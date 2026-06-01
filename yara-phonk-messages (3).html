@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Yara Phonk Messages</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%230e0e1c'/%3E%3Cpath d='M28 26L50 54L72 26' stroke='%23b44dff' stroke-width='10' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='50' y1='54' x2='50' y2='78' stroke='%23ff4db3' stroke-width='10' stroke-linecap='round'/%3E%3C/svg%3E"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body,#root{height:100%;height:100dvh;}
+body{background:#08080e;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#eeeef8;}
+::-webkit-scrollbar{width:5px;}::-webkit-scrollbar-track{background:#13131f;}::-webkit-scrollbar-thumb{background:#b44dff;border-radius:3px;}
+input,textarea,select,button{font-family:'Rajdhani',sans-serif;}
+canvas{touch-action:none;display:block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script>
+/* ── PASTE YOUR FIREBASE CONFIG HERE ───────────────────────────
+   Get it from: console.firebase.google.com → your project
+   → Project Settings (gear) → Your apps → SDK setup → Config
+   IMPORTANT: also add   databaseURL: "https://YOUR-PROJECT-default-rtdb.firebaseio.com"
+   (copy from Realtime Database page in Firebase console)
+──────────────────────────────────────────────────────────────── */
+window.FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+</script>
+
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
+
+/* ─── FIREBASE INIT ───────────────────────────────── */
+const CFG = window.FIREBASE_CONFIG;
+const CONFIGURED = CFG && CFG.apiKey && CFG.databaseURL;
+let FB=null, AUTH=null, DB=null;
+if(CONFIGURED){
+  FB = firebase.initializeApp(CFG);
+  AUTH = firebase.auth();
+  DB = firebase.database();
+}
+const ref = path => DB && DB.ref(path);
+
+/* ─── CONSTANTS ─────────────────────────────────── */
+const C={bg:'#08080e',surf:'#0e0e1c',card:'#12121f',card2:'#16162a',bdr:'#1c1c30',bdr2:'#28284a',
+  a1:'#b44dff',a2:'#ff4db3',grad:'linear-gradient(135deg,#b44dff,#ff4db3)',
+  txt:'#eeeef8',muted:'#7a7ab0',dim:'#3a3a5c',green:'#22c55e',red:'#ef4444',gold:'#ffd24d'};
+const NS='ypm/';
+
+/* ─── HELPERS ────────────────────────────────────── */
+function did(){let d=localStorage.getItem('ypm_did');if(!d){d=(crypto.randomUUID?crypto.randomUUID():(Math.random().toString(36)+Date.now().toString(36)));localStorage.setItem('ypm_did',d);}return d;}
+function roomKey(a,b){return [a,b].sort().join('__');}
+function tnow(){return Date.now();}
+function ago(t){const s=Math.floor((Date.now()-t)/1000);if(s<60)return s+'s';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d';}
+function fmtT(ts){return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+function Avatar({n,sz=36}){return <div style={{width:sz,height:sz,borderRadius:'50%',background:C.grad,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:Math.round(sz*.36),color:'#fff',flexShrink:0}}>{(n||'?').slice(0,2).toUpperCase()}</div>;}
+function Spinner(){return <div style={{width:28,height:28,border:`3px solid ${C.bdr2}`,borderTopColor:C.a1,borderRadius:'50%',animation:'spin .8s linear infinite'}}/>;}
+function Tag({ch,col}){return <span style={{background:col||C.a1,color:'#fff',fontSize:11,fontWeight:700,padding:'2px 7px',borderRadius:20,letterSpacing:.5,whiteSpace:'nowrap'}}>{ch}</span>;}
+function pnotify(title,body){try{if(Notification&&Notification.permission==='granted')new Notification(title,{body});}catch(e){}}
+function askN(){try{if(Notification&&Notification.permission==='default')Notification.requestPermission();}catch(e){}}
+async function compressImg(file){return new Promise(res=>{const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');let w=img.width,h=img.height,mx=800;if(w>mx){h=Math.round(h*mx/w);w=mx;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',.72));};img.src=e.target.result;};r.readAsDataURL(file);});}
+
+/* ─── SETUP SCREEN ───────────────────────────────── */
+function SetupScreen({onSaved}){
+  const [vals,setVals]=useState({apiKey:'',authDomain:'',databaseURL:'',projectId:'',storageBucket:'',messagingSenderId:'',appId:''});
+  const [err,setErr]=useState('');
+  const save=()=>{
+    if(!vals.apiKey.trim()||!vals.databaseURL.trim()){setErr('apiKey and databaseURL are required.');return;}
+    if(!vals.databaseURL.includes('firebaseio.com')){setErr('databaseURL must be https://YOUR-PROJECT-default-rtdb.firebaseio.com');return;}
+    Object.assign(window.FIREBASE_CONFIG,vals);
+    localStorage.setItem('ypm_fbcfg',JSON.stringify(vals));
+    onSaved();
+  };
+  const inp=(k)=>({width:'100%',padding:'9px 12px',background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.txt,fontSize:13,outline:'none',marginBottom:7,fontFamily:'monospace'});
+  const fields=[['apiKey','API Key'],['authDomain','Auth Domain  (xxx.firebaseapp.com)'],['databaseURL','Database URL  (https://xxx-default-rtdb.firebaseio.com)  ← important'],['projectId','Project ID'],['storageBucket','Storage Bucket'],['messagingSenderId','Messaging Sender ID'],['appId','App ID']];
+
+  return <div style={{height:'100%',overflowY:'auto',background:C.bg,padding:'24px 16px'}}>
+    <div style={{maxWidth:640,margin:'0 auto'}}>
+      <div style={{fontFamily:"'Bebas Neue'",fontSize:38,background:C.grad,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',marginBottom:4}}>YARA PHONK MESSAGES</div>
+      <div style={{fontSize:13,color:C.muted,marginBottom:22}}>One-time setup — takes about 5 minutes. Do this once, share the link forever.</div>
+
+      <div style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:14,padding:'18px 20px',marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:16,marginBottom:14,color:C.a1}}>Step 1 — Create Firebase project (free)</div>
+        {[
+          ['1','Go to console.firebase.google.com → Sign in → Click "Add project"'],
+          ['2','Give it a name → Continue → Continue (disable Analytics if asked) → Create project'],
+          ['3','Left sidebar → Build → Authentication → Get started → Email/Password → Enable → Save'],
+          ['4','Left sidebar → Build → Realtime Database → Create database → choose a region → Start in test mode → Enable'],
+          ['5','Copy the database URL shown (looks like https://your-project-default-rtdb.firebaseio.com) — you need this below'],
+          ['6','Top-left home icon (Project Overview) → click the Web icon </> → Register app (any nickname) → copy the firebaseConfig values below'],
+        ].map(([n,t])=><div key={n} style={{display:'flex',gap:10,marginBottom:9}}>
+          <div style={{width:22,height:22,borderRadius:'50%',background:C.grad,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,flexShrink:0}}>{n}</div>
+          <div style={{fontSize:13,color:C.txt,lineHeight:1.5,paddingTop:2}}>{t}</div>
+        </div>)}
+      </div>
+
+      <div style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:14,padding:'18px 20px',marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:16,marginBottom:14,color:C.a1}}>Step 2 — Paste config values</div>
+        {fields.map(([k,label])=><div key={k}>
+          <div style={{fontSize:12,color:C.muted,marginBottom:3,fontWeight:600}}>{label}</div>
+          <input style={inp(k)} placeholder={k} value={vals[k]} onChange={e=>setVals(p=>({...p,[k]:e.target.value.trim()}))}/>
+        </div>)}
+        {err&&<div style={{color:C.red,fontSize:13,marginTop:4}}>{err}</div>}
+        <button onClick={save} style={{marginTop:8,width:'100%',padding:13,background:C.grad,border:'none',borderRadius:10,color:'#fff',fontWeight:700,fontSize:16,cursor:'pointer',letterSpacing:1}}>SAVE & LAUNCH</button>
+      </div>
+
+      <div style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:14,padding:'18px 20px',marginBottom:20}}>
+        <div style={{fontWeight:700,fontSize:16,marginBottom:14,color:C.a1}}>Step 3 — Put the config in the file (for sharing)</div>
+        {[
+          ['1','Open yara-phonk-messages.html in Notepad (Windows) or TextEdit (Mac)'],
+          ['2','Find the line: window.FIREBASE_CONFIG = {'],
+          ['3','Replace the empty quotes with your values — same ones you entered above'],
+          ['4','Make sure databaseURL is included — it is NOT in the default config Firebase shows, copy it from Realtime Database page'],
+          ['5','Save the file'],
+        ].map(([n,t])=><div key={n} style={{display:'flex',gap:10,marginBottom:9}}>
+          <div style={{width:22,height:22,borderRadius:'50%',background:'#1a1a2a',border:`1px solid ${C.bdr2}`,color:C.muted,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,flexShrink:0}}>{n}</div>
+          <div style={{fontSize:13,color:C.txt,lineHeight:1.5,paddingTop:2}}>{t}</div>
+        </div>)}
+      </div>
+
+      <div style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:14,padding:'18px 20px'}}>
+        <div style={{fontWeight:700,fontSize:16,marginBottom:14,color:C.a1}}>Step 4 — Put it on GitHub Pages (free link)</div>
+        {[
+          ['1','Go to github.com → sign in or create free account'],
+          ['2','Click + (top right) → New repository → name it ypm → tick "Add a README" → Create repository'],
+          ['3','Click "Add file" → "Upload files" → drag your saved HTML file → IMPORTANT: rename it to index.html before uploading → Commit changes'],
+          ['4','Click Settings tab → Pages (left sidebar) → Source: Deploy from branch → Branch: main → / (root) → Save'],
+          ['5','Wait 2 minutes → your shareable link is: https://YOUR-USERNAME.github.io/ypm'],
+        ].map(([n,t])=><div key={n} style={{display:'flex',gap:10,marginBottom:9}}>
+          <div style={{width:22,height:22,borderRadius:'50%',background:'#1a1a2a',border:`1px solid ${C.bdr2}`,color:C.muted,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,flexShrink:0}}>{n}</div>
+          <div style={{fontSize:13,color:C.txt,lineHeight:1.5,paddingTop:2}}>{t}</div>
+        </div>)}
+      </div>
+    </div>
+  </div>;
+}
+
+/* ══════════════════ GAMES (60fps) ══════════════════ */
+function useRaf(cb,on){const r=useRef(cb);r.current=cb;useEffect(()=>{if(!on)return;let id,last=performance.now();const loop=t=>{id=requestAnimationFrame(loop);const dt=Math.min((t-last)/1000,.05);last=t;r.current(dt);};id=requestAnimationFrame(loop);return()=>cancelAnimationFrame(id);},[on]);}
+function GShell({title,onBack,ch}){return <div style={{height:'100%',overflowY:'auto'}}><div style={{padding:'12px 18px',borderBottom:`1px solid ${C.bdr}`,display:'flex',alignItems:'center',gap:12,background:C.bg,position:'sticky',top:0,zIndex:5}}><button onClick={onBack} style={{background:'none',border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.muted,padding:'6px 14px',cursor:'pointer',fontWeight:600,fontSize:13}}>← Arcade</button><span style={{fontSize:16,fontWeight:700}}>{title}</span></div><div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'18px 10px 40px'}}>{ch}</div></div>;}
+function SBar({items}){return <div style={{display:'flex',gap:44,marginBottom:12}}>{items.map(s=><div key={s.l} style={{textAlign:'center'}}><div style={{fontSize:10,color:C.muted,letterSpacing:3,fontWeight:700}}>{s.l}</div><div style={{fontSize:30,fontWeight:700,color:s.c||C.a1,lineHeight:1.1}}>{s.v}</div></div>)}</div>;}
+function PBtn({onClick,ch}){return <button onClick={onClick} style={{padding:'12px 38px',background:C.grad,border:'none',borderRadius:10,color:'#fff',fontSize:16,fontWeight:700,cursor:'pointer',letterSpacing:1}}>{ch}</button>;}
+function Ovl({ch}){return <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'rgba(8,8,14,.87)',gap:14}}>{ch}</div>;}
+
+function Flappy({onBack}){const W=340,H=460,cv=useRef(null),s=useRef({y:H/2,vy:0,pipes:[],t:0,sc:0,best:0});const [ph,setPh]=useState('idle');const [sc,setSc]=useState(0);const [best,setBest]=useState(0);const flap=()=>{if(ph==='run')s.current.vy=-295;else{s.current={...s.current,y:H/2,vy:0,pipes:[],t:0,sc:0};setSc(0);setPh('run');}};useEffect(()=>{const h=e=>{if(e.code==='Space'){e.preventDefault();flap();}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[ph]);useEffect(()=>{const c=cv.current.getContext('2d');c.fillStyle='#0c0c18';c.fillRect(0,0,W,H);},[]);useRaf(dt=>{const g=s.current;g.vy+=900*dt;g.y+=g.vy*dt;g.t+=dt;if(!g.pipes.length||g.pipes[g.pipes.length-1].x<W-180){const top=50+Math.random()*(H-200);g.pipes.push({x:W+20,top,gap:148,ok:false});}g.pipes.forEach(p=>{p.x-=158*dt;if(!p.ok&&p.x<68){p.ok=true;g.sc++;setSc(g.sc);}});g.pipes=g.pipes.filter(p=>p.x>-55);let dead=g.y<12||g.y>H-12;g.pipes.forEach(p=>{if(68+12>p.x-24&&68-12<p.x+24&&(g.y-12<p.top||g.y+12>p.top+p.gap))dead=true;});const ctx=cv.current.getContext('2d');ctx.fillStyle='#0c0c18';ctx.fillRect(0,0,W,H);for(let i=0;i<5;i++){ctx.fillStyle='rgba(180,77,255,0.06)';ctx.fillRect((i*80-(g.t*18)%80),0,1,H);}ctx.fillStyle='#b44dff';g.pipes.forEach(p=>{ctx.fillRect(p.x-24,0,48,p.top);ctx.fillRect(p.x-24,p.top+p.gap,48,H);ctx.fillStyle='#ff4db3';ctx.fillRect(p.x-28,p.top-10,56,10);ctx.fillRect(p.x-28,p.top+p.gap,56,10);ctx.fillStyle='#b44dff';});ctx.save();ctx.translate(68,g.y);ctx.rotate(Math.max(-0.5,Math.min(1,g.vy/380)));ctx.fillStyle='#ffd24d';ctx.beginPath();ctx.arc(0,0,12,0,7);ctx.fill();ctx.fillStyle='#08080e';ctx.beginPath();ctx.arc(5,-4,2.5,0,7);ctx.fill();ctx.restore();if(dead){g.best=Math.max(g.best,g.sc);setBest(g.best);setPh('over');}},ph==='run');return <GShell title="Flappy Phonk 🐦" onBack={onBack} ch={<><SBar items={[{l:'SCORE',v:sc},{l:'BEST',v:best,c:C.muted}]}/><div style={{position:'relative',borderRadius:12,overflow:'hidden',border:`1px solid ${C.bdr2}`}} onMouseDown={flap} onTouchStart={e=>{e.preventDefault();flap();}}><canvas ref={cv} width={W} height={H}/>{ph!=='run'&&<Ovl ch={<>{ph==='over'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:42,color:C.a2,letterSpacing:3}}>GAME OVER</div>}{ph==='idle'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:34,color:C.a1,letterSpacing:3}}>FLAPPY PHONK</div>}<PBtn onClick={flap} ch={ph==='idle'?'TAP TO PLAY':'RETRY'}/></>}/>}</div><div style={{fontSize:12,color:C.dim,marginTop:10}}>Tap / click / spacebar</div></>}/>;}
+function Runner({onBack}){const W=380,H=280,cv=useRef(null),GND=H-44;const s=useRef({y:0,vy:0,gr:true,obs:[],spd:230,dist:0,best:0});const [ph,setPh]=useState('idle');const [sc,setSc]=useState(0);const [best,setBest]=useState(0);const jump=()=>{if(ph!=='run'){s.current={...s.current,y:0,vy:0,gr:true,obs:[],spd:230,dist:0};setSc(0);setPh('run');return;}if(s.current.gr){s.current.vy=-420;s.current.gr=false;}};useEffect(()=>{const h=e=>{if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jump();}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[ph]);useEffect(()=>{const c=cv.current.getContext('2d');c.fillStyle='#0c0c18';c.fillRect(0,0,W,H);},[]);useRaf(dt=>{const g=s.current;g.spd=Math.min(g.spd+5*dt,460);g.dist+=g.spd*dt;setSc(Math.floor(g.dist/10));g.vy+=1350*dt;g.y+=g.vy*dt;if(g.y>0){g.y=0;g.vy=0;g.gr=true;}if(!g.obs.length||g.obs[g.obs.length-1].x<W-140-Math.random()*100){const h=22+Math.random()*28;g.obs.push({x:W+10,w:16+Math.random()*14,h});}g.obs.forEach(o=>o.x-=g.spd*dt);g.obs=g.obs.filter(o=>o.x>-30);const px=58,pw=22,ph2=26,py=GND+g.y-ph2;let dead=false;g.obs.forEach(o=>{if(px+pw-4>o.x&&px+4<o.x+o.w&&py+ph2>GND-o.h+2)dead=true;});const ctx=cv.current.getContext('2d');ctx.fillStyle='#0c0c18';ctx.fillRect(0,0,W,H);ctx.fillStyle=C.a1;ctx.fillRect(0,GND,W,3);ctx.fillStyle='#ff4db3';g.obs.forEach(o=>ctx.fillRect(o.x,GND-o.h,o.w,o.h));ctx.fillStyle='#ffd24d';ctx.fillRect(px,py,pw,ph2);ctx.fillStyle='#08080e';ctx.fillRect(px+pw-7,py+5,4,4);if(dead){g.best=Math.max(g.best,Math.floor(g.dist/10));setBest(g.best);setPh('over');}},ph==='run');return <GShell title="Phonk Dash 🏃" onBack={onBack} ch={<><SBar items={[{l:'SCORE',v:sc},{l:'BEST',v:best,c:C.muted}]}/><div style={{position:'relative',borderRadius:12,overflow:'hidden',border:`1px solid ${C.bdr2}`}} onMouseDown={jump} onTouchStart={e=>{e.preventDefault();jump();}}><canvas ref={cv} width={W} height={H}/>{ph!=='run'&&<Ovl ch={<>{ph==='over'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:38,color:C.a2,letterSpacing:3}}>WIPED OUT</div>}{ph==='idle'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:32,color:C.a1,letterSpacing:3}}>PHONK DASH</div>}<PBtn onClick={jump} ch={ph==='idle'?'TAP TO RUN':'RETRY'}/></>}/>}</div><div style={{fontSize:12,color:C.dim,marginTop:10}}>Tap / click / space to jump</div></>}/>;}
+function Breakout({onBack}){const W=360,H=440,cv=useRef(null),s=useRef(null);const [ph,setPh]=useState('idle');const [sc,setSc]=useState(0);const [lv,setLv]=useState(3);const mk=()=>{const bx=[];const cols=7,bw=44,bh=18,gap=4,ox=(W-(cols*(bw+gap)-gap))/2;for(let r=0;r<5;r++)for(let c=0;c<cols;c++)bx.push({x:ox+c*(bw+gap),y:38+r*(bh+gap),w:bw,h:bh,on:true,r});return{px:W/2,ball:{x:W/2,y:H-55,vx:145,vy:-235},bx,sc:0,lives:3};};const go=()=>{s.current=mk();setSc(0);setLv(3);setPh('run');};const mv=x=>{if(s.current)s.current.px=Math.max(36,Math.min(W-36,x));};useEffect(()=>{const c=cv.current.getContext('2d');c.fillStyle='#0c0c18';c.fillRect(0,0,W,H);},[]);useRaf(dt=>{const g=s.current;const b=g.ball;b.x+=b.vx*dt;b.y+=b.vy*dt;if(b.x<8){b.x=8;b.vx*=-1;}if(b.x>W-8){b.x=W-8;b.vx*=-1;}if(b.y<8){b.y=8;b.vy*=-1;}if(b.y>H-24&&b.y<H-12&&Math.abs(b.x-g.px)<38){b.vy=-Math.abs(b.vy);b.vx+=(b.x-g.px)*3;b.y=H-24;}if(b.y>H){g.lives--;setLv(g.lives);if(!g.lives){setPh('over');return;}b.x=W/2;b.y=H-55;b.vx=145;b.vy=-235;}g.bx.forEach(k=>{if(k.on&&b.x>k.x&&b.x<k.x+k.w&&b.y>k.y&&b.y<k.y+k.h){k.on=false;b.vy*=-1;g.sc+=10;setSc(g.sc);}});if(g.bx.every(k=>!k.on)){setPh('win');return;}const ctx=cv.current.getContext('2d');ctx.fillStyle='#0c0c18';ctx.fillRect(0,0,W,H);const pal=['#ff4db3','#c060ff','#b44dff','#8a5cff','#6b6bff'];g.bx.forEach(k=>{if(k.on){ctx.fillStyle=pal[k.r];ctx.fillRect(k.x,k.y,k.w,k.h);}});ctx.shadowColor='#fff';ctx.shadowBlur=8;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,7,0,7);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle=C.a1;ctx.fillRect(g.px-36,H-14,72,7);},ph==='run');const rect=e=>e.currentTarget.getBoundingClientRect();return <GShell title="Brick Breaker 🧱" onBack={onBack} ch={<><SBar items={[{l:'SCORE',v:sc},{l:'LIVES',v:lv,c:C.a2}]}/><div style={{position:'relative',borderRadius:12,overflow:'hidden',border:`1px solid ${C.bdr2}`}} onMouseMove={e=>mv(e.clientX-rect(e).left)} onTouchMove={e=>{e.preventDefault();mv(e.touches[0].clientX-rect(e).left);}}><canvas ref={cv} width={W} height={H}/>{ph!=='run'&&<Ovl ch={<>{ph==='over'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:38,color:C.a2,letterSpacing:3}}>GAME OVER</div>}{ph==='win'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:38,color:C.green,letterSpacing:3}}>YOU WIN!</div>}{ph==='idle'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:32,color:C.a1,letterSpacing:3}}>BRICK BREAKER</div>}<PBtn onClick={go} ch={ph==='idle'?'PLAY':'PLAY AGAIN'}/></>}/>}</div><div style={{fontSize:12,color:C.dim,marginTop:10}}>Move mouse or finger</div></>}/>;}
+function Snake({onBack}){const GR=20,CL=17,SZ=GR*CL,cv=useRef(null);const s=useRef({sn:[{x:10,y:10},{x:9,y:10},{x:8,y:10}],d:{x:1,y:0},nd:{x:1,y:0},f:{x:15,y:10},acc:0,sc:0,best:0});const [ph,setPh]=useState('idle');const [sc,setSc]=useState(0);const [best,setBest]=useState(0);const rf=()=>{let p;do{p={x:Math.floor(Math.random()*GR),y:Math.floor(Math.random()*GR)};}while(s.current.sn.some(c=>c.x===p.x&&c.y===p.y));return p;};const rst=()=>{s.current={sn:[{x:10,y:10},{x:9,y:10},{x:8,y:10}],d:{x:1,y:0},nd:{x:1,y:0},f:{x:15,y:10},acc:0,sc:0,best:s.current.best};setSc(0);setPh('run');};const trn=nd=>{const d=s.current.d;if(nd.x!==-d.x||nd.y!==-d.y)s.current.nd=nd;};useEffect(()=>{const h=e=>{const m={ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0}};if(m[e.key]){e.preventDefault();trn(m[e.key]);}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[]);useEffect(()=>{const c=cv.current.getContext('2d');c.fillStyle='#0d0d1a';c.fillRect(0,0,SZ,SZ);},[]);useRaf(dt=>{const g=s.current;g.acc+=dt;if(g.acc>=0.105){g.acc=0;g.d=g.nd;const h={x:g.sn[0].x+g.d.x,y:g.sn[0].y+g.d.y};if(h.x<0||h.x>=GR||h.y<0||h.y>=GR||g.sn.some(c=>c.x===h.x&&c.y===h.y)){g.best=Math.max(g.best,g.sc);setBest(g.best);setPh('over');return;}if(h.x===g.f.x&&h.y===g.f.y){g.sn=[h,...g.sn];g.f=rf();g.sc+=10;setSc(g.sc);}else g.sn=[h,...g.sn.slice(0,-1)];}const ctx=cv.current.getContext('2d');ctx.fillStyle='#0d0d1a';ctx.fillRect(0,0,SZ,SZ);ctx.shadowColor='#ff4db3';ctx.shadowBlur=14;ctx.fillStyle='#ff4db3';ctx.beginPath();ctx.arc(g.f.x*CL+CL/2,g.f.y*CL+CL/2,CL/2-1,0,7);ctx.fill();ctx.shadowBlur=0;g.sn.forEach((seg,i)=>{ctx.fillStyle=i===0?'#c060ff':'#7030df';ctx.fillRect(seg.x*CL+1,seg.y*CL+1,CL-2,CL-2);});},ph==='run');const db={width:42,height:42,background:C.card2,border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.txt,fontSize:18,cursor:'pointer'};return <GShell title="Phonk Snake 🐍" onBack={onBack} ch={<><SBar items={[{l:'SCORE',v:sc},{l:'BEST',v:best,c:C.muted}]}/><div style={{position:'relative',borderRadius:10,overflow:'hidden',border:`1px solid ${C.bdr2}`}}><canvas ref={cv} width={SZ} height={SZ}/>{ph!=='run'&&<Ovl ch={<>{ph==='over'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:38,color:C.a2,letterSpacing:3}}>GAME OVER</div>}{ph==='idle'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:32,color:C.a1,letterSpacing:3}}>PHONK SNAKE</div>}<PBtn onClick={rst} ch={ph==='idle'?'PLAY':'RETRY'}/></>}/>}</div><div style={{display:'grid',gridTemplateColumns:'repeat(3,42px)',gridTemplateRows:'repeat(3,42px)',gap:5,marginTop:14}}><div/><button style={db} onClick={()=>trn({x:0,y:-1})}>↑</button><div/><button style={db} onClick={()=>trn({x:-1,y:0})}>←</button><div/><button style={db} onClick={()=>trn({x:1,y:0})}>→</button><div/><button style={db} onClick={()=>trn({x:0,y:1})}>↓</button><div/></div></>}/>;}
+function AstDodge({onBack}){const W=360,H=480,cv=useRef(null);const s=useRef({ship:{x:180,y:380},rocks:[],bullets:[],spd:1,sc:0,t:0,best:0,fire:0});const [ph,setPh]=useState('idle');const [sc,setSc]=useState(0);const [best,setBest]=useState(0);const rst=()=>{s.current={ship:{x:180,y:380},rocks:[],bullets:[],spd:1,sc:0,t:0,best:s.current.best,fire:0};setSc(0);setPh('run');};useEffect(()=>{const h=e=>{if(e.code==='Space'){e.preventDefault();if(ph==='run'){const g=s.current;if(Date.now()-g.fire>180){g.bullets.push({x:g.ship.x,y:g.ship.y-20,vy:-400});g.fire=Date.now();}}else rst();}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[ph]);useEffect(()=>{const c=cv.current.getContext('2d');c.fillStyle='#080810';c.fillRect(0,0,W,H);},[]);useRaf(dt=>{const g=s.current;g.t+=dt;g.spd=Math.min(1+g.t*.15,3.5);if(Math.random()<(0.018+g.t*.003)*dt*60)g.rocks.push({x:Math.random()*W,y:-20,r:12+Math.random()*18,vy:60+Math.random()*80*g.spd,vx:(Math.random()-.5)*40});g.rocks.forEach(r=>{r.x+=r.vx*dt;r.y+=r.vy*g.spd*dt;});g.bullets.forEach(b=>b.y+=b.vy*dt);g.bullets=g.bullets.filter(b=>b.y>-10);g.rocks=g.rocks.filter(r=>{if(r.y>H+30)return false;for(let i=g.bullets.length-1;i>=0;i--){const b=g.bullets[i];if(Math.hypot(b.x-r.x,b.y-r.y)<r.r+5){g.bullets.splice(i,1);g.sc+=r.r>20?5:10;setSc(g.sc);return false;}}return true;});let dead=false;g.rocks.forEach(r=>{if(Math.hypot(g.ship.x-r.x,g.ship.y-r.y)<r.r+14)dead=true;});const ctx=cv.current.getContext('2d');ctx.fillStyle='#080810';ctx.fillRect(0,0,W,H);for(let i=0;i<40;i++){const sx=(i*73+g.t*10)%W,sy=(i*97+g.t*15)%H;ctx.fillStyle='rgba(255,255,255,.4)';ctx.fillRect(sx,sy,1.5,1.5);}ctx.fillStyle='#ff4db3';g.rocks.forEach(r=>{ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,7);ctx.fill();});ctx.fillStyle='#ffe066';g.bullets.forEach(b=>{ctx.fillRect(b.x-2,b.y-8,4,14);});ctx.fillStyle=C.a1;ctx.save();ctx.translate(g.ship.x,g.ship.y);ctx.beginPath();ctx.moveTo(0,-18);ctx.lineTo(12,12);ctx.lineTo(-12,12);ctx.closePath();ctx.fill();ctx.restore();if(dead){g.best=Math.max(g.best,g.sc);setBest(g.best);setPh('over');}},ph==='run');const rect=e=>e.currentTarget.getBoundingClientRect();return <GShell title="Asteroid Dodge 🚀" onBack={onBack} ch={<><SBar items={[{l:'SCORE',v:sc},{l:'BEST',v:best,c:C.muted}]}/><div style={{position:'relative',borderRadius:12,overflow:'hidden',border:`1px solid ${C.bdr2}`,cursor:'none'}} onMouseMove={e=>{if(ph==='run')s.current.ship.x=Math.max(18,Math.min(W-18,e.clientX-rect(e).left));}} onTouchMove={e=>{e.preventDefault();if(ph==='run')s.current.ship.x=Math.max(18,Math.min(W-18,e.touches[0].clientX-rect(e).left));}} onMouseDown={()=>{if(ph==='run'){const g=s.current;if(Date.now()-g.fire>180){g.bullets.push({x:g.ship.x,y:g.ship.y-20,vy:-400});g.fire=Date.now();}}}} onTouchStart={e=>{e.preventDefault();if(ph==='run'){const g=s.current;if(Date.now()-g.fire>180){g.bullets.push({x:g.ship.x,y:g.ship.y-20,vy:-400});g.fire=Date.now();}}}}><canvas ref={cv} width={W} height={H}/>{ph!=='run'&&<Ovl ch={<>{ph==='over'&&<div style={{fontFamily:"'Bebas Neue'",fontSize:38,color:C.a2,letterSpacing:3}}>DESTROYED</div>}{ph==='idle'&&<><div style={{fontFamily:"'Bebas Neue'",fontSize:30,color:C.a1,letterSpacing:3}}>ASTEROID DODGE</div><div style={{fontSize:12,color:C.muted,marginBottom:4}}>Move mouse · click to shoot</div></>}<PBtn onClick={rst} ch={ph==='idle'?'PLAY':'RETRY'}/></>}/>}</div></>}/>;}
+function G2048({onBack}){const e=()=>Array(16).fill(0);const sp=g=>{const a=[];g.forEach((v,i)=>{if(!v)a.push(i);});if(a.length)g[a[Math.floor(Math.random()*a.length)]]=Math.random()<.9?2:4;return g;};const [grid,setGrid]=useState(()=>sp(sp(e())));const [sc,setSc]=useState(0);const [ov,setOv]=useState(false);const sl=row=>{let a=row.filter(v=>v),s=0;for(let i=0;i<a.length-1;i++){if(a[i]===a[i+1]){a[i]*=2;s+=a[i];a.splice(i+1,1);}}while(a.length<4)a.push(0);return{row:a,s};};const mv=dir=>{setGrid(prev=>{let g=[...prev],gained=0;const get=(r,c)=>g[r*4+c],set=(r,c,v)=>g[r*4+c]=v;for(let i=0;i<4;i++){let line=[];for(let j=0;j<4;j++)line.push(dir==='left'?get(i,j):dir==='right'?get(i,3-j):dir==='up'?get(j,i):get(3-j,i));const{row,s}=sl(line);gained+=s;for(let j=0;j<4;j++){const v=row[j];dir==='left'?set(i,j,v):dir==='right'?set(i,3-j,v):dir==='up'?set(j,i,v):set(3-j,i,v);}}if(JSON.stringify(g)!==JSON.stringify(prev)){g=sp(g);if(gained)setSc(x=>x+gained);if(g.every(v=>v)){let ok=false;for(let r=0;r<4;r++)for(let c=0;c<4;c++){if((c<3&&g[r*4+c]===g[r*4+c+1])||(r<3&&g[r*4+c]===g[(r+1)*4+c]))ok=true;}if(!ok)setOv(true);}}return g;});};useEffect(()=>{const h=e=>{const m={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down'};if(m[e.key]){e.preventDefault();if(!ov)mv(m[e.key]);}};window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h);},[ov]);const tr=useRef(null);const tS=e=>tr.current={x:e.touches[0].clientX,y:e.touches[0].clientY};const tE=e=>{if(!tr.current||ov)return;const dx=e.changedTouches[0].clientX-tr.current.x,dy=e.changedTouches[0].clientY-tr.current.y;if(Math.abs(dx)<20&&Math.abs(dy)<20)return;Math.abs(dx)>Math.abs(dy)?mv(dx>0?'right':'left'):mv(dy>0?'down':'up');};const pal={2:'#2a2a44',4:'#3a2a5c',8:'#5a3a8c',16:'#7a3cff',32:'#9a4cff',64:'#b44dff',128:'#d44dcf',256:'#ff4db3',512:'#ff6dc3',1024:'#ff9dd3',2048:'#ffd24d'};const rst=()=>{setGrid(sp(sp(e())));setSc(0);setOv(false);};return <GShell title="2048 🔢" onBack={onBack} ch={<><SBar items={[{l:'SCORE',v:sc}]}/><div onTouchStart={tS} onTouchEnd={tE} style={{display:'grid',gridTemplateColumns:'repeat(4,68px)',gridTemplateRows:'repeat(4,68px)',gap:7,background:C.card,padding:7,borderRadius:12,border:`1px solid ${C.bdr2}`,position:'relative'}}>{grid.map((v,i)=><div key={i} style={{background:v?pal[v]||'#ffd24d':'#14142a',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:v>=1024?18:24,color:v<=4?C.muted:'#fff'}}>{v||''}</div>)}{ov&&<div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'rgba(8,8,14,.88)',borderRadius:12,gap:14}}><div style={{fontFamily:"'Bebas Neue'",fontSize:36,color:C.a2,letterSpacing:3}}>GAME OVER</div><PBtn onClick={rst} ch="NEW GAME"/></div>}</div><div style={{fontSize:12,color:C.dim,marginTop:14}}>Arrow keys or swipe</div><button onClick={rst} style={{marginTop:8,background:'transparent',border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.muted,padding:'7px 16px',cursor:'pointer',fontWeight:600,fontSize:13}}>New game</button></>}/>;}
+function Reaction({onBack}){const [st,setSt]=useState('idle');const [ms,setMs]=useState(0);const [best,setBest]=useState(0);const tm=useRef(null);const t0=useRef(0);const tap=()=>{if(st==='idle'||st==='result'||st==='early'){setSt('wait');tm.current=setTimeout(()=>{t0.current=performance.now();setSt('now');},1000+Math.random()*2500);}else if(st==='wait'){clearTimeout(tm.current);setSt('early');}else if(st==='now'){const d=Math.round(performance.now()-t0.current);setMs(d);setBest(b=>b?Math.min(b,d):d);setSt('result');}};useEffect(()=>()=>clearTimeout(tm.current),[]);const bg={idle:C.card2,wait:'#3d0a1a',now:C.green,result:C.card2,early:C.red}[st];const lbl={idle:'TAP TO START',wait:'WAIT...',now:'TAP NOW!',result:ms+'ms',early:'TOO EARLY!'}[st];const rating=ms?(ms<150?'DEMON':ms<220?'ELITE':ms<300?'FAST':ms<400?'AVERAGE':'SLOW'):'';return <GShell title="Reaction Time ⚡" onBack={onBack} ch={<><SBar items={[{l:'LAST',v:ms?ms+'ms':'-'},{l:'BEST',v:best?best+'ms':'-',c:C.muted}]}/><div onClick={tap} style={{width:300,height:300,borderRadius:20,background:bg,border:`1px solid ${C.bdr2}`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',userSelect:'none',transition:'background .12s',gap:6}}><div style={{fontFamily:"'Bebas Neue'",fontSize:st==='result'?52:28,color:'#fff',letterSpacing:2}}>{lbl}</div>{st==='result'&&rating&&<div style={{fontSize:16,color:'rgba(255,255,255,.7)',fontWeight:600}}>{rating}</div>}</div><div style={{fontSize:12,color:C.dim,marginTop:14}}>Tap when it turns green</div></>}/>;}
+
+const GAMES=[{id:'flappy',title:'Flappy Phonk',icon:'🐦',desc:'Tap to fly.',C:Flappy},{id:'runner',title:'Phonk Dash',icon:'🏃',desc:'Endless runner.',C:Runner},{id:'break',title:'Brick Breaker',icon:'🧱',desc:'Smash all bricks.',C:Breakout},{id:'snake',title:'Phonk Snake',icon:'🐍',desc:'Eat and grow.',C:Snake},{id:'asteroid',title:'Asteroid Dodge',icon:'🚀',desc:'Shoot the rocks.',C:AstDodge},{id:'2048',title:'2048',icon:'🔢',desc:'Merge tiles.',C:G2048},{id:'react',title:'Reaction Time',icon:'⚡',desc:'Test reflexes.',C:Reaction}];
+function Arcade(){const [g,setG]=useState(null);if(g){const Comp=GAMES.find(x=>x.id===g).C;return <Comp onBack={()=>setG(null)}/>;}return <div style={{height:'100%',overflowY:'auto',padding:22}}><div style={{fontFamily:"'Bebas Neue'",fontSize:38,letterSpacing:4,marginBottom:2}}>ARCADE</div><div style={{fontSize:13,color:C.muted,marginBottom:20}}>7 games · all 60fps</div><div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))',gap:12,maxWidth:680}}>{GAMES.map(g=><div key={g.id} onClick={()=>setG(g.id)} onMouseEnter={e=>{e.currentTarget.style.borderColor=C.a1;e.currentTarget.style.transform='translateY(-3px)';}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.bdr2;e.currentTarget.style.transform='none';}} style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:14,padding:'20px 16px',cursor:'pointer',transition:'all .15s',display:'flex',flexDirection:'column',gap:6}}><div style={{fontSize:38}}>{g.icon}</div><div style={{fontSize:17,fontWeight:700}}>{g.title}</div><div style={{fontSize:13,color:C.muted,flex:1}}>{g.desc}</div><div style={{fontSize:12,color:C.a1,fontWeight:700,letterSpacing:1}}>PLAY →</div></div>)}</div></div>;}
+
+/* ══════════════════ AUTH ══════════════════ */
+function AuthScreen({onAuth}){
+  const [mode,setMode]=useState('login');const [user,setUser]=useState('');const [pass,setPass]=useState('');const [err,setErr]=useState('');const [busy,setBusy]=useState(false);
+  const go=async()=>{
+    setErr('');setBusy(true);
+    const u=user.trim().toLowerCase();
+    if(u.length<2){setErr('Username must be 2+ characters.');setBusy(false);return;}
+    const email=u+'@ypm.local';
+    try{
+      if(mode==='signup'){
+        if(localStorage.getItem('ypm_acct')){throw new Error('This device already has an account.');}
+        // Check device taken
+        const devSnap=await DB.ref(NS+'devices/'+did()).once('value');
+        if(devSnap.exists()){throw new Error('This device already has an account.');}
+        // Check username taken
+        const unSnap=await DB.ref(NS+'usernames/'+u).once('value');
+        if(unSnap.exists()){throw new Error('Username already taken.');}
+        const cred=await AUTH.createUserWithEmailAndPassword(email,pass);
+        const uid=cred.user.uid;
+        const profile={username:u,uid,created:tnow()};
+        await DB.ref(NS+'users/'+uid).set(profile);
+        await DB.ref(NS+'usernames/'+u).set(uid);
+        await DB.ref(NS+'devices/'+did()).set(uid);
+        await DB.ref(NS+'people/'+uid).set({username:u,uid,t:tnow()});
+        localStorage.setItem('ypm_acct',u);
+        onAuth({uid,...profile});
+      } else {
+        const cred=await AUTH.signInWithEmailAndPassword(email,pass);
+        const uid=cred.user.uid;
+        const snap=await DB.ref(NS+'users/'+uid).once('value');
+        const profile=snap.val()||{username:u,uid};
+        // Check ban
+        const banSnap=await DB.ref(NS+'bans/'+uid).once('value');
+        const ban=banSnap.val();
+        if(ban&&ban.banned){await AUTH.signOut();throw new Error('You have been banned. Contact the admin.');}
+        onAuth({uid,...profile});
+      }
+    }catch(e){
+      let msg=e.message||String(e);
+      if(msg.includes('wrong-password')||msg.includes('invalid-credential'))msg='Wrong password.';
+      if(msg.includes('user-not-found'))msg='No account with that username.';
+      if(msg.includes('weak-password'))msg='Password must be 6+ characters.';
+      if(msg.includes('network'))msg='Network error — check your internet.';
+      setErr(msg);
+    }
+    setBusy(false);
+  };
+  const inp={width:'100%',padding:'12px 14px',background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:10,color:C.txt,fontSize:15,outline:'none',marginBottom:11};
+  return <div style={{minHeight:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:C.bg,padding:16}}>
+    <div style={{width:360,maxWidth:'100%',background:C.surf,border:`1px solid ${C.bdr2}`,borderRadius:16,padding:'40px 30px',textAlign:'center'}}>
+      <div style={{fontFamily:"'Bebas Neue'",fontSize:42,background:C.grad,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',lineHeight:1}}>YARA PHONK</div>
+      <div style={{fontSize:10,color:C.dim,letterSpacing:5,marginBottom:26,marginTop:4}}>MESSAGES</div>
+      <div style={{display:'flex',background:C.card,borderRadius:10,padding:4,marginBottom:18}}>
+        {['login','signup'].map(m=><button key={m} onClick={()=>{setMode(m);setErr('');}} style={{flex:1,padding:9,background:mode===m?C.grad:'transparent',border:'none',borderRadius:7,color:mode===m?'#fff':C.muted,fontWeight:700,fontSize:14,cursor:'pointer',letterSpacing:1}}>{m==='login'?'LOG IN':'SIGN UP'}</button>)}
+      </div>
+      <input style={inp} placeholder="Username" value={user} onChange={e=>setUser(e.target.value)} autoCapitalize="none"/>
+      <input style={inp} type="password" placeholder="Password (6+ characters)" value={pass} onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==='Enter'&&go()}/>
+      {err&&<div style={{color:C.red,fontSize:13,marginBottom:10,textAlign:'left'}}>{err}</div>}
+      <button onClick={go} disabled={busy} style={{width:'100%',padding:13,background:C.grad,border:'none',borderRadius:10,color:'#fff',fontWeight:700,fontSize:16,cursor:'pointer',opacity:busy?.65:1,display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+        {busy&&<Spinner/>}{mode==='login'?'LOG IN':'CREATE ACCOUNT'}
+      </button>
+      <div style={{fontSize:11,color:C.dim,marginTop:14}}>Real accounts · 1 per device · No email needed</div>
+    </div>
+  </div>;
+}
+
+/* ══════════════════ MESSAGES ══════════════════ */
+function MessagesView({me,friends,unread,setUnread}){
+  const [active,setActive]=useState(null);
+  const [msgs,setMsgs]=useState([]);
+  const [input,setInput]=useState('');
+  const endRef=useRef(null);
+  const listenerRef=useRef(null);
+
+  const openChat=useCallback(f=>{
+    setActive(f); setMsgs([]); setUnread(u=>({...u,[f.uid]:0}));
+    if(listenerRef.current){DB.ref(NS+'messages/'+roomKey(me.uid,f.uid)).off('child_added',listenerRef.current);}
+    const handle=(snap)=>{
+      const m={id:snap.key,...snap.val()};
+      setMsgs(prev=>{if(prev.find(x=>x.id===m.id))return prev;return [...prev,m];});
+    };
+    listenerRef.current=handle;
+    DB.ref(NS+'messages/'+roomKey(me.uid,f.uid)).orderByChild('t').on('child_added',handle);
+  },[me.uid,setUnread]);
+
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'});},[msgs]);
+  useEffect(()=>()=>{if(listenerRef.current&&active)DB.ref(NS+'messages/'+roomKey(me.uid,active.uid)).off('child_added',listenerRef.current);},[]);
+
+  const send=()=>{
+    if(!input.trim()||!active)return;
+    const body=input.trim(); setInput('');
+    DB.ref(NS+'messages/'+roomKey(me.uid,active.uid)).push({from:me.uid,fromName:me.username,body,t:tnow()});
+  };
+
+  return <div style={{display:'flex',height:'100%',overflow:'hidden'}}>
+    <div style={{width:232,borderRight:`1px solid ${C.bdr}`,display:'flex',flexDirection:'column',flexShrink:0}}>
+      <div style={{padding:'13px 15px',borderBottom:`1px solid ${C.bdr}`}}><div style={{fontWeight:700,fontSize:15}}>Messages</div><div style={{fontSize:12,color:C.muted}}>{friends.length} friend{friends.length!==1?'s':''}</div></div>
+      <div style={{overflowY:'auto',flex:1}}>
+        {friends.length===0&&<div style={{padding:18,fontSize:13,color:C.dim,textAlign:'center'}}>Go to People to add friends</div>}
+        {friends.map(f=><div key={f.uid} onClick={()=>openChat(f)} style={{padding:'11px 13px',display:'flex',alignItems:'center',gap:10,cursor:'pointer',background:active&&active.uid===f.uid?C.card2:'transparent',borderLeft:active&&active.uid===f.uid?`3px solid ${C.a1}`:'3px solid transparent'}}>
+          <Avatar n={f.username} sz={38}/>
+          <div style={{flex:1,fontSize:14,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.username}</div>
+          {unread[f.uid]>0&&<span style={{background:C.a2,color:'#fff',fontSize:11,fontWeight:700,padding:'1px 7px',borderRadius:20}}>{unread[f.uid]}</span>}
+        </div>)}
+      </div>
+    </div>
+    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+      {active?<>
+        <div style={{padding:'12px 16px',borderBottom:`1px solid ${C.bdr}`,display:'flex',alignItems:'center',gap:11}}>
+          <Avatar n={active.username} sz={36}/><div style={{fontWeight:700,fontSize:15}}>{active.username}</div>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'14px 16px',display:'flex',flexDirection:'column',gap:8}}>
+          {msgs.map(m=>{const mine=m.from===me.uid;return <div key={m.id} style={{display:'flex',flexDirection:mine?'row-reverse':'row',alignItems:'flex-end',gap:7}}>
+            {!mine&&<Avatar n={m.fromName} sz={24}/>}
+            <div style={{maxWidth:'66%',padding:'9px 13px',borderRadius:mine?'16px 16px 4px 16px':'16px 16px 16px 4px',background:mine?C.grad:C.card,fontSize:14,fontWeight:500,lineHeight:1.4,border:mine?'none':`1px solid ${C.bdr2}`,wordBreak:'break-word'}}>
+              {m.body}<div style={{fontSize:10,color:mine?'rgba(255,255,255,.45)':C.dim,textAlign:'right',marginTop:2}}>{fmtT(m.t)}</div>
+            </div></div>;})}
+          <div ref={endRef}/>
+        </div>
+        <div style={{padding:'9px 13px',borderTop:`1px solid ${C.bdr}`,display:'flex',gap:8}}>
+          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}} placeholder={'Message '+active.username+'...'} style={{flex:1,padding:'10px 14px',background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:22,color:C.txt,fontSize:14,outline:'none'}}/>
+          <button onClick={send} style={{padding:'0 17px',background:C.grad,border:'none',borderRadius:22,color:'#fff',fontSize:20,cursor:'pointer'}}>→</button>
+        </div>
+      </>:<div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
+        <div style={{fontSize:44}}>💬</div><div style={{fontSize:16,fontWeight:700,color:C.muted}}>Select a chat</div>
+      </div>}
+    </div>
+  </div>;
+}
+
+/* ══════════════════ FEED ══════════════════ */
+function FeedView({me,bans}){
+  const [posts,setPosts]=useState([]);const [cap,setCap]=useState('');const [file,setFile]=useState(null);const [busy,setBusy]=useState(false);const [open,setOpen]=useState(false);const fRef=useRef(null);
+  const locked=bans[me.uid]&&bans[me.uid].locked;
+
+  useEffect(()=>{
+    const r=DB.ref(NS+'posts').orderByChild('t').limitToLast(60);
+    r.on('value',snap=>{
+      const arr=[];snap.forEach(s=>arr.unshift({id:s.key,...s.val()}));
+      setPosts(arr);
+    });
+    return()=>r.off();
+  },[]);
+
+  const post=async()=>{
+    if(locked){alert('Your posting has been locked by admin.');return;}
+    if(!cap.trim()&&!file)return; setBusy(true);
+    let media='';
+    if(file){try{media=await compressImg(file);}catch(e){}}
+    await DB.ref(NS+'posts').push({author:me.uid,authorName:me.username,caption:cap.trim(),media,t:tnow(),likes:0});
+    setCap('');setFile(null);setOpen(false);setBusy(false);
+  };
+
+  const del=id=>DB.ref(NS+'posts/'+id).remove();
+
+  const like=async(p)=>{
+    await DB.ref(NS+'posts/'+p.id+'/likes').transaction(v=>(v||0)+1);
+  };
+
+  return <div style={{height:'100%',overflowY:'auto'}}>
+    <div style={{maxWidth:560,margin:'0 auto',padding:'18px 13px'}}>
+      {!locked&&<div style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:14,padding:14,marginBottom:16}}>
+        {!open?<div style={{display:'flex',gap:10,alignItems:'center'}}><Avatar n={me.username} sz={38}/>
+          <div onClick={()=>setOpen(true)} style={{flex:1,padding:'10px 15px',background:C.surf,border:`1px solid ${C.bdr2}`,borderRadius:22,color:C.dim,fontSize:14,cursor:'text'}}>Share something...</div></div>
+        :<>
+          <textarea autoFocus value={cap} onChange={e=>setCap(e.target.value)} placeholder="What is up?" rows={3} style={{width:'100%',background:'transparent',border:'none',color:C.txt,fontSize:15,resize:'none',outline:'none',marginBottom:10}}/>
+          {file&&<div style={{fontSize:13,color:C.a1,marginBottom:8,display:'flex',alignItems:'center',gap:8}}>📷 {file.name.slice(0,28)}<button onClick={()=>setFile(null)} style={{background:'none',border:'none',color:C.red,cursor:'pointer',fontWeight:700,fontSize:14}}>✕</button></div>}
+          <input ref={fRef} type="file" accept="image/*" style={{display:'none'}} onChange={e=>setFile(e.target.files[0])}/>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <button onClick={()=>fRef.current.click()} style={{background:C.surf,border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.muted,padding:'7px 13px',cursor:'pointer',fontWeight:600,fontSize:13}}>📷 Add Photo</button>
+            <div style={{display:'flex',gap:7}}>
+              <button onClick={()=>{setOpen(false);setCap('');setFile(null);}} style={{background:'transparent',border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.muted,padding:'7px 14px',cursor:'pointer',fontWeight:600,fontSize:13}}>Cancel</button>
+              <button onClick={post} disabled={busy} style={{background:C.grad,border:'none',borderRadius:8,color:'#fff',padding:'7px 20px',cursor:'pointer',fontWeight:700,fontSize:14,opacity:busy?.6:1}}>{busy?'Posting...':'POST'}</button>
+            </div>
+          </div>
+        </>}
+      </div>}
+      {locked&&<div style={{background:'#1a0808',border:`1px solid ${C.red}`,borderRadius:10,padding:'12px 16px',marginBottom:16,fontSize:14,color:C.red}}>🔒 Your posting has been locked by an admin.</div>}
+      {posts.length===0&&<div style={{textAlign:'center',color:C.dim,padding:40,fontSize:14}}>No posts yet 🔥</div>}
+      {posts.map(p=><div key={p.id} style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:14,marginBottom:14,overflow:'hidden',animation:'fadeUp .3s'}}>
+        <div style={{padding:'13px 14px',display:'flex',alignItems:'center',gap:10}}>
+          <Avatar n={p.authorName} sz={40}/>
+          <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{p.authorName}</div><div style={{fontSize:12,color:C.muted}}>{ago(p.t)} ago</div></div>
+          {(me.username==='admin'||p.author===me.uid)&&<button onClick={()=>del(p.id)} style={{background:'none',border:'none',color:C.red,cursor:'pointer',fontSize:16,padding:'4px 8px'}}>✕</button>}
+        </div>
+        {p.caption&&<div style={{padding:'0 14px 11px',fontSize:15,lineHeight:1.5}}>{p.caption}</div>}
+        {p.media&&<img src={p.media} style={{width:'100%',maxHeight:400,objectFit:'cover',display:'block'}} alt=""/>}
+        <div style={{padding:'9px 14px',borderTop:`1px solid ${C.bdr}`,display:'flex',gap:18}}>
+          <button onClick={()=>like(p)} style={{background:'none',border:'none',cursor:'pointer',color:C.muted,fontSize:14,fontWeight:600,display:'flex',gap:5,alignItems:'center'}}>♡ {p.likes||0}</button>
+        </div>
+      </div>)}
+    </div>
+  </div>;
+}
+
+/* ══════════════════ PEOPLE ══════════════════ */
+function PeopleView({me,friends,setFriends,bans}){
+  const [people,setPeople]=useState([]);
+  const [requests,setRequests]=useState([]);
+  const [tab,setTab]=useState('people');
+  const [sentTo,setSentTo]=useState(new Set());
+
+  useEffect(()=>{
+    // All people
+    DB.ref(NS+'people').on('value',snap=>{
+      const arr=[];snap.forEach(s=>arr.push({...s.val()}));
+      setPeople(arr.filter(p=>p.uid!==me.uid));
+    });
+    // Incoming requests
+    DB.ref(NS+'requests/'+me.uid).on('value',snap=>{
+      const arr=[];snap.forEach(s=>arr.push({id:s.key,...s.val()}));
+      setRequests(arr);
+    });
+    // Sent requests (to show "Pending")
+    DB.ref(NS+'sent/'+me.uid).on('value',snap=>{
+      const ids=new Set();snap.forEach(s=>ids.add(s.key));setSentTo(ids);
+    });
+    return()=>{
+      DB.ref(NS+'people').off();
+      DB.ref(NS+'requests/'+me.uid).off();
+      DB.ref(NS+'sent/'+me.uid).off();
+    };
+  },[me.uid]);
+
+  const isFriend=uid=>friends.some(f=>f.uid===uid);
+
+  const add=async u=>{
+    await DB.ref(NS+'requests/'+u.uid+'/'+me.uid).set({from:me.uid,fromName:me.username,t:tnow()});
+    await DB.ref(NS+'sent/'+me.uid+'/'+u.uid).set(true);
+  };
+
+  const accept=async r=>{
+    await DB.ref(NS+'requests/'+me.uid+'/'+r.from).remove();
+    const newF={uid:r.from,username:r.fromName};
+    await DB.ref(NS+'friends/'+me.uid+'/'+r.from).set(newF);
+    await DB.ref(NS+'friends/'+r.from+'/'+me.uid).set({uid:me.uid,username:me.username});
+    setFriends(prev=>prev.find(f=>f.uid===r.from)?prev:[...prev,newF]);
+  };
+
+  const decline=async r=>{
+    await DB.ref(NS+'requests/'+me.uid+'/'+r.from).remove();
+  };
+
+  const visible=people.filter(p=>!(bans[p.uid]&&bans[p.uid].banned));
+  const tabBtn=a=>({padding:'9px 18px',background:tab===a?C.grad:'transparent',border:`1px solid ${tab===a?'transparent':C.bdr2}`,borderRadius:8,color:tab===a?'#fff':C.muted,fontWeight:700,fontSize:14,cursor:'pointer'});
+
+  return <div style={{height:'100%',overflowY:'auto',padding:20}}>
+    <div style={{maxWidth:520}}>
+      <div style={{display:'flex',gap:8,marginBottom:20,flexWrap:'wrap'}}>
+        <button style={tabBtn('people')} onClick={()=>setTab('people')}>People ({visible.length})</button>
+        <button style={tabBtn('requests')} onClick={()=>setTab('requests')}>
+          Requests {requests.length>0&&<span style={{background:C.a2,color:'#fff',fontSize:11,fontWeight:700,padding:'1px 6px',borderRadius:20,marginLeft:5}}>{requests.length}</span>}
+        </button>
+        <button style={tabBtn('friends')} onClick={()=>setTab('friends')}>Friends ({friends.length})</button>
+      </div>
+
+      {tab==='people'&&<>
+        {visible.length===0&&<div style={{color:C.dim,fontSize:14,padding:20,textAlign:'center'}}>No other users yet — share the link!</div>}
+        {visible.map(p=><div key={p.uid} style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:12,padding:'12px 14px',marginBottom:9,display:'flex',alignItems:'center',gap:11}}>
+          <Avatar n={p.username} sz={42}/>
+          <div style={{flex:1}}><div style={{fontSize:15,fontWeight:700}}>{p.username}</div><div style={{fontSize:12,color:C.muted}}>{ago(p.t)} ago</div></div>
+          {isFriend(p.uid)?<Tag ch="Friends" col={C.muted}/>:sentTo.has(p.uid)?<Tag ch="Pending" col={C.dim}/>:
+            <button onClick={()=>add(p)} style={{background:C.grad,border:'none',borderRadius:8,color:'#fff',padding:'8px 16px',cursor:'pointer',fontWeight:700,fontSize:13}}>+ Add</button>}
+        </div>)}
+      </>}
+
+      {tab==='requests'&&<>
+        {requests.length===0&&<div style={{color:C.dim,fontSize:14,padding:20,textAlign:'center'}}>No pending requests.</div>}
+        {requests.map(r=><div key={r.id} style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:12,padding:'12px 14px',marginBottom:9,display:'flex',alignItems:'center',gap:11}}>
+          <Avatar n={r.fromName} sz={44}/><div style={{flex:1,fontWeight:700,fontSize:15}}>{r.fromName}</div>
+          <button onClick={()=>accept(r)} style={{background:C.grad,border:'none',borderRadius:8,color:'#fff',padding:'8px 15px',cursor:'pointer',fontWeight:700,fontSize:13}}>Accept</button>
+          <button onClick={()=>decline(r)} style={{background:'transparent',border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.muted,padding:'8px 11px',cursor:'pointer',fontWeight:600,fontSize:13}}>✕</button>
+        </div>)}
+      </>}
+
+      {tab==='friends'&&<>
+        {friends.length===0&&<div style={{color:C.dim,fontSize:14,padding:20,textAlign:'center'}}>No friends yet.</div>}
+        {friends.map(f=><div key={f.uid} style={{background:C.card,border:`1px solid ${C.bdr2}`,borderRadius:12,padding:'12px 14px',marginBottom:9,display:'flex',alignItems:'center',gap:11}}>
+          <Avatar n={f.username} sz={44}/><div style={{flex:1,fontWeight:700,fontSize:15}}>{f.username}</div><span style={{fontSize:12,color:C.green}}>● active</span>
+        </div>)}
+      </>}
+    </div>
+  </div>;
+}
+
+/* ══════════════════ ADMIN ══════════════════ */
+function AdminView({me,bans,setBans}){
+  const [people,setPeople]=useState([]);
+  useEffect(()=>{DB.ref(NS+'people').on('value',snap=>{const arr=[];snap.forEach(s=>arr.push(s.val()));setPeople(arr.filter(p=>p.uid!==me.uid));});return()=>DB.ref(NS+'people').off();},[]);
+
+  const setBan=(uid,banned)=>{DB.ref(NS+'bans/'+uid).update({banned});setBans(prev=>({...prev,[uid]:{...(prev[uid]||{}),banned}}));};
+  const setLock=(uid,locked)=>{DB.ref(NS+'bans/'+uid).update({locked});setBans(prev=>({...prev,[uid]:{...(prev[uid]||{}),locked}}));};
+
+  return <div style={{height:'100%',overflowY:'auto',padding:20}}>
+    <div style={{maxWidth:580}}>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:18}}>
+        <div style={{fontFamily:"'Bebas Neue'",fontSize:34,letterSpacing:3}}>ADMIN PANEL</div>
+        <Tag ch="⚡ ADMIN" col={C.gold}/>
+      </div>
+      <div style={{background:'#1a1208',border:`1px solid ${C.gold}`,borderRadius:10,padding:'11px 14px',marginBottom:18,fontSize:13,color:C.gold}}>
+        Ban removes access. Lock prevents posting and messaging. Both are instant.
+      </div>
+      {people.length===0&&<div style={{color:C.dim,fontSize:14,padding:20,textAlign:'center'}}>No other users yet.</div>}
+      {people.map(p=>{
+        const b=bans[p.uid]||{};
+        return <div key={p.uid} style={{background:C.card,border:`1px solid ${b.banned?C.red:b.locked?C.gold:C.bdr2}`,borderRadius:12,padding:'13px 15px',marginBottom:10,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+          <Avatar n={p.username} sz={44}/>
+          <div style={{flex:1,minWidth:80}}>
+            <div style={{fontSize:15,fontWeight:700}}>{p.username}</div>
+            <div style={{display:'flex',gap:5,marginTop:3}}>
+              {b.banned&&<Tag ch="BANNED" col={C.red}/>}
+              {b.locked&&!b.banned&&<Tag ch="LOCKED" col={C.gold}/>}
+              {!b.banned&&!b.locked&&<span style={{fontSize:12,color:C.green}}>● Active</span>}
+            </div>
+          </div>
+          <div style={{display:'flex',gap:7,flexWrap:'wrap'}}>
+            {!b.banned&&<>
+              {b.locked
+                ?<button onClick={()=>setLock(p.uid,false)} style={{background:'transparent',border:`1px solid ${C.gold}`,borderRadius:7,color:C.gold,padding:'6px 12px',cursor:'pointer',fontWeight:700,fontSize:12}}>Unlock</button>
+                :<button onClick={()=>setLock(p.uid,true)} style={{background:'transparent',border:`1px solid ${C.gold}`,borderRadius:7,color:C.gold,padding:'6px 12px',cursor:'pointer',fontWeight:700,fontSize:12}}>🔒 Lock</button>}
+              <button onClick={()=>setBan(p.uid,true)} style={{background:C.red,border:'none',borderRadius:7,color:'#fff',padding:'6px 12px',cursor:'pointer',fontWeight:700,fontSize:12}}>Ban</button>
+            </>}
+            {b.banned&&<button onClick={()=>setBan(p.uid,false)} style={{background:'transparent',border:`1px solid ${C.green}`,borderRadius:7,color:C.green,padding:'6px 12px',cursor:'pointer',fontWeight:700,fontSize:12}}>Unban</button>}
+          </div>
+        </div>;})}
+    </div>
+  </div>;
+}
+
+/* ══════════════════ MAIN APP ══════════════════ */
+function MainApp({me,logout}){
+  const [page,setPage]=useState('people');
+  const [friends,setFriends]=useState([]);
+  const [unread,setUnread]=useState({});
+  const [bans,setBans]=useState({});
+  const [toast,setToast]=useState(null);
+  const isAdmin=me.username==='admin';
+  const pageRef=useRef('people'); pageRef.current=page;
+  const friendsRef=useRef([]); friendsRef.current=friends;
+
+  const show=m=>{setToast(m);setTimeout(()=>setToast(null),2800);};
+
+  // Load friends
+  useEffect(()=>{
+    const r=DB.ref(NS+'friends/'+me.uid);
+    r.on('value',snap=>{const arr=[];snap.forEach(s=>arr.push(s.val()));setFriends(arr);});
+    return()=>r.off();
+  },[me.uid]);
+
+  // Load bans
+  useEffect(()=>{
+    const r=DB.ref(NS+'bans');
+    r.on('value',snap=>{const b={};snap.forEach(s=>b[s.key]=s.val());setBans(b);});
+    return()=>r.off();
+  },[]);
+
+  // New message notifications
+  useEffect(()=>{
+    if(!friends.length)return;
+    const cleanups=[];
+    friends.forEach(f=>{
+      const r=DB.ref(NS+'messages/'+roomKey(me.uid,f.uid));
+      const handle=snap=>{
+        const m=snap.val();
+        if(!m||m.from===me.uid)return;
+        if(pageRef.current==='messages')return;
+        setUnread(u=>({...u,[f.uid]:(u[f.uid]||0)+1}));
+        pnotify(f.username,m.body);
+        show('💬 '+f.username+': '+m.body.slice(0,40));
+      };
+      r.limitToLast(1).on('child_added',handle);
+      cleanups.push(()=>r.off('child_added',handle));
+    });
+    return()=>cleanups.forEach(fn=>fn());
+  },[friends.length]);
+
+  // Friend request notifications
+  useEffect(()=>{
+    const r=DB.ref(NS+'requests/'+me.uid);
+    const h=snap=>{const v=snap.val();if(v){pnotify('Friend request',v.fromName+' wants to connect');show('👥 Request from '+v.fromName);}};
+    r.on('child_added',h);
+    return()=>r.off('child_added',h);
+  },[me.uid]);
+
+  const totalUnread=Object.values(unread).reduce((a,b)=>a+b,0);
+
+  const NAV=[
+    {id:'people',icon:'👥',label:'People'},
+    {id:'messages',icon:'💬',label:'Messages',badge:totalUnread},
+    {id:'feed',icon:'📸',label:'Feed'},
+    {id:'games',icon:'🎮',label:'Games'},
+    ...(isAdmin?[{id:'admin',icon:'⚡',label:'Admin',gold:true}]:[]),
+  ];
+
+  return <div style={{display:'flex',height:'100%',background:C.bg,overflow:'hidden',position:'relative'}}>
+    {toast&&<div style={{position:'absolute',top:14,left:'50%',transform:'translateX(-50%)',background:C.card2,border:`1px solid ${C.bdr2}`,borderRadius:10,padding:'10px 18px',fontSize:14,fontWeight:600,zIndex:999,whiteSpace:'nowrap',maxWidth:'92vw',animation:'fadeUp .2s',boxShadow:'0 6px 24px rgba(0,0,0,.5)'}}>{toast}</div>}
+    <div style={{width:206,background:C.surf,borderRight:`1px solid ${C.bdr}`,display:'flex',flexDirection:'column',flexShrink:0}}>
+      <div style={{padding:'15px 14px 11px',borderBottom:`1px solid ${C.bdr}`}}>
+        <div style={{fontFamily:"'Bebas Neue'",fontSize:22,background:C.grad,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',lineHeight:1}}>YARA PHONK</div>
+        <div style={{fontSize:9,color:C.dim,letterSpacing:4,marginTop:2}}>MESSAGES</div>
+      </div>
+      <div style={{margin:'10px 10px 0',padding:'8px 10px',background:C.card,borderRadius:10,border:`1px solid ${C.bdr2}`,display:'flex',alignItems:'center',gap:8}}>
+        <Avatar n={me.username} sz={32}/>
+        <div style={{overflow:'hidden',flex:1}}>
+          <div style={{fontSize:13,fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4}}>
+            {me.username}{isAdmin&&<span style={{background:C.gold,color:'#08080e',fontSize:9,fontWeight:800,padding:'1px 5px',borderRadius:4,letterSpacing:.5,flexShrink:0}}>ADMIN</span>}
+          </div>
+          <div style={{fontSize:11,color:C.green}}>● Online</div>
+        </div>
+      </div>
+      <nav style={{padding:'8px 0',flex:1}}>
+        {NAV.map(it=><div key={it.id} onClick={()=>{setPage(it.id);if(it.id==='messages')setUnread(u=>{const n={...u};Object.keys(n).forEach(k=>n[k]=0);return n;});}} style={{padding:'11px 14px',display:'flex',alignItems:'center',gap:9,cursor:'pointer',color:page===it.id?C.txt:it.gold?C.gold:C.muted,background:page===it.id?C.card2:'transparent',borderLeft:page===it.id?`3px solid ${it.gold?C.gold:C.a1}`:'3px solid transparent',fontSize:14,fontWeight:600}}>
+          <span style={{fontSize:15}}>{it.icon}</span><span>{it.label}</span>
+          {it.badge>0&&<span style={{marginLeft:'auto',background:C.a2,color:'#fff',fontSize:11,fontWeight:700,padding:'1px 7px',borderRadius:20}}>{it.badge}</span>}
+        </div>)}
+      </nav>
+      <button onClick={logout} style={{margin:'0 10px 12px',padding:'9px',background:'transparent',border:`1px solid ${C.bdr2}`,borderRadius:8,color:C.muted,cursor:'pointer',fontWeight:600,fontSize:13}}>Log out</button>
+    </div>
+    <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+      {page==='people'&&<PeopleView me={me} friends={friends} setFriends={setFriends} bans={bans}/>}
+      {page==='messages'&&<MessagesView me={me} friends={friends} unread={unread} setUnread={setUnread}/>}
+      {page==='feed'&&<FeedView me={me} bans={bans}/>}
+      {page==='games'&&<Arcade/>}
+      {page==='admin'&&isAdmin&&<AdminView me={me} bans={bans} setBans={setBans}/>}
+    </div>
+  </div>;
+}
+
+/* ══════════════════ ROOT ══════════════════ */
+function App(){
+  const [phase,setPhase]=useState('loading');// loading|setup|auth|main
+  const [me,setMe]=useState(null);
+
+  useEffect(()=>{
+    // Check for saved config
+    const saved=localStorage.getItem('ypm_fbcfg');
+    if(saved){try{const c=JSON.parse(saved);Object.assign(window.FIREBASE_CONFIG,c);}catch(e){}}
+    const c=window.FIREBASE_CONFIG;
+    const ok=c&&c.apiKey&&c.databaseURL&&!c.apiKey.includes('undefined')&&c.apiKey.length>5;
+    if(!ok){setPhase('setup');return;}
+    try{
+      if(!firebase.apps.length){firebase.initializeApp(c);}
+      AUTH=firebase.auth(); DB=firebase.database();
+    }catch(e){setPhase('setup');return;}
+    // Listen for auth changes
+    AUTH.onAuthStateChanged(async user=>{
+      if(user){
+        const snap=await DB.ref(NS+'users/'+user.uid).once('value');
+        const profile=snap.val();
+        if(profile){
+          const banSnap=await DB.ref(NS+'bans/'+user.uid).once('value');
+          const ban=banSnap.val();
+          if(ban&&ban.banned){AUTH.signOut();setPhase('auth');return;}
+          setMe({uid:user.uid,...profile});
+          setPhase('main');
+          askN();
+        } else setPhase('auth');
+      } else setPhase('auth');
+    });
+  },[]);
+
+  const logout=()=>{AUTH&&AUTH.signOut();setMe(null);setPhase('auth');};
+
+  if(phase==='loading')return <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:C.bg}}><Spinner/></div>;
+  if(phase==='setup')return <SetupScreen onSaved={()=>window.location.reload()}/>;
+  if(phase==='auth')return <AuthScreen onAuth={u=>{setMe(u);setPhase('main');}}/>;
+  return <MainApp me={me} logout={logout}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
