@@ -129,6 +129,7 @@
         this.shakeAmt = 0;
         this.time = 0;
         this.trails = new Map();
+        this.squash = new Map();
         this.dpr = Math.min(2, (global.devicePixelRatio || 1));
         this.arena = { w: 3400, h: 2200 };
         this.resize();
@@ -151,13 +152,24 @@
           switch (f.t) {
             case 'shot': this.parts.burst(f.x, f.y, 3, { col: f.c, speed: 200, life: 0.18, size: 3 }); break;
             case 'spark': this.parts.burst(f.x, f.y, 7, { col: f.c || '#fff', speed: 320, life: 0.3, size: 3 }); break;
-            case 'hit': this.parts.burst(f.x, f.y, 9, { col: KIND_COLOR[f.k] || '#fff', speed: 340, life: 0.34, size: 4 }); break;
+            case 'hit':
+              this.parts.burst(f.x, f.y, 9, { col: KIND_COLOR[f.k] || '#fff', speed: 340, life: 0.34, size: 4 });
+              this.squash.set(Math.round(f.x) + ',' + Math.round(f.y), this.time);
+              break;
             case 'crit':
               this.parts.burst(f.x, f.y, 20, { col: '#fff', speed: 520, life: 0.45, size: 5 });
               this.parts.ring(f.x, f.y, 90, '#ffffff', 0.35); this.shake(4); break;
             case 'pop':
               this.parts.burst(f.x, f.y, 26, { col: KIND_COLOR[f.k] || '#fff', speed: 520, life: 0.6, size: 5 });
-              this.parts.ring(f.x, f.y, 140, KIND_COLOR[f.k] || '#fff', 0.45); this.shake(5); break;
+              this.parts.ring(f.x, f.y, 140, KIND_COLOR[f.k] || '#fff', 0.45);
+              if (f.q) this.parts.text(f.x, f.y - 20, f.q, KIND_COLOR[f.k] || '#fff');
+              this.shake(5); break;
+            case 'taunt': this.taunt(f.msg); break;
+            case 'upgrade': this.taunt(f.n + '!', f.c); break;
+            case 'armor':
+              this.parts.ring(f.x, f.y, 180, '#ffd24d', 0.7);
+              this.parts.text(f.x, f.y - 40, 'PLOT ARMOR', '#ffd24d');
+              this.shake(10); break;
             case 'boom':
               this.parts.burst(f.x, f.y, 60, { col: '#ff6a2f', speed: 900, life: 0.8, size: 7 });
               this.parts.ring(f.x, f.y, f.r, '#ff2f3c', 0.55); this.shake(16); break;
@@ -187,6 +199,31 @@
             default: break;
           }
         }
+      }
+
+      /** A big comic caption across the middle of the screen. */
+      taunt(text, col) {
+        if (!text) return;
+        this.tauntText = text;
+        this.tauntCol = col || '#ff2fd0';
+        this.tauntUntil = this.time + 3.2;
+      }
+
+      drawTaunt(ctx) {
+        if (!this.tauntText || this.time > this.tauntUntil) return;
+        const left = this.tauntUntil - this.time;
+        const a = Math.min(1, left * 1.6) * Math.min(1, (3.2 - left) * 5);
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.textAlign = 'center';
+        const y = this.h * 0.20 - (1 - Math.min(1, (3.2 - left) * 3)) * 26;
+        ctx.font = '700 clamp(20px, 3.4vw, 40px) Impact, "Arial Black", sans-serif';
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = 'rgba(5,5,10,0.92)';
+        ctx.strokeText(this.tauntText, this.w / 2, y);
+        ctx.fillStyle = this.tauntCol;
+        ctx.fillText(this.tauntText, this.w / 2, y);
+        ctx.restore();
       }
 
       focus(x, y, snap) {
@@ -226,12 +263,14 @@
         this.drawBlobs(ctx, view, o);
         this.drawEnemies(ctx, view);
         this.drawBolts(ctx, view);
+        this.drawLock(ctx, this.lockTarget(view, o));
         this.drawPlayers(ctx, view, o);
         this.parts.draw(ctx);
         if (o.cursor) this.drawCursor(ctx, o.cursor);
 
         ctx.restore();
         this.drawOffscreenMarkers(ctx, view, o);
+        this.drawTaunt(ctx);
         this.drawVignette(ctx);
       }
 
@@ -365,6 +404,47 @@
         }
       }
 
+      /** Which sphere the player's aim assist would grab — recomputed locally,
+          so the lock marker costs nothing on the wire. */
+      lockTarget(view, o) {
+        if (!o || !o.selfId) return null;
+        const me = (view.P || []).find((p) => p[0] === o.selfId && p[7]);
+        if (!me) return null;
+        const ax = o.predicted ? o.predicted.x : me[1];
+        const ay = o.predicted ? o.predicted.y : me[2];
+        const aim = me[5];
+        let best = null, bestScore = Infinity;
+        const consider = (x, y, r) => {
+          const dx = x - ax, dy = y - ay;
+          const d = Math.hypot(dx, dy);
+          if (d > 900) return;
+          let err = Math.atan2(dy, dx) - aim;
+          while (err > Math.PI) err -= TAU;
+          while (err < -Math.PI) err += TAU;
+          if (Math.abs(err) > 0.49) return;
+          const score = Math.abs(err) + d / 5400;
+          if (score < bestScore) { bestScore = score; best = { x, y, r }; }
+        };
+        for (const e of view.E || []) consider(e[2], e[3], e[9]);
+        for (const L of view.L || []) consider(L[4], L[5], L[6] * 0.3);
+        return best;
+      }
+
+      drawLock(ctx, t) {
+        if (!t) return;
+        const r = t.r + 16 + Math.sin(this.time * 8) * 3;
+        ctx.strokeStyle = '#3cff9e';
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.9;
+        for (let i = 0; i < 4; i++) {
+          const a = i * (TAU / 4) + this.time * 0.8;
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, r, a + 0.28, a + TAU / 4 - 0.28);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
       drawEnemies(ctx, view) {
         for (const e of view.E || []) {
           const [id, kind, x, y, angle, hp, maxHp, state, shield, r] = e;
@@ -391,6 +471,18 @@
           const img = Assets.images[kind];
           ctx.save();
           ctx.translate(x, y);
+          // a quick cartoon squash when something just hit this sphere
+          let sq = 1, sqy = 1;
+          for (const [k, t0] of this.squash) {
+            const age = this.time - t0;
+            if (age > 0.22) { this.squash.delete(k); continue; }
+            const [kx, ky] = k.split(',').map(Number);
+            if (Math.hypot(kx - x, ky - y) < r * 1.6) {
+              const w = Math.sin((1 - age / 0.22) * Math.PI) * 0.22;
+              sq = 1 + w; sqy = 1 - w;
+            }
+          }
+          ctx.scale(sq, sqy);
           ctx.rotate(angle);
           if (img) {
             ctx.drawImage(img, -r, -r, r * 2, r * 2);

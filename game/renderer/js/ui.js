@@ -20,6 +20,7 @@
         bind('btn-join-go', () => h.joinGo($('join-host').value.trim(), parseInt($('join-port').value, 10) || 47861));
         bind('btn-join-rescan', () => h.rescan());
         bind('btn-join-back', () => h.leave());
+        bind('btn-ready', () => h.ready());
         bind('btn-resume', () => h.resume());
         bind('btn-quit', () => h.leave());
         bind('btn-again', () => h.again());
@@ -99,6 +100,74 @@
         }
       },
 
+      /** Renders the between-wave upgrade screen from snapshot data alone,
+          so a connected client sees exactly what the host thinks it has. */
+      shop(view, selfId, UPGRADES, onPick, onBuy) {
+        const me = (view.P || []).find((r) => r[0] === selfId);
+        if (!me) return;
+        const offers = me[17] || [], up = me[18] || {}, bank = me[19] || 0;
+        const picked = me[20], ready = me[21];
+
+        $('shop-bank').textContent = bank;
+        $('shop-timer').textContent = view.wt > 0 ? Math.ceil(view.wt) + 's' : '';
+
+        const cards = $('shop-cards');
+        if (this._cardsKey !== JSON.stringify([offers, picked])) {
+          this._cardsKey = JSON.stringify([offers, picked]);
+          cards.innerHTML = '';
+          if (picked || !offers.length) {
+            const d = document.createElement('div');
+            d.className = 'lede';
+            d.textContent = picked ? 'Card taken. Spend your Angelos below, then READY.'
+                                   : 'Nothing left to learn — you have it all.';
+            cards.appendChild(d);
+          } else {
+            offers.forEach((id, i) => {
+              const u = UPGRADES[id]; if (!u) return;
+              const el = document.createElement('div');
+              el.className = 'card';
+              el.innerHTML = `<div class="key">PRESS ${i + 1}</div>` +
+                `<div class="nm">${esc(u.name)}</div>` +
+                `<div class="ds">${esc(u.desc)}</div>` +
+                `<div class="lvl">${(up[id] || 0)} / ${u.max}</div>`;
+              el.addEventListener('click', () => onPick(i + 1));
+              cards.appendChild(el);
+            });
+          }
+        }
+
+        const stock = $('shop-stock');
+        const stockKey = JSON.stringify([view.st, bank, up]);
+        if (this._stockKey !== stockKey) {
+          this._stockKey = stockKey;
+          stock.innerHTML = '';
+          (view.st || []).forEach((it, i) => {
+            const u = UPGRADES[it.id]; if (!u) return;
+            const maxed = (up[it.id] || 0) >= u.max;
+            const broke = bank < it.cost || maxed;
+            const el = document.createElement('div');
+            el.className = 'buy' + (broke ? ' broke' : '');
+            el.innerHTML = `<div class="bn">${esc(u.name)}</div>` +
+              `<div class="bd">${esc(u.desc)}</div>` +
+              `<div class="bc">${maxed ? 'MAXED' : '◈ ' + it.cost}</div>`;
+            if (!broke) el.addEventListener('click', () => onBuy(i + 1));
+            stock.appendChild(el);
+          });
+        }
+
+        const owned = $('shop-owned');
+        const ownKey = JSON.stringify(up);
+        if (this._ownKey !== ownKey) {
+          this._ownKey = ownKey;
+          owned.innerHTML = Object.keys(up).map((id) =>
+            `<span>${esc((UPGRADES[id] || {}).name || id)} ×${up[id]}</span>`).join('');
+        }
+
+        const rb = $('btn-ready');
+        rb.textContent = ready ? 'READY ✓' : 'READY';
+        rb.className = ready ? 'primary readied' : 'primary';
+      },
+
       hud(view, selfId, netLabel) {
         if (!view) return;
         $('wave-label').textContent = view.ph === 'intermission'
@@ -109,16 +178,19 @@
         $('angelos-need').textContent = '/ ' + view.nd + ' ANGELOS';
         $('wave-timer').textContent = view.ph === 'intermission' && view.wt > 0
           ? 'NEXT WAVE IN ' + Math.ceil(view.wt) : '';
+        const lives = $('lives');
+        if (lives) lives.textContent = '♥ '.repeat(Math.max(0, view.lv || 0)).trim();
 
         let me = null;
         const rows = (view.P || []).slice().sort((a, b) => b[8] - a[8]);
         for (const p of rows) if (p[0] === selfId) me = p;
         if (me) {
           const hp = Math.max(0, me[6]);
-          $('hp-bar').style.width = hp + '%';
+          const maxHp = me[22] || 100;
+          $('hp-bar').style.width = (hp / maxHp * 100) + '%';
           $('hp-bar').style.background = hp > 40
             ? 'linear-gradient(90deg,#3cff9e,#2fe6ff)' : 'linear-gradient(90deg,#ff2f3c,#ff2fd0)';
-          $('hp-text').textContent = me[7] ? hp : 'DOWN';
+          $('hp-text').textContent = me[7] ? hp + ' / ' + maxHp : 'DOWN';
           const dash = $('dash-pip');
           dash.className = 'pip ' + (me[10] ? 'cool' : 'ready');
           const ult = $('ult-pips');

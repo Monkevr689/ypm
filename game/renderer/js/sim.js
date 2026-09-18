@@ -17,30 +17,73 @@
       ARENA_W: 2800, ARENA_H: 1800,
       WALL_R: 40,
 
-      PLAYER_R: 26, PLAYER_M: 1.5, PLAYER_HP: 100,
+      PLAYER_R: 26, PLAYER_M: 1.5, PLAYER_HP: 140,
       THRUST: 3000, PLAYER_DAMP: 2.4,
-      DASH_IMPULSE: 1500, DASH_CD: 1.5, DASH_IFRAMES: 0.22,
-      FIRE_CD: 0.14, BOLT_SPEED: 1650, BOLT_R: 8, BOLT_M: 0.2, BOLT_DMG: 13, BOLT_LIFE: 1.5,
-      RESPAWN: 5,
-      REGEN_DELAY: 6, REGEN_RATE: 5,
+      DASH_IMPULSE: 1500, DASH_CD: 1.0, DASH_IFRAMES: 0.45,
+      FIRE_CD: 0.14, BOLT_SPEED: 1650, BOLT_R: 11, BOLT_M: 0.2, BOLT_DMG: 16, BOLT_LIFE: 1.5,
+      RESPAWN: 3,
+      REGEN_DELAY: 3, REGEN_RATE: 9,
       ULT_COST: 10, ULT_MAX: 3, ULT_R: 560, ULT_POWER: 2600, ULT_DMG: 60,
       GRAPPLE_RANGE: 620, GRAPPLE_PULL: 2400,
 
-      ORB_LIFE: 30, ORB_MAGNET: 210, ORB_HEAL: 4,
-      INTERMISSION: 6,
+      ORB_LIFE: 45, ORB_MAGNET: 340, ORB_HEAL: 7,
+      LIVES: 5, LIVES_MAX: 9,
+      INTERMISSION: 4, SHOP_TIME: 30,
+
+      // Aim assist: point roughly at a sphere and the shot finds it.
+      AIM_CONE: 0.49, AIM_RANGE: 900, BOLT_TURN: 6, BOLT_SEEK_TIME: 0.6,
     };
 
     /* Henry's guard — the four spheres from the photograph. */
     const GUARDS = {
-      yellow: { r: 25, m: 0.9,  hp: 30,  e: 0.94, mu: 0.15, dmg: 9,  speed: 2400, drop: 1, score: 10,
+      yellow: { r: 25, m: 0.9,  hp: 24,  e: 0.94, mu: 0.15, dmg: 4,  speed: 1400, drop: 1, score: 10,
                 damping: 0.9,  name: 'FALSEITY ANGELOSITY' },
-      pink:   { r: 34, m: 2.0,  hp: 62,  e: 0.55, mu: 0.3,  dmg: 12, speed: 1500, drop: 2, score: 20,
+      pink:   { r: 34, m: 2.0,  hp: 46,  e: 0.55, mu: 0.3,  dmg: 5,  speed: 950,  drop: 2, score: 20,
                 damping: 1.6,  name: 'LOVE ANGELOSITY' },
-      red:    { r: 46, m: 5.5,  hp: 125, e: 0.6,  mu: 0.35, dmg: 24, speed: 1900, drop: 3, score: 35,
+      red:    { r: 46, m: 5.5,  hp: 90,  e: 0.6,  mu: 0.35, dmg: 10, speed: 1250, drop: 3, score: 35,
                 damping: 1.2,  name: 'CRULETY ANGELOSITY' },
-      blue:   { r: 55, m: 9.0,  hp: 210, e: 0.35, mu: 0.5,  dmg: 18, speed: 1500, drop: 4, score: 55,
+      blue:   { r: 55, m: 9.0,  hp: 150, e: 0.35, mu: 0.5,  dmg: 8,  speed: 950,  drop: 4, score: 55,
                 damping: 1.5,  name: 'VEIRTY ANGELOSITY' },
     };
+
+    /* Upgrades. Effects are never baked into the base constants — every use
+       site reads the player's level with lv(), so a snapshot fully describes
+       a player and nothing has to be un-applied on respawn or reset. */
+    const UPGRADES = {
+      fasthands: { name: 'FAST HANDS',      desc: 'Fire 18% faster',            max: 5, cost: 3 },
+      chonk:     { name: 'CHONK BOLTS',     desc: '+25% bolt damage',           max: 5, cost: 3 },
+      multishot: { name: 'DOUBLE TROUBLE',  desc: '+1 bolt every shot',         max: 3, cost: 7 },
+      ricochet:  { name: 'RICOCHET RICK',   desc: 'Bolts bounce 2 more times',  max: 3, cost: 4 },
+      magnet:    { name: 'ANGELOS MAGNET',  desc: '+60% pickup range',          max: 3, cost: 3 },
+      thicc:     { name: 'THICC HIDE',      desc: '+30 max health',             max: 5, cost: 4 },
+      regen:     { name: 'HENRY HEALS ALL', desc: 'Regenerate way faster',      max: 3, cost: 3 },
+      zoom:      { name: 'ZOOM',            desc: 'Dash cooldown -25%',         max: 3, cost: 3 },
+      caffeine:  { name: 'CAFFEINE',        desc: '+15% move speed',            max: 4, cost: 3 },
+      battery:   { name: 'VERITY BATTERY',  desc: 'Shockwave charges 35% faster', max: 3, cost: 4 },
+      spicy:     { name: 'SPICY BOLTS',     desc: 'Bolts explode on impact',    max: 2, cost: 9 },
+      vampire:   { name: 'VAMPIRE ANGELOS', desc: 'Heal 4 per sphere popped',   max: 3, cost: 5 },
+      taxman:    { name: 'TAX COLLECTOR',   desc: 'Spheres drop +1 Angelos',    max: 3, cost: 5 },
+      plotarmor: { name: 'PLOT ARMOR',      desc: 'Survive one fatal hit a wave', max: 2, cost: 10 },
+    };
+    const UP_IDS = Object.keys(UPGRADES);
+
+    /** How many times a player has taken an upgrade. */
+    const lv = (p, id) => (p && p.up && p.up[id]) || 0;
+
+    /* Henry never shuts up. */
+    const TAUNTS = [
+      'HENRY ANGELOS IS DISAPPOINTED IN YOU',
+      "THAT'S NOT VERY VERITY OF YOU",
+      'SKILL ISSUE — HENRY',
+      'THE SPHERES ARE LAUGHING AT YOU',
+      'MY FACE IS ON EVERYTHING. COPE.',
+      'YOU CANNOT POP AN IDEA',
+      'I HAVE MORE FACES THAN YOU HAVE FRIENDS',
+      'BEHOLD: ROUNDNESS',
+      'ANGELOSITY IS A LIFESTYLE',
+      'GET SPHERED, REBEL',
+    ];
+    const QUIPS = ['POPPED', 'BONK', 'DELETED', 'OOF', 'SPHERED', 'NO MORE ROUND', 'BYE'];
 
     const HUES = ['#4dffd2', '#ffd24d', '#7cff4d', '#4db8ff', '#ff7c4d', '#e04dff', '#ffffff', '#ff4d6e'];
 
@@ -68,6 +111,7 @@
         this.banner = '';
         this.endless = false;
         this.contactCd = new Map();
+        this.stock = [];
         this.pendingBolt = [];
         this.pendingBoom = [];
         this.world = null;
@@ -82,9 +126,11 @@
         this.world.onContact = (a, b, j, nx, ny, px, py) => this.onContact(a, b, j, nx, ny, px, py);
         this.enemies.clear(); this.bolts.clear(); this.orbs.clear(); this.blobs.clear();
         this.fx.length = 0; this.contactCd.clear();
+        this.stock = [];
         this.tick = 0; this.time = 0;
         this.wave = 0; this.waveTimer = 4; this.phase = 'intermission';
         this.collected = 0; this.needed = 0;
+        this.lives = K.LIVES;
         this.banner = 'THE RULE OF HENRY ANGELOS BEGINS';
         this.buildArena();
         for (const p of this.players.values()) this.spawnPlayer(p, true);
@@ -125,10 +171,13 @@
         const p = {
           id, name: (name || 'REBEL').slice(0, 14).toUpperCase(),
           hue: HUES[idx % HUES.length],
-          hp: K.PLAYER_HP, alive: true, respawn: 0,
-          score: 0, angelos: 0, ult: 0, ultCharge: 0,
+          hp: K.PLAYER_HP, maxHp: K.PLAYER_HP, alive: true, respawn: 0,
+          score: 0, angelos: 0, bank: 0, ult: 0, ultCharge: 0,
           fireCd: 0, dashCd: 0, invuln: 0, hurtTimer: 0,
-          aim: 0, input: { mx: 0, my: 0, aim: 0, fire: 0, dash: 0, ult: 0, grap: 0 },
+          up: {}, offers: [], picked: false, ready: false, armor: 0,
+          aim: 0, lockOn: 0,
+          input: { mx: 0, my: 0, aim: 0, fire: 0, dash: 0, ult: 0, grap: 0, pick: 0, buy: 0, ready: 0 },
+          prev: { pick: 0, buy: 0, ready: 0 },
           rope: null, body: null, kills: 0,
         };
         this.players.set(id, p);
@@ -156,7 +205,8 @@
           p.body.x = spot.x; p.body.y = spot.y; p.body.vx = 0; p.body.vy = 0; p.body.av = 0;
         }
         p.alive = true;
-        p.hp = K.PLAYER_HP;
+        p.maxHp = K.PLAYER_HP + 30 * lv(p, 'thicc');
+        p.hp = p.maxHp;
         p.invuln = 1.2;
         p.respawn = 0;
         if (fresh) { p.ult = 0; p.ultCharge = 0; }
@@ -189,6 +239,9 @@
         p.input.dash = inp.dash ? 1 : 0;
         p.input.ult = inp.ult ? 1 : 0;
         p.input.grap = inp.grap ? 1 : 0;
+        p.input.pick = inp.pick | 0;
+        p.input.buy = inp.buy | 0;
+        p.input.ready = inp.ready ? 1 : 0;
       }
 
       /* ── waves ─────────────────────────────────────────────── */
@@ -196,13 +249,13 @@
         // n is 1-based. Every fourth wave is a blob; wave 10 is Henry himself.
         const heads = Math.max(1, this.players.size);
         const s = (v) => Math.round(v * (0.75 + 0.25 * heads));
-        if (n === 10) return { henry: true, yellow: s(4), pink: s(2), blue: s(1) };
-        if (n % 4 === 0) return { blobs: n >= 8 ? 2 : 1, yellow: s(3 + n), pink: s(1 + n * 0.3) };
+        if (n === 10) return { henry: true, yellow: s(3), pink: s(1), blue: s(1) };
+        if (n % 4 === 0) return { blobs: n >= 8 ? 2 : 1, yellow: s(2 + n * 0.5), pink: s(n * 0.2) };
         return {
-          yellow: s(4 + n * 1.6),
-          pink: s(n * 0.8),
-          red: s(Math.max(0, n - 1) * 0.5),
-          blue: s(Math.max(0, n - 2) * 0.32),
+          yellow: s(3 + n * 0.8),
+          pink: s(n * 0.45),
+          red: s(Math.max(0, n - 1) * 0.28),
+          blue: s(Math.max(0, n - 2) * 0.18),
         };
       }
 
@@ -240,7 +293,9 @@
         this.needed = Math.max(4, Math.round(drops * 0.6));
         this.collected = 0;
         this.banner = t.henry ? 'HENRY ANGELOS DESCENDS' : 'WAVE ' + n + ' — COLLECT THE ANGELOS';
+        for (const p of this.players.values()) p.armor = lv(p, 'plotarmor');
         this.pushFx({ t: 'wave', n });
+        this.pushFx({ t: 'taunt', msg: this.rand.pick(TAUNTS) });
       }
 
       spawnGuard(kind, x, y) {
@@ -306,7 +361,7 @@
 
           const m = len(i.mx, i.my);
           if (m > 0.02) {
-            const s = Math.min(1, m);
+            const s = Math.min(1, m) * (1 + 0.15 * lv(p, 'caffeine'));
             b.applyForce((i.mx / m) * K.THRUST * s, (i.my / m) * K.THRUST * s);
             b.av += (i.mx / m) * 0.6 * dt;   // lean into the turn
           }
@@ -316,14 +371,14 @@
             if (len(dx, dy) < 0.05) { dx = Math.cos(p.aim); dy = Math.sin(p.aim); }
             const l = Math.max(1e-4, len(dx, dy));
             b.applyImpulse((dx / l) * K.DASH_IMPULSE, (dy / l) * K.DASH_IMPULSE);
-            p.dashCd = K.DASH_CD;
+            p.dashCd = K.DASH_CD * Math.pow(0.75, lv(p, 'zoom'));
             p.invuln = Math.max(p.invuln, K.DASH_IFRAMES);
             this.pushFx({ t: 'dash', x: b.x, y: b.y, a: Math.atan2(dy, dx), c: p.hue });
           }
 
           if (i.fire && p.fireCd <= 0) {
             this.fireBolt(p);
-            p.fireCd = K.FIRE_CD;
+            p.fireCd = K.FIRE_CD * Math.pow(0.82, lv(p, 'fasthands'));
           }
 
           if (i.ult && p.ult >= 1) {
@@ -350,8 +405,8 @@
             this.world.removeRope(p.rope); p.rope = null; p.ropeTo = null;
           }
 
-          if (p.hurtTimer <= 0 && p.hp < K.PLAYER_HP) {
-            p.hp = Math.min(K.PLAYER_HP, p.hp + K.REGEN_RATE * dt);
+          if (p.hurtTimer <= 0 && p.hp < p.maxHp) {
+            p.hp = Math.min(p.maxHp, p.hp + K.REGEN_RATE * (1 + lv(p, 'regen')) * dt);
           }
 
           b.x = clamp(b.x, 10, K.ARENA_W - 10);
@@ -373,25 +428,67 @@
         return best;
       }
 
+      /** Every target a bolt could plausibly want, as {body, id}. */
+      *targets() {
+        for (const e of this.enemies.values()) yield { body: e.body, id: e.id };
+        for (const bl of this.blobs.values()) yield { body: bl.nucleus, id: bl.id };
+      }
+
+      /** Strong aim assist: pick the best sphere near where you pointed and
+          return an angle that leads it, so a rough aim still connects. */
+      aimAssist(p, angle) {
+        const b = p.body;
+        let best = null, bestScore = Infinity;
+        for (const t of this.targets()) {
+          const dx = t.body.x - b.x, dy = t.body.y - b.y;
+          const d = len(dx, dy);
+          if (d > K.AIM_RANGE) continue;
+          const err = Math.abs(Core.angleDelta(angle, Math.atan2(dy, dx)));
+          if (err > K.AIM_CONE) continue;
+          // favour a tight angle first, nearness second
+          const score = err + d / (K.AIM_RANGE * 6);
+          if (score < bestScore) { bestScore = score; best = { t, d }; }
+        }
+        if (!best) return { angle, seek: 0 };
+        // lead the target: aim where it will be when the bolt arrives
+        const tb = best.t.body;
+        const flight = best.d / K.BOLT_SPEED;
+        const px = tb.x + tb.vx * flight, py = tb.y + tb.vy * flight;
+        return { angle: Math.atan2(py - b.y, px - b.x), seek: best.t.id };
+      }
+
       fireBolt(p) {
         const b = p.body;
-        const a = p.aim;
-        const dx = Math.cos(a), dy = Math.sin(a);
-        const bolt = {
-          id: newId(), owner: p.id, hue: p.hue, dmg: K.BOLT_DMG,
-          life: K.BOLT_LIFE, bounces: 1, type: 'bolt',
-        };
-        bolt.body = this.world.add(new Body({
-          x: b.x + dx * (K.PLAYER_R + K.BOLT_R + 2),
-          y: b.y + dy * (K.PLAYER_R + K.BOLT_R + 2),
-          vx: b.vx + dx * K.BOLT_SPEED, vy: b.vy + dy * K.BOLT_SPEED,
-          r: K.BOLT_R, m: K.BOLT_M, e: 0.75, mu: 0.05, damping: 0.02, angularDamping: 0.2,
-          cat: CAT.BOLT, mask: ALL & ~CAT.PLAYER & ~CAT.BOLT & ~CAT.PICKUP, owner: bolt,
-        }));
-        this.bolts.set(bolt.id, bolt);
-        // recoil — momentum has to come from somewhere
-        b.applyImpulse(-dx * K.BOLT_M * K.BOLT_SPEED, -dy * K.BOLT_M * K.BOLT_SPEED);
-        this.pushFx({ t: 'shot', x: bolt.body.x, y: bolt.body.y, a, c: p.hue });
+        const assisted = this.aimAssist(p, p.aim);
+        p.lockOn = assisted.seek;
+        const dmg = K.BOLT_DMG * (1 + 0.25 * lv(p, 'chonk'));
+        const shots = 1 + lv(p, 'multishot');
+        const bounces = 1 + 2 * lv(p, 'ricochet');
+        const spicy = lv(p, 'spicy');
+        const spread = shots > 1 ? 0.13 : 0;
+
+        for (let i = 0; i < shots; i++) {
+          const a = assisted.angle + (i - (shots - 1) / 2) * spread;
+          const dx = Math.cos(a), dy = Math.sin(a);
+          const bolt = {
+            id: newId(), owner: p.id, hue: p.hue, dmg,
+            life: K.BOLT_LIFE, bounces, type: 'bolt',
+            seek: assisted.seek, seekTime: K.BOLT_SEEK_TIME, spicy,
+          };
+          bolt.body = this.world.add(new Body({
+            x: b.x + dx * (K.PLAYER_R + K.BOLT_R + 2),
+            y: b.y + dy * (K.PLAYER_R + K.BOLT_R + 2),
+            vx: b.vx + dx * K.BOLT_SPEED, vy: b.vy + dy * K.BOLT_SPEED,
+            r: K.BOLT_R, m: K.BOLT_M, e: 0.75, mu: 0.05, damping: 0.02, angularDamping: 0.2,
+            cat: CAT.BOLT, mask: ALL & ~CAT.PLAYER & ~CAT.BOLT & ~CAT.PICKUP, owner: bolt,
+          }));
+          this.bolts.set(bolt.id, bolt);
+          this.pushFx({ t: 'shot', x: bolt.body.x, y: bolt.body.y, a, c: p.hue });
+        }
+        // recoil — momentum still has to come from somewhere
+        const rd = assisted.angle;
+        b.applyImpulse(-Math.cos(rd) * K.BOLT_M * K.BOLT_SPEED,
+                       -Math.sin(rd) * K.BOLT_M * K.BOLT_SPEED);
       }
 
       /** Enemy fire: slow homing orbs from the pink Charmers. */
@@ -401,7 +498,7 @@
         const orb = { id: newId(), owner: null, hue: '#ff4db3', dmg: 14, life: 4, bounces: 3, type: 'pink', homing: target.id };
         orb.body = this.world.add(new Body({
           x: b.x + Math.cos(a) * (e.body.r + 14), y: b.y + Math.sin(a) * (e.body.r + 14),
-          vx: Math.cos(a) * 520, vy: Math.sin(a) * 520,
+          vx: Math.cos(a) * 380, vy: Math.sin(a) * 380,
           r: 12, m: 0.4, e: 0.8, mu: 0.1, damping: 0.05,
           cat: CAT.BOLT, mask: ALL & ~CAT.ENEMY & ~CAT.BOLT & ~CAT.PICKUP, owner: orb,
         }));
@@ -422,7 +519,7 @@
       stepGuards(dt) {
         // When only stragglers are left they stop playing coy and hunt, so a
         // wave never drags on while someone chases one sphere round a pylon.
-        const hunt = this.enemies.size <= 3 && this.blobs.size === 0 ? 1.7 : 1;
+        const hunt = this.enemies.size <= 3 && this.blobs.size === 0 ? 1.6 : 1;
         for (const e of this.enemies.values()) {
           const g = GUARDS[e.kind];
           const b = e.body;
@@ -442,15 +539,15 @@
             const radial = clamp((d - want) / 200, -1, 1) * hunt;
             const px = -ty, py = tx;
             b.applyForce((tx * radial + px * 0.85) * g.speed, (ty * radial + py * 0.85) * g.speed);
-            if (e.timer <= 0) { this.firePinkOrb(e, p); e.timer = 2.4; }
+            if (e.timer <= 0) { this.firePinkOrb(e, p); e.timer = 3.4; }
           } else if (e.kind === 'red') {
             if (e.state === 0) {                       // stalk
               b.applyForce(tx * g.speed * 0.45 * hunt, ty * g.speed * 0.45 * hunt);
-              if (d < 780 * hunt && e.timer <= 0) { e.state = 1; e.timer = 0.75; this.pushFx({ t: 'wind', x: b.x, y: b.y }); }
+              if (d < 620 * hunt && e.timer <= 0) { e.state = 1; e.timer = 1.0; this.pushFx({ t: 'wind', x: b.x, y: b.y }); }
             } else if (e.state === 1) {                // wind up
               b.vx *= 0.9; b.vy *= 0.9;
               if (e.timer <= 0) {
-                b.applyImpulse(tx * 9000, ty * 9000);
+                b.applyImpulse(tx * 5200, ty * 5200);
                 e.state = 2; e.timer = 1.1;
                 this.pushFx({ t: 'charge', x: b.x, y: b.y, a: Math.atan2(ty, tx) });
               }
@@ -463,8 +560,8 @@
             for (const q of this.players.values()) {
               if (!q.alive) continue;
               const dd = dist(b.x, b.y, q.body.x, q.body.y);
-              if (dd < 480 && dd > 1) {
-                const pull = 1700 * (1 - dd / 480);
+              if (dd < 380 && dd > 1) {
+                const pull = 800 * (1 - dd / 380);
                 q.body.applyForce(((b.x - q.body.x) / dd) * pull, ((b.y - q.body.y) / dd) * pull);
               }
             }
@@ -481,14 +578,14 @@
           const near = this.nearestPlayer(c.x, c.y);
           if (near) {
             const d = Math.max(1, near.d);
-            const s = bl.kind === 'henry' ? 5200 : 2600;
+            const s = bl.kind === 'henry' ? 3200 : 1700;
             bl.drive(((near.p.body.x - c.x) / d) * s, ((near.p.body.y - c.y) / d) * s);
           }
           // engulfing: anything inside the membrane is crushed and slowed
           for (const p of this.players.values()) {
             if (!p.alive || p.invuln > 0) continue;
             if (bl.contains(p.body.x, p.body.y)) {
-              this.hurtPlayer(p, (bl.kind === 'henry' ? 26 : 16) * dt, c.x, c.y);
+              this.hurtPlayer(p, (bl.kind === 'henry' ? 14 : 8) * dt, c.x, c.y);
               p.body.vx *= 0.94; p.body.vy *= 0.94;
             }
           }
@@ -501,8 +598,9 @@
                 c.x + Math.cos(a) * (bl.r0 + 90), c.y + Math.sin(a) * (bl.r0 + 90));
             }
             if (bl.timer <= 0) {
-              bl.timer = 9;
-              this.shockwave(c.x, c.y, 760, 2200, 22, null);
+              bl.timer = 13;
+              this.shockwave(c.x, c.y, 760, 2200, 12, null);
+              this.pushFx({ t: 'taunt', msg: this.rand.pick(TAUNTS) });
               this.pushFx({ t: 'henrywave', x: c.x, y: c.y, r: 760 });
             }
           }
@@ -514,14 +612,39 @@
         }
       }
 
+      /** Steer a projectile toward a point, capped so it arcs instead of snapping. */
+      steer(body, tx, ty, turnRate, dt) {
+        const sp = len(body.vx, body.vy);
+        if (sp < 1e-3) return;
+        const cur = Math.atan2(body.vy, body.vx);
+        const want = Math.atan2(ty - body.y, tx - body.x);
+        const d = clamp(Core.angleDelta(cur, want), -turnRate * dt, turnRate * dt);
+        const a = cur + d;
+        body.vx = Math.cos(a) * sp;
+        body.vy = Math.sin(a) * sp;
+      }
+
+      findTarget(id) {
+        const e = this.enemies.get(id);
+        if (e) return e.body;
+        const bl = this.blobs.get(id);
+        return bl ? bl.nucleus : null;
+      }
+
       stepBolts(dt) {
         for (const b of this.bolts.values()) {
           b.life -= dt;
+          if (b.seek && b.seekTime > 0) {
+            b.seekTime -= dt;
+            const tb = this.findTarget(b.seek);
+            if (tb) this.steer(b.body, tb.x, tb.y, K.BOLT_TURN, dt);
+            else b.seek = 0;
+          }
           if (b.type === 'pink' && b.homing) {
             const t = this.players.get(b.homing);
             if (t && t.alive) {
               const d = Math.max(1, dist(b.body.x, b.body.y, t.body.x, t.body.y));
-              const s = 900;
+              const s = 520;
               b.body.applyForce(((t.body.x - b.body.x) / d) * s, ((t.body.y - b.body.y) / d) * s);
             }
           }
@@ -535,17 +658,19 @@
           if (o.life <= 0) { this.world.remove(o.body); this.orbs.delete(o.id); continue; }
           const near = this.nearestPlayer(o.body.x, o.body.y);
           if (!near) continue;
-          if (near.d < K.ORB_MAGNET) {
-            const pull = 2200 * (1 - near.d / K.ORB_MAGNET);
+          const swept = this.enemies.size === 0 && this.blobs.size === 0;
+          const magnet = K.ORB_MAGNET * (1 + 0.6 * lv(near.p, 'magnet')) * (swept ? 9 : 1);
+          if (near.d < magnet) {
+            const pull = (swept ? 5200 : 2200) * (1 - near.d / magnet);
             const d = Math.max(1, near.d);
             o.body.applyForce(((near.p.body.x - o.body.x) / d) * pull, ((near.p.body.y - o.body.y) / d) * pull);
           }
           if (near.d < K.PLAYER_R + 16) {
             const p = near.p;
-            p.angelos++; p.score += 15;
+            p.angelos++; p.bank++; p.score += 15;
             this.collected++;
-            p.hp = Math.min(K.PLAYER_HP, p.hp + K.ORB_HEAL);
-            p.ultCharge++;
+            p.hp = Math.min(p.maxHp, p.hp + K.ORB_HEAL);
+            p.ultCharge += 1 + 0.35 * lv(p, 'battery');
             if (p.ultCharge >= K.ULT_COST) { p.ultCharge = 0; p.ult = Math.min(K.ULT_MAX, p.ult + 1); }
             this.world.remove(o.body);
             this.orbs.delete(o.id);
@@ -554,7 +679,96 @@
         }
       }
 
+      /* ── upgrades, cards and the shop ──────────────────────────── */
+
+      /** Upgrade ids a player can still take (not already maxed). */
+      available(p) {
+        return UP_IDS.filter((id) => lv(p, id) < UPGRADES[id].max);
+      }
+
+      rollOffers(p, n) {
+        const pool = this.available(p).slice();
+        const out = [];
+        for (let i = 0; i < n && pool.length; i++) {
+          out.push(pool.splice(this.rand.int(0, pool.length - 1), 1)[0]);
+        }
+        return out;
+      }
+
+      grant(p, id) {
+        if (!UPGRADES[id] || lv(p, id) >= UPGRADES[id].max) return false;
+        p.up[id] = lv(p, id) + 1;
+        if (id === 'thicc') {                 // more max health, granted live
+          p.maxHp = K.PLAYER_HP + 30 * lv(p, 'thicc');
+          p.hp = Math.min(p.maxHp, p.hp + 30);
+        }
+        if (id === 'plotarmor') p.armor = lv(p, 'plotarmor');
+        this.pushFx({ t: 'upgrade', id, n: UPGRADES[id].name, c: p.hue });
+        return true;
+      }
+
+      openShop() {
+        this.phase = 'shop';
+        this.waveTimer = K.SHOP_TIME;
+        this.banner = 'SPEND YOUR ANGELOS — HENRY HATES THIS';
+        for (const p of this.players.values()) {
+          p.offers = this.rollOffers(p, 3);
+          p.picked = false;
+          p.ready = false;
+          p.prev.pick = 0; p.prev.buy = 0; p.prev.ready = 0;
+        }
+        // shared stock, priced in Angelos
+        const pool = UP_IDS.slice();
+        this.stock = [];
+        for (let i = 0; i < 4 && pool.length; i++) {
+          const id = pool.splice(this.rand.int(0, pool.length - 1), 1)[0];
+          this.stock.push({ id, cost: UPGRADES[id].cost });
+        }
+        // price each item for the richest shopper's level, then scale with wave
+        const waveMul = 1 + this.wave * 0.35;
+        for (const item of this.stock) {
+          let owned = 0;
+          for (const p of this.players.values()) owned = Math.max(owned, lv(p, item.id));
+          item.cost = Math.max(2, Math.round(UPGRADES[item.id].cost * waveMul * (1 + owned * 0.8)));
+        }
+        this.pushFx({ t: 'shop' });
+      }
+
+      /** Card picks and purchases arrive on the normal input channel, so
+          multiplayer needs no extra message type. Everything is edge-triggered. */
+      stepShop(dt) {
+        this.waveTimer -= dt;
+        let allReady = this.players.size > 0;
+        for (const p of this.players.values()) {
+          const i = p.input;
+          if (i.pick && !p.prev.pick && !p.picked) {
+            const id = p.offers[i.pick - 1];
+            if (id && this.grant(p, id)) { p.picked = true; p.offers = []; }
+          }
+          if (i.buy && !p.prev.buy) {
+            const item = this.stock[i.buy - 1];
+            if (item && p.bank >= item.cost && lv(p, item.id) < UPGRADES[item.id].max) {
+              p.bank -= item.cost;
+              this.grant(p, item.id);
+            }
+          }
+          if (i.ready && !p.prev.ready) p.ready = !p.ready;
+          p.prev.pick = i.pick; p.prev.buy = i.buy; p.prev.ready = i.ready;
+          if (!p.ready) allReady = false;
+        }
+        // Always advance on the timer: an AFK player (or a bot in the tests)
+        // must never be able to stall the game.
+        if (allReady || this.waveTimer <= 0) {
+          for (const p of this.players.values()) { p.offers = []; p.ready = false; }
+          this.stock = [];
+          this.phase = 'intermission';
+          this.waveTimer = K.INTERMISSION;
+          this.banner = 'WAVE ' + (this.wave + 1) + ' INCOMING';
+        }
+      }
+
       stepPhase(dt) {
+        if (this.phase === 'shop') { this.stepShop(dt); return; }
         if (this.phase === 'intermission') {
           this.waveTimer -= dt;
           if (this.waveTimer <= 0) this.startWave(this.wave + 1);
@@ -570,14 +784,13 @@
                 this.banner = "HENRY'S RULE IS BROKEN";
                 this.pushFx({ t: 'victory' });
               } else {
-                this.phase = 'intermission';
-                this.waveTimer = K.INTERMISSION;
                 this.banner = 'WAVE ' + this.wave + ' CLEARED — ' + this.collected + ' ANGELOS TAKEN';
+                this.lives = Math.min(K.LIVES_MAX, this.lives + 1);
+                this.openShop();
               }
             }
           }
-          const anyAlive = [...this.players.values()].some((p) => p.alive);
-          if (!anyAlive && this.players.size > 0) {
+          if (this.lives <= 0 && this.players.size > 0) {
             this.phase = 'defeat';
             this.banner = 'THE RULE HOLDS — HENRY ANGELOS WINS';
             this.pushFx({ t: 'defeat' });
@@ -616,6 +829,7 @@
         const o = other.owner;
         if (o && this.enemies.has(o.id)) {
           this.damageGuard(o, bolt.dmg, bolt.owner, px, py);
+          this.boltBoom(bolt, px, py);
           this.killBolt(bolt, true);
           return;
         }
@@ -623,6 +837,7 @@
           const isNucleus = other.isNucleus;
           const mult = isNucleus ? 1 : 0.4;
           this.damageBlob(o, bolt.dmg * mult, bolt.owner, px, py, isNucleus);
+          this.boltBoom(bolt, px, py);
           this.killBolt(bolt, true);
           return;
         }
@@ -637,15 +852,33 @@
         }
       }
 
+      /** SPICY BOLTS detonate where they land. Queued so chains can't recurse. */
+      boltBoom(bolt, px, py) {
+        if (!bolt.spicy) return;
+        const r = 150 + 60 * bolt.spicy;
+        this.pendingBoom.push({ x: px, y: py, r, power: 700, dmg: bolt.dmg * 0.6, by: bolt.owner });
+        this.pushFx({ t: 'boom', x: px, y: py, r });
+      }
+
       hurtPlayer(p, dmg, fromX, fromY) {
         p.hp -= dmg;
         p.hurtTimer = K.REGEN_DELAY;
+        if (p.hp <= 0 && p.armor > 0) {
+          // PLOT ARMOR: the script says you live
+          p.armor--;
+          p.hp = Math.max(1, Math.round(p.maxHp * 0.35));
+          p.invuln = Math.max(p.invuln, 1.4);
+          this.pushFx({ t: 'armor', x: p.body.x, y: p.body.y, c: p.hue });
+          return;
+        }
         this.pushFx({ t: 'hurt', x: p.body.x, y: p.body.y, c: p.hue, d: dmg });
         if (p.hp <= 0) {
           p.hp = 0; p.alive = false; p.respawn = K.RESPAWN;
+          this.lives--;
           if (p.rope) { this.world.removeRope(p.rope); p.rope = null; }
           this.world.radialImpulse(p.body.x, p.body.y, 260, 700, { mask: CAT.ENEMY | CAT.BLOB });
           this.pushFx({ t: 'down', x: p.body.x, y: p.body.y, c: p.hue, n: p.name });
+          this.pushFx({ t: 'taunt', msg: this.rand.pick(TAUNTS) });
           p.body.x = -9999; p.body.y = -9999; p.body.vx = 0; p.body.vy = 0;
         }
       }
@@ -667,16 +900,21 @@
       killGuard(e, byId) {
         const g = GUARDS[e.kind];
         const by = this.players.get(byId);
-        if (by) { by.score += g.score; by.kills++; }
+        if (by) {
+          by.score += g.score; by.kills++;
+          const heal = 4 * lv(by, 'vampire');
+          if (heal && by.alive) by.hp = Math.min(by.maxHp, by.hp + heal);
+        }
         const x = e.body.x, y = e.body.y;
         if (e.kind === 'red') {
           // queued, not recursive: a Wrath that pops a Wrath sets off a chain
           // reaction and the chain has to unwind iteratively.
-          this.pendingBoom.push({ x, y, r: 300, power: 1900, dmg: 30, hurtsPlayers: true });
+          this.pendingBoom.push({ x, y, r: 300, power: 1500, dmg: 12, hurtsPlayers: true });
           this.pushFx({ t: 'boom', x, y, r: 300 });
         }
-        for (let i = 0; i < g.drop; i++) this.spawnOrb(x, y);
-        this.pushFx({ t: 'pop', x, y, k: e.kind });
+        const drops = g.drop + lv(by, 'taxman');
+        for (let i = 0; i < drops; i++) this.spawnOrb(x, y);
+        this.pushFx({ t: 'pop', x, y, k: e.kind, q: this.rand.pick(QUIPS) });
         this.world.remove(e.body);
         this.enemies.delete(e.id);
       }
@@ -754,7 +992,8 @@
         let guard = 0;
         while (this.pendingBoom.length && guard++ < 64) {
           const b = this.pendingBoom.shift();
-          this.shockwave(b.x, b.y, b.r, b.power, b.dmg, null, b.hurtsPlayers);
+          this.shockwave(b.x, b.y, b.r, b.power, b.dmg,
+            b.by ? this.players.get(b.by) : null, b.hurtsPlayers);
         }
         this.pendingBoom.length = 0;
       }
@@ -784,7 +1023,8 @@
           P.push([p.id, q(p.body.x), q(p.body.y), q(p.body.vx), q(p.body.vy), q(p.aim),
             Math.round(p.hp), p.alive ? 1 : 0, p.score, p.angelos, +(p.dashCd > 0), p.ult,
             +(p.invuln > 0), p.name, p.hue, q(p.body.angle),
-            p.rope && p.ropeTo ? [q(p.rope.b ? p.rope.b.x : p.rope.px), q(p.rope.b ? p.rope.b.y : p.rope.py)] : 0]);
+            p.rope && p.ropeTo ? [q(p.rope.b ? p.rope.b.x : p.rope.px), q(p.rope.b ? p.rope.b.y : p.rope.py)] : 0,
+            p.offers, p.up, p.bank, +p.picked, +p.ready, Math.round(p.maxHp), p.armor]);
         }
         const E = [];
         for (const e of this.enemies.values()) {
@@ -803,6 +1043,7 @@
         const s = {
           k: this.tick, ph: this.phase, wv: this.wave, wt: Core.q1(this.waveTimer),
           co: this.collected, nd: this.needed, bn: this.banner,
+          st: this.stock, lv: this.lives,
           P, E, B, O, L, F: this.fxSince(sinceFx), fs: this.fxSeq,
         };
         return s;
@@ -819,7 +1060,7 @@
       }
     }
 
-    return { Game, K, GUARDS, HUES };
+    return { Game, K, GUARDS, HUES, UPGRADES, UP_IDS, TAUNTS };
   }
 
   if (typeof module !== 'undefined' && module.exports) {

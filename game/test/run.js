@@ -216,14 +216,30 @@ test('a downed rebel respawns', () => {
   assert.ok(p.alive && p.hp > 0, 'came back');
 });
 
-test('the whole team going down mid-fight ends the war', () => {
+test('running the team out of lives ends the war', () => {
   const g = new Game({ seed: 4 });
-  const a = g.addPlayer(1, 'A'), b = g.addPlayer(2, 'B');
+  const a = g.addPlayer(1, 'A');
   g.startWave(1);
-  g.hurtPlayer(a, 999, 0, 0);
-  g.hurtPlayer(b, 999, 0, 0);
+  for (let i = 0; i < K.LIVES; i++) {
+    a.alive = true; a.invuln = 0; a.armor = 0;
+    g.hurtPlayer(a, 999, 0, 0);
+  }
   g.step(K.TICK);
+  assert.strictEqual(g.lives, 0, 'lives spent');
   assert.strictEqual(g.phase, 'defeat');
+});
+
+test('one death is survivable — it just costs a life', () => {
+  const g = new Game({ seed: 4 });
+  const a = g.addPlayer(1, 'SOLO');
+  g.startWave(1);
+  const before = g.lives;
+  g.hurtPlayer(a, 999, 0, 0);
+  g.step(K.TICK);
+  assert.strictEqual(g.lives, before - 1, 'one life gone');
+  assert.strictEqual(g.phase, 'fight', 'the run continues');
+  for (let i = 0; i < 60 * (K.RESPAWN + 1); i++) g.step(K.TICK);
+  assert.ok(a.alive, 'and you come back');
 });
 
 test('a wipe between waves is survivable — everyone just respawns', () => {
@@ -256,6 +272,150 @@ test('effect cursors let the renderer and the network read the same log', () => 
   assert.strictEqual(b.F.length, 0, 'second read from the same cursor sees nothing new');
   const c = g.snapshot(0);
   assert.ok(c.F.length > 0, 'a fresh cursor still sees history');
+});
+
+/* ── aim assist & upgrades ───────────────────────────── */
+test('aim assist lands a shot fired well off-target', () => {
+  const g = new Game({ seed: 5 });
+  const p = g.addPlayer(1, 'TESTER');
+  const e = g.spawnGuard('yellow', p.body.x + 400, p.body.y);
+  const wideOfIt = 0.35;                       // ~20 degrees off
+  g.setInput(1, { mx: 0, my: 0, aim: wideOfIt, fire: 1 });
+  const hp0 = e.hp;
+  for (let i = 0; i < 60; i++) g.step(K.TICK);
+  assert.ok(e.hp < hp0, `assist should connect: hp ${hp0} -> ${e.hp}`);
+});
+
+test('aim assist leaves far-off aim alone', () => {
+  const g = new Game({ seed: 5 });
+  const p = g.addPlayer(1, 'TESTER');
+  g.spawnGuard('yellow', p.body.x + 400, p.body.y);
+  const away = Math.PI;                        // pointing the other way entirely
+  const out = g.aimAssist(p, away);
+  assert.strictEqual(out.seek, 0, 'nothing grabbed outside the cone');
+  assert.strictEqual(out.angle, away, 'aim untouched');
+});
+
+test('each upgrade actually changes its stat', () => {
+  const g = new Game({ seed: 7 });
+  const p = g.addPlayer(1, 'TESTER');
+
+  g.grant(p, 'multishot');
+  g.setInput(1, { aim: 0, fire: 1 });
+  g.step(K.TICK);
+  assert.ok(g.bolts.size >= 2, `DOUBLE TROUBLE fires more bolts: ${g.bolts.size}`);
+
+  const base = p.maxHp;
+  g.grant(p, 'thicc');
+  assert.strictEqual(p.maxHp, base + 30, 'THICC HIDE raises max health');
+
+  g.grant(p, 'chonk');
+  const dmg = [...g.bolts.values()][0].dmg;
+  g.bolts.clear();
+  p.fireCd = 0;
+  g.setInput(1, { aim: 0, fire: 1 });
+  g.step(K.TICK);
+  assert.ok([...g.bolts.values()][0].dmg > dmg, 'CHONK BOLTS raises damage');
+});
+
+test('PLOT ARMOR eats exactly one fatal hit', () => {
+  const g = new Game({ seed: 3 });
+  const p = g.addPlayer(1, 'TESTER');
+  g.grant(p, 'plotarmor');
+  p.armor = 1;
+  g.hurtPlayer(p, 9999, 0, 0);
+  assert.ok(p.alive, 'survived the first one');
+  p.invuln = 0;
+  g.hurtPlayer(p, 9999, 0, 0);
+  assert.ok(!p.alive, 'the second one lands');
+});
+
+/* ── the shop ────────────────────────────────────────── */
+test('clearing a wave opens the shop with cards and stock', () => {
+  const g = new Game({ seed: 9 });
+  const p = g.addPlayer(1, 'A');
+  g.startWave(1);
+  for (const e of [...g.enemies.values()]) g.killGuard(e, 1);
+  for (const o of [...g.orbs.values()]) o.life = 0;
+  for (let i = 0; i < 10; i++) g.step(K.TICK);
+  assert.strictEqual(g.phase, 'shop');
+  assert.strictEqual(p.offers.length, 3, 'three cards offered');
+  assert.ok(g.stock.length > 0, 'store has stock');
+});
+
+test('picking a card and buying from the store both work', () => {
+  const g = new Game({ seed: 9 });
+  const p = g.addPlayer(1, 'A');
+  g.openShop();
+  const offered = p.offers[0];
+  g.setInput(1, { pick: 1 });
+  g.step(K.TICK);
+  assert.strictEqual(p.up[offered], 1, 'card granted');
+  assert.ok(p.picked, 'marked as picked');
+
+  p.bank = 50;
+  const item = g.stock[0];
+  g.setInput(1, { pick: 0, buy: 1 });
+  g.step(K.TICK);
+  assert.strictEqual(p.bank, 50 - item.cost, 'Angelos deducted');
+  assert.ok(p.up[item.id] >= 1, 'purchased upgrade granted');
+});
+
+test('you cannot buy what you cannot afford', () => {
+  const g = new Game({ seed: 11 });
+  const p = g.addPlayer(1, 'A');
+  g.openShop();
+  p.bank = 0;
+  const before = JSON.stringify(p.up);
+  g.setInput(1, { buy: 1 });
+  g.step(K.TICK);
+  assert.strictEqual(p.bank, 0, 'no debt');
+  assert.strictEqual(JSON.stringify(p.up), before, 'nothing granted');
+});
+
+test('the shop always advances on its own, even if nobody picks', () => {
+  const g = new Game({ seed: 12 });
+  g.addPlayer(1, 'AFK');
+  g.openShop();
+  for (let i = 0; i < 60 * (K.SHOP_TIME + 2); i++) g.step(K.TICK);
+  assert.strictEqual(g.phase, 'intermission', 'an idle player cannot stall the game');
+});
+
+test('everyone readying up skips the shop timer', () => {
+  const g = new Game({ seed: 13 });
+  g.addPlayer(1, 'A');
+  g.openShop();
+  g.setInput(1, { ready: 1 });
+  g.step(K.TICK);
+  g.step(K.TICK);
+  assert.strictEqual(g.phase, 'intermission', 'ready ends it early');
+  assert.ok(g.waveTimer <= K.INTERMISSION, 'moved on to the countdown');
+});
+
+test('collecting angelos fills the spendable bank', () => {
+  const g = new Game({ seed: 5 });
+  const p = g.addPlayer(1, 'A');
+  const before = p.bank;
+  for (let i = 0; i < 3; i++) {
+    const o = g.spawnOrb(p.body.x + 20, p.body.y);
+    o.body.x = p.body.x + 16; o.body.y = p.body.y;
+    for (let t = 0; t < 30 && g.orbs.has(o.id); t++) g.step(K.TICK);
+  }
+  assert.ok(p.bank > before, `bank filled: ${before} -> ${p.bank}`);
+  assert.strictEqual(p.bank, p.angelos, 'bank tracks what you picked up');
+});
+
+test('snapshots carry the upgrade and shop state to clients', () => {
+  const g = new Game({ seed: 8 });
+  const p = g.addPlayer(1, 'A');
+  g.grant(p, 'zoom');
+  g.openShop();
+  const snap = g.snapshot(0);
+  const row = snap.P[0];
+  assert.ok(Array.isArray(row[17]), 'offers travel');
+  assert.strictEqual(row[18].zoom, 1, 'upgrade levels travel');
+  assert.ok(Array.isArray(snap.st), 'store stock travels');
+  assert.ok(row[22] >= 100, 'max health travels');
 });
 
 /* ── client view ─────────────────────────────────────── */

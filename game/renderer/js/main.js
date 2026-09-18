@@ -25,7 +25,8 @@
     resultShown: false,
     mouse: { x: 0, y: 0, down: false, right: false },
     keys: Object.create(null),
-    input: { mx: 0, my: 0, aim: 0, fire: 0, dash: 0, ult: 0, grap: 0 },
+    input: { mx: 0, my: 0, aim: 0, fire: 0, dash: 0, ult: 0, grap: 0, pick: 0, buy: 0, ready: 0 },
+    shopOpen: false,
   };
 
   const canvas = document.getElementById('game');
@@ -43,6 +44,12 @@
     if (e.code === 'KeyM') { UI.toast(Audio.toggleMute() ? 'MUTED' : 'SOUND ON', 1200); return; }
     if (e.code === 'KeyF') { toggleFullscreen(); return; }
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    if (state.shopOpen) {
+      if (e.code === 'Digit1') { state.pendPick = 1; e.preventDefault(); }
+      if (e.code === 'Digit2') { state.pendPick = 2; e.preventDefault(); }
+      if (e.code === 'Digit3') { state.pendPick = 3; e.preventDefault(); }
+      if (e.code === 'Space') { state.readyHeld = !state.readyHeld; e.preventDefault(); }
+    }
     state.keys[e.code] = 1;
     if (KEYMAP[e.code] || ['Space', 'ShiftLeft', 'ShiftRight', 'KeyQ', 'KeyE', 'Tab'].includes(e.code)) e.preventDefault();
   });
@@ -82,6 +89,11 @@
 
   function gatherInput() {
     const i = state.input;
+    // shop actions are edge-triggered: set for one frame, then cleared
+    i.pick = state.pendPick || 0;
+    i.buy = state.pendBuy || 0;
+    state.pendPick = 0; state.pendBuy = 0;
+    i.ready = state.readyHeld ? 1 : 0;
     i.mx = (state.keys.KeyD || state.keys.ArrowRight ? 1 : 0) - (state.keys.KeyA || state.keys.ArrowLeft ? 1 : 0);
     i.my = (state.keys.KeyS || state.keys.ArrowDown ? 1 : 0) - (state.keys.KeyW || state.keys.ArrowUp ? 1 : 0);
     // mouse aim, converted from screen space back into the arena
@@ -364,6 +376,7 @@
         renderer.draw(view, { dt, selfId: state.selfId, cursor: state.cursorWorld });
         UI.hud(view, state.selfId, netLabel());
         renderer.drawMinimap(miniCtx, view, 220, 142);
+        syncShop(view);
         checkResult(view);
       }
     } else if (state.mode === 'client') {
@@ -371,7 +384,9 @@
       state.inputAcc += dt;
       if (state.inputAcc >= 1 / 60) {
         state.inputAcc = 0;
-        Net.send({ t: 'in', mx: input.mx, my: input.my, aim: input.aim, fire: input.fire, dash: input.dash, ult: input.ult, grap: input.grap });
+        Net.send({ t: 'in', mx: input.mx, my: input.my, aim: input.aim, fire: input.fire,
+          dash: input.dash, ult: input.ult, grap: input.grap,
+          pick: input.pick, buy: input.buy, ready: input.ready });
       }
       const view = Net.client.sample(dt);
       if (view) {
@@ -389,6 +404,7 @@
         renderer.draw(view, { dt, selfId: state.selfId, predicted: pred, cursor: state.cursorWorld });
         UI.hud(view, state.selfId, netLabel());
         renderer.drawMinimap(miniCtx, view, 220, 142);
+        syncShop(view);
         checkResult(view);
       } else {
         renderer.draw({ P: [], E: [], B: [], O: [], L: [] }, { dt });
@@ -400,6 +416,25 @@
     if (state.mode === 'host') return 'HOSTING · ' + (state.game ? state.game.players.size : 1) + ' REBELS';
     if (state.mode === 'client') return 'CONNECTED · ' + ((Net.client.latest && Net.client.latest.P) ? Net.client.latest.P.length : 1) + ' REBELS';
     return 'SOLO';
+  }
+
+  /** The shop screen is owned by the simulation's phase, not by a click. */
+  function syncShop(view) {
+    const wantShop = view.ph === 'shop' && !state.paused && UI.screen !== 'result';
+    if (wantShop && !state.shopOpen) {
+      state.shopOpen = true;
+      state.readyHeld = false;
+      UI.show('shop');
+    } else if (!wantShop && state.shopOpen) {
+      state.shopOpen = false;
+      state.readyHeld = false;
+      if (UI.screen === 'shop') UI.show(null);
+    }
+    if (state.shopOpen) {
+      UI.shop(view, state.selfId, Sim.UPGRADES,
+        (n) => { state.pendPick = n; },
+        (n) => { state.pendBuy = n; });
+    }
   }
 
   function checkResult(view) {
@@ -430,6 +465,7 @@
     resume: () => togglePause(),
     again,
     volume: (v) => Audio.setVolume(v),
+    ready: () => { state.readyHeld = !state.readyHeld; },
   });
 
   Render.Assets.load('../assets/').then(() => {

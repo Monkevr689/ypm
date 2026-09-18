@@ -1,7 +1,7 @@
 {
   "name": "war-against-henry-angelos",
   "productName": "War Against Henry Angelos",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Collect the Angelos, break the rule. A multiplayer physics arena war against Henry Angelos and his yellow, pink, red and blue spheres.",
   "main": "main.js",
   "author": "ypm",
