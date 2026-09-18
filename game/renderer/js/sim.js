@@ -33,13 +33,13 @@
     /* Henry's guard — the four spheres from the photograph. */
     const GUARDS = {
       yellow: { r: 25, m: 0.9,  hp: 30,  e: 0.94, mu: 0.15, dmg: 9,  speed: 2400, drop: 1, score: 10,
-                damping: 0.9,  name: 'SPARK' },
+                damping: 0.9,  name: 'FALSEITY ANGELOSITY' },
       pink:   { r: 34, m: 2.0,  hp: 62,  e: 0.55, mu: 0.3,  dmg: 12, speed: 1500, drop: 2, score: 20,
-                damping: 1.6,  name: 'CHARMER' },
+                damping: 1.6,  name: 'LOVE ANGELOSITY' },
       red:    { r: 46, m: 5.5,  hp: 125, e: 0.6,  mu: 0.35, dmg: 24, speed: 1900, drop: 3, score: 35,
-                damping: 1.2,  name: 'WRATH' },
+                damping: 1.2,  name: 'CRULETY ANGELOSITY' },
       blue:   { r: 55, m: 9.0,  hp: 210, e: 0.35, mu: 0.5,  dmg: 18, speed: 1500, drop: 4, score: 55,
-                damping: 1.5,  name: 'WARDEN' },
+                damping: 1.5,  name: 'VEIRTY ANGELOSITY' },
     };
 
     const HUES = ['#4dffd2', '#ffd24d', '#7cff4d', '#4db8ff', '#ff7c4d', '#e04dff', '#ffffff', '#ff4d6e'];

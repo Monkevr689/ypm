@@ -11,6 +11,10 @@
       yellow: '#ffd21f', pink: '#ff2fd0', red: '#ff2f3c', blue: '#2f8bff',
       blob: '#b44dff', henry: '#ff2fd0',
     };
+    const KIND_LABEL = {
+      yellow: 'FALSEITY ANGELOSITY', pink: 'LOVE ANGELOSITY',
+      red: 'CRULETY ANGELOSITY', blue: 'VEIRTY ANGELOSITY',
+    };
 
     /* ── asset loading (everything is optional: the game draws without it) ── */
     const Assets = {
@@ -399,6 +403,16 @@
           ctx.restore();
 
           if (hp < maxHp) this.healthArc(ctx, x, y, r + 10, hp / maxHp, col);
+
+          const label = KIND_LABEL[kind];
+          if (label) {
+            ctx.font = '700 11px Impact, "Arial Black", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillText(label, x + 1, y - r - 13);
+            ctx.fillStyle = col;
+            ctx.fillText(label, x, y - r - 14);
+          }
         }
       }
 
