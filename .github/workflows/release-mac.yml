@@ -17,6 +17,8 @@ on:
   push:
     tags:
       - "mac-v*"
+    branches:
+      - "claude/henry-angelos-game-mac-s94eat"
 
 permissions:
   contents: write
