@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>War Against Henry Angelos</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="hud-top-left">
+    <div id="wave-label">WAVE 1</div>
+    <div id="banner">THE RULE OF HENRY ANGELOS BEGINS</div>
+  </div>
+
+  <div id="hud-top-center">
+    <div id="angelos-box">
+      <span class="orb"></span>
+      <span id="angelos-count">0</span>
+      <span id="angelos-need">/ 0 ANGELOS</span>
+    </div>
+    <div id="wave-timer"></div>
+    <div id="lives"></div>
+  </div>
+
+  <div id="scoreboard"></div>
+
+  <div id="hud-bottom-left">
+    <div class="bar-wrap"><div id="hp-bar"></div><span id="hp-text">100</span></div>
+    <div class="pips">
+      <div id="dash-pip" class="pip">DASH</div>
+      <div id="ult-pips" class="pip">VERITY ★ 0</div>
+    </div>
+  </div>
+
+  <div id="hud-bottom-right">
+    <canvas id="minimap" width="220" height="142"></canvas>
+    <div id="netstatus">SOLO</div>
+  </div>
+</div>
+
+<div id="overlay">
+  <!-- TITLE -->
+  <section class="screen active" id="screen-title">
+    <div class="title-art"><img id="title-img" src="../assets/henry_group.jpg" alt="Henry Angelos"></div>
+    <h1>WAR AGAINST<br><span class="pink">HENRY ANGELOS</span></h1>
+    <h2>COLLECT THE ANGELOS · BREAK THE RULE</h2>
+    <div class="row">
+      <label>CALLSIGN</label>
+      <input id="name-input" maxlength="14" value="REBEL">
+    </div>
+    <div class="menu">
+      <button id="btn-solo" class="primary">SOLO CAMPAIGN</button>
+      <button id="btn-host">HOST MULTIPLAYER</button>
+      <button id="btn-join">JOIN MULTIPLAYER</button>
+      <button id="btn-help">HOW TO FIGHT</button>
+    </div>
+    <div class="foot"><span id="build-note"></span></div>
+  </section>
+
+  <!-- HOST -->
+  <section class="screen" id="screen-host">
+    <h1 class="small">HOST THE <span class="pink">UPRISING</span></h1>
+    <p class="lede">Other Macs on your Wi-Fi find this game automatically. Anywhere else, give them the address below.</p>
+    <div class="panel">
+      <div class="kv"><span>STATUS</span><b id="host-status">starting…</b></div>
+      <div class="kv"><span>ADDRESS</span><b id="host-addr">—</b></div>
+      <div class="kv"><span>PORT</span><b id="host-port">47861</b></div>
+      <div class="kv"><span>REBELS</span><b id="host-peers">1</b></div>
+    </div>
+    <ul id="host-roster" class="roster"></ul>
+    <div class="menu">
+      <button id="btn-host-start" class="primary">START THE WAR</button>
+      <button id="btn-host-back">BACK</button>
+    </div>
+  </section>
+
+  <!-- JOIN -->
+  <section class="screen" id="screen-join">
+    <h1 class="small">JOIN THE <span class="pink">UPRISING</span></h1>
+    <p class="lede">Games found on this network:</p>
+    <ul id="server-list" class="roster"><li class="dim">scanning…</li></ul>
+    <div class="row">
+      <label>ADDRESS</label>
+      <input id="join-host" value="127.0.0.1">
+      <label>PORT</label>
+      <input id="join-port" value="47861" size="6">
+    </div>
+    <div class="menu">
+      <button id="btn-join-go" class="primary">CONNECT</button>
+      <button id="btn-join-rescan">RESCAN</button>
+      <button id="btn-join-back">BACK</button>
+    </div>
+    <div class="foot" id="join-error"></div>
+  </section>
+
+  <!-- HELP -->
+  <section class="screen" id="screen-help">
+    <h1 class="small">HOW TO <span class="pink">FIGHT</span></h1>
+    <div class="cols">
+      <div>
+        <h3>CONTROLS</h3>
+        <ul class="keys">
+          <li><b>WASD / ARROWS</b> thrust</li>
+          <li><b>MOUSE</b> aim · <b>LEFT CLICK</b> fire verity bolts</li>
+          <li><b>SHIFT / RIGHT CLICK</b> dash (brief invulnerability)</li>
+          <li><b>E</b> grapple — rope onto a sphere or pylon and swing</li>
+          <li><b>Q</b> verity shockwave (costs a ★)</li>
+          <li><b>TAB</b> scores · <b>M</b> mute · <b>F</b> fullscreen · <b>ESC</b> pause</li>
+          <li><b>GAMEPAD</b> sticks to move/aim, triggers to fire/dash</li>
+        </ul>
+      </div>
+      <div>
+        <h3>HENRY'S GUARD</h3>
+        <ul class="keys">
+          <li><b class="yellow">YELLOW — FALSEITY ANGELOSITY</b> light, rubbery, never stops bouncing</li>
+          <li><b class="pink2">PINK — LOVE ANGELOSITY</b> orbits you and spits homing orbs</li>
+          <li><b class="red">RED — CRULETY ANGELOSITY</b> winds up, charges, detonates when killed</li>
+          <li><b class="blue">BLUE — VEIRTY ANGELOSITY</b> shielded, drags you in with a gravity well</li>
+          <li><b class="violet">THE BLOB</b> a pressurised membrane that swallows rebels — shoot the white nucleus</li>
+          <li><b class="pink2">HENRY ANGELOS</b> wave 10. Bigger. Angrier. Spawns his own guard.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="lede">Every sphere you pop drops <b class="gold">ANGELOS</b>. Collect them: they heal you and charge your shockwave. Ten waves and the rule is broken.</p>
+    <div class="menu"><button id="btn-help-back" class="primary">BACK</button></div>
+  </section>
+
+
+  <!-- SHOP / UPGRADE -->
+  <section class="screen" id="screen-shop">
+    <h1 class="small">CHOOSE YOUR <span class="pink">ANGELOSITY</span></h1>
+    <div class="shop-top">
+      <span class="bank"><span class="orb"></span> <b id="shop-bank">0</b> ANGELOS</span>
+      <span id="shop-timer" class="shop-timer"></span>
+    </div>
+    <div id="shop-cards" class="cards"></div>
+    <h3 class="shop-h">THE ANGELOS STORE <span class="dimlabel">— buy as many as you can afford</span></h3>
+    <div id="shop-stock" class="stock"></div>
+    <div id="shop-owned" class="owned"></div>
+    <div class="menu"><button id="btn-ready" class="primary">READY</button></div>
+    <div class="foot">Press 1 · 2 · 3 to take a card · click the store to buy · SPACE when done</div>
+  </section>
+
+  <!-- PAUSE -->
+  <section class="screen" id="screen-pause">
+    <h1 class="small">PAUSED</h1>
+    <div class="row">
+      <label>VOLUME</label>
+      <input id="vol-slider" type="range" min="0" max="100" value="55">
+    </div>
+    <div class="menu">
+      <button id="btn-resume" class="primary">RESUME</button>
+      <button id="btn-quit">LEAVE THE WAR</button>
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section class="screen" id="screen-result">
+    <h1 class="small" id="result-title">HENRY'S RULE IS BROKEN</h1>
+    <ul id="result-stats" class="roster"></ul>
+    <div class="menu">
+      <button id="btn-again" class="primary">FIGHT AGAIN</button>
+      <button id="btn-result-menu">MAIN MENU</button>
+    </div>
+  </section>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/core.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/softbody.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/net.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

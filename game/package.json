@@ -1,0 +1,65 @@
+{
+  "name": "war-against-henry-angelos",
+  "productName": "War Against Henry Angelos",
+  "version": "1.1.0",
+  "description": "Collect the Angelos, break the rule. A multiplayer physics arena war against Henry Angelos and his yellow, pink, red and blue spheres.",
+  "main": "main.js",
+  "author": "ypm",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/run.js",
+    "dist:mac": "electron-builder --mac --arm64 --x64",
+    "dist:mac-arm": "electron-builder --mac --arm64",
+    "dist:mac-intel": "electron-builder --mac --x64",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^44.4.2",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.ypm.waragainsthenryangelos",
+    "productName": "War Against Henry Angelos",
+    "copyright": "Copyright © 2026",
+    "publish": null,
+    "files": [
+      "main.js",
+      "preload.js",
+      "netcore.js",
+      "renderer/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.action-games",
+      "icon": "assets/icon.png",
+      "target": [
+        { "target": "zip", "arch": ["arm64", "x64"] },
+        { "target": "dmg", "arch": ["arm64", "x64"] }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "artifactName": "WarAgainstHenryAngelos-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "War Against Henry Angelos",
+      "backgroundColor": "#05050a"
+    },
+    "win": {
+      "target": ["nsis", "zip"],
+      "icon": "assets/icon.png",
+      "artifactName": "WarAgainstHenryAngelos-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Game",
+      "icon": "assets/icon.png",
+      "artifactName": "WarAgainstHenryAngelos-${version}-${arch}.${ext}"
+    }
+  }
+}

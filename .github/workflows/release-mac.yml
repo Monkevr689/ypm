@@ -1,0 +1,81 @@
+name: Build & release macOS app
+
+# Builds the Apple Silicon (arm64) build of War Against Henry Angelos and
+# publishes it as a GitHub Release asset — a single file anyone with the
+# release link can download in one click.
+#
+# electron-builder's zip target doesn't need macOS host tools (only its dmg
+# target does), so a standard Linux runner produces a fully valid .app/.zip.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create (e.g. mac-v1.0.1)"
+        required: false
+        default: ""
+  push:
+    tags:
+      - "mac-v*"
+    branches:
+      - "claude/henry-angelos-game-mac-s94eat"
+
+permissions:
+  contents: write
+
+jobs:
+  build-mac:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run headless test suite
+        run: npm test
+
+      - name: Build macOS (arm64) app
+        run: npx electron-builder --mac --arm64 -c.mac.target=zip --publish never
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            V=$(node -p "require('./package.json').version")
+            echo "tag=mac-v${V}-build${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "War Against Henry Angelos — macOS (Apple Silicon)"
+          body: |
+            Downloadable Mac build (Apple Silicon / arm64) of **War Against Henry Angelos**.
+
+            **Install:**
+            1. Download the `.zip` asset below.
+            2. Double-click it to unzip (Finder does this automatically).
+            3. Double-click **War Against Henry Angelos.app**.
+            4. First launch only: right-click the app → **Open** → **Open**
+               (it's unsigned — no paid Apple developer account was used —
+               so Gatekeeper needs one manual confirmation).
+
+            Built automatically by GitHub Actions from commit
+            `${{ github.sha }}`.
+          files: game/dist/*.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: false
