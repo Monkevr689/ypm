@@ -14,8 +14,9 @@ public abstract class PlayerSpeedMixin {
     @Inject(method = "getSpeed", at = @At("RETURN"), cancellable = true)
     private void ypm$scaleSpeed(CallbackInfoReturnable<Float> cir) {
         YpmConfig.Speed cfg = YpmConfig.INSTANCE.speed;
-        if (cfg.enabled && (Object) this == Minecraft.getInstance().player) {
-            cir.setReturnValue((float) (cir.getReturnValueF() * cfg.multiplier));
-        }
+        Player self = (Player) (Object) this;
+        if (!cfg.enabled || self != Minecraft.getInstance().player) return;
+        if (cfg.notWhileSneaking && self.isShiftKeyDown()) return;
+        cir.setReturnValue((float) (cir.getReturnValueF() * cfg.multiplier));
     }
 }

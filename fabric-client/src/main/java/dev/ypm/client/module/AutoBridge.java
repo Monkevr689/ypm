@@ -8,7 +8,20 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.AnvilBlock;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ButtonBlock;
+import net.minecraft.world.level.block.CraftingTableBlock;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.NoteBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -22,22 +35,23 @@ public final class AutoBridge {
 
     private int cooldown;
     private int bridgeY = Integer.MIN_VALUE;
+    private boolean holdingSneak;
 
     public void onTick(Minecraft mc) {
         YpmConfig.AutoBridge cfg = YpmConfig.INSTANCE.autoBridge;
         LocalPlayer player = mc.player;
         if (!cfg.enabled || player == null || mc.level == null || mc.gameMode == null
-                || !mc.mouseHandler.isMouseGrabbed() || player.isSpectator()) {
-            bridgeY = Integer.MIN_VALUE;
-            return;
-        }
-        if (cooldown > 0) {
-            cooldown--;
+                || !mc.mouseHandler.isMouseGrabbed() || player.isSpectator() || player.getAbilities().flying) {
+            reset(mc);
             return;
         }
 
-        InteractionHand hand = blockHand(player, cfg.useOffhand);
-        if (hand == null) return;
+        boolean aiming = !cfg.requireLookDown || player.getXRot() >= cfg.minPitch || player.isShiftKeyDown();
+        InteractionHand hand = blockHand(player, cfg);
+        if (hand == null || !aiming) {
+            reset(mc);
+            return;
+        }
 
         // The layer under your feet. With keepY, jumping doesn't raise the bridge.
         int feetY = BlockPos.containing(player.getX(), player.getY() - 0.5, player.getZ()).getY();
@@ -45,13 +59,33 @@ public final class AutoBridge {
             bridgeY = feetY;
         }
 
+        Vec3 v = player.getDeltaMovement();
         BlockPos under = BlockPos.containing(player.getX(), bridgeY, player.getZ());
-        if (tryPlaceAt(mc, player, hand, under, cfg)) return;
+        BlockPos next = BlockPos.containing(player.getX() + v.x, bridgeY, player.getZ() + v.z);
+        updateSneak(mc, cfg, player, next);
 
-        if (cfg.predict) {
-            Vec3 v = player.getDeltaMovement();
-            BlockPos next = BlockPos.containing(player.getX() + v.x, bridgeY, player.getZ() + v.z);
-            if (!next.equals(under)) tryPlaceAt(mc, player, hand, next, cfg);
+        if (cooldown > 0) {
+            cooldown--;
+            return;
+        }
+        if (tryPlaceAt(mc, player, hand, under, cfg)) return;
+        if (cfg.predict && !next.equals(under)) tryPlaceAt(mc, player, hand, next, cfg);
+    }
+
+    /** Holds sneak while standing on the edge of a drop, and lets go once there's ground ahead again. */
+    private void updateSneak(Minecraft mc, YpmConfig.AutoBridge cfg, LocalPlayer player, BlockPos next) {
+        boolean atEdge = cfg.sneakAtEdge && player.onGround() && mc.level.getBlockState(next).canBeReplaced();
+        if (atEdge != holdingSneak) {
+            mc.options.keyShift.setDown(atEdge);
+            holdingSneak = atEdge;
+        }
+    }
+
+    private void reset(Minecraft mc) {
+        bridgeY = Integer.MIN_VALUE;
+        if (holdingSneak) {
+            mc.options.keyShift.setDown(false);
+            holdingSneak = false;
         }
     }
 
@@ -80,7 +114,7 @@ public final class AutoBridge {
         Vec3 eye = player.getEyePosition();
         for (Direction dir : SUPPORTS) {
             BlockPos neighbour = target.relative(dir);
-            if (mc.level.getBlockState(neighbour).canBeReplaced()) continue;
+            if (!isClickable(mc.level, neighbour)) continue;
 
             Direction face = dir.getOpposite();
             Vec3 hit = Vec3.atCenterOf(neighbour).add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
@@ -88,7 +122,7 @@ public final class AutoBridge {
 
             InteractionResult result = mc.gameMode.useItemOn(player, hand, new BlockHitResult(hit, face, neighbour, false));
             if (result.consumesAction()) {
-                Swing.swing(player, hand);
+                if (cfg.swing) Swing.swing(player, hand);
                 cooldown = cfg.placeDelay;
                 return true;
             }
@@ -96,16 +130,42 @@ public final class AutoBridge {
         return false;
     }
 
+    /**
+     * A neighbour we can safely click to place against: something solid that won't open a menu or toggle
+     * (chests, doors, crafting tables...) instead of placing our block.
+     */
+    private static boolean isClickable(ClientLevel level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (state.canBeReplaced() || level.getBlockEntity(pos) != null) return false;
+        Block block = state.getBlock();
+        return !(block instanceof DoorBlock || block instanceof TrapDoorBlock || block instanceof FenceGateBlock
+                || block instanceof ButtonBlock || block instanceof LeverBlock || block instanceof BedBlock
+                || block instanceof AnvilBlock || block instanceof CraftingTableBlock || block instanceof NoteBlock);
+    }
+
     private static boolean hasSupport(ClientLevel level, BlockPos pos) {
         for (Direction dir : SUPPORTS) {
-            if (!level.getBlockState(pos.relative(dir)).canBeReplaced()) return true;
+            if (isClickable(level, pos.relative(dir))) return true;
         }
         return false;
     }
 
-    private static InteractionHand blockHand(LocalPlayer player, boolean allowOffhand) {
-        if (player.getMainHandItem().getItem() instanceof BlockItem) return InteractionHand.MAIN_HAND;
-        if (allowOffhand && player.getOffhandItem().getItem() instanceof BlockItem) return InteractionHand.OFF_HAND;
+    private static InteractionHand blockHand(LocalPlayer player, YpmConfig.AutoBridge cfg) {
+        if (isBlock(player.getMainHandItem())) return InteractionHand.MAIN_HAND;
+        if (cfg.useOffhand && isBlock(player.getOffhandItem())) return InteractionHand.OFF_HAND;
+        if (cfg.autoSwitch) {
+            Inventory inv = player.getInventory();
+            for (int slot = 0; slot < Inventory.getSelectionSize(); slot++) {
+                if (isBlock(inv.getItem(slot))) {
+                    inv.setSelectedSlot(slot);
+                    return InteractionHand.MAIN_HAND;
+                }
+            }
+        }
         return null;
+    }
+
+    private static boolean isBlock(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof BlockItem;
     }
 }

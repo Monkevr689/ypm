@@ -6,14 +6,11 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Gently rotates the camera toward the nearest valid target inside a cone around the crosshair.
+ * Gently rotates the camera toward the best valid target inside a cone around the crosshair.
  * Rotation is applied through {@link LocalPlayer#turn}, the same path mouse movement takes.
  */
 public final class AimAssist {
@@ -23,6 +20,11 @@ public final class AimAssist {
     private LivingEntity target;
     private long lastFrameNanos;
 
+    /** The entity currently being assisted toward, or null. */
+    public LivingEntity target() {
+        return target;
+    }
+
     public void onFrame() {
         long now = System.nanoTime();
         double dt = lastFrameNanos == 0 ? 0 : Math.min((now - lastFrameNanos) / 1.0e9, 0.1);
@@ -31,9 +33,12 @@ public final class AimAssist {
         Minecraft mc = Minecraft.getInstance();
         LocalPlayer player = mc.player;
         YpmConfig.AimAssist cfg = YpmConfig.INSTANCE.aimAssist;
+        YpmConfig.Targets targets = YpmConfig.INSTANCE.targets;
 
-        if (!cfg.enabled || dt <= 0 || player == null || mc.level == null || !mc.mouseHandler.isMouseGrabbed() || mc.isPaused()
-                || player.isSpectator() || (cfg.requireAttackKey && !mc.options.keyAttack.isDown())) {
+        if (!cfg.enabled || dt <= 0 || player == null || mc.level == null || !mc.mouseHandler.isMouseGrabbed()
+                || mc.isPaused() || player.isSpectator()
+                || (cfg.requireAttackKey && !mc.options.keyAttack.isDown())
+                || (cfg.weaponOnly && !TargetFilter.holdingWeapon(player))) {
             target = null;
             return;
         }
@@ -41,10 +46,11 @@ public final class AimAssist {
         float partialTick = mc.getDeltaTracker().getGameTimeDeltaPartialTick(true);
         Vec3 eye = player.getEyePosition(partialTick);
 
-        if (!cfg.stickyTarget || !isValid(player, target, eye, partialTick, cfg)) {
-            target = findTarget(mc, player, eye, partialTick, cfg);
+        if (!cfg.stickyTarget || !isValid(player, target, eye, partialTick, cfg, targets)) {
+            target = findTarget(mc, player, eye, partialTick, cfg, targets);
         }
         if (target == null) return;
+        if (cfg.stopOnTarget && mc.crosshairPickEntity == target) return;
 
         Vec3 aim = aimPoint(player, target, eye, partialTick, cfg.vertical);
         float[] wanted = rotationTo(eye, aim);
@@ -62,38 +68,31 @@ public final class AimAssist {
         player.turn(yawStep / TURN_SCALE, pitchStep / TURN_SCALE);
     }
 
-    private LivingEntity findTarget(Minecraft mc, LocalPlayer player, Vec3 eye, float partialTick, YpmConfig.AimAssist cfg) {
+    private LivingEntity findTarget(Minecraft mc, LocalPlayer player, Vec3 eye, float partialTick,
+                                    YpmConfig.AimAssist cfg, YpmConfig.Targets targets) {
         LivingEntity best = null;
-        double bestAngle = Double.MAX_VALUE;
+        double bestScore = Double.MAX_VALUE;
         for (Entity entity : mc.level.entitiesForRendering()) {
-            if (!(entity instanceof LivingEntity living) || !isValid(player, living, eye, partialTick, cfg)) continue;
-            double angle = angleTo(player, eye, center(living, partialTick));
-            if (angle < bestAngle) {
-                bestAngle = angle;
+            if (!(entity instanceof LivingEntity living) || !isValid(player, living, eye, partialTick, cfg, targets)) continue;
+            double score = switch (targets.priority) {
+                case ANGLE -> angleTo(player, eye, center(living, partialTick));
+                case DISTANCE -> closestPoint(box(living, partialTick), eye).distanceTo(eye);
+                case HEALTH -> living.getHealth();
+            };
+            if (score < bestScore) {
+                bestScore = score;
                 best = living;
             }
         }
         return best;
     }
 
-    private boolean isValid(LocalPlayer player, LivingEntity entity, Vec3 eye, float partialTick, YpmConfig.AimAssist cfg) {
-        if (entity == null || entity == player || !entity.isAlive() || entity.isDeadOrDying()) return false;
-        if (cfg.ignoreInvisible && entity.isInvisible()) return false;
-
-        if (entity instanceof Player other) {
-            if (!cfg.targetPlayers || other.isSpectator()) return false;
-            if (cfg.ignoreTeammates && player.isAlliedTo(other)) return false;
-        } else if (entity instanceof Mob) {
-            boolean hostile = entity instanceof Enemy;
-            if (hostile ? !cfg.targetHostiles : !cfg.targetPassives) return false;
-        } else {
-            return false; // armor stands and other non-mob living entities
-        }
-
-        Vec3 center = center(entity, partialTick);
+    private boolean isValid(LocalPlayer player, LivingEntity entity, Vec3 eye, float partialTick,
+                            YpmConfig.AimAssist cfg, YpmConfig.Targets targets) {
+        if (entity == null || !TargetFilter.accepts(player, entity, targets)) return false;
         if (closestPoint(box(entity, partialTick), eye).distanceTo(eye) > cfg.range) return false;
-        if (angleTo(player, eye, center) > cfg.fov / 2.0) return false;
-        return !cfg.requireLineOfSight || player.hasLineOfSight(entity);
+        if (angleTo(player, eye, center(entity, partialTick)) > cfg.fov / 2.0) return false;
+        return !targets.requireLineOfSight || player.hasLineOfSight(entity);
     }
 
     /**
