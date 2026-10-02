@@ -26,3 +26,33 @@ jobs:
         with:
           name: ypm-client
           path: fabric-client/build/libs/*.jar
+      - name: Dump API signatures (temporary)
+        if: always()
+        run: |
+          MC=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          d() { echo "=== $1"; javap -cp "$MC" -public "$1" 2>&1 | grep -Ev 'lambda\$' | grep -Ei -- "${2:-.}"; }
+          d net.minecraft.client.Minecraft 'screen|getDeltaTracker'
+          d net.minecraft.client.gui.screens.Screen
+          d net.minecraft.client.gui.components.Button
+          d 'net.minecraft.client.gui.components.Button$Builder'
+          d 'net.minecraft.client.gui.components.Button$OnPress'
+          d net.minecraft.client.gui.components.AbstractSliderButton
+          d net.minecraft.client.gui.components.CycleButton 'static|builder'
+          d net.minecraft.client.gui.components.StringWidget 'StringWidget\('
+          d net.minecraft.client.gui.components.AbstractWidget 'Message|Tooltip|active|visible|AbstractWidget\('
+          d net.minecraft.client.gui.components.Tooltip 'create'
+          d net.minecraft.client.multiplayer.MultiPlayerGameMode 'useItem'
+          d net.minecraft.world.phys.BlockHitResult 'BlockHitResult\('
+          d net.minecraft.world.item.BlockItem 'getBlock|BlockItem\('
+          d net.minecraft.world.item.ItemStack 'getItem\(|isEmpty|getCount'
+          d 'net.minecraft.world.level.block.state.BlockBehaviour$BlockStateBase' 'replace|isAir|isSolid|getCollisionShape|blocksMotion'
+          d net.minecraft.world.entity.LivingEntity 'swing|getMainHandItem|getSpeed|travel|isSprinting'
+          d net.minecraft.world.entity.Entity 'blockPosition|onGround|DeltaMovement|getX\(|getY\(|getZ\(|isShiftKeyDown|level\('
+          d net.minecraft.world.entity.player.Player 'getSpeed'
+          d net.minecraft.core.BlockPos 'containing|below\(|above\(|relative\(|offset\('
+          d net.minecraft.core.Direction 'values|getOpposite|getUnitVec|getStep|Axis'
+          d net.minecraft.world.phys.Vec3 'atCenterOf|relative|Vec3\(|add\('
+          d net.minecraft.client.player.ClientInput
+          d com.mojang.blaze3d.platform.InputConstants 'RCONTROL|UNKNOWN'
+          d net.minecraft.world.InteractionHand
+          d net.minecraft.world.InteractionResult 'consumesAction|SUCCESS'
