@@ -10,7 +10,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Settings persisted to {@code config/ypm-client.json}. Edit the file and press the reload key to apply. */
+/** Settings persisted to {@code config/ypm-client.json}. Re-read whenever aim assist is toggled on. */
 public final class YpmConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("ypm-client.json");

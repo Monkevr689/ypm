@@ -10,9 +10,8 @@ A client-side Fabric mod with a smooth, configurable **aim assist**.
 | Key | Action |
 | --- | --- |
 | `R` | Toggle aim assist |
-| *(unbound)* | Reload config |
 
-Both can be rebound under **Options → Controls → Key Binds → YPM Client**.
+Rebind it under **Options → Controls → Key Binds → YPM Client**.
 
 ## How it works
 While enabled (and, by default, while holding attack), the camera eases toward the nearest valid
@@ -35,7 +34,7 @@ target's hitbox, pitch is left alone.
 | `ignoreInvisible` / `ignoreTeammates` | `true` / `true` | Filters |
 | `requireLineOfSight` | `true` | Skip targets behind walls |
 
-Edit the file and press the reload key to apply without restarting.
+The file is re-read every time you toggle aim assist on, so edits apply without restarting.
 
 ## Build
 Requires JDK 25.

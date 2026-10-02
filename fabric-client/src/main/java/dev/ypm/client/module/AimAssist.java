@@ -42,7 +42,7 @@ public final class AimAssist {
         LocalPlayer player = mc.player;
         YpmConfig.AimAssist cfg = YpmConfig.INSTANCE.aimAssist;
 
-        if (!enabled || dt <= 0 || player == null || mc.level == null || mc.screen != null || mc.isPaused()
+        if (!enabled || dt <= 0 || player == null || mc.level == null || !mc.mouseHandler.isMouseGrabbed() || mc.isPaused()
                 || player.isSpectator() || (cfg.requireAttackKey && !mc.options.keyAttack.isDown())) {
             target = null;
             return;
