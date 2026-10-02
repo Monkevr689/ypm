@@ -32,14 +32,11 @@ jobs:
         with:
           name: ypm-client
           path: fabric-client/build/libs/*.jar
-      - name: Dump API signatures (diagnostics on failure)
-        if: failure()
+      - name: Check mixin compatibility levels
+        if: always()
         run: |
-          MC=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
-          KM=$(find ~/.gradle -name 'fabric-key-mapping-api-v1-*.jar' ! -name '*sources*' | head -1)
-          echo "=== KeyMappingHelper"; javap -cp "$KM" -public net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
-          echo "=== Minecraft (filtered)"; javap -cp "$MC" -public net.minecraft.client.Minecraft | grep -Ei 'screen|delta|mouse'
-          echo "=== MouseHandler"; javap -cp "$MC" -public net.minecraft.client.MouseHandler | grep -Ei 'grab'
-          echo "=== Options (filtered)"; javap -cp "$MC" -public net.minecraft.client.Options | grep -Ei 'keyAttack'
-          echo "=== DeltaTracker"; javap -cp "$MC" -public net.minecraft.client.DeltaTracker
-          echo "=== InputConstants (filtered)"; javap -cp "$MC" -public com.mojang.blaze3d.platform.InputConstants | grep -Ei 'unknown'
+          for j in $(find ~/.gradle -name 'fabric-key-mapping-api-v1-*.jar' -o -name 'fabric-lifecycle-events-v1-*.jar' | grep -v sources); do
+            unzip -p "$j" '*.mixins.json' 2>/dev/null | grep -i compatibilityLevel
+          done
+          M=$(find ~/.gradle -name 'sponge-mixin-*.jar' ! -name '*sources*' | head -1); echo "$M"
+          javap -cp "$M" -public 'org.spongepowered.asm.mixin.MixinEnvironment$CompatibilityLevel' | grep JAVA_
