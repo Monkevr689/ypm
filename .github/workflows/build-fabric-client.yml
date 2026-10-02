@@ -34,9 +34,3 @@ jobs:
           echo "----- BEGIN JAR $(basename "$JAR") -----"
           base64 -w 0 "$JAR"; echo
           echo "----- END JAR -----"
-      - name: Dump API signatures (temporary)
-        if: always()
-        run: |
-          MC=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
-          javap -cp "$MC" -c net.minecraft.world.entity.LivingEntity | awk '/public boolean swing\(/,/^$/' | head -60 || true
-          javap -cp "$MC" -public net.minecraft.network.protocol.game.ServerboundSwingPacket | grep -i 'ServerboundSwingPacket(' || true
