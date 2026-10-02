@@ -1,4 +1,7 @@
 {
   "key.category.ypm.ypm": "YPM Client",
-  "key.ypm.toggle_aim_assist": "Toggle Aim Assist"
+  "key.ypm.open_gui": "Open YPM Menu",
+  "key.ypm.toggle_aim_assist": "Toggle Aim Assist",
+  "key.ypm.toggle_auto_bridge": "Toggle Auto Bridge",
+  "key.ypm.toggle_speed": "Toggle Speed"
 }

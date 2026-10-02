@@ -1,6 +1,6 @@
 # YPM Client (Fabric, Minecraft 26.3)
 
-A client-side Fabric mod with a smooth, configurable **aim assist**.
+A client-side Fabric mod with **aim assist**, **auto bridge** and **speed**, configured from an in-game menu.
 
 ## Install
 1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.3 and drop [Fabric API](https://modrinth.com/mod/fabric-api) into `mods/`.
@@ -9,9 +9,20 @@ A client-side Fabric mod with a smooth, configurable **aim assist**.
 ## Controls
 | Key | Action |
 | --- | --- |
+| `Right Ctrl` | Open / close the YPM menu |
 | `R` | Toggle aim assist |
+| *(unbound)* | Toggle auto bridge |
+| *(unbound)* | Toggle speed |
 
-Rebind it under **Options → Controls → Key Binds → YPM Client**.
+Rebind any of them under **Options → Controls → Key Binds → YPM Client**.
+
+## Modules
+- **Aim Assist**: see *How it works* below.
+- **Auto Bridge**: while you hold blocks (main hand, or off hand if enabled), places one under your feet whenever
+  there's air there, by clicking the side of a neighbouring block exactly like a right-click would. *Keep Y* keeps the
+  bridge level while you jump, *Predict* also fills the block you're about to step onto, and *Diagonal* builds a
+  supporting block first when there's nothing directly adjacent to click.
+- **Speed**: multiplies your ground movement speed.
 
 ## How it works
 While enabled (and, by default, while holding attack), the camera eases toward the nearest valid
@@ -20,6 +31,8 @@ runs every frame, so it feels like a gentle pull rather than a snap. If your cro
 target's hitbox, pitch is left alone.
 
 ## Config — `config/ypm-client.json`
+Everything is editable in the YPM menu and saved when you close it. Aim assist settings:
+
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `enabled` | `false` | Start enabled |
@@ -34,7 +47,8 @@ target's hitbox, pitch is left alone.
 | `ignoreInvisible` / `ignoreTeammates` | `true` / `true` | Filters |
 | `requireLineOfSight` | `true` | Skip targets behind walls |
 
-The file is re-read every time you toggle aim assist on, so edits apply without restarting.
+Auto bridge: `placeDelay` (1 tick), `reach` (4.5), `keepY`, `predict`, `diagonal`, `useOffhand` (all on).
+Speed: `multiplier` (1.3).
 
 ## Build
 Requires JDK 25.
@@ -44,5 +58,6 @@ Requires JDK 25.
 The jar lands in `build/libs/`. Version numbers live in `gradle.properties`; see
 <https://fabricmc.net/develop> for the latest loader/Fabric API versions.
 
-> Most multiplayer servers forbid aim assist and anti-cheat plugins can detect it. Use it in singleplayer
-> or on servers that allow it.
+> These modules are not hidden from anti-cheat: automated placement, aim correction and modified speed are all
+> visible to a server in your movement and interaction packets. Most multiplayer servers forbid them. Use them in
+> singleplayer or on servers that allow it.

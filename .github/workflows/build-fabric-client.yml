@@ -26,20 +26,17 @@ jobs:
         with:
           name: ypm-client
           path: fabric-client/build/libs/*.jar
+      - name: Print jar as base64
+        if: success()
+        run: |
+          JAR=$(ls build/libs/*.jar | grep -v sources)
+          sha256sum "$JAR"
+          echo "----- BEGIN JAR $(basename "$JAR") -----"
+          base64 -w 0 "$JAR"; echo
+          echo "----- END JAR -----"
       - name: Dump API signatures (temporary)
         if: always()
         run: |
           MC=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
-          d() { echo "=== $1"; javap -cp "$MC" -protected "$1" 2>&1 | grep -Ev 'lambda\$' | grep -Ei -- "${2:-.}"; }
-          d net.minecraft.client.gui.screens.Screen 'protected|Screen\('
-          d net.minecraft.client.gui.components.AbstractSliderButton 'protected|value'
-          d 'net.minecraft.client.gui.components.CycleButton$Builder'
-          d 'net.minecraft.client.gui.components.CycleButton$OnValueChange'
-          d net.minecraft.client.gui.components.CycleButton 'getValue|setValue'
-          d net.minecraft.client.gui.GuiGraphicsExtractor 'fill|text|String|outline|guiWidth|guiHeight'
-          d net.minecraft.world.item.component.SwingAnimation
-          d net.minecraft.world.entity.LivingEntity 'swing'
-          d net.minecraft.client.player.LocalPlayer 'swing'
-          d 'com.mojang.blaze3d.platform.InputConstants$Key' 'getValue|public'
-          d net.minecraft.core.component.DataComponents 'SWING'
-          d net.minecraft.world.item.ItemStack 'get\(|getOrDefault'
+          javap -cp "$MC" -c net.minecraft.world.entity.LivingEntity | awk '/public boolean swing\(/,/^$/' | head -60 || true
+          javap -cp "$MC" -public net.minecraft.network.protocol.game.ServerboundSwingPacket | grep -i 'ServerboundSwingPacket(' || true

@@ -10,7 +10,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Settings persisted to {@code config/ypm-client.json}. Re-read whenever aim assist is toggled on. */
+/** Settings persisted to {@code config/ypm-client.json}. Edited in-game through the YPM screen (Right Ctrl). */
 public final class YpmConfig {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("ypm-client.json");
@@ -18,6 +18,8 @@ public final class YpmConfig {
     public static YpmConfig INSTANCE = new YpmConfig();
 
     public AimAssist aimAssist = new AimAssist();
+    public AutoBridge autoBridge = new AutoBridge();
+    public Speed speed = new Speed();
 
     public static final class AimAssist {
         /** Whether aim assist starts enabled when the game launches. */
@@ -44,12 +46,36 @@ public final class YpmConfig {
         public boolean requireLineOfSight = true;
     }
 
+    public static final class AutoBridge {
+        public boolean enabled = false;
+        /** Ticks to wait between placements (0 = every tick). */
+        public int placeDelay = 1;
+        /** Maximum distance from the eyes to the face being clicked. */
+        public double reach = 4.5;
+        /** Keep placing at the height you started bridging from, even while jumping. */
+        public boolean keepY = true;
+        /** Place under where you will be next tick as well as where you are now. */
+        public boolean predict = true;
+        /** Also place diagonally when the block under you has no direct neighbour to click on. */
+        public boolean diagonal = true;
+        /** Use blocks from the off hand when the main hand isn't holding any. */
+        public boolean useOffhand = true;
+    }
+
+    public static final class Speed {
+        public boolean enabled = false;
+        /** Multiplier applied to your ground movement speed. */
+        public double multiplier = 1.3;
+    }
+
     public static void load() {
         if (Files.exists(PATH)) {
             try (Reader reader = Files.newBufferedReader(PATH)) {
                 YpmConfig loaded = GSON.fromJson(reader, YpmConfig.class);
                 if (loaded != null) {
                     if (loaded.aimAssist == null) loaded.aimAssist = new AimAssist();
+                    if (loaded.autoBridge == null) loaded.autoBridge = new AutoBridge();
+                    if (loaded.speed == null) loaded.speed = new Speed();
                     INSTANCE = loaded;
                 }
             } catch (Exception e) {

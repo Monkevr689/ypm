@@ -2,7 +2,7 @@
   "required": true,
   "package": "dev.ypm.client.mixin",
   "compatibilityLevel": "JAVA_25",
-  "client": ["GameRendererMixin"],
+  "client": ["GameRendererMixin", "PlayerSpeedMixin"],
   "injectors": {
     "defaultRequire": 1
   }

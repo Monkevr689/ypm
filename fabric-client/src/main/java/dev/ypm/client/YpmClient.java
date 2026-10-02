@@ -1,7 +1,9 @@
 package dev.ypm.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.ypm.client.gui.YpmScreen;
 import dev.ypm.client.module.AimAssist;
+import dev.ypm.client.module.AutoBridge;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -13,43 +15,71 @@ import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 public final class YpmClient implements ClientModInitializer {
     public static final String MOD_ID = "ypm";
     public static final Logger LOGGER = LoggerFactory.getLogger("YPM Client");
 
     public static final AimAssist AIM_ASSIST = new AimAssist();
+    public static final AutoBridge AUTO_BRIDGE = new AutoBridge();
 
     private static final KeyMapping.Category CATEGORY =
             KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "ypm"));
 
+    private static KeyMapping openGui;
     private static KeyMapping toggleAimAssist;
+    private static KeyMapping toggleAutoBridge;
+    private static KeyMapping toggleSpeed;
 
     @Override
     public void onInitializeClient() {
         YpmConfig.load();
-        AIM_ASSIST.setEnabled(YpmConfig.INSTANCE.aimAssist.enabled);
 
-        toggleAimAssist = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.ypm.toggle_aim_assist", InputConstants.Type.KEYBOARD, InputConstants.KEY_R, CATEGORY));
+        openGui = register("open_gui", InputConstants.KEY_RCONTROL);
+        toggleAimAssist = register("toggle_aim_assist", InputConstants.KEY_R);
+        toggleAutoBridge = register("toggle_auto_bridge", InputConstants.UNKNOWN.getValue());
+        toggleSpeed = register("toggle_speed", InputConstants.UNKNOWN.getValue());
 
         ClientTickEvents.END_CLIENT_TICK.register(YpmClient::onEndTick);
         LOGGER.info("YPM Client loaded");
     }
 
-    private static void onEndTick(Minecraft mc) {
-        while (toggleAimAssist.consumeClick()) {
-            boolean enable = !AIM_ASSIST.isEnabled();
-            // Re-read the config on every enable so edits to the file apply without a restart.
-            if (enable) YpmConfig.load();
-            AIM_ASSIST.setEnabled(enable);
-            notify(mc, "Aim Assist", enable);
-        }
+    public static KeyMapping openGuiKey() {
+        return openGui;
     }
 
-    private static void notify(Minecraft mc, String feature, boolean on) {
-        if (mc.player == null) return;
-        mc.player.sendOverlayMessage(Component.literal("[YPM] " + feature + ": ")
-                .append(Component.literal(on ? "ON" : "OFF")
-                        .withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED)));
+    private static KeyMapping register(String name, int key) {
+        return KeyMappingHelper.registerKeyMapping(
+                new KeyMapping("key.ypm." + name, InputConstants.Type.KEYBOARD, key, CATEGORY));
+    }
+
+    private static void onEndTick(Minecraft mc) {
+        YpmConfig c = YpmConfig.INSTANCE;
+        while (openGui.consumeClick()) {
+            mc.setScreenAndShow(new YpmScreen());
+        }
+        handleToggle(mc, toggleAimAssist, "Aim Assist", () -> c.aimAssist.enabled, v -> c.aimAssist.enabled = v);
+        handleToggle(mc, toggleAutoBridge, "Auto Bridge", () -> c.autoBridge.enabled, v -> c.autoBridge.enabled = v);
+        handleToggle(mc, toggleSpeed, "Speed", () -> c.speed.enabled, v -> c.speed.enabled = v);
+
+        AUTO_BRIDGE.onTick(mc);
+    }
+
+    private static void handleToggle(Minecraft mc, KeyMapping key, String name, Supplier<Boolean> get, Consumer<Boolean> set) {
+        boolean changed = false;
+        while (key.consumeClick()) {
+            set.accept(!get.get());
+            changed = true;
+        }
+        if (!changed) return;
+        YpmConfig.save();
+        boolean on = get.get();
+        if (mc.player != null) {
+            mc.player.sendOverlayMessage(Component.literal("[YPM] " + name + ": ")
+                    .append(Component.literal(on ? "ON" : "OFF")
+                            .withStyle(on ? ChatFormatting.GREEN : ChatFormatting.RED)));
+        }
     }
 }

@@ -20,18 +20,8 @@ public final class AimAssist {
     /** {@link Entity#turn} multiplies its input by this factor. */
     private static final double TURN_SCALE = 0.15;
 
-    private boolean enabled;
     private LivingEntity target;
     private long lastFrameNanos;
-
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-        this.target = null;
-    }
 
     public void onFrame() {
         long now = System.nanoTime();
@@ -42,7 +32,7 @@ public final class AimAssist {
         LocalPlayer player = mc.player;
         YpmConfig.AimAssist cfg = YpmConfig.INSTANCE.aimAssist;
 
-        if (!enabled || dt <= 0 || player == null || mc.level == null || !mc.mouseHandler.isMouseGrabbed() || mc.isPaused()
+        if (!cfg.enabled || dt <= 0 || player == null || mc.level == null || !mc.mouseHandler.isMouseGrabbed() || mc.isPaused()
                 || player.isSpectator() || (cfg.requireAttackKey && !mc.options.keyAttack.isDown())) {
             target = null;
             return;
