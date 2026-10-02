@@ -1,6 +1,7 @@
 # YPM Client (Fabric, Minecraft 26.3)
 
-A client-side Fabric mod with **aim assist**, **auto bridge** and **speed**, configured from an in-game menu.
+A client-side Fabric mod with aim assist, triggerbot, auto bridge, speed, auto sprint and a HUD, all configured
+from an in-game menu.
 
 ## Install
 1. Install [Fabric Loader](https://fabricmc.net/use/) for Minecraft 26.3 and drop [Fabric API](https://modrinth.com/mod/fabric-api) into `mods/`.
@@ -11,44 +12,32 @@ A client-side Fabric mod with **aim assist**, **auto bridge** and **speed**, con
 | --- | --- |
 | `Right Ctrl` | Open / close the YPM menu |
 | `R` | Toggle aim assist |
-| *(unbound)* | Toggle auto bridge |
-| *(unbound)* | Toggle speed |
+| *(unbound)* | Toggle triggerbot / auto bridge / speed / auto sprint |
 
 Rebind any of them under **Options → Controls → Key Binds → YPM Client**.
 
-## Modules
-- **Aim Assist**: see *How it works* below.
-- **Auto Bridge**: while you hold blocks (main hand, or off hand if enabled), places one under your feet whenever
-  there's air there, by clicking the side of a neighbouring block exactly like a right-click would. *Keep Y* keeps the
-  bridge level while you jump, *Predict* also fills the block you're about to step onto, and *Diagonal* builds a
-  supporting block first when there's nothing directly adjacent to click.
-- **Speed**: multiplies your ground movement speed.
+## Menu tabs
+- **Aim**: aim assist (see *How it works*): range, FOV, smoothing, max speed, vertical, hold attack, sticky
+  target, stop on target, weapon only.
+- **Trigger**: attacks whatever valid target is under your crosshair once your attack cooldown reaches the set
+  percentage. Weapon only, pause while using an item.
+- **Targets**: shared by Aim and Trigger: players / hostiles / passives, skip invisible, skip teammates, line of
+  sight, and priority (angle, distance or lowest health).
+- **Bridge**: while you hold blocks, places one under your feet by clicking the side of a neighbouring block
+  exactly like a right-click. Only while looking down (min pitch) or sneaking, keep Y, predict, diagonal, off
+  hand, auto switch to a hotbar block stack, sneak at edge, swing. It never clicks chests, doors, crafting tables
+  or other blocks that would open or toggle instead of placing.
+- **Move**: speed multiplier (optionally off while sneaking) and auto sprint.
+- **HUD**: enabled-module list (top left/right) and target name + health under the crosshair.
+
+Tab names turn green while their module is on. Everything is saved to `config/ypm-client.json` when you close
+the menu; hand-edited values are clamped to their valid ranges on load.
 
 ## How it works
 While enabled (and, by default, while holding attack), the camera eases toward the nearest valid
 target inside a cone around your crosshair. It rotates through the same code path as mouse movement and
 runs every frame, so it feels like a gentle pull rather than a snap. If your crosshair is already on the
 target's hitbox, pitch is left alone.
-
-## Config — `config/ypm-client.json`
-Everything is editable in the YPM menu and saved when you close it. Aim assist settings:
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `enabled` | `false` | Start enabled |
-| `range` | `4.5` | Max distance to target (blocks) |
-| `fov` | `70` | Cone (degrees, full width) in which targets are picked |
-| `smoothing` | `6.0` | Ease rate; higher = snappier |
-| `maxSpeed` | `240` | Rotation cap in degrees/second |
-| `vertical` | `true` | Also adjust pitch |
-| `requireAttackKey` | `true` | Only assist while attack is held |
-| `stickyTarget` | `true` | Keep the current target while it remains valid |
-| `targetPlayers` / `targetHostiles` / `targetPassives` | `true` / `true` / `false` | Target types |
-| `ignoreInvisible` / `ignoreTeammates` | `true` / `true` | Filters |
-| `requireLineOfSight` | `true` | Skip targets behind walls |
-
-Auto bridge: `placeDelay` (1 tick), `reach` (4.5), `keepY`, `predict`, `diagonal`, `useOffhand` (all on).
-Speed: `multiplier` (1.3).
 
 ## Build
 Requires JDK 25.
