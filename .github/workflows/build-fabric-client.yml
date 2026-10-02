@@ -19,12 +19,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - name: Show available Fabric versions
-        run: |
-          echo "--- loader ---";     curl -sS https://meta.fabricmc.net/v2/versions/loader | head -c 400; echo
-          echo "--- 26.x game ---";  curl -sS https://meta.fabricmc.net/v2/versions/game | grep -o '"version":"26[^"]*"' | head -20
-          echo "--- fabric-api ---"; curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml | grep -o '<version>[^<]*26[^<]*</version>' | tail -10
-          echo "--- loom ---";       curl -sS https://maven.fabricmc.net/net/fabricmc/fabric-loom/net.fabricmc.fabric-loom.gradle.plugin/maven-metadata.xml | grep -o '<version>[^<]*</version>' | tail -8
       - name: Build
         run: chmod +x gradlew && ./gradlew build --stacktrace
       - uses: actions/upload-artifact@v4
@@ -32,11 +26,3 @@ jobs:
         with:
           name: ypm-client
           path: fabric-client/build/libs/*.jar
-      - name: Check mixin compatibility levels
-        if: always()
-        run: |
-          for j in $(find ~/.gradle -name 'fabric-key-mapping-api-v1-*.jar' -o -name 'fabric-lifecycle-events-v1-*.jar' | grep -v sources); do
-            unzip -p "$j" '*.mixins.json' 2>/dev/null | grep -i compatibilityLevel
-          done
-          M=$(find ~/.gradle -name 'sponge-mixin-*.jar' ! -name '*sources*' | head -1); echo "$M"
-          javap -cp "$M" -public 'org.spongepowered.asm.mixin.MixinEnvironment$CompatibilityLevel' | grep JAVA_
