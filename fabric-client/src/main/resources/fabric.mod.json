@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "ypm",
+  "version": "${version}",
+  "name": "YPM Client",
+  "description": "Client-side utility mod with a smooth, configurable aim assist.",
+  "authors": ["monkevr689"],
+  "license": "MIT",
+  "icon": "assets/ypm/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.ypm.client.YpmClient"]
+  },
+  "mixins": ["ypm.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
