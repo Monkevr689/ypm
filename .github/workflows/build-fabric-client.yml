@@ -34,3 +34,27 @@ jobs:
           echo "----- BEGIN JAR $(basename "$JAR") -----"
           base64 -w 0 "$JAR"; echo
           echo "----- END JAR -----"
+      - name: Dump API signatures (temporary)
+        if: always()
+        run: |
+          MC=$(find ~/.gradle -name 'minecraft-merged-deobf-26.3.jar' | head -1)
+          d() { echo "=== $1"; javap -cp "$MC" -public "$1" 2>&1 | grep -Ev 'lambda\$' | grep -Ei -- "${2:-.}" || true; }
+          d net.minecraft.world.entity.player.Inventory 'select|getItem\(|getContainerSize|SLOT|static final int'
+          d net.minecraft.client.multiplayer.MultiPlayerGameMode 'attack|ensureHasSentCarriedItem|carried'
+          d net.minecraft.world.entity.player.Player 'AttackStrength|attackStrength|resetAttack|isCreative|getCurrentItemAttackStrengthDelay'
+          d net.minecraft.world.entity.LivingEntity 'getOffhandItem|isUsingItem|hurtTime|getHealth|getMaxHealth|isBlocking'
+          d net.minecraft.client.Options 'keySprint|keyShift|keyUp|keyJump|keyUse|gamma'
+          d net.minecraft.client.Minecraft 'crosshairPickEntity|hitResult|options|gui'
+          d net.minecraft.world.entity.Entity 'setSprinting|isSprinting|isInWater|isPassenger|hurtTime|invulnerableTime|getBbHeight|isOnFire|getName\('
+          d net.minecraft.world.item.ItemStack 'is\(|getMaxDamage|getDamageValue|isDamageableItem'
+          d net.minecraft.tags.ItemTags 'SWORD|AXE'
+          d net.minecraft.world.food.FoodData 'getFoodLevel'
+          d net.minecraft.world.entity.player.Abilities 'flying|mayfly'
+          d net.minecraft.client.gui.Font 'width\(|lineHeight'
+          for j in $(find ~/.gradle -name 'fabric-rendering-v1-*.jar' ! -name '*sources*' | sort -u | head -2); do
+            echo "=== $j"; unzip -l "$j" | grep -Eo 'net/fabricmc/fabric/api/client/rendering/v1/[^ ]*hud[^ ]*\.class' | grep -v '\$' || true
+          done
+          HR=$(find ~/.gradle -name 'fabric-rendering-v1-*.jar' ! -name '*sources*' | head -1)
+          for c in net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements; do
+            echo "=== $c"; javap -cp "$HR:$MC" -public "$c" 2>&1 | head -30 || true
+          done
