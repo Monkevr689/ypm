@@ -1,0 +1,125 @@
+# =====================================================================
+#  KushCraft - grow, cook, roll and deal. 100% server side.
+#  Everything is done with items, machines and menus - commands are
+#  only needed by admins.
+# =====================================================================
+
+# Custom textures/models are delivered with a server resource pack that
+# KushCraft builds and hosts by itself. Players get the usual
+# "this server uses a resource pack" prompt when they join.
+resource-pack:
+  enabled: true
+  # true = players must accept the pack to stay on the server.
+  required: false
+  # Port of the small built-in web server that hosts the pack. It must be
+  # reachable by players (open it in your firewall / hosting panel).
+  port: 8163
+  # Public address players use to reach the pack server. Leave empty to use
+  # the same address the player typed to join the server (works for most setups).
+  host: ''
+  # Host the zip yourself instead (Dropbox/GitHub/your website, direct link).
+  # The zip is written to plugins/KushCraft/KushCraft-pack.zip on start-up.
+  # When set, the built-in web server is not started.
+  url: ''
+  prompt: '<green><bold>KushCraft</bold></green> <gray>adds custom plants, machines and items. Accept the pack to see them!'
+
+growth:
+  # How often plants are updated (seconds).
+  tick-seconds: 10
+  # Real-time minutes for a cannabis plant to fully mature in average conditions.
+  cannabis-minutes: 20
+  # Real-time minutes for a magic mushroom cluster to mature.
+  mushroom-minutes: 12
+  # Cannabis needs at least this light level (sun or torches), unless a Grow Lamp is close.
+  min-light: 9
+  # Grow Lamps boost and light every plant within this many blocks.
+  lamp-radius: 6
+  # Players can only break plants/machines they could break a block at (protection plugins).
+  respect-protection: true
+
+wild:
+  # Chance to find wild seeds when breaking grass / ferns / dead bushes.
+  # The strain you find depends on the biome!
+  grass-seed-chance: 0.04
+  # Chance to find mushroom spores when breaking small mushrooms.
+  mushroom-spore-chance: 0.12
+
+drying:
+  # Minutes buds need on a Drying Rack.
+  minutes: 3
+
+lab:
+  # Multiplier for all lab brewing times (0.5 = twice as fast).
+  time-multiplier: 1.0
+
+effects:
+  # Show a boss bar with your high level and active effects.
+  boss-bar: true
+  # Allow screen wobble (nausea) on trippy effects.
+  nausea: true
+  # High level (0-100+) above which you "green out".
+  green-out-at: 100
+
+strain-maker:
+  # Money it costs to register a new strain (0 = free).
+  cost: 150
+  # Maximum strains one player can create.
+  max-per-player: 25
+  # Seed packs you receive for a new strain.
+  seeds-given: 3
+
+economy:
+  # Use Vault (EssentialsX, CMI, ...) when it is installed. Otherwise KushCraft
+  # keeps its own simple wallet per player.
+  use-vault: true
+  starting-balance: 100
+  symbol: '$'
+
+# Give new players the Grower's Handbook on their first join.
+give-guide-on-first-join: true
+
+# =====================================================================
+#  SHOP  (Dealer Stand)
+#  buy  -> what the dealer sells to players (price per click)
+#  sell -> what the dealer pays players. Strain items are multiplied by
+#          quality (1-5 stars) and potency, so better weed = more money.
+# =====================================================================
+shop:
+  buy:
+    - {item: seed_pack, strain: og_kush, amount: 1, price: 40}
+    - {item: seed_pack, strain: blue_dream, amount: 1, price: 50}
+    - {item: seed_pack, strain: jungle_haze, amount: 1, price: 55}
+    - {item: seed_pack, strain: savanna_gold, amount: 1, price: 55}
+    - {item: seed_pack, strain: northern_lights, amount: 1, price: 60}
+    - {item: seed_pack, strain: purple_kush, amount: 1, price: 70}
+    - {item: seed_pack, strain: sour_diesel, amount: 1, price: 90}
+    - {item: seed_pack, strain: white_widow, amount: 1, price: 110}
+    - {item: mushroom_spores, amount: 1, price: 45}
+    - {item: rolling_papers, amount: 8, price: 10}
+    - {item: blunt_wrap, amount: 4, price: 16}
+    - {item: fertilizer, amount: 4, price: 20}
+    - {item: bong, amount: 1, price: 120}
+    - {item: lab_solvent, amount: 2, price: 50}
+    - {item: catalyst, amount: 2, price: 70}
+    - {item: grower_guide, amount: 1, price: 0}
+    - {item: planter_box, amount: 1, price: 60}
+    - {item: drying_rack, amount: 1, price: 150}
+    - {item: rolling_table, amount: 1, price: 200}
+    - {item: grow_lamp, amount: 1, price: 250}
+    - {item: lab_station, amount: 1, price: 900}
+    - {item: strain_maker, amount: 1, price: 1500}
+  sell:
+    bud_fresh: 5
+    bud_dried: 14
+    joint: 22
+    blunt: 40
+    hash: 55
+    moon_rock: 130
+    space_brownie: 35
+    magic_mushroom: 10
+    shroom_tea: 30
+    lucid_tab: 28
+    blue_crystal: 85
+    pixie_dust: 65
+    seed_pack: 8
+    mushroom_spores: 6

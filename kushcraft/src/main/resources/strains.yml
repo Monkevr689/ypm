@@ -1,0 +1,85 @@
+# =====================================================================
+#  KushCraft strains
+#  Add your own strains here, or let players make them in the Strain Maker
+#  (player strains are saved to this file too, marked with "creator").
+#
+#  type:        SATIVA (likes warm biomes, grows tall)
+#               INDICA (likes cold biomes, short and bushy)
+#               HYBRID (likes mild biomes)
+#  color:       bud colour shown on seeds, buds and the growing plant
+#  potency:     5-35 (THC %). Stronger = longer effects + higher price
+#  effects:     up to 3 of GIGGLES, MUNCHIES, COUCH_LOCK, ENERGY, EUPHORIA,
+#               CREATIVE, FLOATY, PARANOIA, SLEEPY, FOCUS, PAIN_RELIEF, TRIPPY
+#  wild-biomes: biomes where breaking grass can drop these seeds
+# =====================================================================
+strains:
+  og_kush:
+    name: OG Kush
+    type: HYBRID
+    color: '#A8E05A'
+    potency: 20
+    effects: [GIGGLES, MUNCHIES, FOCUS]
+    wild-biomes: [forest, birch_forest, old_growth_birch_forest, flower_forest, plains, sunflower_plains]
+  blue_dream:
+    name: Blue Dream
+    type: HYBRID
+    color: '#6FA8F0'
+    potency: 21
+    effects: [EUPHORIA, CREATIVE, FLOATY]
+    wild-biomes: [meadow, river, beach, stony_shore, pale_garden]
+  jungle_haze:
+    name: Jungle Haze
+    type: SATIVA
+    color: '#D4F05A'
+    potency: 22
+    effects: [ENERGY, CREATIVE, GIGGLES]
+    wild-biomes: [jungle, bamboo_jungle, sparse_jungle]
+  savanna_gold:
+    name: Savanna Gold
+    type: SATIVA
+    color: '#F0C850'
+    potency: 20
+    effects: [EUPHORIA, ENERGY, FOCUS]
+    wild-biomes: [savanna, savanna_plateau, windswept_savanna, desert, badlands, wooded_badlands, eroded_badlands]
+  northern_lights:
+    name: Northern Lights
+    type: INDICA
+    color: '#7FE0D0'
+    potency: 24
+    effects: [COUCH_LOCK, SLEEPY, PAIN_RELIEF]
+    wild-biomes: [taiga, snowy_taiga, old_growth_pine_taiga, old_growth_spruce_taiga, snowy_plains, snowy_slopes, grove, frozen_river]
+  purple_kush:
+    name: Purple Kush
+    type: INDICA
+    color: '#A45AE8'
+    potency: 26
+    effects: [COUCH_LOCK, MUNCHIES, EUPHORIA]
+    wild-biomes: [dark_forest, windswept_hills, windswept_forest, windswept_gravelly_hills, jagged_peaks]
+  swamp_skunk:
+    name: Swamp Skunk
+    type: HYBRID
+    color: '#B8B040'
+    potency: 18
+    effects: [MUNCHIES, PARANOIA, SLEEPY]
+    wild-biomes: [swamp, mangrove_swamp]
+  cherry_pie:
+    name: Cherry Pie
+    type: HYBRID
+    color: '#F07AAA'
+    potency: 20
+    effects: [EUPHORIA, FLOATY, GIGGLES]
+    wild-biomes: [cherry_grove]
+  sour_diesel:
+    name: Sour Diesel
+    type: SATIVA
+    color: '#E8F070'
+    potency: 25
+    effects: [ENERGY, FOCUS, PARANOIA]
+    wild-biomes: []
+  white_widow:
+    name: White Widow
+    type: HYBRID
+    color: '#F0F4F8'
+    potency: 27
+    effects: [EUPHORIA, CREATIVE, PAIN_RELIEF]
+    wild-biomes: [ice_spikes, frozen_peaks]

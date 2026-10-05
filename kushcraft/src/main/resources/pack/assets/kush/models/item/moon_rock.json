@@ -1,0 +1,7 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/moon_rock",
+  "layer1": "kush:item/moon_rock_tint"
+ }
+}
