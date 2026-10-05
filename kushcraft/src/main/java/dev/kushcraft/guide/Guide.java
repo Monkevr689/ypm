@@ -36,45 +36,38 @@ public final class Guide {
     private static List<String> pages() {
         List<String> p = new ArrayList<>();
         p.add("<dark_green><bold>   KUSHCRAFT</bold>\n<dark_gray>  Grower's Handbook\n\n"
-                + "<black>Grow strains, cook in the lab, roll joints and sell to the dealer.\n\n"
-                + "<dark_gray>No commands needed - everything is items, plants and machines.");
-        p.add("<dark_green><bold>Contents</bold>\n\n<black>Getting seeds\nGrowing\nBiomes\nHarvest & drying\n"
-                + "Rolling & smoking\nLab Station\nLab synthetics\nStrain Maker\nDealer Stand\nEffects\nStrains\n"
-                + "Crafting recipes");
-        p.add("<dark_green><bold>Getting seeds</bold>\n\n<black>Break <dark_green>grass</dark_green>, ferns or dead bushes"
-                + " - sometimes you find wild seeds!\n\nThe strain depends on the <dark_aqua>biome</dark_aqua>: jungles give"
-                + " Jungle Haze, taigas Northern Lights...\n\nBreak small mushrooms for <gold>spores</gold>.\n\n"
-                + "Or buy seeds from a <dark_green>Dealer Stand</dark_green>.");
-        p.add("<dark_green><bold>Growing</bold>\n\n<black>Right-click the top of <dark_aqua>farmland</dark_aqua>, grass,"
-                + " dirt or a <dark_green>Planter Box</dark_green> with seeds.\n\nPlants need <gold>light 9+</gold>"
-                + " (sun/torches) or a <dark_purple>Grow Lamp</dark_purple> nearby.\n\n<dark_aqua>Watered farmland</dark_aqua>"
-                + " and Planter Boxes grow faster and better. Fertilizer helps too.");
-        p.add("<dark_green><bold>Biomes</bold>\n\n<gold>Sativa</gold><black> - tall, loves <gold>warm</gold> biomes"
-                + " (jungle, savanna, desert).\n\n<dark_purple>Indica</dark_purple><black> - short & bushy, loves"
-                + " <dark_aqua>cold</dark_aqua> biomes (taiga, snow, mountains).\n\n<dark_green>Hybrid</dark_green><black>"
-                + " - loves <dark_green>mild</dark_green> biomes (plains, forest).\n\nRight climate = faster + better quality.");
-        p.add("<dark_green><bold>Harvest</bold>\n\n<black>Right-click (or punch) a plant to see how it's doing."
-                + " <dark_gray>Sneak</dark_gray> for details.\n\nWhen it's fully grown, click it to harvest"
-                + " <dark_green>Fresh Buds</dark_green> + seeds.\n\nHang fresh buds on a <gold>Drying Rack</gold>"
-                + " (right-click it). After a few minutes you get <dark_green>Dried Buds</dark_green>.");
-        p.add("<dark_green><bold>Rolling & smoking</bold>\n\n<black>At a <gold>Rolling Table</gold>: click a dried bud in"
-                + " your inventory, then roll a <dark_gray>Joint</dark_gray> (bud + paper) or <dark_gray>Blunt</dark_gray>"
-                + " (2 buds + wrap).\n\nRight-click a joint to take a hit.\n\nA <dark_aqua>Bong</dark_aqua> smokes buds,"
-                + " hash or moon rocks straight from your inventory.");
-        p.add("<dark_green><bold>Lab Station</bold>\n\n<black>Click a recipe while you carry the ingredients. Come back"
-                + " when it's done.\n\n<dark_gray>Hash</dark_gray> 4 bud + ice\n<dark_gray>Moon Rock</dark_gray> bud + hash +"
-                + " honey\n<dark_gray>Brownies</dark_gray> 2 bud + cocoa + 2 wheat + sugar\n<dark_gray>Shroom Tea</dark_gray>"
-                + " 2 shrooms + bottle\n<dark_gray>+ synthetics</dark_gray> (next page)");
-        p.add("<dark_green><bold>Lab synthetics</bold>\n\n<dark_purple>Lucid Tabs</dark_purple><black>\nsolvent + 2 shrooms"
-                + " + paper\n\n<blue>Blue Crystal</blue><black>\nsolvent + catalyst + 4 lapis + 2 sugar\n\n"
-                + "<light_purple>Pixie Dust</light_purple><black>\nsolvent + 4 glowstone dust + 2 sugar\n\n"
-                + "<dark_gray>Solvent & Catalyst are crafted or bought.");
-        p.add("<dark_green><bold>Strain Maker</bold>\n\n<black>Click two seeds in your inventory to cross them. Then pick"
-                + " up to <gold>3 effects</gold>, the type, bud colour and a name.\n\nPress <dark_green>Create</dark_green>"
-                + " - your strain is saved forever and you get seeds!\n\nPotency comes from the parents.");
-        p.add("<dark_green><bold>Dealer Stand</bold>\n\n<black>Click items at the top to <dark_green>buy</dark_green>.\n\n"
-                + "Click KushCraft items in your own inventory to <gold>sell</gold> them. Shift-click sells the stack, or use"
-                + " <gold>Sell everything</gold>.\n\nStronger strains & more <gold>★</gold> = more money.");
+                + "<black>Grow plants, cook in the Drug Lab, roll joints and get rich at the Market.\n\n"
+                + "<dark_gray>Type <black>/kush</black> any time for the menu: market, catalog, strains, orders.");
+        p.add("<dark_green><bold>The 4 blocks</bold>\n\n<black><bold>Drug Lab</bold>\n<dark_gray>cook, roll, dry, mix strains\n"
+                + "<black><bold>Planter</bold>\n<dark_gray>best soil, +1 quality\n<black><bold>Grow Lamp</bold>\n"
+                + "<dark_gray>grow indoors\n<black><bold>Dealer Stand</bold>\n<dark_gray>the market as a block\n\n"
+                + "<dark_gray>Recipes: /kush > Catalog");
+        p.add("<dark_green><bold>Getting seeds</bold>\n\n<black>Break <dark_green>grass</dark_green> or ferns for cannabis"
+                + " seeds - the <dark_aqua>biome</dark_aqua> decides the strain.\n\nJungle grass can drop"
+                + " <dark_green>coca seeds</dark_green>, red poppies drop <red>poppy seeds</red>, small mushrooms drop"
+                + " <gold>spores</gold>.\n\nOr buy them at the Market.");
+        p.add("<dark_green><bold>Growing</bold>\n\n<black>Right-click the <dark_aqua>top</dark_aqua> of farmland, grass,"
+                + " dirt or a <dark_green>Planter</dark_green>.\n\nNeeds <gold>light 9+</gold> or a"
+                + " <dark_purple>Grow Lamp</dark_purple>. Mushrooms like the dark.\n\nWatered farmland, Planters and"
+                + " Fertilizer = faster + better quality.\nClick a plant to check it.");
+        p.add("<dark_green><bold>Biomes</bold>\n\n<gold>Sativa</gold><black>, <dark_green>coca</dark_green>:"
+                + " warm biomes.\n<dark_purple>Indica</dark_purple><black>: cold biomes.\n<dark_green>Hybrid</dark_green>"
+                + "<black>, <red>poppy</red>: mild biomes.\n\nRight climate = faster growth and more"
+                + " <gold>\u2605</gold> quality. Cold is bad for coca and poppies.");
+        p.add("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: hash, moon rocks, brownies, tea,"
+                + " cocaine, heroin, LSD, meth...\n<bold>Roll</bold>: joints & blunts\n<bold>Dry</bold>: fresh buds"
+                + " -> dried buds\n<bold>Mix</bold>: make a strain\n\n<dark_gray>Ingredients come from your inventory.");
+        p.add("<dark_green><bold>Hard drugs</bold>\n\n<black><bold>Cocaine</bold>\n<dark_gray>8 coca leaves + solvent"
+                + " + sugar\n<black><bold>Heroin</bold>\n<dark_gray>6 poppy pods + solvent + catalyst\n<black><bold>LSD"
+                + "</bold>\n<dark_gray>solvent + 2 shrooms + paper\n<black><bold>Meth</bold>\n<dark_gray>solvent +"
+                + " catalyst + 4 lapis + 2 sugar");
+        p.add("<dark_green><bold>Your own strain</bold>\n\n<black>/kush > Strains > <dark_green>Mix</dark_green> (or the"
+                + " Drug Lab). Click two seeds, pick up to <gold>3 effects</gold>, type and colour, then"
+                + " <dark_green>Create</dark_green> and type a <bold>name</bold>.\n\nYou can rename your strains"
+                + " later in the Strains list.");
+        p.add("<dark_green><bold>Money</bold>\n\n<black>Sell at the <dark_green>Market</dark_green>. Selling lots of one"
+                + " thing drops its price - sell a mix!\n\nThe <gold>HOT</gold> item pays +50%.\n\n"
+                + "<gold>Daily Orders</gold> pay ~75% extra for big batches.\n\nBetter <gold>\u2605</gold> = more money.");
         // effects (4 per page)
         List<EffectType> effects = List.of(EffectType.values());
         for (int i = 0; i < effects.size(); i += 4) {

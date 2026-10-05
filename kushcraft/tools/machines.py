@@ -403,7 +403,7 @@ def strain_maker():
                                              "west": face("#plant", [0, 0, 16, 16])}, rot, shade=False))
     model("strain_maker", {
         "particle": "sm_base", "base": "sm_base", "screen": "sm_screen", "top": "sm_top", "glass": "glass_green",
-        "planter": "steel_dark", "soil": "planter_soil", "plant": f"{G.NS}:plant/hybrid_2",
+        "planter": "steel_dark", "soil": "planter_soil", "plant": f"{G.NS}:block/plant/hybrid_2",
     }, els)
 
 

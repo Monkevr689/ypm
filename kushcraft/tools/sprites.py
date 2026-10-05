@@ -1036,3 +1036,158 @@ icon("type_hybrid", [
     "........K.......",
     "................",
 ], {"K": "1a3a10", "g": "5ac83a", "s": "4a7a2a"})
+
+
+# --------------------------------------------------------------------------
+# Coca & opium poppy (v1.1)
+# --------------------------------------------------------------------------
+_SEED_ART = ITEMS["seed_pack"]["art"]
+_SEED_PAL = dict(ITEMS["seed_pack"]["pal"])
+
+item("coca_seeds", _SEED_ART, dict(_SEED_PAL, w="5ac83a", v="2e7a24", S="b03a2a", s="6a1a12",
+                                   Q="b8c890", p="e4ecc8", q="c8d4a8"))
+item("poppy_seeds", _SEED_ART, dict(_SEED_PAL, w="e83a3a", v="8a1414", S="4a4a5a", s="2a2a34",
+                                    Q="c8b8a0", p="f0e8dc", q="d8cfc0"))
+
+item("coca_leaves", [
+    "................",
+    "................",
+    ".........KKK....",
+    "........KgggK...",
+    ".......KgGgggK..",
+    "..KKK..KggGggK..",
+    ".KgggK.KgggGgK..",
+    "KgGgggKKggggGK..",
+    "KggGgggKKgggK...",
+    ".KggGgggsKKK....",
+    "..KKgGggsK.KK...",
+    "....KKKsK.KrrK..",
+    "......KsK.KrRK..",
+    ".....KsK...KK...",
+    ".....KK.........",
+    "................",
+], {"K": "143a10", "g": "5ac83a", "G": "2e8a24", "s": "6a5a2a", "r": "e8402a", "R": "a01a12"})
+
+item("poppy_pod", [
+    "................",
+    "......KKKK......",
+    ".....KcKKcK.....",
+    "....KKccccKK....",
+    "...KgggggggGK...",
+    "..KgwgggggggGK..",
+    "..KgwggggggggK..",
+    "..KggggggggGGK..",
+    "..KgggggggggGK..",
+    "...KgggggggGK...",
+    "....KKgggGKK....",
+    "......KssK......",
+    "......KssK......",
+    ".......KsK......",
+    ".......KK.......",
+    "................",
+], {"K": "1e3a2a", "c": "8a7aa8", "g": "8ec8a0", "G": "5a9a72", "w": "d8f0e0", "s": "6a9a5a"})
+
+_BAG_ART = ITEMS["pixie_dust"]["art"]
+item("cocaine", _BAG_ART, {"K": "5a5a6a", "r": "3a7ae8", "w": "f0f0ff60", "p": "e6e6ee", "P": "ffffff"})
+item("heroin", _BAG_ART, {"K": "4a3a2a", "r": "e8c040", "w": "f0f0ff60", "p": "a8825a", "P": "d4b48a"})
+
+
+# --------------------------------------------------------------------------
+# Menu icons (v1.1)
+# --------------------------------------------------------------------------
+icon("ui_back", [row[::-1] for row in ICONS["ui_arrow"]["art"]], ICONS["ui_arrow"]["pal"])
+
+icon("ui_catalog", [
+    "................",
+    "......KKKK......",
+    "....KKmmmmKK....",
+    "...KbbKKKKbbK...",
+    "...KbwwwwwwbK...",
+    "...KbwLLwwwbK...",
+    "...KbwwwwwwbK...",
+    "...KbwLLLwwbK...",
+    "...KbwwwwwwbK...",
+    "...KbwLLwwwbK...",
+    "...KbwwwwwwbK...",
+    "...KbwLLLLwbK...",
+    "...KbwwwwwwbK...",
+    "...KbbbbbbbbK...",
+    "....KKKKKKKK....",
+    "................",
+], {"K": "2a1e10", "m": "c0c0c8", "b": "a8743a", "w": "f4f0e4", "L": "7a7a7a"})
+
+icon("ui_trophy", [
+    "................",
+    "..KKKKKKKKKKKK..",
+    ".KyKyyyyyyyyKyK.",
+    ".KyKyywyyyyyKyK.",
+    ".KyKyywyyyyyKyK.",
+    "..KKyyyyyyyyKK..",
+    "...KyyyyyyyyK...",
+    "....KyyyyyyK....",
+    ".....KKyyKK.....",
+    "......KyyK......",
+    "......KyyK......",
+    ".....KYYYYK.....",
+    "....KbbbbbbK....",
+    "....KbBbbBbK....",
+    "....KKKKKKKK....",
+    "................",
+], {"K": "5a3a00", "y": "f8c83a", "w": "fff4c0", "Y": "d89a20", "b": "6a4a2a", "B": "4a3018"})
+
+icon("ui_orders", [
+    "................",
+    "...KKKKKKKKK....",
+    "...KwwwwwwwwK...",
+    "...KwLLLLwwwK...",
+    "...KwwwwwwwwK...",
+    "...KwLLLwwwwK...",
+    "...KwwwwwwwwK...",
+    "...KwLLLLLwwK...",
+    "...KwwwwwwKKK...",
+    "...KwwwwwKyyyK..",
+    "...KwLLwKyYYyyK.",
+    "...KwwwwKyYyyyK.",
+    "...KKKKKKyYYyyK.",
+    ".........KyyyK..",
+    "..........KKK...",
+    "................",
+], {"K": "3a2a14", "w": "f4f0e4", "L": "8a8a8a", "y": "f8d84a", "Y": "c89a20"})
+
+icon("ui_crown", [
+    "................",
+    "................",
+    "................",
+    "..K....KK....K..",
+    ".KyK..KyyK..KyK.",
+    ".KyyK.KyyK.KyyK.",
+    ".KyyyKyyyyKyyyK.",
+    ".KyyyyyyyyyyyyK.",
+    ".KyRyyyByyyGyyK.",
+    ".KyyyyyyyyyyyyK.",
+    ".KYYYYYYYYYYYYK.",
+    "..KKKKKKKKKKKK..",
+    "................",
+    "................",
+    "................",
+    "................",
+], {"K": "5a3a00", "y": "f8d84a", "Y": "c89a20", "R": "e83a3a", "B": "3a7ae8", "G": "3ac84a"})
+
+icon("ui_fire", [
+    "................",
+    ".......K........",
+    "......KrK.......",
+    "......KrrK......",
+    ".....KrrrK..K...",
+    "..K..KrorrK.KK..",
+    "..KK.KroorrKrK..",
+    "..KrKKrooorrrK..",
+    "..KrrrooyyoorK..",
+    "..KrroyyyyyorK..",
+    "..KrooyyyyyorK..",
+    "...KroyyyyyoK...",
+    "...KrooyyyyoK...",
+    "....KroooooK....",
+    ".....KKKKKK.....",
+    "................",
+], {"K": "5a1a00", "r": "e8402a", "o": "f8902a", "y": "fff04a"})

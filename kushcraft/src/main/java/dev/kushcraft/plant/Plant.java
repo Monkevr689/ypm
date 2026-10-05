@@ -7,7 +7,23 @@ import java.util.UUID;
 /** A growing plant. Its look is made of display entities that are respawned on chunk load. */
 public final class Plant {
 
-    public enum Kind { CANNABIS, MUSHROOM }
+    public enum Kind {
+        CANNABIS, MUSHROOM, COCA, POPPY;
+
+        /** Cannabis has 5 stages (0-4), everything else 4 (0-3). */
+        public int lastStage() {
+            return this == CANNABIS ? 4 : 3;
+        }
+
+        public String display() {
+            return switch (this) {
+                case CANNABIS -> "Cannabis";
+                case MUSHROOM -> "Magic Mushrooms";
+                case COCA -> "Coca Bush";
+                case POPPY -> "Opium Poppy";
+            };
+        }
+    }
 
     private final BlockKey key;
     private final Kind kind;
@@ -75,9 +91,9 @@ public final class Plant {
         return growth >= 100;
     }
 
-    /** Cannabis: 0..4, mushrooms: 0..3. */
+    /** Cannabis: 0..4, everything else: 0..3. */
     public int stage() {
-        if (kind == Kind.MUSHROOM) {
+        if (kind != Kind.CANNABIS) {
             if (growth >= 100) {
                 return 3;
             }
@@ -96,20 +112,13 @@ public final class Plant {
     }
 
     public String stageName() {
-        if (kind == Kind.MUSHROOM) {
-            return switch (stage()) {
-                case 0 -> "Mycelium";
-                case 1 -> "Pinning";
-                case 2 -> "Fruiting";
-                default -> "Ready to pick";
-            };
-        }
-        return switch (stage()) {
-            case 0 -> "Seedling";
-            case 1 -> "Young plant";
-            case 2 -> "Vegetative";
-            case 3 -> "Flowering";
-            default -> "Ready to harvest";
+        int st = stage();
+        return switch (kind) {
+            case MUSHROOM -> st == 0 ? "Mycelium" : st == 1 ? "Pinning" : st == 2 ? "Fruiting" : "Ready to pick";
+            case COCA -> st == 0 ? "Sprout" : st == 1 ? "Young bush" : st == 2 ? "Leafy bush" : "Ready to pick";
+            case POPPY -> st == 0 ? "Sprout" : st == 1 ? "Budding" : st == 2 ? "Flowering" : "Pods ready";
+            case CANNABIS -> st == 0 ? "Seedling" : st == 1 ? "Young plant" : st == 2 ? "Vegetative"
+                    : st == 3 ? "Flowering" : "Ready to harvest";
         };
     }
 }

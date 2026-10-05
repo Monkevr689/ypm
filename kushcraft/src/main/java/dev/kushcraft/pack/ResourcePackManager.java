@@ -159,6 +159,11 @@ public final class ResourcePackManager implements Listener {
                 String hex = HexFormat.of().formatHex(externalSha1);
                 plugin.getLogger().info("Resource pack: downloaded " + body.length / 1024 + " KB from resource-pack.url,"
                         + " sha1 " + hex + (hex.equals(hashHex) ? " (same as this plugin's pack)" : " (custom pack)"));
+                if (!hex.equals(hashHex)) {
+                    plugin.getLogger().warning("The zip at resource-pack.url is not the pack this KushCraft version"
+                            + " builds - new textures will be missing. Upload plugins/KushCraft/KushCraft-pack.zip"
+                            + " there again (ignore this if you edited the pack on purpose).");
+                }
             } catch (Exception e) {
                 plugin.getLogger().warning("Could not check resource-pack.url from the server (" + e + "). Players"
                         + " still try it, using the hash of the pack this plugin builds.");

@@ -43,6 +43,10 @@ def check_model(ref, seen):
         tns, tpath = res(t, "textures", ".png")
         if tns != "minecraft" and not os.path.exists(tpath):
             errors.append(f"model {ref}: missing texture {t}")
+        tpath_rel = t.split(":", 1)[1] if ":" in t else t
+        if tns != "minecraft" and not (tpath_rel.startswith("block/") or tpath_rel.startswith("item/")):
+            # the block/item atlas only stitches these folders: anything else shows up magenta/black
+            errors.append(f"model {ref}: texture {t} is outside block/ or item/ (not in the texture atlas)")
     for e in m.get("elements", []):
         for c in e["from"] + e["to"]:
             if c < -16 or c > 32:
@@ -120,7 +124,8 @@ def main():
         for st in range(5):
             used.add(f"plant_{kind}_{st}")
     for st in range(4):
-        used.add(f"plant_mushroom_{st}")
+        for kind in ("mushroom", "coca", "poppy"):
+            used.add(f"plant_{kind}_{st}")
     for u in sorted(used):
         if u not in item_defs:
             errors.append(f"Java uses item model kush:{u} but items/{u}.json is missing")

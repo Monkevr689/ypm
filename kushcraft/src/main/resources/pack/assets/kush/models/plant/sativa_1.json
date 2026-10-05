@@ -1,8 +1,8 @@
 {
  "ambientocclusion": false,
  "textures": {
-  "particle": "kush:plant/sativa_1",
-  "leaves": "kush:plant/sativa_1"
+  "particle": "kush:block/plant/sativa_1",
+  "leaves": "kush:block/plant/sativa_1"
  },
  "elements": [
   {

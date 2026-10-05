@@ -37,6 +37,9 @@ public final class Shop {
                 plugin.getLogger().warning("shop.buy: unknown item " + m.get("item"));
                 continue;
             }
+            if (t.retired()) {
+                continue; // old stations are replaced by the Drug Lab
+            }
             Object strain = m.get("strain");
             if (t.strainBound() && (strain == null || plugin.strains().get(String.valueOf(strain)) == null)) {
                 plugin.getLogger().warning("shop.buy: " + t.id() + " needs a valid strain (got " + strain + ")");
@@ -69,17 +72,23 @@ public final class Shop {
         return Items.create(e.type(), e.amount());
     }
 
-    /** Price the dealer pays for ONE of this item, 0 if he doesn't want it. */
+    /** Config sell price of one plain item (no quality / strain / market adjustments). */
+    public double basePrice(ItemType t) {
+        Double base = sell.get(t);
+        return base == null ? 0 : Math.max(0, base);
+    }
+
+    /** Price the dealer pays for ONE of this item right now, 0 if he doesn't want it. */
     public double sellPrice(ItemStack item) {
         ItemType t = Items.type(item);
         if (t == null) {
             return 0;
         }
-        Double base = sell.get(t);
-        if (base == null || base <= 0) {
+        double base = basePrice(t);
+        if (base <= 0) {
             return 0;
         }
-        double price = base;
+        double price = base * plugin.market().multiplier(t);
         if (t.strainBound()) {
             Strain s = Items.strain(item);
             if (s != null) {

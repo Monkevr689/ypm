@@ -99,7 +99,17 @@ final class SelfTest {
         check(Items.hits(Items.strainItem(ItemType.JOINT, s, 3, 1)) == Items.JOINT_HITS, "joint hits");
         check(Dose.strain(s, 5, 60, 10).effects().size() == s.effects().size(), "dose effects");
         check(GuiFont.space(-169).length() == 4, "negative space builder");
-        check(LabRecipe.values().length == 7, "lab recipes");
+        check(LabRecipe.values().length == 9, "lab recipes");
+        for (ItemType t : ItemType.values()) {
+            if (!t.retired() && t != ItemType.MOON_ROCK && dev.kushcraft.catalog.Catalog.of(t) == null
+                    && t.machine() == null) {
+                // every non-block item should be explained in the catalog
+                check(false, "catalog entry for " + t);
+            }
+            if (t.isDrug() && !t.strainBound() && t != ItemType.SPACE_BROWNIE) {
+                check(dev.kushcraft.catalog.Catalog.dose(t) != null, "dose for " + t);
+            }
+        }
     }
 
     private void shop() {
@@ -112,6 +122,20 @@ final class SelfTest {
         check(plugin.shop().sellPrice(Items.strainItem(ItemType.BUD_DRIED, s, 5, 1))
                 > plugin.shop().sellPrice(Items.strainItem(ItemType.BUD_DRIED, s, 1, 1)), "quality raises price");
         check(plugin.shop().sellPrice(Items.create(ItemType.BONG)) == 0, "dealer does not buy bongs");
+        // market: selling lowers the price, orders exist and pay more than the market
+        double before = plugin.shop().sellPrice(Items.create(ItemType.COCAINE));
+        check(before > 0, "cocaine sells");
+        plugin.market().sold(ItemType.COCAINE, 10);
+        check(plugin.shop().sellPrice(Items.create(ItemType.COCAINE)) < before, "selling lowers the price");
+        plugin.market().tick();
+        check(!plugin.market().orders().isEmpty(), "daily orders exist");
+        for (var o : plugin.market().orders()) {
+            check(o.reward() >= plugin.shop().basePrice(o.type()) * o.amount(), "order pays a bonus: " + o.type());
+        }
+        check(plugin.market().hot() != null, "a hot item is picked");
+        for (var e : plugin.shop().buyEntries()) {
+            check(!e.type().retired(), "retired block not sold: " + e.type());
+        }
         File zip = new File(plugin.getDataFolder(), "KushCraft-pack.zip");
         check(zip.isFile() && zip.length() > 10_000, "resource pack zip written");
     }
@@ -128,10 +152,11 @@ final class SelfTest {
 
     private void plants(World w, int x, int y, int z) {
         PlantManager pm = plugin.plants();
-        String[] kinds = {"SATIVA", "INDICA", "HYBRID", "MUSHROOM"};
+        String[] kinds = {"SATIVA", "INDICA", "HYBRID", "MUSHROOM", "COCA", "POPPY"};
         for (int i = 0; i < kinds.length; i++) {
             Block soil = w.getBlockAt(x, y, z + i * 2);
             soil.setType(i == 3 ? Material.MYCELIUM : Material.FARMLAND);
+            Plant.Kind kind = i < 3 ? Plant.Kind.CANNABIS : Plant.Kind.valueOf(kinds[i]);
             soil.getRelative(0, 1, 0).setType(Material.AIR);
             soil.getRelative(0, 2, 0).setType(Material.AIR);
             BlockKey key = BlockKey.of(soil.getRelative(0, 1, 0));
@@ -148,8 +173,9 @@ final class SelfTest {
                     strain = plugin.strains().all().iterator().next();
                 }
             }
-            Plant p = pm.plantAt(key, i == 3 ? Plant.Kind.MUSHROOM : Plant.Kind.CANNABIS, strain, null);
-            String prefix = i == 3 ? "plant_mushroom_" : "plant_" + strain.type().plantModel() + "_";
+            Plant p = pm.plantAt(key, kind, strain, null);
+            String prefix = kind != Plant.Kind.CANNABIS ? "plant_" + kind.name().toLowerCase(java.util.Locale.ROOT) + "_"
+                    : "plant_" + strain.type().plantModel() + "_";
             check(pm.at(key) == p, kinds[i] + " plant registered");
             check(prefix.concat("0").equals(shownModel(p.displayId())), kinds[i] + " seedling model, got " + shownModel(p.displayId()));
             check(p.hitboxId() != null && Bukkit.getEntity(p.hitboxId()) instanceof Interaction, kinds[i] + " hitbox");
@@ -161,7 +187,7 @@ final class SelfTest {
             check(pm.fertilize(p), kinds[i] + " fertilize");
             p.growth(100);
             pm.refresh(p);
-            int last = i == 3 ? 3 : 4;
+            int last = kind.lastStage();
             check((prefix + last).equals(shownModel(p.displayId())), kinds[i] + " mature model, got " + shownModel(p.displayId()));
             UUID disp = p.displayId();
             pm.harvest(p, null);

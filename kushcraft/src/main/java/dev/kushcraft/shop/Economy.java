@@ -5,25 +5,113 @@ import dev.kushcraft.Keys;
 import dev.kushcraft.util.Text;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  * Money. Uses Vault when it's installed (and enabled in the config),
- * otherwise a simple wallet stored on the player.
+ * otherwise a simple wallet saved in plugins/KushCraft/balances.yml.
  */
 public final class Economy {
 
+    public record Rich(UUID id, String name, double balance) {
+    }
+
     private final KushCraft plugin;
+    private final File file;
+    private final Map<UUID, Double> wallet = new HashMap<>();
+    private final Map<UUID, String> names = new HashMap<>();
+    private boolean dirty;
     private Object vault;
     private Method vGet, vWithdraw, vDeposit, vSuccess;
 
     public Economy(KushCraft plugin) {
         this.plugin = plugin;
+        this.file = new File(plugin.getDataFolder(), "balances.yml");
     }
+
+    // ------------------------------------------------------------------
+    // storage
+    // ------------------------------------------------------------------
+
+    public void load() {
+        wallet.clear();
+        names.clear();
+        if (!file.exists()) {
+            return;
+        }
+        YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
+        ConfigurationSection sec = y.getConfigurationSection("players");
+        if (sec == null) {
+            return;
+        }
+        for (String k : sec.getKeys(false)) {
+            try {
+                UUID id = UUID.fromString(k);
+                names.put(id, sec.getString(k + ".name", "?"));
+                if (sec.isSet(k + ".balance")) {
+                    wallet.put(id, sec.getDouble(k + ".balance"));
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+    }
+
+    public void save() {
+        YamlConfiguration y = new YamlConfiguration();
+        for (Map.Entry<UUID, String> e : names.entrySet()) {
+            String k = "players." + e.getKey();
+            y.set(k + ".name", e.getValue());
+            Double b = wallet.get(e.getKey());
+            if (b != null) {
+                y.set(k + ".balance", Math.round(b * 100) / 100.0);
+            }
+        }
+        try {
+            y.save(file);
+            dirty = false;
+        } catch (IOException ex) {
+            plugin.getLogger().log(Level.SEVERE, "Could not save balances.yml", ex);
+        }
+    }
+
+    public void start() {
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (dirty) {
+                save();
+            }
+        }, 20L * 30, 20L * 30);
+    }
+
+    /** Remembers the player's name and moves an old (v1.0) wallet into balances.yml. */
+    public void join(Player p) {
+        String old = names.put(p.getUniqueId(), p.getName());
+        if (!p.getName().equals(old)) {
+            dirty = true;
+        }
+        if (!wallet.containsKey(p.getUniqueId())) {
+            Double legacy = p.getPersistentDataContainer().get(Keys.BALANCE, PersistentDataType.DOUBLE);
+            wallet.put(p.getUniqueId(), legacy != null ? legacy : plugin.getConfig().getDouble("economy.starting-balance", 100));
+            dirty = true;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // vault
+    // ------------------------------------------------------------------
 
     public void hook() {
         vault = null;
@@ -55,7 +143,11 @@ public final class Economy {
         return vault != null;
     }
 
-    public double balance(Player p) {
+    // ------------------------------------------------------------------
+    // money
+    // ------------------------------------------------------------------
+
+    public double balance(OfflinePlayer p) {
         if (vault != null) {
             try {
                 return (double) vGet.invoke(vault, p);
@@ -63,15 +155,16 @@ public final class Economy {
                 return 0;
             }
         }
-        Double d = p.getPersistentDataContainer().get(Keys.BALANCE, PersistentDataType.DOUBLE);
+        Double d = wallet.get(p.getUniqueId());
         if (d == null) {
             d = plugin.getConfig().getDouble("economy.starting-balance", 100);
-            p.getPersistentDataContainer().set(Keys.BALANCE, PersistentDataType.DOUBLE, d);
+            wallet.put(p.getUniqueId(), d);
+            dirty = true;
         }
         return d;
     }
 
-    public boolean withdraw(Player p, double amount) {
+    public boolean withdraw(OfflinePlayer p, double amount) {
         if (amount <= 0) {
             return true;
         }
@@ -89,28 +182,29 @@ public final class Economy {
         if (b + 1e-9 < amount) {
             return false;
         }
-        p.getPersistentDataContainer().set(Keys.BALANCE, PersistentDataType.DOUBLE, b - amount);
+        wallet.put(p.getUniqueId(), b - amount);
+        dirty = true;
         return true;
     }
 
-    public void deposit(Player p, double amount) {
+    public void deposit(OfflinePlayer p, double amount) {
         if (amount <= 0) {
             return;
         }
         if (vault != null) {
             try {
                 vDeposit.invoke(vault, p, amount);
-                return;
             } catch (Exception e) {
                 plugin.getLogger().warning("Vault deposit failed: " + e.getMessage());
-                return;
             }
+            return;
         }
-        p.getPersistentDataContainer().set(Keys.BALANCE, PersistentDataType.DOUBLE, balance(p) + amount);
+        wallet.put(p.getUniqueId(), balance(p) + amount);
+        dirty = true;
     }
 
-    /** Admin: set the built-in wallet (Vault balances are managed by your economy plugin). */
-    public void set(Player p, double amount) {
+    /** Admin: set a balance. */
+    public void set(OfflinePlayer p, double amount) {
         if (vault != null) {
             double diff = amount - balance(p);
             if (diff > 0) {
@@ -120,7 +214,19 @@ public final class Economy {
             }
             return;
         }
-        p.getPersistentDataContainer().set(Keys.BALANCE, PersistentDataType.DOUBLE, Math.max(0, amount));
+        wallet.put(p.getUniqueId(), Math.max(0, amount));
+        dirty = true;
+    }
+
+    /** Richest players (everyone that ever joined since KushCraft was installed). */
+    public List<Rich> top(int limit) {
+        List<Rich> out = new ArrayList<>();
+        for (Map.Entry<UUID, String> e : names.entrySet()) {
+            double b = vault != null ? balance(Bukkit.getOfflinePlayer(e.getKey())) : wallet.getOrDefault(e.getKey(), 0.0);
+            out.add(new Rich(e.getKey(), e.getValue(), b));
+        }
+        out.sort((a, b) -> Double.compare(b.balance(), a.balance()));
+        return out.size() > limit ? out.subList(0, limit) : out;
     }
 
     public String format(double amount) {

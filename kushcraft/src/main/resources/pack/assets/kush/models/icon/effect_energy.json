@@ -1,6 +1,6 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:icon/effect_energy"
+  "layer0": "kush:item/icon/effect_energy"
  }
 }

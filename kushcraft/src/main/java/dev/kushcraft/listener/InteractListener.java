@@ -4,10 +4,9 @@ import dev.kushcraft.KushCraft;
 import dev.kushcraft.effect.Dose;
 import dev.kushcraft.effect.EffectType;
 import dev.kushcraft.gui.DealerMenu;
-import dev.kushcraft.gui.LabMenu;
 import dev.kushcraft.gui.RollerMenu;
 import dev.kushcraft.gui.StrainMakerMenu;
-import dev.kushcraft.guide.Guide;
+import dev.kushcraft.catalog.Catalog;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.machine.Machine;
@@ -91,8 +90,7 @@ public final class InteractListener implements Listener {
                 if (!p.hasPermission("kushcraft.use")) {
                     return;
                 }
-                if (m.type() == dev.kushcraft.machine.MachineType.PLANTER_BOX
-                        && (type == ItemType.SEED_PACK || type == ItemType.MUSHROOM_SPORES)) {
+                if (m.type() == dev.kushcraft.machine.MachineType.PLANTER_BOX && kindFor(type) != null) {
                     plant(p, item, type, b);
                     return;
                 }
@@ -106,7 +104,7 @@ public final class InteractListener implements Listener {
         }
 
         // ---- planting ----------------------------------------------------
-        if (type == ItemType.SEED_PACK || type == ItemType.MUSHROOM_SPORES) {
+        if (kindFor(type) != null) {
             if (a == Action.RIGHT_CLICK_BLOCK) {
                 e.setCancelled(true);
                 if (e.getBlockFace() != BlockFace.UP) {
@@ -136,7 +134,7 @@ public final class InteractListener implements Listener {
 
     private void openMachine(Player p, Machine m) {
         switch (m.type()) {
-            case LAB_STATION -> new LabMenu(p, m).open();
+            case LAB_STATION -> new dev.kushcraft.gui.LabHubMenu(p, m).open();
             case STRAIN_MAKER -> new StrainMakerMenu(p).open();
             case ROLLING_TABLE -> new RollerMenu(p).open();
             case DEALER -> new DealerMenu(p).open();
@@ -147,8 +145,21 @@ public final class InteractListener implements Listener {
         }
     }
 
+    private static Plant.Kind kindFor(ItemType type) {
+        if (type == null) {
+            return null;
+        }
+        return switch (type) {
+            case SEED_PACK -> Plant.Kind.CANNABIS;
+            case MUSHROOM_SPORES -> Plant.Kind.MUSHROOM;
+            case COCA_SEEDS -> Plant.Kind.COCA;
+            case POPPY_SEEDS -> Plant.Kind.POPPY;
+            default -> null;
+        };
+    }
+
     private void plant(Player p, ItemStack item, ItemType type, Block soil) {
-        Plant.Kind kind = type == ItemType.SEED_PACK ? Plant.Kind.CANNABIS : Plant.Kind.MUSHROOM;
+        Plant.Kind kind = kindFor(type);
         Strain s = kind == Plant.Kind.CANNABIS ? Items.strain(item) : null;
         if (kind == Plant.Kind.CANNABIS && s == null) {
             p.sendActionBar(Text.mm("<red>These seeds are from a strain that no longer exists."));
@@ -176,7 +187,7 @@ public final class InteractListener implements Listener {
     private boolean use(Player p, ItemStack item, ItemType type) {
         switch (type) {
             case GROWER_GUIDE -> {
-                p.openBook(Guide.book());
+                new dev.kushcraft.gui.MainMenu(p).open();
                 return true;
             }
             case JOINT, BLUNT -> {
@@ -191,19 +202,23 @@ public final class InteractListener implements Listener {
                 }
                 return true;
             }
-            case SPACE_BROWNIE, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL, PIXIE_DUST -> {
+            case SPACE_BROWNIE, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL, PIXIE_DUST, COCAINE, HEROIN -> {
                 if (!onCooldown(p, 800)) {
                     consume(p, item, type);
                 }
                 return true;
             }
             case BUD_DRIED, HASH, MOON_ROCK -> {
-                p.sendActionBar(Text.mm("<gray>Smoke it with a <aqua>Bong</aqua>, roll it at a <yellow>Rolling Table</yellow>"
-                        + (type == ItemType.BUD_DRIED ? " or cook it in a <green>Lab Station</green>." : ".")));
+                p.sendActionBar(Text.mm("<gray>Smoke it with a <aqua>Bong</aqua>"
+                        + (type == ItemType.BUD_DRIED ? ", or roll / cook it in a <green>Drug Lab</green>." : ".")));
                 return true;
             }
             case BUD_FRESH -> {
-                p.sendActionBar(Text.mm("<gray>Fresh buds need drying first - use a <yellow>Drying Rack</yellow>."));
+                p.sendActionBar(Text.mm("<gray>Fresh buds need drying first - <green>Drug Lab</green> > Dry."));
+                return true;
+            }
+            case COCA_LEAVES, POPPY_POD -> {
+                p.sendActionBar(Text.mm("<gray>Cook it in a <green>Drug Lab</green> > Cook."));
                 return true;
             }
             case FERTILIZER -> {
@@ -309,28 +324,31 @@ public final class InteractListener implements Listener {
                 p.sendActionBar(Text.mm("<gray>Tasty. <dark_gray>Doesn't feel like anything... yet."));
             }
             case MAGIC_MUSHROOM -> {
-                d = new Dose().add(EffectType.TRIPPY, 90).add(EffectType.GIGGLES, 90).high(16);
+                d = Catalog.dose(type);
                 food = 1;
             }
             case SHROOM_TEA -> {
-                d = new Dose().add(EffectType.TRIPPY, 180).add(EffectType.EUPHORIA, 180).high(26)
-                        .delay(5, "<light_purple>The tea starts to work...");
+                d = Catalog.dose(type);
                 sound = "minecraft:entity.generic.drink";
                 food = 2;
             }
             case LUCID_TAB -> {
-                d = new Dose().add(EffectType.TRIPPY, 300).add(EffectType.CREATIVE, 300).add(EffectType.FOCUS, 200)
-                        .high(30).delay(10, "<light_purple>The colours start to breathe...");
+                d = Catalog.dose(type);
                 sound = "minecraft:block.amethyst_block.chime";
             }
-            case BLUE_CRYSTAL -> {
-                d = new Dose().add(EffectType.HYPER, 120).high(28);
+            case BLUE_CRYSTAL, COCAINE -> {
+                d = Catalog.dose(type);
                 sound = "minecraft:entity.sniffer.sniffing";
                 p.getWorld().spawnParticle(Particle.DUST, p.getEyeLocation(), 12, 0.15, 0.1, 0.15, 0,
-                        new Particle.DustOptions(org.bukkit.Color.fromRGB(0x72D6FF), 1f));
+                        new Particle.DustOptions(org.bukkit.Color.fromRGB(type == ItemType.COCAINE ? 0xFFFFFF : 0x72D6FF), 1f));
+            }
+            case HEROIN -> {
+                d = Catalog.dose(type);
+                sound = "minecraft:block.beacon.deactivate";
+                p.sendActionBar(Text.mm("<gray>A heavy warmth washes over you..."));
             }
             case PIXIE_DUST -> {
-                d = new Dose().add(EffectType.GLOW, 120).add(EffectType.FLOATY, 120).add(EffectType.EUPHORIA, 120).high(24);
+                d = Catalog.dose(type);
                 sound = "minecraft:block.amethyst_block.resonate";
                 p.getWorld().spawnParticle(Particle.WAX_ON, p.getLocation().add(0, 1.2, 0), 30, 0.4, 0.6, 0.4, 0.5);
             }

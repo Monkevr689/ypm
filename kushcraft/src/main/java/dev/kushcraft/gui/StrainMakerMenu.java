@@ -46,9 +46,11 @@ public final class StrainMakerMenu extends Menu {
     private int colorIndex = -1;
     private int potency = 20;
     private String name;
+    private boolean named;
+    private static final int BACK = 45;
 
     public StrainMakerMenu(Player player) {
-        super(player, 6, "strain", "Strain Maker");
+        super(player, 6, "strain", "Mix Strains");
     }
 
     private Strain strain(String id) {
@@ -81,7 +83,9 @@ public final class StrainMakerMenu extends Menu {
         colorIndex = -1;
         ThreadLocalRandom r = ThreadLocalRandom.current();
         potency = Math.max(5, Math.min(35, (sa.potency() + sb.potency()) / 2 + r.nextInt(-2, 5)));
-        name = autoName(sa, sb);
+        if (!named) {
+            name = autoName(sa, sb);
+        }
     }
 
     private static int blend(int x, int y) {
@@ -108,6 +112,7 @@ public final class StrainMakerMenu extends Menu {
     @Override
     public void render() {
         inv.clear();
+        backButton(BACK);
         Strain sa = strain(a), sb = strain(b);
         set(PARENT_A, sa == null ? Items.icon("seed_pack", "<gray>Parent A",
                 "<gray>Click a <green>Seeds</green> item in", "<gray>your inventory to add it.")
@@ -237,20 +242,51 @@ public final class StrainMakerMenu extends Menu {
                 render();
             }
             case NAME -> ChatInput.ask(player, "<green>What should your strain be called?", text -> {
-                String n = text.replaceAll("[^A-Za-z0-9 '\\-]", "").replaceAll(" +", " ").trim();
-                if (n.length() < 2 || n.length() > 24) {
-                    player.sendMessage(Text.msg("<red>Names must be 2-24 letters/numbers."));
-                } else if (KushCraft.get().strains().nameTaken(n)) {
-                    player.sendMessage(Text.msg("<red>That strain already exists."));
-                } else {
-                    name = n;
+                if (acceptName(text)) {
+                    named = true;
                 }
                 reopen();
             }, this::reopen);
-            case CREATE -> create();
+            case CREATE -> {
+                if (named) {
+                    create();
+                    return;
+                }
+                // always let the player name their strain before it is saved
+                ChatInput.ask(player, "<green>Name your new strain!</green> <gray>Type a name, or <white>ok</white> to keep <white>"
+                        + Text.escape(name) + "</white>.", text -> {
+                    if (text.equalsIgnoreCase("ok") || acceptName(text)) {
+                        named = true;
+                        if (!create()) {
+                            reopen();
+                        }
+                    } else {
+                        reopen();
+                    }
+                }, this::reopen);
+            }
             default -> {
             }
         }
+    }
+
+    /** Validates a typed name and uses it. */
+    private boolean acceptName(String text) {
+        String n = clean(text);
+        if (n.length() < 2 || n.length() > 24) {
+            player.sendMessage(Text.msg("<red>Names must be 2-24 letters/numbers."));
+            return false;
+        }
+        if (KushCraft.get().strains().nameTaken(n)) {
+            player.sendMessage(Text.msg("<red>That strain already exists - pick another name."));
+            return false;
+        }
+        name = n;
+        return true;
+    }
+
+    static String clean(String text) {
+        return text.replaceAll("[^A-Za-z0-9 '\\-]", "").replaceAll(" +", " ").trim();
     }
 
     private void reopen() {
@@ -259,40 +295,41 @@ public final class StrainMakerMenu extends Menu {
         }
     }
 
-    private void create() {
+    private boolean create() {
         KushCraft plugin = KushCraft.get();
         if (!player.hasPermission("kushcraft.strainmaker")) {
             player.sendActionBar(Text.mm("<red>You are not allowed to create strains."));
             failSound();
-            return;
+            return false;
         }
         if (effects.isEmpty()) {
             player.sendActionBar(Text.mm("<red>Pick at least one effect."));
             failSound();
-            return;
+            return false;
         }
         if (plugin.strains().nameTaken(name)) {
             player.sendActionBar(Text.mm("<red>That name is taken - pick another."));
+            named = false;
             failSound();
-            return;
+            return false;
         }
         int max = plugin.getConfig().getInt("strain-maker.max-per-player", 25);
         if (!player.hasPermission("kushcraft.admin") && plugin.strains().countCreatedBy(player.getUniqueId()) >= max) {
             player.sendActionBar(Text.mm("<red>You already created " + max + " strains."));
             failSound();
-            return;
+            return false;
         }
         int needA = a.equals(b) ? 2 : 1;
         if (countSeeds(a) < needA || countSeeds(b) < 1) {
             player.sendActionBar(Text.mm("<red>The parent seeds are no longer in your inventory."));
             failSound();
-            return;
+            return false;
         }
         double cost = plugin.getConfig().getDouble("strain-maker.cost", 150);
         if (!plugin.economy().withdraw(player, cost)) {
             player.sendActionBar(Text.mm("<red>You need " + plugin.economy().format(cost) + " to register a strain."));
             failSound();
-            return;
+            return false;
         }
         removeSeed(a);
         removeSeed(b);
@@ -303,6 +340,7 @@ public final class StrainMakerMenu extends Menu {
         player.playSound(player.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.7f, 1.2f);
         Bukkit.broadcast(Text.msg("<white>" + Text.escape(player.getName()) + " <gray>bred a new strain: "
                 + s.colored() + " <gray>(" + s.type().colored() + "<gray>)"));
+        return true;
     }
 
     private int countSeeds(String id) {

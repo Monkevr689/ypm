@@ -184,19 +184,19 @@ def cross(y0, y1, tex, depth=0.0, tint=False):
 
 
 def plant_model(name, tall, has_buds):
-    tex = {"particle": f"{G.NS}:plant/{name}", "leaves": f"{G.NS}:plant/{name}"}
+    tex = {"particle": f"{G.NS}:block/plant/{name}", "leaves": f"{G.NS}:block/plant/{name}"}
     el = cross(0, 16, "#leaves")
     if tall:
-        tex["leaves_top"] = f"{G.NS}:plant/{name}_top"
+        tex["leaves_top"] = f"{G.NS}:block/plant/{name}_top"
         el += cross(16, 32, "#leaves_top")
     if has_buds:
-        tex["buds"] = f"{G.NS}:plant/{name}_buds"
-        tex["pistils"] = f"{G.NS}:plant/{name}_pistils"
+        tex["buds"] = f"{G.NS}:block/plant/{name}_buds"
+        tex["pistils"] = f"{G.NS}:block/plant/{name}_pistils"
         el += cross(0, 16, "#buds", 0.12, tint=True)
         el += cross(0, 16, "#pistils", 0.24)
         if tall:
-            tex["buds_top"] = f"{G.NS}:plant/{name}_buds_top"
-            tex["pistils_top"] = f"{G.NS}:plant/{name}_pistils_top"
+            tex["buds_top"] = f"{G.NS}:block/plant/{name}_buds_top"
+            tex["pistils_top"] = f"{G.NS}:block/plant/{name}_pistils_top"
             el += cross(16, 32, "#buds_top", 0.12, tint=True)
             el += cross(16, 32, "#pistils_top", 0.24)
     return {"ambientocclusion": False, "textures": tex, "elements": el}
@@ -221,11 +221,11 @@ def cannabis():
         for stage in range(5):
             name = f"{kind}_{stage}"
             leaves, buds, pist, H = plant_texture(kind, stage)
-            split_save(leaves, f"plant/{name}")
+            split_save(leaves, f"block/plant/{name}")
             has_buds = buds is not None and buds.getbbox() is not None
             if has_buds:
-                split_save(buds, f"plant/{name}_buds")
-                split_save(pist, f"plant/{name}_pistils")
+                split_save(buds, f"block/plant/{name}_buds")
+                split_save(pist, f"block/plant/{name}_pistils")
             G.save_json(plant_model(name, H == 32, has_buds), f"models/plant/{name}.json")
             G.save_json(G.item_definition(f"{G.NS}:plant/{name}",
                                           [{"type": "minecraft:custom_model_data", "index": 0,
@@ -285,7 +285,7 @@ def mushroom_textures():
                 myc.putpixel((x, y), (v, v, v - 10, 255))
     for name, img in (("mushroom_cap", cap), ("mushroom_cap_side", cap_side), ("mushroom_gills", gills),
                       ("mushroom_stalk", stalk), ("mycelium_patch", myc)):
-        G.save_png(img, f"plant/{name}")
+        G.save_png(img, f"block/plant/{name}")
 
 
 def box(f, t, faces, rot=None):
@@ -337,9 +337,9 @@ def mushrooms():
         model = {
             "ambientocclusion": False,
             "textures": {
-                "particle": f"{ns}:plant/mushroom_cap", "cap": f"{ns}:plant/mushroom_cap",
-                "cap_side": f"{ns}:plant/mushroom_cap_side", "gills": f"{ns}:plant/mushroom_gills",
-                "stalk": f"{ns}:plant/mushroom_stalk", "mycelium": f"{ns}:plant/mycelium_patch",
+                "particle": f"{ns}:block/plant/mushroom_cap", "cap": f"{ns}:block/plant/mushroom_cap",
+                "cap_side": f"{ns}:block/plant/mushroom_cap_side", "gills": f"{ns}:block/plant/mushroom_gills",
+                "stalk": f"{ns}:block/plant/mushroom_stalk", "mycelium": f"{ns}:block/plant/mycelium_patch",
             },
             "elements": els,
         }
@@ -347,10 +347,121 @@ def mushrooms():
         G.save_json(G.item_definition(f"{ns}:plant/mushroom_{stage}"), f"items/plant_mushroom_{stage}.json")
 
 
+# ---------------------------------------------------------------------------
+# coca bush & opium poppy (4 stages each, crossed planes, no tint)
+# ---------------------------------------------------------------------------
+def oval_leaf(img, x, y, angle, length, col, hi, vein):
+    """Glossy oval leaf (coca): 2px wide in the middle, pointed tip."""
+    a = math.radians(angle)
+    dx, dy = math.cos(a), -math.sin(a)
+    nx, ny = -dy, dx
+    steps = max(2, int(length * 2))
+    for i in range(steps + 1):
+        t = i / steps
+        cx, cy = x + dx * length * t, y + dy * length * t
+        w = math.sin(math.pi * min(1.0, t * 1.1)) * 1.1
+        px(img, cx, cy, vein if 0.15 < t < 0.85 else col)
+        if w > 0.5:
+            px(img, cx + nx * w, cy + ny * w, col)
+            px(img, cx - nx * w, cy - ny * w, hi if t < 0.6 else col)
+
+
+def coca_texture(stage):
+    rgba = G.rgba
+    rng = random.Random(f"coca-{stage}")
+    img = Image.new("RGBA", (16, 16))
+    leaf_c, hi, vein = rgba("4fb83a"), rgba("8ae05a"), rgba("2e7a24")
+    wood = rgba("6a5434")
+    if stage == 0:
+        line(img, 7, 15, 7, 12, rgba("6a8a3a"))
+        oval_leaf(img, 7, 12, 135, 2.5, leaf_c, hi, vein)
+        oval_leaf(img, 7, 12, 45, 2.5, leaf_c, hi, vein)
+        return img
+    height = {1: 7, 2: 11, 3: 13}[stage]
+    branches = {1: 2, 2: 4, 3: 5}[stage]
+    line(img, 7, 15, 7, 15 - height, wood)
+    if stage >= 2:
+        px(img, 8, 15, wood)
+        px(img, 8, 14, wood)
+    for b in range(branches):
+        by = 15 - int(height * (0.35 + 0.6 * b / max(1, branches - 1)))
+        side = -1 if b % 2 == 0 else 1
+        bx = 7 + side * (2 + (b % 3))
+        line(img, 7, by + 1, bx, by - 1, wood)
+        for k in range(3):
+            ang = 90 + side * (25 + 35 * k) + rng.randint(-8, 8)
+            oval_leaf(img, bx, by - 1, ang, 2.6 + rng.random() * 1.2, leaf_c, hi, vein)
+        if stage == 3 and rng.random() < 0.85:
+            px(img, bx + side, by + 1, rgba("e8402a"))
+            px(img, bx, by + 1, rgba("b02a1a"))
+    oval_leaf(img, 7, 15 - height, 90, 3, leaf_c, hi, vein)
+    oval_leaf(img, 7, 15 - height, 60, 2.6, leaf_c, hi, vein)
+    oval_leaf(img, 7, 15 - height, 120, 2.6, leaf_c, hi, vein)
+    return img
+
+
+def poppy_texture(stage):
+    rgba = G.rgba
+    img = Image.new("RGBA", (16, 16))
+    stem_c, leaf_c, leaf_d = rgba("7aa86a"), rgba("8ab890"), rgba("5a8a6a")
+    # long grey-green leaves at the base
+    for (x0, ang, ln) in ((7, 150, 5), (8, 30, 5), (7, 115, 4), (8, 65, 4)):
+        if stage == 0 and ln == 5:
+            continue
+        a = math.radians(ang)
+        line(img, x0, 15, x0 + math.cos(a) * ln, 15 - math.sin(a) * ln, leaf_c, leaf_d)
+    if stage == 0:
+        line(img, 7, 15, 7, 12, stem_c)
+        px(img, 6, 12, leaf_c)
+        px(img, 8, 12, leaf_c)
+        return img
+    stems = [(4, 9), (8, 12), (11, 10)] if stage >= 2 else [(6, 6), (9, 5)]
+    for (x, h) in stems:
+        top = 15 - h
+        for y in range(top, 16):
+            sway = 1 if (y < top + 3 and x < 7) else (-1 if (y < top + 3 and x > 9) else 0)
+            px(img, x + sway, y, stem_c)
+        hx = x + (1 if x < 7 else -1 if x > 9 else 0)
+        if stage == 1:
+            # drooping bud
+            px(img, hx, top, rgba("6a9a5a"))
+            px(img, hx + 1, top + 1, rgba("6a9a5a"))
+        elif stage == 2:
+            # red flower with a dark centre
+            for (dx, dy) in ((-1, -1), (0, -1), (1, -1), (-2, 0), (-1, 0), (1, 0), (2, 0), (-1, 1), (0, 1), (1, 1)):
+                px(img, hx + dx, top + dy, rgba("e8302a") if dy != -1 else rgba("ff5a4a"))
+            px(img, hx, top, rgba("1a1a1a"))
+        else:
+            # green seed pod with a little crown
+            for (dx, dy) in ((-1, 0), (0, 0), (1, 0), (-1, 1), (0, 1), (1, 1), (0, -1)):
+                px(img, hx + dx, top + dy, rgba("8ec8a0"))
+            px(img, hx - 1, top - 1, rgba("8a7aa8"))
+            px(img, hx + 1, top - 1, rgba("8a7aa8"))
+            px(img, hx, top, rgba("d8f0e0"))
+    return img
+
+
+def small_crops():
+    for kind, fn in (("coca", coca_texture), ("poppy", poppy_texture)):
+        for stage in range(4):
+            name = f"{kind}_{stage}"
+            img = fn(stage)
+            G.save_png(img, f"block/plant/{name}")
+            model = {"ambientocclusion": False,
+                     "textures": {"particle": f"{G.NS}:block/plant/{name}", "leaves": f"{G.NS}:block/plant/{name}"},
+                     "elements": cross(0, 16, "#leaves")}
+            G.save_json(model, f"models/plant/{name}.json")
+            G.save_json(G.item_definition(f"{G.NS}:plant/{name}"), f"items/plant_{name}.json")
+            canvas = Image.new("RGBA", (16, 32))
+            canvas.alpha_composite(img, (0, 16))
+            PREVIEW.append(canvas)
+
+
 def generate(g):
     global G
     G = g
     cannabis()
+    small_crops()
     mushrooms()
     # plant preview strip
     import os

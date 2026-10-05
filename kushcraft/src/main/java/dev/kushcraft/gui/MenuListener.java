@@ -61,6 +61,10 @@ public final class MenuListener implements Listener {
         int raw = e.getRawSlot();
         try {
             if (raw < e.getView().getTopInventory().getSize()) {
+                if (raw == m.backSlot()) {
+                    m.goBack();
+                    return;
+                }
                 m.click(raw, e.getClick());
             } else if (e.getClickedInventory() == e.getWhoClicked().getInventory()) {
                 m.clickOwn(e.getSlot(), e.getCurrentItem(), e.getClick());

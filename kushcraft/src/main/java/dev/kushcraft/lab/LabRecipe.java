@@ -24,6 +24,10 @@ public enum LabRecipe {
     BLUE_CRYSTAL(ItemType.BLUE_CRYSTAL, 4, 90,
             Ingredient.of(ItemType.LAB_SOLVENT, 1), Ingredient.of(ItemType.CATALYST, 1),
             Ingredient.of(Material.LAPIS_LAZULI, 4), Ingredient.of(Material.SUGAR, 2)),
+    COCAINE(ItemType.COCAINE, 4, 60,
+            Ingredient.of(ItemType.COCA_LEAVES, 8), Ingredient.of(ItemType.LAB_SOLVENT, 1), Ingredient.of(Material.SUGAR, 1)),
+    HEROIN(ItemType.HEROIN, 3, 75,
+            Ingredient.of(ItemType.POPPY_POD, 6), Ingredient.of(ItemType.LAB_SOLVENT, 1), Ingredient.of(ItemType.CATALYST, 1)),
     PIXIE_DUST(ItemType.PIXIE_DUST, 4, 60,
             Ingredient.of(ItemType.LAB_SOLVENT, 1), Ingredient.of(Material.GLOWSTONE_DUST, 4), Ingredient.of(Material.SUGAR, 2));
 

@@ -1,163 +1,115 @@
 # KushCraft – grow, cook, roll & deal (Paper 26.3)
 
-A **server-side only** Paper plugin: custom plants, strains, a lab, a strain
-maker, rolling, a dealer shop and custom effects. All of it comes in **one jar**.
-Players don't install any mods. The plugin builds its own resource pack (custom
-textures, 3D models and GUI art), hosts it, and sends it to every player who
-joins.
+A **server-side only** Paper plugin: custom plants, strains, a Drug Lab, a
+market with a living economy, and custom effects. It all comes in **one jar**.
+Players don't install any mods. The plugin builds its own resource pack
+(textures, 3D models and menu art) and sends it to everyone who joins.
 
-**Download:** [`release/KushCraft-1.0.0.jar`](release/KushCraft-1.0.0.jar). Drop it in `plugins/` and restart.
+**Download:** [`release/KushCraft-1.1.0.jar`](release/KushCraft-1.1.0.jar). Drop it in `plugins/` and restart.
 
-| Items | Machines | Plants |
+| Items | Blocks | Plants |
 |---|---|---|
-| ![items](docs/items_preview.png) | ![machines](docs/blocks_preview.png) | ![plants](docs/plants3d_preview.png) |
+| ![items](docs/items_preview.png) | ![blocks](docs/blocks_preview.png) | ![plants](docs/plants3d_preview.png) |
 
-![GUIs](docs/gui_preview.png)
+![menus](docs/gui_preview.png)
 
-## Features
+## Players: just type `/kush`
 
-* **Custom plants that really grow.** Cannabis has 5 growth stages, magic mushrooms have 4. Each is a 3D model drawn with display entities, so no vanilla blocks get replaced.
-  * **Sativa** grows tall (2 blocks) and loves **warm** biomes.
-  * **Indica** stays short and bushy and loves **cold** biomes.
-  * **Hybrid** sits in between and loves **mild** biomes.
-  * Growth speed and harvest **quality (1–5 ★)** depend on light, soil (watered farmland or a Planter Box is best), the biome climate and fertilizer.
-  * Every strain has its own **bud colour**, visible on the seeds, the buds and the growing plant.
-* **10 built-in strains**, and **you can breed your own** in the Strain Maker. Pick a name, type, colour and up to 3 effects. New strains are saved to `strains.yml`, and admins can add strains there too.
-* **Biome landraces:** breaking grass in a jungle can drop *Jungle Haze* seeds, a taiga gives *Northern Lights*, a cherry grove gives *Cherry Pie*, and so on.
-* **Machines** (custom 3D blocks):
+`/kush` (or right-clicking the **KushCraft Menu** item, which new players get) opens one menu with everything:
 
-  | Machine | What it does |
-  |---|---|
-  | **Lab Station** | Cooks hash, moon rocks, space brownies, shroom tea and synthetics (Lucid Tabs, Blue Crystal, Pixie Dust) on a timer |
-  | **Strain Maker** | Crosses two seeds into a brand new strain |
-  | **Rolling Table** | Rolls joints and blunts |
-  | **Drying Rack** | Turns fresh buds into dried buds |
-  | **Grow Lamp** | Gives light and a growth boost, so you can grow indoors or underground |
-  | **Planter Box** | Perfect soil: faster growth and +1 ★ |
-  | **Dealer Stand** | A very simple shop: click to buy, click your items to sell |
-* **16 custom effects** with their own icons, shown on a boss-bar HUD with a "high" meter: Giggles, Munchies, Couch Lock, Energy Rush, Euphoria, Creative Flow, Floaty, Paranoia (fake creeper hisses behind you), Sleepy, Focus, Pain Relief, Trippy (rainbow particles and a colour-shifting sky), Hyper (followed by a Crash), Glow, and Greened Out (if you smoke too much).
-* **Custom GUIs:** every machine menu has its own full background image.
-* **Grower's Handbook:** an in-game book that explains everything, including all recipes. New players get one on their first join.
-* **Simple money:** a built-in wallet, or **Vault** (EssentialsX, CMI, …) if installed.
+| Button | What it does |
+|---|---|
+| **Guide** | the handbook: how everything works |
+| **Market** | buy seeds, supplies and blocks; sell your product |
+| **Drug Catalog** | every product: how to make it, what it does, what it's worth right now |
+| **Strains** | every strain; **mix your own** and **name** it; rename your strains |
+| **Daily Orders** | hand in a batch (e.g. 8 cocaine) for ~75% more than the market |
+| **Top Dealers** | the money leaderboard |
+| **Your Status** | your high meter and active effects |
+| **Texture Pack** | re-download the pack |
+| *Admin* (ops only) | click any item to get it |
+
+## The 4 blocks
+
+| Block | Use |
+|---|---|
+| **Drug Lab** | one station for everything: **Cook**, **Roll** (joints/blunts), **Dry** (fresh → dried buds) and **Mix** (new strains) |
+| **Planter** | perfect soil: faster growth, +1 ★ quality |
+| **Grow Lamp** | light + growth boost so you can grow indoors or underground |
+| **Dealer Stand** | the market as a block (needed only if `market.anywhere: false`) |
+
+Placed Strain Makers, Rolling Tables and Drying Racks from v1.0 still work, but they're no longer sold or crafted.
+
+## Plants & drugs
+
+| Plant | Seeds from | Likes | Harvest → product |
+|---|---|---|---|
+| Cannabis (10 strains + yours) | grass/ferns (biome decides the strain), Market | sativa: warm, indica: cold, hybrid: mild | fresh buds → dry → joints, blunts, hash, moon rock, brownies |
+| Coca bush | jungle/savanna grass, Market | warm | coca leaves → **Cocaine** |
+| Opium poppy | red poppy flowers, Market | mild | poppy pods → **Heroin** |
+| Magic mushrooms | small mushrooms, Market | darkness, mycelium | mushrooms → shroom tea, **LSD** |
+
+**Drug Lab > Cook** (ingredients come from your inventory):
+
+| Product | Ingredients | Effects |
+|---|---|---|
+| Hash ×2 | 4 dried bud + ice | strong strain effects (bong) |
+| Moon Rock | bud + hash + honey bottle | very strong strain effects (bong) |
+| Space Brownie ×3 | 2 bud + cocoa + 2 wheat + sugar | long strain effects + Munchies |
+| Shroom Tea | 2 magic mushrooms + bottle | Trippy, Euphoria |
+| **Cocaine ×4** | 8 coca leaves + lab solvent + sugar | Energy Rush, Focus, Paranoia |
+| **Heroin ×3** | 6 poppy pods + lab solvent + catalyst | Euphoria, Couch Lock, Pain Relief, Sleepy (very strong) |
+| **LSD ×6** | lab solvent + 2 magic mushrooms + paper | Trippy, Creative Flow, Focus |
+| **Meth ×4** | lab solvent + catalyst + 4 lapis + 2 sugar | Hyper, then a Crash |
+| Pixie Dust ×4 | lab solvent + 4 glowstone dust + 2 sugar | Glow, Floaty, Euphoria |
+
+The full list with prices is in-game under `/kush` > Drug Catalog. A boss bar shows your "high"; reach 100% and you **green out**.
+
+## Economy
+
+* Built-in wallet (saved in `balances.yml`), or **Vault** (EssentialsX, CMI, …) if installed.
+* **Market prices move:** every item you sell lowers that product's price a little, and it recovers over time, so selling a mix pays best.
+* **Hot item:** one random product sells for +50% for an hour.
+* **Daily Orders:** 3 open orders. The first player to hand one in gets the bonus, then a new order appears.
+* Better ★ quality and stronger strains always sell for more.
+* **Top Dealers** leaderboard in `/kush`.
 
 ## Installing
 
-1. Use **Paper 26.3** (Java 25).
-2. Put `KushCraft-1.0.0.jar` in `plugins/` and start the server.
-3. **Open port `8163`** (TCP) on your firewall or hosting panel. This is the plugin's built-in web server, which hands the texture pack to players.
-   * Can't open a port? Upload `plugins/KushCraft/KushCraft-pack.zip` somewhere that gives a direct download link and set `resource-pack.url` in `config.yml`.
-   * If players reach your server through an address that can't serve the pack, set `resource-pack.host`.
-4. Join. Accept the resource pack and you're done.
+1. **Paper 26.3** (Java 25). Put the jar in `plugins/` and start the server.
+2. Players need the texture pack. KushCraft hosts it on **port 8163**. Open that port, **or** (most game hosts, e.g. Shockbyte) use a hosted copy:
+   ```yaml
+   # plugins/KushCraft/config.yml
+   resource-pack:
+     url: 'https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip'
+   ```
+   The plugin downloads that file on start-up and checks it. The console should say `Resource pack: downloaded ... (same as this plugin's pack)`. If it warns that the zip is *not* this version's pack, re-upload `plugins/KushCraft/KushCraft-pack.zip`.
+3. Join and accept the pack.
 
-> Players who decline the pack still have every feature, but items and plants will look like placeholder textures. Set `resource-pack.required: true` to make the pack mandatory.
+Updating from 1.0: just replace the jar. `config.yml` is upgraded automatically: the new shop list and options are added, and your resource-pack settings are kept.
 
-### Hosted server (Shockbyte etc.) - "FAILED_DOWNLOAD"
-
-Game hosts usually only open the game port, so players can't reach port 8163 and the console shows
-`could not load the resource pack (FAILED_DOWNLOAD)`. Host the zip somewhere else instead:
-
-1. In `plugins/KushCraft/config.yml` set `resource-pack.url` to a **direct** link to the zip:
-   * GitHub (easiest, the zip is in this repo):
-     `https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip`
-   * or upload `KushCraft-pack.zip` (also written to `plugins/KushCraft/`) to Dropbox and use the share link ending in `?dl=1`.
-2. Restart the server (or `/kush reload`).
-
-The plugin downloads that file itself on start-up and sends players its hash, so any copy of the zip works.
-The console prints `Resource pack: downloaded ... sha1 ...` when it is set up correctly.
-
-## How to play
-
-1. **Seeds:** break grass, ferns or dead bushes (about a 4% chance; the strain depends on the biome) or buy them from a Dealer. Break small mushrooms to get spores.
-2. **Plant:** right-click the **top** of farmland, grass, dirt, moss or a Planter Box. Mushrooms like mycelium or podzol and **darkness**.
-3. **Grow:** right-click a plant to see its progress; sneak + right-click shows full details. It needs light level 9+ (or a Grow Lamp). Fertilizer and bone meal speed it up.
-4. **Harvest:** click a fully grown plant to get **Fresh Buds** and seeds.
-5. **Dry:** right-click a Drying Rack with fresh buds. A few minutes later you get **Dried Buds**.
-6. **Use:** roll joints or blunts at the Rolling Table, smoke dried bud, hash or moon rocks in a Bong, or cook in the Lab.
-7. **Sell** at the Dealer. Better ★ quality and stronger strains earn more.
-
-### Crafting (vanilla crafting table)
-
-| Item | Recipe |
-|---|---|
-| Lab Station | `Bottle Brewing-Stand Bottle / Iron Cauldron Iron / Iron _ Iron` |
-| Strain Maker | `Glass×3 / Glass Emerald Glass / Iron Redstone-Block Iron` |
-| Rolling Table | `Paper×3 / Planks×3 / Planks _ Planks` |
-| Drying Rack | `Stick×3 / String×3 / Stick _ Stick` |
-| Grow Lamp | `Iron×3 / Glowstone-Dust Redstone-Lamp Glowstone-Dust / _ Iron _` |
-| Planter Box ×2 | `Planks Bone-Meal Planks / Planks Dirt Planks / Planks×3` |
-| Dealer Stand | `Emerald×3 / Planks Chest Planks / Planks×3` |
-| Bong | `_ Glass _ / _ Glass Iron-Nugget / Glass Bottle Glass` |
-| Rolling Papers ×6 | 3 Paper + Sugar Cane |
-| Blunt Wrap ×3 | Paper + Cocoa Beans + Dried Kelp |
-| Fertilizer ×3 | 2 Bone Meal + Rotten Flesh |
-| Lab Solvent ×2 | Glass Bottle + Sugar + Redstone + Gunpowder |
-| Catalyst ×2 | Amethyst Shard + Glowstone Dust + Redstone |
-| Grower's Handbook | Book + Wheat Seeds |
-
-### Lab Station recipes
-
-| Product | Ingredients | Time |
-|---|---|---|
-| Hash ×2 | 4 Dried Bud (one strain) + Ice | 0:30 |
-| Moon Rock | Dried Bud + Hash + Honey Bottle | 0:45 |
-| Space Brownie ×3 | 2 Dried Bud + Cocoa Beans + 2 Wheat + Sugar | 0:40 |
-| Shroom Tea | 2 Magic Mushroom + Glass Bottle | 0:20 |
-| Lucid Tab ×6 | Lab Solvent + 2 Magic Mushroom + Paper | 1:00 |
-| Blue Crystal ×4 | Lab Solvent + Catalyst + 4 Lapis + 2 Sugar | 1:30 |
-| Pixie Dust ×4 | Lab Solvent + 4 Glowstone Dust + 2 Sugar | 1:00 |
-
-### Built-in strains
-
-| Strain | Type | THC | Effects | Found wild in |
-|---|---|---|---|---|
-| OG Kush | Hybrid | 20% | Giggles, Munchies, Focus | forests, plains |
-| Blue Dream | Hybrid | 21% | Euphoria, Creative, Floaty | meadows, rivers, beaches |
-| Jungle Haze | Sativa | 22% | Energy, Creative, Giggles | jungles |
-| Savanna Gold | Sativa | 20% | Euphoria, Energy, Focus | savanna, desert, badlands |
-| Northern Lights | Indica | 24% | Couch Lock, Sleepy, Pain Relief | taiga, snowy biomes |
-| Purple Kush | Indica | 26% | Couch Lock, Munchies, Euphoria | dark forest, windswept hills |
-| Swamp Skunk | Hybrid | 18% | Munchies, Paranoia, Sleepy | swamps |
-| Cherry Pie | Hybrid | 20% | Euphoria, Floaty, Giggles | cherry groves |
-| Sour Diesel | Sativa | 25% | Energy, Focus, Paranoia | dealer only |
-| White Widow | Hybrid | 27% | Euphoria, Creative, Pain Relief | ice spikes, frozen peaks |
-
-## Commands & permissions
-
-Players only ever *need* items and machines. The command is optional:
+## Commands (optional)
 
 | Command | Permission | |
 |---|---|---|
-| `/kush guide` | `kushcraft.use` | open the handbook |
-| `/kush pack` | `kushcraft.use` | re-send the texture pack |
-| `/kush balance` | `kushcraft.use` | show your money |
-| `/kush strains` | `kushcraft.use` | list all strains |
+| `/kush` | `kushcraft.use` | the main menu |
+| `/kush guide` / `pack` / `balance` / `strains` | `kushcraft.use` | shortcuts |
 | `/kush give <player> <item> [amount] [strain] [quality]` | `kushcraft.admin` | |
 | `/kush money <player> <amount>` | `kushcraft.admin` | set a balance |
-| `/kush shop` | `kushcraft.admin` | open the dealer anywhere |
+| `/kush shop` | `kushcraft.admin` | open the market anywhere |
 | `/kush reload` | `kushcraft.admin` | reload config, strains, shop |
-| `/kush selftest` | console | tests plants, machines and items on a test world |
+| `/kush selftest` | console | tests plants, blocks, items and the market on a test world |
 
 `kushcraft.strainmaker` (default: everyone) controls who may create strains.
-
-## Config highlights (`config.yml`)
-
-* `resource-pack.*`: port, host, external URL, required.
-* `growth.*`: minutes to grow, minimum light, lamp radius, protection checks (works with WorldGuard, GriefPrevention and similar).
-* `wild.*`: seed and spore drop chances.
-* `strain-maker.*`: cost, seeds given, max strains per player.
-* `economy.*`: Vault, starting balance, currency symbol.
-* `shop.buy` / `shop.sell`: everything the dealer sells and pays.
 
 ## Building from source
 
 ```bash
 cd kushcraft
-mvn package                       # needs JDK 25; jar ends up in target/
-python3 tools/gen_assets.py       # (optional) redraws all textures/models (needs Pillow)
-python3 tools/validate_pack.py    # checks the resource pack
+mvn package                       # JDK 25; jar in target/
+python3 tools/gen_assets.py       # redraw textures/models/menus (needs Pillow)
+python3 tools/validate_pack.py    # checks the pack (incl. atlas folders)
+python3 tools/make_pack_zip.py    # release/KushCraft-pack.zip for hosting
 ```
 
-All textures, models and GUI backgrounds are generated by the Python scripts in
-`tools/`. Edit the pixel art in `tools/sprites.py` and run `gen_assets.py`.
-GitHub Actions builds the jar against the real Paper 26.3 API, then boots a
-real Paper 26.3 server with the plugin and runs `/kush selftest`.
+GitHub Actions builds against the real Paper 26.3 API and boots a real Paper 26.3 server with the plugin to run `/kush selftest`.

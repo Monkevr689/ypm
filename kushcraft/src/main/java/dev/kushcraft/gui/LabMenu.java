@@ -20,9 +20,10 @@ import java.util.List;
 public final class LabMenu extends Menu {
 
     private static final int STATUS = 8;
-    private static final int INFO = 36;
+    private static final int BACK = 36;
     private static final int OUTPUT = 40;
-    private static final int[] RECIPES = {10, 11, 12, 13, 14, 15, 16};
+    private static final int INFO = 44;
+    private static final int[] RECIPES = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
     private static final int[] PROGRESS = {28, 29, 30, 31, 32, 33, 34};
 
     private final Machine machine;
@@ -30,13 +31,14 @@ public final class LabMenu extends Menu {
     private int pickQuality;
 
     public LabMenu(org.bukkit.entity.Player player, Machine machine) {
-        super(player, 5, "lab", "Lab Station");
+        super(player, 5, "lab", "Drug Lab - Cook");
         this.machine = machine;
     }
 
     @Override
     public void render() {
         inv.clear();
+        backButton(BACK);
         LabRecipe[] recipes = LabRecipe.values();
         for (int i = 0; i < RECIPES.length && i < recipes.length; i++) {
             set(RECIPES[i], recipeIcon(recipes[i]));
@@ -85,7 +87,7 @@ public final class LabMenu extends Menu {
             }
         }
         help.add("");
-        help.add("<dark_gray>Lab Solvent & Catalyst: crafting table or Dealer");
+        help.add("<dark_gray>Lab Solvent & Catalyst: crafting table or Market");
         set(INFO, Items.icon("ui_info", "<aqua>How the lab works", help));
     }
 

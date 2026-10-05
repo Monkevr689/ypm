@@ -43,6 +43,7 @@ public final class PlayerListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
+        plugin.economy().join(p);
         p.discoverRecipes(Recipes.keys());
         plugin.effects().join(p);
         if (plugin.getConfig().getBoolean("give-guide-on-first-join", true)
@@ -51,8 +52,8 @@ public final class PlayerListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (p.isOnline()) {
                     InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
-                    p.sendMessage(Text.msg("<gray>This server runs <green>KushCraft</green>! Right-click the"
-                            + " <green>Grower's Handbook</green> to get started."));
+                    p.sendMessage(Text.msg("<gray>This server runs <green>KushCraft</green>! Type <white>/kush</white>"
+                            + " or right-click the <green>KushCraft Menu</green> item to get started."));
                 }
             }, 60L);
         }

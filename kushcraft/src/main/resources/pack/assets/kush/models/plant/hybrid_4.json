@@ -1,13 +1,13 @@
 {
  "ambientocclusion": false,
  "textures": {
-  "particle": "kush:plant/hybrid_4",
-  "leaves": "kush:plant/hybrid_4",
-  "leaves_top": "kush:plant/hybrid_4_top",
-  "buds": "kush:plant/hybrid_4_buds",
-  "pistils": "kush:plant/hybrid_4_pistils",
-  "buds_top": "kush:plant/hybrid_4_buds_top",
-  "pistils_top": "kush:plant/hybrid_4_pistils_top"
+  "particle": "kush:block/plant/hybrid_4",
+  "leaves": "kush:block/plant/hybrid_4",
+  "leaves_top": "kush:block/plant/hybrid_4_top",
+  "buds": "kush:block/plant/hybrid_4_buds",
+  "pistils": "kush:block/plant/hybrid_4_pistils",
+  "buds_top": "kush:block/plant/hybrid_4_buds_top",
+  "pistils_top": "kush:block/plant/hybrid_4_pistils_top"
  },
  "elements": [
   {

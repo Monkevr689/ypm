@@ -58,6 +58,51 @@
    "chars": [
     "\ue003"
    ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/main.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue004"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/list.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue005"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/hub.png",
+   "ascent": 13,
+   "height": 168,
+   "chars": [
+    "\ue006"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/dry.png",
+   "ascent": 13,
+   "height": 168,
+   "chars": [
+    "\ue007"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/orders.png",
+   "ascent": 13,
+   "height": 168,
+   "chars": [
+    "\ue008"
+   ]
   }
  ]
 }

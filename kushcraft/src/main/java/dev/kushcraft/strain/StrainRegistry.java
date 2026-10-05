@@ -203,6 +203,19 @@ public final class StrainRegistry {
         return s;
     }
 
+    /** Renames a strain (id stays the same, so existing seeds/buds keep working). */
+    public Strain rename(Strain old, String newName) {
+        Strain s = new Strain(old.id(), newName, old.type(), old.color(), old.potency(), old.effects(),
+                old.wildBiomes(), old.creator(), old.creatorName());
+        strains.put(s.id(), s);
+        ConfigurationSection sec = yaml.getConfigurationSection("strains." + s.id());
+        if (sec != null) {
+            sec.set("name", newName);
+            save();
+        }
+        return s;
+    }
+
     public void save() {
         try {
             yaml.save(file);

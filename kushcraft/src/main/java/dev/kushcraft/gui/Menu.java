@@ -17,6 +17,8 @@ public abstract class Menu implements InventoryHolder {
 
     protected final Player player;
     protected final Inventory inv;
+    private Menu parent;
+    private int backSlot = -1;
 
     protected Menu(Player player, int rows, String gui, String title) {
         this.player = player;
@@ -36,6 +38,42 @@ public abstract class Menu implements InventoryHolder {
 
     public Player player() {
         return player;
+    }
+
+    /** Menu to return to with the back button (null = close). */
+    public Menu parent(Menu parent) {
+        this.parent = parent;
+        return this;
+    }
+
+    public Menu parent() {
+        return parent;
+    }
+
+    /** Puts the back arrow in a slot; clicks on it are handled by the listener. */
+    protected void backButton(int slot) {
+        backSlot = slot;
+        inv.setItem(slot, dev.kushcraft.item.Items.icon("ui_back",
+                parent != null ? "<gray>Back" : "<gray>Close"));
+    }
+
+    int backSlot() {
+        return backSlot;
+    }
+
+    void goBack() {
+        clickSound();
+        if (parent != null) {
+            parent.open();
+        } else {
+            player.closeInventory();
+        }
+    }
+
+    /** Opens another menu that returns here with its back button. */
+    protected void openChild(Menu child) {
+        clickSound();
+        child.parent(this).open();
     }
 
     /** Draw every slot. */

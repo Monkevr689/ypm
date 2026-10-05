@@ -116,9 +116,12 @@ def write_flat_item(name, layers, folder="item"):
     for i, l in enumerate(layers):
         if nonempty(l) or any(nonempty(x) for x in layers[i + 1:]):
             count = i + 1
+    # textures must live under item/ or block/ - those are the only folders the
+    # game stitches into its texture atlas (anything else renders magenta/black)
+    tex_folder = "item" if folder == "item" else f"item/{folder}"
     for i in range(count):
         suffix = "" if i == 0 else ("_tint" if i == 1 else "_overlay")
-        rel = f"{folder}/{name}{suffix}"
+        rel = f"{tex_folder}/{name}{suffix}"
         save_png(layers[i], rel)
         tex[f"layer{i}"] = f"{NS}:{rel}"
     save_json({"parent": "minecraft:item/generated", "textures": tex}, f"models/{folder}/{name}.json")
@@ -236,7 +239,7 @@ def main():
         "block/drying_rack_dry", "block/grow_lamp", "block/planter_box", "block/dealer"], "blocks_preview.png")
     render_models.generate(sys.modules[__name__], [
         "plant/sativa_2", "plant/sativa_4", "plant/indica_3", "plant/indica_4", "plant/hybrid_4",
-        "plant/mushroom_1", "plant/mushroom_2", "plant/mushroom_3"], "plants3d_preview.png", tint=0xb05ae0)
+        "plant/coca_3", "plant/poppy_2", "plant/poppy_3", "plant/mushroom_3"], "plants3d_preview.png", tint=0xb05ae0)
     print(f"generated {len(GENERATED)} flat items into {PACK}")
 
 

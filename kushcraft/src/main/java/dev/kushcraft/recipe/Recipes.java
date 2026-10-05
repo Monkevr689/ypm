@@ -44,13 +44,6 @@ public final class Recipes {
         shaped(plugin, ItemType.LAB_STATION, 1, "P=Glass Bottle, B=Brewing Stand, I=Iron Ingot, C=Cauldron",
                 new String[]{"PBP", "ICI", "I I"},
                 'P', Material.GLASS_BOTTLE, 'B', Material.BREWING_STAND, 'I', Material.IRON_INGOT, 'C', Material.CAULDRON);
-        shaped(plugin, ItemType.STRAIN_MAKER, 1, "G=Glass, S=Emerald, I=Iron Ingot, R=Redstone Block",
-                new String[]{"GGG", "GSG", "IRI"},
-                'G', Material.GLASS, 'S', Material.EMERALD, 'I', Material.IRON_INGOT, 'R', Material.REDSTONE_BLOCK);
-        shaped(plugin, ItemType.ROLLING_TABLE, 1, "P=Paper, W=any Planks",
-                new String[]{"PPP", "WWW", "W W"}, 'P', Material.PAPER, 'W', planks);
-        shaped(plugin, ItemType.DRYING_RACK, 1, "S=Stick, T=String",
-                new String[]{"SSS", "TTT", "S S"}, 'S', Material.STICK, 'T', Material.STRING);
         shaped(plugin, ItemType.GROW_LAMP, 1, "I=Iron Ingot, G=Glowstone Dust, L=Redstone Lamp",
                 new String[]{"III", "GLG", " I "}, 'I', Material.IRON_INGOT, 'G', Material.GLOWSTONE_DUST,
                 'L', Material.REDSTONE_LAMP);

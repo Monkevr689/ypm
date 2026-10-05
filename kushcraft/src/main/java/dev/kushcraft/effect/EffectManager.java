@@ -89,6 +89,17 @@ public final class EffectManager {
         return s != null && s.effects.containsKey(type);
     }
 
+    /** Copy of the active effects (seconds left) for menus. */
+    public Map<EffectType, Integer> active(Player p) {
+        State s = states.get(p.getUniqueId());
+        return s == null ? Map.of() : new EnumMap<>(s.effects);
+    }
+
+    public int pending(Player p) {
+        State s = states.get(p.getUniqueId());
+        return s == null ? 0 : s.pending.size();
+    }
+
     public double high(Player p) {
         State s = states.get(p.getUniqueId());
         return s == null ? 0 : s.high;

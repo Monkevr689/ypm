@@ -1,8 +1,8 @@
 {
  "ambientocclusion": false,
  "textures": {
-  "particle": "kush:plant/hybrid_0",
-  "leaves": "kush:plant/hybrid_0"
+  "particle": "kush:block/plant/hybrid_0",
+  "leaves": "kush:block/plant/hybrid_0"
  },
  "elements": [
   {

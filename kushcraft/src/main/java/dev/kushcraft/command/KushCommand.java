@@ -34,9 +34,13 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        String sub = args.length == 0 ? "help" : args[0].toLowerCase(Locale.ROOT);
+        String sub = args.length == 0 ? "menu" : args[0].toLowerCase(Locale.ROOT);
         boolean admin = sender.hasPermission("kushcraft.admin");
+        if (sub.equals("menu") && !(sender instanceof Player)) {
+            sub = "help";
+        }
         switch (sub) {
+            case "menu" -> new dev.kushcraft.gui.MainMenu((Player) sender).open();
             case "guide", "book" -> {
                 if (sender instanceof Player p) {
                     p.openBook(Guide.book());
@@ -110,8 +114,9 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Text.msg("<green>KushCraft reloaded (config, strains, shop, recipes)."));
             }
             default -> {
-                sender.sendMessage(Text.msg("<green>KushCraft <gray>- most things are done with items & machines!"));
-                sender.sendMessage(Text.mm(" <white>/kush guide <gray>- open the Grower's Handbook"));
+                sender.sendMessage(Text.msg("<green>KushCraft <gray>- type <white>/kush</white> to open the menu!"));
+                sender.sendMessage(Text.mm(" <white>/kush <gray>- main menu (market, catalog, strains, orders...)"));
+                sender.sendMessage(Text.mm(" <white>/kush guide <gray>- open the guide book"));
                 sender.sendMessage(Text.mm(" <white>/kush pack <gray>- re-download the texture pack"));
                 sender.sendMessage(Text.mm(" <white>/kush balance <gray>- your money"));
                 sender.sendMessage(Text.mm(" <white>/kush strains <gray>- list every strain"));
@@ -184,7 +189,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
-            out.addAll(List.of("guide", "pack", "balance", "strains"));
+            out.addAll(List.of("menu", "guide", "pack", "balance", "strains", "help"));
             if (admin) {
                 out.addAll(List.of("give", "money", "shop", "reload"));
             }

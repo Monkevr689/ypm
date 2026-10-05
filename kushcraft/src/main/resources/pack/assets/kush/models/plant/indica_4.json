@@ -1,10 +1,10 @@
 {
  "ambientocclusion": false,
  "textures": {
-  "particle": "kush:plant/indica_4",
-  "leaves": "kush:plant/indica_4",
-  "buds": "kush:plant/indica_4_buds",
-  "pistils": "kush:plant/indica_4_pistils"
+  "particle": "kush:block/plant/indica_4",
+  "leaves": "kush:block/plant/indica_4",
+  "buds": "kush:block/plant/indica_4_buds",
+  "pistils": "kush:block/plant/indica_4_pistils"
  },
  "elements": [
   {

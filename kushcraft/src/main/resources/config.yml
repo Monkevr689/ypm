@@ -1,8 +1,8 @@
 # =====================================================================
 #  KushCraft - grow, cook, roll and deal. 100% server side.
-#  Everything is done with items, machines and menus - commands are
-#  only needed by admins.
+#  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
+config-version: 2
 
 # Custom textures/models are delivered with a server resource pack that
 # KushCraft builds and hosts by itself. Players get the usual
@@ -34,6 +34,8 @@ growth:
   cannabis-minutes: 20
   # Real-time minutes for a magic mushroom cluster to mature.
   mushroom-minutes: 12
+  coca-minutes: 16
+  poppy-minutes: 14
   # Cannabis needs at least this light level (sun or torches), unless a Grow Lamp is close.
   min-light: 9
   # Grow Lamps boost and light every plant within this many blocks.
@@ -47,13 +49,17 @@ wild:
   grass-seed-chance: 0.04
   # Chance to find mushroom spores when breaking small mushrooms.
   mushroom-spore-chance: 0.12
+  # Chance for coca seeds from grass in jungles and savannas.
+  coca-seed-chance: 0.03
+  # Chance for poppy seeds when breaking a red poppy flower.
+  poppy-seed-chance: 0.15
 
 drying:
-  # Minutes buds need on a Drying Rack.
+  # Minutes buds need on the Drug Lab drying shelf.
   minutes: 3
 
 lab:
-  # Multiplier for all lab brewing times (0.5 = twice as fast).
+  # Multiplier for all Drug Lab cooking times (0.5 = twice as fast).
   time-multiplier: 1.0
 
 effects:
@@ -65,6 +71,8 @@ effects:
   green-out-at: 100
 
 strain-maker:
+  # Players can mix strains from /kush > Strains (otherwise only at a Drug Lab).
+  anywhere: true
   # Money it costs to register a new strain (0 = free).
   cost: 150
   # Maximum strains one player can create.
@@ -79,11 +87,28 @@ economy:
   starting-balance: 100
   symbol: '$'
 
-# Give new players the Grower's Handbook on their first join.
+market:
+  # Players can open the market from /kush. false = only at a Dealer Stand.
+  anywhere: true
+  # Every item sold lowers that product's price by this much (0.01 = 1%)...
+  demand-drop: 0.01
+  # ...down to this fraction of the normal price...
+  min-price: 0.5
+  # ...and it recovers this much per minute.
+  recovery-per-minute: 0.02
+  # A random "hot" product sells for extra for a while.
+  hot-item-bonus: 1.5
+  hot-item-minutes: 60
+  # Daily orders: hand in a batch for bonus cash.
+  orders: 3
+  order-minutes: 60
+  order-bonus: 1.75
+
+# Give new players the KushCraft Menu item on their first join.
 give-guide-on-first-join: true
 
 # =====================================================================
-#  SHOP  (Dealer Stand)
+#  SHOP  (Market: /kush > Market or a Dealer Stand)
 #  buy  -> what the dealer sells to players (price per click)
 #  sell -> what the dealer pays players. Strain items are multiplied by
 #          quality (1-5 stars) and potency, so better weed = more money.
@@ -98,20 +123,20 @@ shop:
     - {item: seed_pack, strain: purple_kush, amount: 1, price: 70}
     - {item: seed_pack, strain: sour_diesel, amount: 1, price: 90}
     - {item: seed_pack, strain: white_widow, amount: 1, price: 110}
+    - {item: coca_seeds, amount: 1, price: 80}
+    - {item: poppy_seeds, amount: 1, price: 90}
     - {item: mushroom_spores, amount: 1, price: 45}
     - {item: rolling_papers, amount: 8, price: 10}
     - {item: blunt_wrap, amount: 4, price: 16}
     - {item: fertilizer, amount: 4, price: 20}
-    - {item: bong, amount: 1, price: 120}
     - {item: lab_solvent, amount: 2, price: 50}
     - {item: catalyst, amount: 2, price: 70}
+    - {item: bong, amount: 1, price: 120}
     - {item: grower_guide, amount: 1, price: 0}
     - {item: planter_box, amount: 1, price: 60}
-    - {item: drying_rack, amount: 1, price: 150}
-    - {item: rolling_table, amount: 1, price: 200}
     - {item: grow_lamp, amount: 1, price: 250}
+    - {item: dealer, amount: 1, price: 400}
     - {item: lab_station, amount: 1, price: 900}
-    - {item: strain_maker, amount: 1, price: 1500}
   sell:
     bud_fresh: 5
     bud_dried: 14
@@ -125,5 +150,11 @@ shop:
     lucid_tab: 28
     blue_crystal: 85
     pixie_dust: 65
+    coca_leaves: 6
+    cocaine: 70
+    poppy_pod: 7
+    heroin: 95
     seed_pack: 8
+    coca_seeds: 10
+    poppy_seeds: 10
     mushroom_spores: 6

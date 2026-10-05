@@ -12,7 +12,8 @@ for i, n in enumerate((1, 2, 4, 8, 16, 32, 64, 128, 256)):
     SPACES[chr(0xF801 + i)] = -n
     SPACES[chr(0xF821 + i)] = n
 
-GUI_GLYPHS = {"lab": "", "strain": "", "roller": "", "dealer": ""}
+GUI_GLYPHS = {"lab": "\ue000", "strain": "\ue001", "roller": "\ue002", "dealer": "\ue003", "main": "\ue004",
+              "list": "\ue005", "hub": "\ue006", "dry": "\ue007", "orders": "\ue008"}
 
 
 def generate(g):

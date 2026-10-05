@@ -196,7 +196,7 @@ public final class PlantManager {
         if (m != null) {
             return m.type() == MachineType.PLANTER_BOX;
         }
-        return (kind == Plant.Kind.CANNABIS ? CANNABIS_SOIL : MUSHROOM_SOIL).contains(soil.getType());
+        return (kind == Plant.Kind.MUSHROOM ? MUSHROOM_SOIL : CANNABIS_SOIL).contains(soil.getType());
     }
 
     /** Plants on top of soil. Returns false (with a message) when it can't. */
@@ -204,9 +204,9 @@ public final class PlantManager {
         Block space = soil.getRelative(0, 1, 0);
         BlockKey key = BlockKey.of(space);
         if (!isSoil(soil, kind)) {
-            player.sendActionBar(Text.mm(kind == Plant.Kind.CANNABIS
-                    ? "<red>Plant seeds on farmland, grass, dirt, moss or a Planter Box."
-                    : "<red>Plant spores on mycelium, podzol, moss, dirt or a Planter Box."));
+            player.sendActionBar(Text.mm(kind != Plant.Kind.MUSHROOM
+                    ? "<red>Plant seeds on farmland, grass, dirt, moss or a Planter."
+                    : "<red>Plant spores on mycelium, podzol, moss, dirt or a Planter."));
             return false;
         }
         if (!space.getType().isAir() || plants.containsKey(key) || plugin.machines().at(key) != null) {
@@ -241,8 +241,12 @@ public final class PlantManager {
         }
         Location c = p.key().bottomCenter();
         if (p.stage() <= 1 && c != null) {
-            ItemStack back = p.kind() == Plant.Kind.MUSHROOM ? Items.create(ItemType.MUSHROOM_SPORES)
-                    : Items.strainItem(ItemType.SEED_PACK, plugin.strains().getOrDefault(p.strainId()), 3, 1);
+            ItemStack back = switch (p.kind()) {
+                case MUSHROOM -> Items.create(ItemType.MUSHROOM_SPORES);
+                case COCA -> Items.create(ItemType.COCA_SEEDS);
+                case POPPY -> Items.create(ItemType.POPPY_SEEDS);
+                case CANNABIS -> Items.strainItem(ItemType.SEED_PACK, plugin.strains().getOrDefault(p.strainId()), 3, 1);
+            };
             c.getWorld().dropItemNaturally(c.add(0, 0.3, 0), back);
         } else if (who != null) {
             who.sendActionBar(Text.mm("<gray>You pulled out the plant. <dark_gray>(Wait until it's ready next time!)"));
@@ -285,6 +289,20 @@ public final class PlantManager {
             drops.add(Items.strainItem(ItemType.SEED_PACK, s, 3, seeds));
             if (who != null) {
                 who.sendActionBar(Text.mm("<green>Harvested " + buds + "x " + s.colored() + " <gray>" + Text.stars(q)));
+            }
+        } else if (p.kind() == Plant.Kind.COCA) {
+            int leaves = 3 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
+            drops.add(Items.create(ItemType.COCA_LEAVES, leaves));
+            drops.add(Items.create(ItemType.COCA_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
+            if (who != null) {
+                who.sendActionBar(Text.mm("<green>Picked " + leaves + " Coca Leaves <gray>" + Text.stars(q)));
+            }
+        } else if (p.kind() == Plant.Kind.POPPY) {
+            int pods = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
+            drops.add(Items.create(ItemType.POPPY_POD, pods));
+            drops.add(Items.create(ItemType.POPPY_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
+            if (who != null) {
+                who.sendActionBar(Text.mm("<green>Picked " + pods + " Poppy Pods <gray>" + Text.stars(q)));
             }
         } else {
             int shrooms = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (p.fertilized() ? 1 : 0);
@@ -360,8 +378,7 @@ public final class PlantManager {
         String soilText;
         String climateText = "";
 
-        if (p.kind() == Plant.Kind.CANNABIS) {
-            Strain s = plugin.strains().getOrDefault(p.strainId());
+        if (p.kind() != Plant.Kind.MUSHROOM) {
             int minLight = plugin.getConfig().getInt("growth.min-light", 9);
             if (lamp) {
                 mult *= 1.35;
@@ -395,8 +412,19 @@ public final class PlantManager {
                 soilText = "<gray>Plain ground";
             }
             Climate climate = Climate.of(at);
-            mult *= s.type().climateMultiplier(climate);
-            int cq = s.type().climateQuality(climate);
+            double cm;
+            int cq;
+            if (p.kind() == Plant.Kind.CANNABIS) {
+                Strain s = plugin.strains().getOrDefault(p.strainId());
+                cm = s.type().climateMultiplier(climate);
+                cq = s.type().climateQuality(climate);
+            } else {
+                // coca loves the heat, poppies like it mild; both hate the cold
+                Climate best = p.kind() == Plant.Kind.COCA ? Climate.WARM : Climate.MILD;
+                cm = climate == best ? 1.4 : climate == Climate.COLD ? 0.55 : 1.0;
+                cq = climate == best ? 1 : climate == Climate.COLD ? -1 : 0;
+            }
+            mult *= cm;
             quality += cq;
             climateText = climate.colored() + (cq > 0 ? " <green>✔ ideal" : cq < 0 ? " <red>✘ wrong climate" : "");
         } else {
@@ -451,6 +479,8 @@ public final class PlantManager {
     private void growAll(int tickSeconds) {
         double cannabisMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.cannabis-minutes", 20));
         double mushroomMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.mushroom-minutes", 12));
+        double cocaMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.coca-minutes", 16));
+        double poppyMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.poppy-minutes", 14));
         for (Plant p : new ArrayList<>(plants.values())) {
             if (p.mature() || !p.key().isLoaded()) {
                 continue;
@@ -463,7 +493,12 @@ public final class PlantManager {
                 continue;
             }
             Conditions c = conditions(p);
-            double minutes = p.kind() == Plant.Kind.CANNABIS ? cannabisMinutes : mushroomMinutes;
+            double minutes = switch (p.kind()) {
+                case CANNABIS -> cannabisMinutes;
+                case MUSHROOM -> mushroomMinutes;
+                case COCA -> cocaMinutes;
+                case POPPY -> poppyMinutes;
+            };
             double perTick = 100.0 / (minutes * 60.0 / tickSeconds);
             p.status = c.problem() == null ? "" : c.problem();
             if (c.multiplier() <= 0) {
@@ -489,8 +524,8 @@ public final class PlantManager {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta meta = it.getItemMeta();
         int stage = p.stage();
-        if (p.kind() == Plant.Kind.MUSHROOM) {
-            meta.setItemModel(Keys.model("plant_mushroom_" + stage));
+        if (p.kind() != Plant.Kind.CANNABIS) {
+            meta.setItemModel(Keys.model("plant_" + p.kind().name().toLowerCase(Locale.ROOT) + "_" + stage));
         } else {
             Strain s = plugin.strains().getOrDefault(p.strainId());
             meta.setItemModel(Keys.model("plant_" + s.type().plantModel() + "_" + stage));
@@ -504,6 +539,9 @@ public final class PlantManager {
         int st = p.stage();
         if (p.kind() == Plant.Kind.MUSHROOM) {
             return st >= 2 ? 0.6f : 0.35f;
+        }
+        if (p.kind() != Plant.Kind.CANNABIS) {
+            return st >= 2 ? 0.9f : 0.5f;
         }
         Strain s = plugin.strains().getOrDefault(p.strainId());
         if (st <= 1) {
@@ -609,8 +647,12 @@ public final class PlantManager {
     /** Short status for the action bar when a plant is right-clicked. */
     public void showInfo(Player player, Plant p) {
         Conditions c = conditions(p);
-        String name = p.kind() == Plant.Kind.MUSHROOM ? "<gold>Magic Mushrooms"
-                : plugin.strains().getOrDefault(p.strainId()).colored();
+        String name = switch (p.kind()) {
+            case MUSHROOM -> "<gold>Magic Mushrooms";
+            case COCA -> "<green>Coca Bush";
+            case POPPY -> "<red>Opium Poppy";
+            case CANNABIS -> plugin.strains().getOrDefault(p.strainId()).colored();
+        };
         String line = name + " <dark_gray>|</dark_gray> <white>" + p.stageName() + " <gray>"
                 + (int) p.growth() + "%</gray> <dark_gray>|</dark_gray> " + Text.stars(c.quality());
         if (p.status != null && !p.status.isEmpty()) {

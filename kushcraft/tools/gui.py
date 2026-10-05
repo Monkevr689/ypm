@@ -62,6 +62,9 @@ THEMES = {
     "strain": dict(base="3a2f4c", light="62527e", dark="1c1626", slot="221a30", accent="e85ad0"),
     "roller": dict(base="5a3c24", light="8a6240", dark="2e1e10", slot="2e2014", accent="9ae85a"),
     "dealer": dict(base="2f4a2a", light="56804c", dark="162414", slot="182a16", accent="f2d24a"),
+    "main": dict(base="25402f", light="4a7a58", dark="10200f", slot="142518", accent="8ae85a"),
+    "list": dict(base="2e3a42", light="52646e", dark="151c20", slot="1a2328", accent="7ad0e8"),
+    "dry": dict(base="6a4a2c", light="9a7048", dark="34220f", slot="3a2814", accent="f0c850"),
 }
 
 
@@ -138,6 +141,7 @@ def frame(img, x0, y0, x1, y1, col, fill=None):
 
 
 def paste_icon(img, name, x, y, scale=1, folder="item"):
+    folder = "item" if folder == "item" else "item/" + folder
     path = os.path.join(G.ASSETS, "textures", folder, name + ".png")
     ic = Image.open(path).convert("RGBA")
     tint_path = os.path.join(G.ASSETS, "textures", folder, name + "_tint.png")
@@ -160,27 +164,25 @@ LAYOUTS = {}
 
 
 def lab():
+    """Drug Lab - Cook tab. Recipes rows 1-2 cols 1-7, progress row 3,
+    back (4,0), output (4,4), info (4,8), status (0,8)."""
     rows = 5
     rng = random.Random(1)
     img, th = panel(rows, THEMES["lab"], rng)
-    # recipe shelf row 1
-    frame(img, 7 + 18 - 3, 17 + 18 - 3, 7 + 18 * 8 + 2, 17 + 36 + 2, th["accent"], G.shade(th["base"], 0.7))
-    for c in range(1, 8):
-        cslot(img, 1, c, th)
+    frame(img, 7 + 18 - 3, 17 + 18 - 3, 7 + 18 * 8 + 2, 17 + 18 * 3 + 2, th["accent"], G.shade(th["base"], 0.7))
+    for r in (1, 2):
+        for c in range(1, 8):
+            cslot(img, r, c, th)
     label(img, 25, 17 + 3, "RECIPES", th)
-    # glass tube progress row 3
     y = 17 + 3 * 18
-    frame(img, 7 + 18 - 3, y - 3, 7 + 18 * 8 + 2, y + 20, G.rgba("d8f4ff"), G.shade(th["base"], 0.6))
+    frame(img, 7 + 18 - 3, y - 2, 7 + 18 * 8 + 2, y + 19, G.rgba("d8f4ff"), G.shade(th["base"], 0.6))
     for c in range(1, 8):
         cslot(img, 3, c, th)
-    label(img, 25, y - 10, "PROGRESS", th)
-    # output + status
     cslot(img, 4, 4, th, "big")
     label(img, 7 + 18 * 5 + 4, 17 + 4 * 18 + 6, "OUTPUT", th)
     cslot(img, 0, 8, th)
     cslot(img, 4, 0, th)
-    paste_icon(img, "lab_solvent", 7 + 18 * 1 + 1, 17 + 4 * 18 + 1)
-    paste_icon(img, "catalyst", 7 + 18 * 2 + 1, 17 + 4 * 18 + 1)
+    cslot(img, 4, 8, th)
     player_inv(img, rows, th)
     return "lab", img, rows
 
@@ -189,7 +191,6 @@ def strain():
     rows = 6
     rng = random.Random(2)
     img, th = panel(rows, THEMES["strain"], rng)
-    # parents + result
     frame(img, 7 + 18 - 3, 17 + 18 - 3, 7 + 18 * 8 + 2, 17 + 36 + 2, th["accent"], G.shade(th["base"], 0.7))
     cslot(img, 1, 1, th)
     cslot(img, 1, 3, th)
@@ -198,16 +199,14 @@ def strain():
     paste_icon(img, "ui_dna", 7 + 18 * 4 + 1, 17 + 18 + 1, folder="icon")
     paste_icon(img, "ui_arrow", 7 + 18 * 5 + 1, 17 + 18 + 1, folder="icon")
     paste_icon(img, "ui_arrow", 7 + 18 * 6 + 1, 17 + 18 + 1, folder="icon")
-    label(img, 9, 17 + 3, "PARENT A + PARENT B", th)
+    label(img, 9, 17 + 3, "SEED A + SEED B", th)
     label(img, 7 + 18 * 7 - 6, 17 + 3, "STRAIN", th)
-    # effects grid rows 3-4, cols 0-5
     y = 17 + 3 * 18
     frame(img, 4, y - 3, 7 + 18 * 6 + 2, y + 38, th["accent"], G.shade(th["base"], 0.7))
     label(img, 8, y - 10, "EFFECTS (PICK 3)", th)
     for r in (3, 4):
         for c in range(6):
             cslot(img, r, c, th)
-    # settings 2x2
     frame(img, 7 + 18 * 7 - 3, y - 3, 7 + 18 * 9 + 2, y + 38, th["accent"], G.shade(th["base"], 0.7))
     label(img, 7 + 18 * 7, y - 10, "STYLE", th)
     for r in (3, 4):
@@ -215,6 +214,7 @@ def strain():
             cslot(img, r, c, th)
     cslot(img, 5, 4, th, "big")
     label(img, 7 + 18 * 5 + 4, 17 + 5 * 18 + 6, "CREATE", th)
+    cslot(img, 5, 0, th)
     player_inv(img, rows, th)
     return "strain", img, rows
 
@@ -224,7 +224,6 @@ def roller():
     rng = random.Random(3)
     img, th = panel(rows, THEMES["roller"], rng)
     y = 17 + 18
-    # green rolling mat
     frame(img, 7 + 18 - 4, y - 4, 7 + 18 * 8 + 3, y + 21, G.rgba("1a3a14"), G.rgba("2f7a3a"))
     for x in range(7 + 18 - 3, 7 + 18 * 8 + 3):
         for yy in range(y - 3, y + 21):
@@ -239,37 +238,136 @@ def roller():
     label(img, 7 + 18 * 3 - 2, 17 + 3, "JOINT", th)
     label(img, 7 + 18 * 5 - 2, 17 + 3, "BLUNT", th)
     label(img, 7 + 18 * 7 - 6, 17 + 3, "ROLL ALL", th)
+    cslot(img, 2, 0, th)
     cslot(img, 2, 8, th)
     player_inv(img, rows, th)
     return "roller", img, rows
 
 
 def dealer():
+    """Market. Top: info (0,0), orders (0,2), wallet (0,4), hot item (0,6),
+    sell all (0,8). Rows 1-4 buy. Row 5: back, prev, page, next."""
     rows = 6
     rng = random.Random(4)
     img, th = panel(rows, THEMES["dealer"], rng)
-    cslot(img, 0, 0, th)
+    for c in (0, 2, 6, 8):
+        cslot(img, 0, c, th)
     cslot(img, 0, 4, th, "big")
-    cslot(img, 0, 8, th)
     frame(img, 4, 17 + 18 - 2, 171, 17 + 18 * 5 + 1, th["accent"], G.shade(th["base"], 0.7))
     for r in range(1, 5):
         for c in range(9):
             cslot(img, r, c, th)
-    cslot(img, 5, 3, th)
-    cslot(img, 5, 4, th)
-    cslot(img, 5, 5, th)
-    label(img, 9, 17 + 5 * 18 + 6, "BUY ABOVE", th)
-    label(img, 7 + 18 * 6 + 2, 17 + 5 * 18 + 6, "CLICK YOUR", th)
-    label(img, 7 + 18 * 6 + 2, 17 + 5 * 18 + 12, "ITEMS = SELL", th)
+    for c in (0, 3, 4, 5):
+        cslot(img, 5, c, th)
+    label(img, 29, 17 + 5 * 18 + 4, "BUY", th)
+    label(img, 29, 17 + 5 * 18 + 10, "ABOVE", th)
+    label(img, 7 + 18 * 6 + 2, 17 + 5 * 18 + 4, "CLICK YOUR", th)
+    label(img, 7 + 18 * 6 + 2, 17 + 5 * 18 + 10, "ITEMS = SELL", th)
     player_inv(img, rows, th)
     return "dealer", img, rows
+
+
+def centered_label(img, row, col, text_, th):
+    cx = 7 + 18 * col + 9
+    label(img, cx - text_width(text_) // 2, 17 + row * 18 + 6, text_, th)
+
+
+def main_menu():
+    """/kush. Wallet (0,0), admin (0,8); buttons (1,1..7 odd) and (3,1..7 odd)
+    with labels under them."""
+    rows = 5
+    rng = random.Random(5)
+    img, th = panel(rows, THEMES["main"], rng)
+    cslot(img, 0, 0, th)
+    cslot(img, 0, 8, th)
+    for r, names in ((1, ("GUIDE", "MARKET", "CATALOG", "STRAINS")), (3, ("ORDERS", "TOP", "STATUS", "PACK"))):
+        for i, c in enumerate((1, 3, 5, 7)):
+            cslot(img, r, c, th, "big")
+            centered_label(img, r + 1, c, names[i], th)
+    leaf_y = 17 + 2
+    for x0 in (60, 105):
+        paste_icon(img, "type_hybrid", x0, leaf_y - 2, folder="icon")
+    player_inv(img, rows, th)
+    return "main", img, rows
+
+
+def list_menu():
+    """Generic paged list. Header (0,4); rows 1-4 content; row 5:
+    back (5,0), prev (5,3), page (5,4), next (5,5), action (5,8)."""
+    rows = 6
+    rng = random.Random(6)
+    img, th = panel(rows, THEMES["list"], rng)
+    cslot(img, 0, 4, th, "big")
+    frame(img, 4, 17 + 18 - 2, 171, 17 + 18 * 5 + 1, th["accent"], G.shade(th["base"], 0.7))
+    for r in range(1, 5):
+        for c in range(9):
+            cslot(img, r, c, th)
+    for c in (0, 3, 4, 5, 8):
+        cslot(img, 5, c, th)
+    player_inv(img, rows, th)
+    return "list", img, rows
+
+
+def hub():
+    """Drug Lab hub: Cook (1,1), Roll (1,3), Dry (1,5), Mix (1,7);
+    back (2,0), info (2,8)."""
+    rows = 3
+    rng = random.Random(7)
+    img, th = panel(rows, THEMES["lab"], rng)
+    for i, (c, name) in enumerate(((1, "COOK"), (3, "ROLL"), (5, "DRY"), (7, "MIX"))):
+        cslot(img, 1, c, th, "big")
+        centered_label(img, 2, c, name, th)
+    cslot(img, 2, 0, th)
+    cslot(img, 2, 8, th)
+    label(img, 9, 17 + 3, "WHAT DO YOU WANT TO MAKE?", th)
+    player_inv(img, rows, th)
+    return "hub", img, rows
+
+
+def dry():
+    """Drying shelf: input (1,1), progress (1,3..5), output (1,7); back (2,0), info (2,8)."""
+    rows = 3
+    rng = random.Random(8)
+    img, th = panel(rows, THEMES["dry"], rng)
+    y = 17 + 18
+    frame(img, 7 + 18 - 4, y - 4, 7 + 18 * 8 + 3, y + 21, th["dark"], G.shade(th["base"], 0.75))
+    for x in range(7 + 18 - 3, 7 + 18 * 8 + 3, 6):
+        for yy in range(y - 3, y + 21):
+            img.putpixel((x, yy), G.shade(th["base"], 0.6))
+    cslot(img, 1, 1, th, "big")
+    for c in (3, 4, 5):
+        cslot(img, 1, c, th)
+    cslot(img, 1, 7, th, "big")
+    paste_icon(img, "ui_arrow", 7 + 18 * 2 + 1, y + 1, folder="icon")
+    paste_icon(img, "ui_arrow", 7 + 18 * 6 + 1, y + 1, folder="icon")
+    label(img, 7 + 18 * 1 - 2, 17 + 3, "FRESH", th)
+    label(img, 7 + 18 * 4 - 4, 17 + 3, "DRYING", th)
+    label(img, 7 + 18 * 7 - 2, 17 + 3, "DRIED", th)
+    cslot(img, 2, 0, th)
+    cslot(img, 2, 8, th)
+    player_inv(img, rows, th)
+    return "dry", img, rows
+
+
+def orders():
+    """Daily orders: (1,2), (1,4), (1,6); back (2,0), info (2,8)."""
+    rows = 3
+    rng = random.Random(9)
+    img, th = panel(rows, THEMES["dealer"], rng)
+    label(img, 9, 17 + 4, "CLICK AN ORDER TO HAND IT IN", th)
+    for c in (2, 4, 6):
+        cslot(img, 1, c, th, "big")
+    cslot(img, 2, 0, th)
+    cslot(img, 2, 8, th)
+    player_inv(img, rows, th)
+    return "orders", img, rows
 
 
 def generate(g):
     global G
     G = g
     out = []
-    for fn in (lab, strain, roller, dealer):
+    for fn in (lab, strain, roller, dealer, main_menu, list_menu, hub, dry, orders):
         name, img, rows = fn()
         G.save_png(img, f"gui/{name}")
         LAYOUTS[name] = (img.width, img.height, rows)

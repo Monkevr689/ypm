@@ -1,12 +1,12 @@
 {
  "ambientocclusion": false,
  "textures": {
-  "particle": "kush:plant/mushroom_cap",
-  "cap": "kush:plant/mushroom_cap",
-  "cap_side": "kush:plant/mushroom_cap_side",
-  "gills": "kush:plant/mushroom_gills",
-  "stalk": "kush:plant/mushroom_stalk",
-  "mycelium": "kush:plant/mycelium_patch"
+  "particle": "kush:block/plant/mushroom_cap",
+  "cap": "kush:block/plant/mushroom_cap",
+  "cap_side": "kush:block/plant/mushroom_cap_side",
+  "gills": "kush:block/plant/mushroom_gills",
+  "stalk": "kush:block/plant/mushroom_stalk",
+  "mycelium": "kush:block/plant/mycelium_patch"
  },
  "elements": [
   {

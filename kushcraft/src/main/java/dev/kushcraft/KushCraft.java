@@ -14,10 +14,13 @@ import dev.kushcraft.pack.ResourcePackManager;
 import dev.kushcraft.plant.PlantManager;
 import dev.kushcraft.recipe.Recipes;
 import dev.kushcraft.shop.Economy;
+import dev.kushcraft.shop.Market;
 import dev.kushcraft.shop.Shop;
 import dev.kushcraft.strain.StrainRegistry;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -37,6 +40,7 @@ public final class KushCraft extends JavaPlugin {
     private EffectManager effects;
     private Economy economy;
     private Shop shop;
+    private Market market;
     private ResourcePackManager pack;
 
     public static KushCraft get() {
@@ -48,12 +52,16 @@ public final class KushCraft extends JavaPlugin {
         instance = this;
         Keys.init(this);
         saveDefaultConfig();
+        migrateConfig();
 
         strains = new StrainRegistry(this);
         strains.load();
         economy = new Economy(this);
+        economy.load();
         shop = new Shop(this);
         shop.load();
+        market = new Market(this);
+        market.load();
         machines = new MachineManager(this);
         machines.load();
         plants = new PlantManager(this);
@@ -81,6 +89,8 @@ public final class KushCraft extends JavaPlugin {
         }
 
         pack.start();
+        economy.start();
+        market.start();
         effects.start();
         machines.start();
         plants.start();
@@ -89,6 +99,7 @@ public final class KushCraft extends JavaPlugin {
         Bukkit.getScheduler().runTask(this, economy::hook);
 
         for (Player p : Bukkit.getOnlinePlayers()) {
+            economy.join(p);
             p.discoverRecipes(Recipes.keys());
             pack.send(p);
         }
@@ -110,6 +121,12 @@ public final class KushCraft extends JavaPlugin {
         }
         if (pack != null) {
             pack.stop();
+        }
+        if (economy != null) {
+            economy.save();
+        }
+        if (market != null) {
+            market.save();
         }
         Recipes.unregister();
     }
@@ -146,6 +163,39 @@ public final class KushCraft extends JavaPlugin {
 
     public Shop shop() {
         return shop;
+    }
+
+    public Market market() {
+        return market;
+    }
+
+    /**
+     * v1.0 configs: replace the shop lists (the old stations were removed and
+     * new drugs added) and add every new option, keeping everything else
+     * (resource-pack url, prices you did not touch...).
+     */
+    private void migrateConfig() {
+        if (getConfig().getInt("config-version", 1) >= 2) {
+            return;
+        }
+        java.io.InputStream in = getResource("config.yml");
+        if (in == null) {
+            return;
+        }
+        YamlConfiguration def = YamlConfiguration.loadConfiguration(
+                new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+        getConfig().set("shop.buy", def.getMapList("shop.buy"));
+        ConfigurationSection sell = def.getConfigurationSection("shop.sell");
+        if (sell != null) {
+            for (String k : sell.getKeys(false)) {
+                getConfig().set("shop.sell." + k, sell.get(k));
+            }
+        }
+        getConfig().setDefaults(def);
+        getConfig().options().copyDefaults(true);
+        getConfig().set("config-version", 2);
+        saveConfig();
+        getLogger().info("Updated config.yml to version 2 (new shop list, market & strain options).");
     }
 
     public ResourcePackManager pack() {

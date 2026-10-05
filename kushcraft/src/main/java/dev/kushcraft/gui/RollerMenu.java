@@ -21,13 +21,14 @@ public final class RollerMenu extends Menu {
     private static final int JOINT = 12;
     private static final int BLUNT = 14;
     private static final int ALL = 16;
+    private static final int BACK = 18;
     private static final int INFO = 26;
 
     private String pickStrain;
     private int pickQuality;
 
     public RollerMenu(Player player) {
-        super(player, 3, "roller", "Rolling Table");
+        super(player, 3, "roller", "Drug Lab - Roll");
     }
 
     private StrainStock.Group selected(int needed) {
@@ -37,6 +38,7 @@ public final class RollerMenu extends Menu {
     @Override
     public void render() {
         inv.clear();
+        backButton(BACK);
         StrainStock.Group g = selected(1);
         if (g != null && (pickStrain == null || !g.is(pickStrain, pickQuality))) {
             pickStrain = g.strain().id();
@@ -44,7 +46,7 @@ public final class RollerMenu extends Menu {
         }
         if (g == null) {
             set(BUD, Items.icon("bud_dried", "<gray>No dried buds",
-                    "<gray>Dry fresh buds on a <yellow>Drying Rack</yellow>,",
+                    "<gray>Dry fresh buds in the Drug Lab (Dry),",
                     "<gray>then click one in your inventory."));
         } else {
             ItemStack show = Items.amount(Items.strainItem(ItemType.BUD_DRIED, g.strain(), g.quality(), 1), g.count());
@@ -78,13 +80,13 @@ public final class RollerMenu extends Menu {
         set(ALL, Items.icon("rolling_papers", "<green>Roll all <white>(" + canAll + " joints)",
                 "<gray>Rolls every bud of the selected strain",
                 "<gray>you have papers for."));
-        set(INFO, Items.icon("ui_info", "<aqua>Rolling Table",
+        set(INFO, Items.icon("ui_info", "<aqua>Rolling",
                 "<gray>Click a <green>Dried Bud</green> in your inventory",
                 "<gray>to pick which strain to roll.",
                 "",
                 "<gray>Rolling Papers: 3 paper + sugar cane",
                 "<gray>Blunt Wrap: paper + cocoa + dried kelp",
-                "<gray>(crafting table) or buy them from a Dealer."));
+                "<gray>(crafting table) or buy them at the Market."));
     }
 
     @Override

@@ -1,6 +1,6 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:icon/type_indica"
+  "layer0": "kush:item/icon/type_indica"
  }
 }

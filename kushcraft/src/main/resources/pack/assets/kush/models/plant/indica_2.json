@@ -1,8 +1,8 @@
 {
  "ambientocclusion": false,
  "textures": {
-  "particle": "kush:plant/indica_2",
-  "leaves": "kush:plant/indica_2"
+  "particle": "kush:block/plant/indica_2",
+  "leaves": "kush:block/plant/indica_2"
  },
  "elements": [
   {

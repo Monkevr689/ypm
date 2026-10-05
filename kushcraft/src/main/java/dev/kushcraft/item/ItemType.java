@@ -11,14 +11,13 @@ public enum ItemType {
     // --- cannabis -------------------------------------------------------
     SEED_PACK("Seeds", "seed_pack", true, true,
             "<gray>Right-click the top of farmland, grass,",
-            "<gray>dirt or a <green>Planter Box</green> to plant."),
+            "<gray>dirt or a <green>Planter</green> to plant."),
     BUD_FRESH("Fresh Bud", "bud_fresh", true, true,
-            "<gray>Hang it on a <yellow>Drying Rack</yellow> first.",
+            "<gray>Dry it in a <green>Drug Lab</green> (Dry tab).",
             "<gray>Fresh buds are worth little."),
     BUD_DRIED("Dried Bud", "bud_dried", true, true,
-            "<gray>Roll it at a <yellow>Rolling Table</yellow>,",
-            "<gray>smoke it in a <aqua>Bong</aqua>, cook it in the Lab",
-            "<gray>or sell it to a <green>Dealer</green>."),
+            "<gray>Roll or cook it in a <green>Drug Lab</green>,",
+            "<gray>smoke it in a <aqua>Bong</aqua> or sell it."),
     JOINT("Joint", "joint", true, false,
             "<gray>Right-click to take a hit."),
     BLUNT("Blunt", "blunt", true, false,
@@ -33,60 +32,78 @@ public enum ItemType {
     // --- mushrooms ------------------------------------------------------
     MAGIC_MUSHROOM("Magic Mushroom", "magic_mushroom", false, false,
             "<gray>Right-click to eat. Trippy!",
-            "<gray>Brew it into tea or tabs in the Lab."),
+            "<gray>Brew it into tea or LSD in the Drug Lab."),
     MUSHROOM_SPORES("Mushroom Spores", "mushroom_spores", false, false,
             "<gray>Plant on mycelium, podzol, moss, dirt",
-            "<gray>or a Planter Box. Likes the <dark_gray>dark</dark_gray>."),
+            "<gray>or a Planter. Likes the <dark_gray>dark</dark_gray>."),
     SHROOM_TEA("Shroom Tea", "shroom_tea", false, false,
             "<gray>Right-click to drink."),
-    // --- lab synthetics -------------------------------------------------
-    LUCID_TAB("Lucid Tab", "lucid_tab", false, false,
+    // --- hard drugs -----------------------------------------------------
+    LUCID_TAB("LSD Tab", "lucid_tab", false, false,
             "<gray>Right-click to drop it on your tongue.",
             "<light_purple>Long, colourful trip."),
-    BLUE_CRYSTAL("Blue Crystal", "blue_crystal", false, false,
+    BLUE_CRYSTAL("Meth", "blue_crystal", false, false,
             "<gray>Right-click to use.",
             "<red>Extreme rush, nasty crash."),
     PIXIE_DUST("Pixie Dust", "pixie_dust", false, false,
             "<gray>Right-click to sprinkle on yourself.",
             "<yellow>Glow and float!"),
+    COCA_SEEDS("Coca Seeds", "coca_seeds", false, false,
+            "<gray>Plant on farmland, grass, dirt or a Planter.",
+            "<gold>Loves warm biomes</gold> <gray>(jungle, savanna)."),
+    COCA_LEAVES("Coca Leaves", "coca_leaves", false, false,
+            "<gray>Cook into <white>Cocaine</white> in a <green>Drug Lab</green>."),
+    COCAINE("Cocaine", "cocaine", false, false,
+            "<gray>Right-click to use.",
+            "<aqua>Fast, focused... and paranoid."),
+    POPPY_SEEDS("Poppy Seeds", "poppy_seeds", false, false,
+            "<gray>Plant on farmland, grass, dirt or a Planter.",
+            "<green>Loves mild biomes</green> <gray>(plains, meadows)."),
+    POPPY_POD("Poppy Pod", "poppy_pod", false, false,
+            "<gray>Cook into <white>Heroin</white> in a <green>Drug Lab</green>."),
+    HEROIN("Heroin", "heroin", false, false,
+            "<gray>Right-click to use.",
+            "<red>Very strong - easy to overdo."),
     // --- supplies -------------------------------------------------------
     ROLLING_PAPERS("Rolling Papers", "rolling_papers", false, false,
-            "<gray>Used at the Rolling Table for joints."),
+            "<gray>Used in the Drug Lab to roll joints."),
     BLUNT_WRAP("Blunt Wrap", "blunt_wrap", false, false,
-            "<gray>Used at the Rolling Table for blunts."),
+            "<gray>Used in the Drug Lab to roll blunts."),
     BONG("Bong", "bong", false, false,
             "<gray>Right-click to smoke a Dried Bud, Hash or",
             "<gray>Moon Rock from your inventory.",
             "<dark_gray>Hold one in your off-hand to pick which."),
     LAB_SOLVENT("Lab Solvent", "lab_solvent", false, false,
-            "<gray>Base for lab synthetics."),
+            "<gray>Base for most Drug Lab recipes."),
     CATALYST("Catalyst", "catalyst", false, false,
-            "<gray>Speeds up reactions in the Lab."),
+            "<gray>Needed for Meth and Heroin."),
     FERTILIZER("Fertilizer", "fertilizer", false, false,
             "<gray>Right-click a plant: faster growth",
             "<gray>and <gold>+1 quality</gold> at harvest."),
-    GROWER_GUIDE("Grower's Handbook", "grower_guide", false, false,
-            "<gray>Right-click to read. Everything you",
-            "<gray>need to know about KushCraft."),
-    // --- machines (placed as blocks) -------------------------------------
-    LAB_STATION("Lab Station", "machine_lab_station", MachineType.LAB_STATION,
-            "<gray>Cook hash, moon rocks, brownies, tea",
-            "<gray>and synthetic stuff."),
+    GROWER_GUIDE("KushCraft Menu", "grower_guide", false, false,
+            "<gray>Right-click to open the KushCraft menu:",
+            "<gray>guide, market, catalog, strains and more.",
+            "<dark_gray>(same as /kush)"),
+    // --- blocks (placed like a block, punch to pick up) ------------------
+    LAB_STATION("Drug Lab", "machine_lab_station", MachineType.LAB_STATION,
+            "<gray>One station for everything:",
+            "<gray>cook drugs, roll joints, dry buds",
+            "<gray>and mix your own strains."),
     STRAIN_MAKER("Strain Maker", "machine_strain_maker", MachineType.STRAIN_MAKER,
-            "<gray>Cross two seeds and design your",
-            "<gray>own strain: name, type, colour, effects."),
+            "<dark_gray>Old block - the Drug Lab does this now."),
     ROLLING_TABLE("Rolling Table", "machine_rolling_table", MachineType.ROLLING_TABLE,
-            "<gray>Roll joints and blunts."),
+            "<dark_gray>Old block - the Drug Lab does this now."),
     DRYING_RACK("Drying Rack", "machine_drying_rack", MachineType.DRYING_RACK,
-            "<gray>Right-click with Fresh Buds to dry them."),
+            "<dark_gray>Old block - the Drug Lab does this now."),
     GROW_LAMP("Grow Lamp", "machine_grow_lamp", MachineType.GROW_LAMP,
             "<gray>Lights up and speeds up nearby plants.",
             "<gray>Grow indoors and underground!"),
-    PLANTER_BOX("Planter Box", "machine_planter_box", MachineType.PLANTER_BOX,
+    PLANTER_BOX("Planter", "machine_planter_box", MachineType.PLANTER_BOX,
             "<gray>Perfect soil: plants grow faster",
             "<gray>and get <gold>+1 quality</gold>."),
     DEALER("Dealer Stand", "machine_dealer", MachineType.DEALER,
-            "<gray>Buy seeds and gear, sell your product.");
+            "<gray>Opens the market: buy gear and seeds,",
+            "<gray>sell your product, hand in orders.");
 
     private final String display;
     private final String model;
@@ -151,6 +168,20 @@ public enum ItemType {
             return 1;
         }
         return machine != null ? 16 : 64;
+    }
+
+    /** Old stations replaced by the Drug Lab: still work, but not sold or crafted any more. */
+    public boolean retired() {
+        return this == STRAIN_MAKER || this == ROLLING_TABLE || this == DRYING_RACK;
+    }
+
+    /** Things players consume for an effect. */
+    public boolean isDrug() {
+        return switch (this) {
+            case JOINT, BLUNT, SPACE_BROWNIE, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL, PIXIE_DUST,
+                 COCAINE, HEROIN -> true;
+            default -> false;
+        };
     }
 
     public static ItemType parse(String s) {

@@ -92,6 +92,15 @@ public final class WorldListener implements Listener {
                 Strain s = plugin.strains().wildFor(b);
                 b.getWorld().dropItemNaturally(drop, Items.strainItem(ItemType.SEED_PACK, s, 3, 1));
             }
+            String biome = b.getBiome().getKey().getKey().toLowerCase(Locale.ROOT);
+            if ((biome.contains("jungle") || biome.contains("savanna"))
+                    && r.nextDouble() < plugin.getConfig().getDouble("wild.coca-seed-chance", 0.03)) {
+                b.getWorld().dropItemNaturally(drop, Items.create(ItemType.COCA_SEEDS));
+            }
+        } else if (b.getType() == Material.POPPY) {
+            if (r.nextDouble() < plugin.getConfig().getDouble("wild.poppy-seed-chance", 0.15)) {
+                b.getWorld().dropItemNaturally(drop, Items.create(ItemType.POPPY_SEEDS));
+            }
         } else if (SHROOMS.contains(b.getType())) {
             double chance = plugin.getConfig().getDouble("wild.mushroom-spore-chance", 0.12);
             if (b.getBiome().getKey().getKey().toLowerCase(Locale.ROOT).contains("mushroom")) {

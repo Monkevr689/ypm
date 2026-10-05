@@ -7,7 +7,7 @@
   "glass": "kush:block/glass_green",
   "planter": "kush:block/steel_dark",
   "soil": "kush:block/planter_soil",
-  "plant": "kush:plant/hybrid_2"
+  "plant": "kush:block/plant/hybrid_2"
  },
  "display": {
   "gui": {

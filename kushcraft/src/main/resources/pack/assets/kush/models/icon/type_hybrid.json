@@ -1,6 +1,6 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:icon/type_hybrid"
+  "layer0": "kush:item/icon/type_hybrid"
  }
 }
