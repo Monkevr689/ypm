@@ -6,20 +6,16 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "25"
       - name: Paper version info
         run: |
           UA="probe (https://github.com/${{ github.repository }})"
           curl -sSf -H "User-Agent: $UA" https://fill.papermc.io/v3/projects/paper/versions/26.3/builds/latest -o b.json
           curl -sSfL -H "User-Agent: $UA" "$(jq -r '.downloads["server:default"].url' b.json)" -o paper.jar
-          mkdir s && cd s && echo eula=true > eula.txt
-          printf 'online-mode=false\nlevel-type=minecraft\\:flat\n' > server.properties
-          timeout 120 java -jar ../paper.jar --nogui <<< "stop" > log.txt 2>&1 || true
-          find . -name '*.jar' | head
-          for j in $(find . -name 'mojang*.jar' -o -name 'server-*.jar' | head -3); do echo "== $j"; unzip -p "$j" version.json || true; done
-          unzip -l ../paper.jar | grep -i version.json || true
-          unzip -p ../paper.jar version.json || true
+          echo "== outer jar"; unzip -l paper.jar | grep -iE "version|META-INF/versions" | head -20
+          unzip -p paper.jar version.json 2>/dev/null && echo || echo "no root version.json"
+          mkdir inner && cd inner
+          unzip -q -o ../paper.jar 'META-INF/versions/*' 2>/dev/null || true
+          for j in $(find . -name '*.jar'); do echo "== $j"; unzip -l "$j" | grep -E " version.json|pack.mcmeta" ; unzip -p "$j" version.json 2>/dev/null; done
+          unzip -p ../paper.jar META-INF/MANIFEST.MF | head -20
