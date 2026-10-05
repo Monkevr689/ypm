@@ -1,0 +1,25 @@
+name: probe-pack-format
+on:
+  push:
+    paths: [ ".github/workflows/probe-pack.yml" ]
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Paper version info
+        run: |
+          UA="probe (https://github.com/${{ github.repository }})"
+          curl -sSf -H "User-Agent: $UA" https://fill.papermc.io/v3/projects/paper/versions/26.3/builds/latest -o b.json
+          curl -sSfL -H "User-Agent: $UA" "$(jq -r '.downloads["server:default"].url' b.json)" -o paper.jar
+          mkdir s && cd s && echo eula=true > eula.txt
+          printf 'online-mode=false\nlevel-type=minecraft\\:flat\n' > server.properties
+          timeout 120 java -jar ../paper.jar --nogui <<< "stop" > log.txt 2>&1 || true
+          find . -name '*.jar' | head
+          for j in $(find . -name 'mojang*.jar' -o -name 'server-*.jar' | head -3); do echo "== $j"; unzip -p "$j" version.json || true; done
+          unzip -l ../paper.jar | grep -i version.json || true
+          unzip -p ../paper.jar version.json || true
