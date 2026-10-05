@@ -34,9 +34,9 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/strain.png",
+   "file": "kush:gui/mixer.png",
    "ascent": 13,
-   "height": 222,
+   "height": 204,
    "chars": [
     "\ue001"
    ]
@@ -52,7 +52,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/dealer.png",
+   "file": "kush:gui/list.png",
    "ascent": 13,
    "height": 222,
    "chars": [
@@ -61,29 +61,11 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/main.png",
-   "ascent": 13,
-   "height": 222,
-   "chars": [
-    "\ue004"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/list.png",
-   "ascent": 13,
-   "height": 222,
-   "chars": [
-    "\ue005"
-   ]
-  },
-  {
-   "type": "bitmap",
    "file": "kush:gui/hub.png",
    "ascent": 13,
    "height": 168,
    "chars": [
-    "\ue006"
+    "\ue004"
    ]
   },
   {
@@ -92,16 +74,7 @@
    "ascent": 13,
    "height": 168,
    "chars": [
-    "\ue007"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/orders.png",
-   "ascent": 13,
-   "height": 168,
-   "chars": [
-    "\ue008"
+    "\ue005"
    ]
   },
   {
@@ -110,12 +83,39 @@
    "ascent": 13,
    "height": 204,
    "chars": [
+    "\ue006"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/home.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue007"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/drugs.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue008"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/shop.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
     "\ue009"
    ]
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/exchange.png",
+   "file": "kush:gui/breed.png",
    "ascent": 13,
    "height": 222,
    "chars": [
@@ -126,9 +126,27 @@
    "type": "bitmap",
    "file": "kush:gui/jobs.png",
    "ascent": 13,
-   "height": 186,
+   "height": 222,
    "chars": [
     "\ue00b"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/trade.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue00c"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/bank.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue00d"
    ]
   }
  ]

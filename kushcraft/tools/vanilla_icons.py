@@ -474,6 +474,108 @@ art("brewing_stand", [
 ], {"K": "1a1a1a", "h": "f8d84a", "d": "6a4a2a", "g": "d8f0f8", "r": "d83a6a", "m": "8a8a8a"})
 
 
+def dye(name, light, mid, dark, outline):
+    art(name, [
+        "................",
+        "................",
+        "................",
+        "......KKKK......",
+        ".....KhmmmK.....",
+        "....KhmmmmdK....",
+        "....KmmmmmdK....",
+        "...KhmmmmmmdK...",
+        "...KmmmmmmmdK...",
+        "...KmmmmmmddK...",
+        "....KmmmmddK....",
+        ".....KddddK.....",
+        "......KKKK......",
+        "................",
+        "................",
+        "................",
+    ], {"K": outline, "h": light, "m": mid, "d": dark})
+
+
+dye("pink_dye", "ffd0e8", "f08ac0", "c05a90", "5a1a3a")
+dye("purple_dye", "d8a8ff", "9a4ad8", "6a2aa0", "2a0a4a")
+dust("blaze_powder", "fff0a0", "f8b830", "d87a10", "5a2a00")
+
+art("nether_wart", [
+    "................",
+    "................",
+    "................",
+    "......KKK.......",
+    ".....KrRrK..KK..",
+    "....KrrrrrKKrRK.",
+    "....KrRrrrKrrrK.",
+    ".KK..KrrrKKrRrK.",
+    "KrRK..KrK..KrK..",
+    "KrrrK.KrK..KrK..",
+    ".KrrrKKrK.KrK...",
+    "..KKrrrrrKrK....",
+    "....KKrrrrK.....",
+    "......KKKK......",
+    "................",
+    "................",
+], {"K": "3a0a0a", "r": "a82a2a", "R": "e05a4a"})
+
+art("glow_berries", [
+    "................",
+    "........K.......",
+    ".......KgK......",
+    "......KgK.......",
+    "......KgK.......",
+    ".....KgKKK......",
+    "....KKKyyyK.....",
+    "...KyyKywyyK....",
+    "..KywyKyyyyK....",
+    "..KyyyKKyyK.....",
+    "...KyyK.KK......",
+    "....KK..........",
+    "................",
+    "................",
+    "................",
+    "................",
+], {"K": "3a2a0a", "g": "5a8a2a", "y": "f8c040", "w": "fff0b0"})
+
+art("sweet_berries", [
+    "................",
+    "................",
+    ".........KK.....",
+    "........KgK.....",
+    ".......KgK......",
+    "....KKKgKKK.....",
+    "...KrrKKrrrK....",
+    "..KrwrrKrwrrK...",
+    "..KrrrrKrrrrK...",
+    "..KrrrRKKrrRK...",
+    "...KRRK..KRK....",
+    "....KK....K.....",
+    "................",
+    "................",
+    "................",
+    "................",
+], {"K": "3a0a0a", "g": "4a7a2a", "r": "d83a3a", "R": "a02020", "w": "ffb0b0"})
+
+art("slime_ball", [
+    "................",
+    "................",
+    "................",
+    ".....KKKKK......",
+    "....KggggGK.....",
+    "...KgwwgggGK....",
+    "...KgwgggggGK...",
+    "...KggggggggK...",
+    "...KgggggggGK...",
+    "....KggggGGK....",
+    ".....KKKKKK.....",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+], {"K": "1a4a1a", "g": "7ad860", "G": "4aa83a", "w": "d0ffc0"})
+
+
 def get(material):
     """Icon for a lower-case material name, or None."""
     return ICONS.get(material)

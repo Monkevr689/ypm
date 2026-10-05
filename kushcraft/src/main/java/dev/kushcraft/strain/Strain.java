@@ -77,6 +77,10 @@ public final class Strain {
         return "<color:" + Text.hex(brighten(color)) + ">" + Text.escape(name) + "</color>";
     }
 
+    public Rarity rarity() {
+        return Rarity.of(potency, effects.size());
+    }
+
     /** Potency factor used for effect length and prices (0.25 .. 1.75). */
     public double potencyFactor() {
         return potency / 20.0;

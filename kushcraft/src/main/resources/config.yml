@@ -2,7 +2,7 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 3
+config-version: 4
 
 # Custom textures/models are delivered with a server resource pack that
 # KushCraft builds and hosts by itself. Players get the usual
@@ -36,6 +36,7 @@ growth:
   mushroom-minutes: 12
   coca-minutes: 16
   poppy-minutes: 14
+  peyote-minutes: 18
   # Cannabis needs at least this light level (sun or torches), unless a Grow Lamp is close.
   min-light: 9
   # Grow Lamps boost and light every plant within this many blocks.
@@ -53,6 +54,8 @@ wild:
   coca-seed-chance: 0.03
   # Chance for poppy seeds when breaking a red poppy flower.
   poppy-seed-chance: 0.15
+  # Chance for peyote seeds from dead bushes in deserts and badlands.
+  peyote-seed-chance: 0.08
 
 drying:
   # Minutes buds need on the Drug Lab drying shelf.
@@ -61,6 +64,9 @@ drying:
 lab:
   # Multiplier for all Drug Lab cooking times (0.5 = twice as fast).
   time-multiplier: 1.0
+  # Price of each Drug Lab upgrade (level 2, 3, 4, 5). Every level cooks
+  # 15% faster and adds 8% chance of a bonus item.
+  upgrade-costs: [5000, 15000, 40000, 100000]
 
 effects:
   # Show a boss bar with your high level and active effects.
@@ -69,12 +75,14 @@ effects:
   nausea: true
   # High level (0-100+) above which you "green out".
   green-out-at: 100
+  # Chance that a natural ore drops double while you have the Lucky effect.
+  lucky-double-chance: 0.2
 
 strain-maker:
-  # Players can mix strains from /kush > Strains (otherwise only at a Drug Lab).
+  # Players can breed strains from /kush > Breed (otherwise only at a Drug Lab).
   anywhere: true
-  # Money it costs to register a new strain (0 = free).
-  cost: 150
+  # Money every mix costs (the result is random: keep it or try again).
+  cost: 1500
   # Maximum strains one player can create.
   max-per-player: 25
   # Seed packs you receive for a new strain.
@@ -84,25 +92,39 @@ economy:
   # Use Vault (EssentialsX, CMI, ...) when it is installed. Otherwise KushCraft
   # keeps its own simple wallet per player.
   use-vault: true
-  starting-balance: 100
+  starting-balance: 300
   symbol: '$'
 
 market:
   # Players can open the market from /kush. false = only at a Dealer Stand.
   anywhere: true
   # Every item sold lowers that product's price by this much (0.01 = 1%)...
-  demand-drop: 0.01
+  demand-drop: 0.004
   # ...down to this fraction of the normal price...
   min-price: 0.5
   # ...and it recovers this much per minute.
-  recovery-per-minute: 0.02
+  recovery-per-minute: 0.03
   # A random "hot" product sells for extra for a while.
   hot-item-bonus: 1.5
   hot-item-minutes: 60
   # Daily orders: hand in a batch for bonus cash.
   orders: 3
   order-minutes: 60
-  order-bonus: 1.75
+  order-bonus: 1.6
+
+# =====================================================================
+#  DEALER RANKS - earned by selling product (Shop sales and orders).
+#  Ranks unlock Drug Lab recipes (level 1-5, see /kush > Drugs) and pay a
+#  bonus on every sale. sales = lifetime money from selling.
+# =====================================================================
+ranks:
+  - {name: Street Seller, color: gray, sales: 0, bonus: 0}
+  - {name: Corner Dealer, color: green, sales: 2500, bonus: 0.05}
+  - {name: Hustler, color: aqua, sales: 15000, bonus: 0.10}
+  - {name: Supplier, color: light_purple, sales: 60000, bonus: 0.15}
+  - {name: The Plug, color: gold, sales: 200000, bonus: 0.20}
+  - {name: Kingpin, color: red, sales: 600000, bonus: 0.25}
+  - {name: Cartel Boss, color: dark_red, sales: 2000000, bonus: 0.30}
 
 # Give new players the KushCraft Menu book on their first join.
 give-guide-on-first-join: true
@@ -123,7 +145,9 @@ menu:
 # =====================================================================
 exchange:
   enabled: true
-  sell-ratio: 0.5
+  # All prices below are multiplied by this (2.5 = a diamond costs 300).
+  price-multiplier: 2.5
+  sell-ratio: 0.3
   # Price change per "amount" bought (+) or sold (-), 0.01 = 1%...
   price-step: 0.01
   # ...between these limits of the normal price...
@@ -293,7 +317,9 @@ exchange:
 jobs:
   enabled: true
   # Max money one player can earn from jobs per hour (stops farms printing money).
-  hourly-cap: 1500
+  hourly-cap: 750
+  # All pay below is multiplied by this.
+  pay-multiplier: 0.5
   # Show "+$0.50 Miner" above the hotbar.
   action-bar: true
   pay:
@@ -370,56 +396,74 @@ jobs:
       cannabis: 3
       coca: 3
       poppy: 3
+      peyote: 3
       mushroom: 2
 
 # =====================================================================
-#  SHOP  (Market: /kush > Market or a Dealer Stand)
+#  SHOP  (/kush > Shop or a Dealer Stand)
 #  buy  -> what the dealer sells to players (price per click)
 #  sell -> what the dealer pays players. Strain items are multiplied by
 #          quality (1-5 stars) and potency, so better weed = more money.
 # =====================================================================
 shop:
   buy:
-    - {item: seed_pack, strain: og_kush, amount: 1, price: 40}
-    - {item: seed_pack, strain: blue_dream, amount: 1, price: 50}
-    - {item: seed_pack, strain: jungle_haze, amount: 1, price: 55}
-    - {item: seed_pack, strain: savanna_gold, amount: 1, price: 55}
-    - {item: seed_pack, strain: northern_lights, amount: 1, price: 60}
-    - {item: seed_pack, strain: purple_kush, amount: 1, price: 70}
-    - {item: seed_pack, strain: sour_diesel, amount: 1, price: 90}
-    - {item: seed_pack, strain: white_widow, amount: 1, price: 110}
-    - {item: coca_seeds, amount: 1, price: 80}
-    - {item: poppy_seeds, amount: 1, price: 90}
-    - {item: mushroom_spores, amount: 1, price: 45}
-    - {item: rolling_papers, amount: 8, price: 10}
-    - {item: blunt_wrap, amount: 4, price: 16}
-    - {item: fertilizer, amount: 4, price: 20}
-    - {item: lab_solvent, amount: 2, price: 50}
-    - {item: catalyst, amount: 2, price: 70}
-    - {item: bong, amount: 1, price: 120}
+    - {item: seed_pack, strain: og_kush, amount: 1, price: 300}
+    - {item: seed_pack, strain: blue_dream, amount: 1, price: 350}
+    - {item: seed_pack, strain: jungle_haze, amount: 1, price: 400}
+    - {item: seed_pack, strain: savanna_gold, amount: 1, price: 400}
+    - {item: seed_pack, strain: northern_lights, amount: 1, price: 450}
+    - {item: seed_pack, strain: purple_kush, amount: 1, price: 550}
+    - {item: seed_pack, strain: sour_diesel, amount: 1, price: 700}
+    - {item: seed_pack, strain: white_widow, amount: 1, price: 900}
+    - {item: mushroom_spores, amount: 1, price: 350}
+    - {item: coca_seeds, amount: 1, price: 800}
+    - {item: poppy_seeds, amount: 1, price: 900}
+    - {item: peyote_seeds, amount: 1, price: 850}
+    - {item: rolling_papers, amount: 8, price: 60}
+    - {item: blunt_wrap, amount: 4, price: 80}
+    - {item: fertilizer, amount: 4, price: 150}
+    - {item: lab_solvent, amount: 2, price: 400}
+    - {item: catalyst, amount: 2, price: 600}
+    - {item: bong, amount: 1, price: 1000}
     - {item: grower_guide, amount: 1, price: 0}
-    - {item: planter_box, amount: 1, price: 60}
-    - {item: grow_lamp, amount: 1, price: 250}
-    - {item: dealer, amount: 1, price: 400}
-    - {item: lab_station, amount: 1, price: 900}
+    - {item: planter_box, amount: 1, price: 500}
+    - {item: grow_lamp, amount: 1, price: 3000}
+    - {item: dealer, amount: 1, price: 5000}
+    - {item: lab_station, amount: 1, price: 10000}
   sell:
-    bud_fresh: 5
-    bud_dried: 14
-    joint: 22
-    blunt: 40
-    hash: 55
-    moon_rock: 130
-    space_brownie: 35
-    magic_mushroom: 10
-    shroom_tea: 30
-    lucid_tab: 28
-    blue_crystal: 85
-    pixie_dust: 65
-    coca_leaves: 6
-    cocaine: 70
-    poppy_pod: 7
-    heroin: 95
-    seed_pack: 8
-    coca_seeds: 10
-    poppy_seeds: 10
-    mushroom_spores: 6
+    # weed
+    bud_fresh: 2
+    bud_dried: 8
+    joint: 12
+    blunt: 24
+    hash: 30
+    moon_rock: 75
+    space_brownie: 20
+    gummies: 18
+    # psychedelics
+    magic_mushroom: 6
+    shroom_tea: 16
+    lucid_tab: 16
+    peyote_button: 6
+    mescaline: 45
+    dmt: 70
+    # uppers
+    cocaine: 42
+    crack: 38
+    blue_crystal: 55
+    ecstasy: 30
+    pixie_dust: 40
+    angel_dust: 60
+    # downers
+    opium: 22
+    heroin: 65
+    lean: 20
+    ketamine: 35
+    # harvest & seeds
+    coca_leaves: 3
+    poppy_pod: 3
+    seed_pack: 5
+    coca_seeds: 6
+    poppy_seeds: 6
+    peyote_seeds: 6
+    mushroom_spores: 4

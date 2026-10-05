@@ -24,8 +24,8 @@ public final class GuiFont {
      * (tools/validate_pack.py checks that they match).
      */
     static final List<String> GUIS = List.of(
-            "lab", "strain", "roller", "dealer", "main", "list", "hub", "dry", "orders",
-            "recipe", "exchange", "jobs");
+            "lab", "mixer", "roller", "list", "hub", "dry", "recipe",
+            "home", "drugs", "shop", "breed", "jobs", "trade", "bank");
     private static final int GUI_WIDTH = 176;
     private static final int TITLE_X = 8;
 
@@ -48,6 +48,11 @@ public final class GuiFont {
     }
 
     public static Component title(Player viewer, String gui, String miniMessageTitle) {
+        return title(viewer, gui, miniMessageTitle, true);
+    }
+
+    /** showTitle false: pack users see only the background (tab pages have their labels drawn in). */
+    public static Component title(Player viewer, String gui, String miniMessageTitle, boolean showTitle) {
         int index = GUIS.indexOf(gui);
         if (index < 0) {
             KushCraft.get().getLogger().warning("No menu background named " + gui);
@@ -57,6 +62,6 @@ public final class GuiFont {
         }
         String bg = space(-TITLE_X) + (char) (0xE000 + index) + space(-(GUI_WIDTH + 1 - TITLE_X));
         Component background = Component.text(bg).font(FONT).color(NamedTextColor.WHITE);
-        return Component.empty().append(background).append(Text.mm("<white>" + miniMessageTitle));
+        return Component.empty().append(background).append(Text.mm(showTitle ? "<white>" + miniMessageTitle : ""));
     }
 }

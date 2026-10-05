@@ -51,6 +51,10 @@ public final class PlantManager {
     private static final Set<Material> CANNABIS_SOIL = EnumSet.of(Material.FARMLAND, Material.GRASS_BLOCK,
             Material.DIRT, Material.COARSE_DIRT, Material.ROOTED_DIRT, Material.PODZOL, Material.MUD,
             Material.MOSS_BLOCK);
+    /** Peyote also grows in sand, like in the desert. */
+    private static final Set<Material> PEYOTE_SOIL = EnumSet.of(Material.FARMLAND, Material.GRASS_BLOCK,
+            Material.DIRT, Material.COARSE_DIRT, Material.ROOTED_DIRT, Material.SAND, Material.RED_SAND,
+            Material.TERRACOTTA);
     private static final Set<Material> MUSHROOM_SOIL = EnumSet.of(Material.MYCELIUM, Material.PODZOL,
             Material.MOSS_BLOCK, Material.DIRT, Material.COARSE_DIRT, Material.ROOTED_DIRT, Material.GRASS_BLOCK,
             Material.MUD, Material.FARMLAND);
@@ -197,7 +201,12 @@ public final class PlantManager {
         if (m != null) {
             return m.type() == MachineType.PLANTER_BOX;
         }
-        return (kind == Plant.Kind.MUSHROOM ? MUSHROOM_SOIL : CANNABIS_SOIL).contains(soil.getType());
+        Set<Material> ok = switch (kind) {
+            case MUSHROOM -> MUSHROOM_SOIL;
+            case PEYOTE -> PEYOTE_SOIL;
+            default -> CANNABIS_SOIL;
+        };
+        return ok.contains(soil.getType());
     }
 
     /** Plants on top of soil. Returns false (with a message) when it can't. */
@@ -205,9 +214,11 @@ public final class PlantManager {
         Block space = soil.getRelative(0, 1, 0);
         BlockKey key = BlockKey.of(space);
         if (!isSoil(soil, kind)) {
-            player.sendActionBar(Text.mm(kind != Plant.Kind.MUSHROOM
-                    ? "<red>Plant seeds on farmland, grass, dirt, moss or a Planter."
-                    : "<red>Plant spores on mycelium, podzol, moss, dirt or a Planter."));
+            player.sendActionBar(Text.mm(switch (kind) {
+                case MUSHROOM -> "<red>Plant spores on mycelium, podzol, moss, dirt or a Planter.";
+                case PEYOTE -> "<red>Plant peyote on sand, dirt, farmland or a Planter.";
+                default -> "<red>Plant seeds on farmland, grass, dirt, moss or a Planter.";
+            }));
             return false;
         }
         if (!space.getType().isAir() || plants.containsKey(key) || plugin.machines().at(key) != null) {
@@ -246,6 +257,7 @@ public final class PlantManager {
                 case MUSHROOM -> Items.create(ItemType.MUSHROOM_SPORES);
                 case COCA -> Items.create(ItemType.COCA_SEEDS);
                 case POPPY -> Items.create(ItemType.POPPY_SEEDS);
+                case PEYOTE -> Items.create(ItemType.PEYOTE_SEEDS);
                 case CANNABIS -> Items.strainItem(ItemType.SEED_PACK, plugin.strains().getOrDefault(p.strainId()), 3, 1);
             };
             c.getWorld().dropItemNaturally(c.add(0, 0.3, 0), back);
@@ -300,6 +312,11 @@ public final class PlantManager {
             drops.add(Items.create(ItemType.POPPY_POD, pods));
             drops.add(Items.create(ItemType.POPPY_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
             msg = "<green>Picked " + pods + " Poppy Pods <gray>" + Text.stars(q);
+        } else if (p.kind() == Plant.Kind.PEYOTE) {
+            int buttons = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
+            drops.add(Items.create(ItemType.PEYOTE_BUTTON, buttons));
+            drops.add(Items.create(ItemType.PEYOTE_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
+            msg = "<green>Cut " + buttons + " Peyote Buttons <gray>" + Text.stars(q);
         } else {
             int shrooms = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (p.fertilized() ? 1 : 0);
             drops.add(Items.create(ItemType.MAGIC_MUSHROOM, shrooms));
@@ -406,6 +423,11 @@ public final class PlantManager {
                         problem = "Water nearby would help";
                     }
                 }
+            } else if (p.kind() == Plant.Kind.PEYOTE && (soil.getType() == Material.SAND
+                    || soil.getType() == Material.RED_SAND)) {
+                mult *= 1.25;
+                quality++;
+                soilText = "<gold>Desert sand ✔";
             } else {
                 mult *= 0.8;
                 quality--;
@@ -419,8 +441,8 @@ public final class PlantManager {
                 cm = s.type().climateMultiplier(climate);
                 cq = s.type().climateQuality(climate);
             } else {
-                // coca loves the heat, poppies like it mild; both hate the cold
-                Climate best = p.kind() == Plant.Kind.COCA ? Climate.WARM : Climate.MILD;
+                // coca and peyote love the heat, poppies like it mild; all hate the cold
+                Climate best = p.kind() == Plant.Kind.POPPY ? Climate.MILD : Climate.WARM;
                 cm = climate == best ? 1.4 : climate == Climate.COLD ? 0.55 : 1.0;
                 cq = climate == best ? 1 : climate == Climate.COLD ? -1 : 0;
             }
@@ -481,6 +503,7 @@ public final class PlantManager {
         double mushroomMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.mushroom-minutes", 12));
         double cocaMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.coca-minutes", 16));
         double poppyMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.poppy-minutes", 14));
+        double peyoteMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.peyote-minutes", 18));
         for (Plant p : new ArrayList<>(plants.values())) {
             if (p.mature() || !p.key().isLoaded()) {
                 continue;
@@ -498,6 +521,7 @@ public final class PlantManager {
                 case MUSHROOM -> mushroomMinutes;
                 case COCA -> cocaMinutes;
                 case POPPY -> poppyMinutes;
+                case PEYOTE -> peyoteMinutes;
             };
             double perTick = 100.0 / (minutes * 60.0 / tickSeconds);
             p.status = c.problem() == null ? "" : c.problem();
@@ -651,6 +675,7 @@ public final class PlantManager {
             case MUSHROOM -> "<gold>Magic Mushrooms";
             case COCA -> "<green>Coca Bush";
             case POPPY -> "<red>Opium Poppy";
+            case PEYOTE -> "<gold>Peyote Cactus";
             case CANNABIS -> plugin.strains().getOrDefault(p.strainId()).colored();
         };
         String line = name + " <dark_gray>|</dark_gray> <white>" + p.stageName() + " <gray>"

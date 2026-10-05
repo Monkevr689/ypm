@@ -44,16 +44,26 @@ CRAFTING = [
 # cook: (enum name, result id, amount, seconds, [(ingredient, count)]); "kush:" = KushCraft item
 COOK = [
     ("HASH", "hash", 2, 30, [("kush:bud_dried", 4), ("ice", 1)]),
-    ("MOON_ROCK", "moon_rock", 1, 45, [("kush:bud_dried", 1), ("kush:hash", 1), ("honey_bottle", 1)]),
     ("SPACE_BROWNIE", "space_brownie", 3, 40,
      [("kush:bud_dried", 2), ("cocoa_beans", 1), ("wheat", 2), ("sugar", 1)]),
+    ("GUMMIES", "gummies", 4, 40, [("kush:hash", 1), ("sugar", 2), ("slime_ball", 1)]),
     ("SHROOM_TEA", "shroom_tea", 1, 20, [("kush:magic_mushroom", 2), ("glass_bottle", 1)]),
+    ("OPIUM", "opium", 2, 40, [("kush:poppy_pod", 3), ("glass_bottle", 1)]),
+    ("LEAN", "lean", 2, 30, [("glass_bottle", 1), ("sugar", 2), ("purple_dye", 1), ("sweet_berries", 2)]),
+    ("MOON_ROCK", "moon_rock", 1, 45, [("kush:bud_dried", 1), ("kush:hash", 1), ("honey_bottle", 1)]),
     ("LUCID_TAB", "lucid_tab", 6, 60, [("kush:lab_solvent", 1), ("kush:magic_mushroom", 2), ("paper", 1)]),
+    ("ECSTASY", "ecstasy", 4, 60, [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("pink_dye", 2), ("sugar", 1)]),
+    ("PIXIE_DUST", "pixie_dust", 4, 60, [("kush:lab_solvent", 1), ("glowstone_dust", 4), ("sugar", 2)]),
+    ("COCAINE", "cocaine", 4, 60, [("kush:coca_leaves", 8), ("kush:lab_solvent", 1), ("sugar", 1)]),
+    ("CRACK", "crack", 3, 40, [("kush:cocaine", 2), ("bone_meal", 1)]),
+    ("KETAMINE", "ketamine", 4, 60, [("kush:lab_solvent", 1), ("nether_wart", 2), ("sugar", 2)]),
+    ("MESCALINE", "mescaline", 3, 60, [("kush:peyote_button", 4), ("kush:lab_solvent", 1)]),
     ("BLUE_CRYSTAL", "blue_crystal", 4, 90,
      [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("lapis_lazuli", 4), ("sugar", 2)]),
-    ("COCAINE", "cocaine", 4, 60, [("kush:coca_leaves", 8), ("kush:lab_solvent", 1), ("sugar", 1)]),
     ("HEROIN", "heroin", 3, 75, [("kush:poppy_pod", 6), ("kush:lab_solvent", 1), ("kush:catalyst", 1)]),
-    ("PIXIE_DUST", "pixie_dust", 4, 60, [("kush:lab_solvent", 1), ("glowstone_dust", 4), ("sugar", 2)]),
+    ("DMT", "dmt", 3, 75, [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("glow_berries", 3)]),
+    ("ANGEL_DUST", "angel_dust", 3, 90,
+     [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("gunpowder", 2), ("blaze_powder", 1)]),
 ]
 
 # other Drug Lab tabs: (id, station text, result, amount, [(ingredient, count)])
@@ -61,7 +71,7 @@ OTHER = [
     ("roll_joint", ["DRUG LAB", "ROLL"], "joint", 1, [("kush:bud_dried", 1), ("kush:rolling_papers", 1)]),
     ("roll_blunt", ["DRUG LAB", "ROLL"], "blunt", 1, [("kush:bud_dried", 2), ("kush:blunt_wrap", 1)]),
     ("dry_bud", ["DRUG LAB", "DRY 3 MIN"], "bud_dried", 1, [("kush:bud_fresh", 1)]),
-    ("mix_strain", ["DRUG LAB", "MIX + $"], "seed_pack", 3, [("kush:seed_pack", 1), ("kush:seed_pack", 1)]),
+    ("mix_strain", ["MIX: RANDOM", "STRAIN + $"], "seed_pack", 3, [("kush:seed_pack", 1), ("kush:seed_pack", 1)]),
 ]
 
 NAMES = {
@@ -71,6 +81,8 @@ NAMES = {
     "moon_rock": "Moon Rock", "space_brownie": "Space Brownie", "shroom_tea": "Shroom Tea", "lucid_tab": "LSD",
     "blue_crystal": "Meth", "cocaine": "Cocaine", "heroin": "Heroin", "pixie_dust": "Pixie Dust",
     "joint": "Joint", "blunt": "Blunt", "bud_dried": "Dried Bud", "seed_pack": "Your own strain",
+    "gummies": "THC Gummies", "opium": "Opium", "lean": "Lean", "ecstasy": "Ecstasy", "crack": "Crack Rock",
+    "ketamine": "Ketamine", "mescaline": "Mescaline", "dmt": "DMT", "angel_dust": "Angel Dust",
 }
 
 MACHINES = {"lab_station": "block/lab_station", "grow_lamp": "block/grow_lamp",

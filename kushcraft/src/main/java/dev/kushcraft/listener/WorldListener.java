@@ -97,6 +97,10 @@ public final class WorldListener implements Listener {
                     && r.nextDouble() < plugin.getConfig().getDouble("wild.coca-seed-chance", 0.03)) {
                 b.getWorld().dropItemNaturally(drop, Items.create(ItemType.COCA_SEEDS));
             }
+            if (b.getType() == Material.DEAD_BUSH && (biome.contains("desert") || biome.contains("badlands"))
+                    && r.nextDouble() < plugin.getConfig().getDouble("wild.peyote-seed-chance", 0.08)) {
+                b.getWorld().dropItemNaturally(drop, Items.create(ItemType.PEYOTE_SEEDS));
+            }
         } else if (b.getType() == Material.POPPY) {
             if (r.nextDouble() < plugin.getConfig().getDouble("wild.poppy-seed-chance", 0.15)) {
                 b.getWorld().dropItemNaturally(drop, Items.create(ItemType.POPPY_SEEDS));

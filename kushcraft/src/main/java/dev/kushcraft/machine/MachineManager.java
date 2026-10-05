@@ -86,6 +86,7 @@ public final class MachineManager {
             } catch (IllegalArgumentException ignored) {
             }
             Machine m = new Machine(key, type, (float) s.getDouble("yaw"), owner);
+            m.level = Math.max(1, s.getInt("level", 1));
             if (s.isString("job")) {
                 m.job = s.getString("job");
                 m.jobStart = s.getLong("job-start");
@@ -113,6 +114,9 @@ public final class MachineManager {
             s.set("yaw", (double) m.yaw());
             if (m.owner() != null) {
                 s.set("owner", m.owner().toString());
+            }
+            if (m.level > 1) {
+                s.set("level", m.level);
             }
             if (m.job != null && m.output != null) {
                 s.set("job", m.job);
@@ -223,9 +227,10 @@ public final class MachineManager {
     // ------------------------------------------------------------------
 
     /** Called after the barrier block was placed by the player. */
-    public Machine place(Player player, Block block, MachineType type) {
+    public Machine place(Player player, Block block, MachineType type, int level) {
         float yaw = Math.round(player.getLocation().getYaw() / 90f) * 90f;
         Machine m = placeAt(block, type, yaw, player.getUniqueId());
+        m.level(level);
         Location c = m.key().center();
         c.getWorld().playSound(c, "minecraft:block.wood.place", SoundCategory.BLOCKS, 1f, 0.9f);
         player.sendActionBar(Text.mm("<green>" + type.item().display() + " placed! <gray>Right-click to use, punch to pick up."));
@@ -271,7 +276,7 @@ public final class MachineManager {
         World w = c.getWorld();
         boolean creative = player != null && player.getGameMode() == GameMode.CREATIVE;
         if (!creative) {
-            w.dropItemNaturally(c, Items.create(m.type().item()));
+            w.dropItemNaturally(c, Items.machine(m.type().item(), m.level()));
         }
         // contents always drop so nothing is lost
         if (m.output != null && m.jobDone()) {

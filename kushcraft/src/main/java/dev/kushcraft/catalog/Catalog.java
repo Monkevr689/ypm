@@ -15,11 +15,12 @@ import java.util.Map;
 public final class Catalog {
 
     public enum Category {
-        PLANTS("Seeds & Harvest", "seed_pack"),
         WEED("Weed", "bud_dried"),
-        HARD("Hard Drugs", "cocaine"),
-        SUPPLIES("Supplies", "lab_solvent"),
-        BLOCKS("Blocks", "machine_lab_station");
+        PSYCH("Psychedelics", "lucid_tab"),
+        UPPERS("Uppers", "cocaine"),
+        DOWNERS("Downers", "heroin"),
+        GROW("Seeds & Harvest", "seed_pack"),
+        GEAR("Supplies & Blocks", "machine_lab_station");
 
         private final String display;
         private final String icon;
@@ -47,17 +48,11 @@ public final class Catalog {
         ENTRIES.add(new Entry(t, c, List.of(howTo), effects));
     }
 
+    private static void drug(ItemType t, Category c, String howTo) {
+        add(t, c, effects(t), howTo);
+    }
+
     static {
-        // seeds & harvest
-        add(ItemType.SEED_PACK, Category.PLANTS, null,
-                "Break grass/ferns (biome decides the strain),", "buy at the Market or mix in the Drug Lab.");
-        add(ItemType.COCA_SEEDS, Category.PLANTS, null, "Break grass in jungles/savannas or buy them.");
-        add(ItemType.POPPY_SEEDS, Category.PLANTS, null, "Break red poppy flowers or buy them.");
-        add(ItemType.MUSHROOM_SPORES, Category.PLANTS, null, "Break small mushrooms or buy them.");
-        add(ItemType.BUD_FRESH, Category.PLANTS, null, "Harvest a fully grown cannabis plant.");
-        add(ItemType.COCA_LEAVES, Category.PLANTS, null, "Harvest a fully grown coca bush.");
-        add(ItemType.POPPY_POD, Category.PLANTS, null, "Harvest fully grown opium poppies.");
-        add(ItemType.MAGIC_MUSHROOM, Category.PLANTS, "Trippy + Giggles", "Harvest grown magic mushrooms.");
         // weed
         add(ItemType.BUD_DRIED, Category.WEED, "Strain effects (in a Bong)", "Drug Lab > Dry: fresh buds.");
         add(ItemType.JOINT, Category.WEED, "Strain effects, 3 hits", "Drug Lab > Roll: 1 dried bud + papers.");
@@ -67,35 +62,48 @@ public final class Catalog {
                 "Drug Lab > Cook: bud + hash + honey bottle.");
         add(ItemType.SPACE_BROWNIE, Category.WEED, "Long strain effects + Munchies",
                 "Drug Lab > Cook: 2 buds + cocoa + 2 wheat + sugar.");
-        add(ItemType.SHROOM_TEA, Category.WEED, "Trippy + Euphoria", "Drug Lab > Cook: 2 magic mushrooms + bottle.");
-        // hard drugs
-        add(ItemType.COCAINE, Category.HARD, effects(ItemType.COCAINE),
-                "Drug Lab > Cook: 8 coca leaves + solvent + sugar.");
-        add(ItemType.HEROIN, Category.HARD, effects(ItemType.HEROIN),
-                "Drug Lab > Cook: 6 poppy pods + solvent + catalyst.");
-        add(ItemType.LUCID_TAB, Category.HARD, effects(ItemType.LUCID_TAB),
-                "Drug Lab > Cook: solvent + 2 magic mushrooms + paper.");
-        add(ItemType.BLUE_CRYSTAL, Category.HARD, effects(ItemType.BLUE_CRYSTAL),
-                "Drug Lab > Cook: solvent + catalyst + 4 lapis + 2 sugar.");
-        add(ItemType.PIXIE_DUST, Category.HARD, effects(ItemType.PIXIE_DUST),
-                "Drug Lab > Cook: solvent + 4 glowstone dust + 2 sugar.");
-        // supplies
-        add(ItemType.ROLLING_PAPERS, Category.SUPPLIES, null, "Craft: 3 paper + sugar cane (gives 6).");
-        add(ItemType.BLUNT_WRAP, Category.SUPPLIES, null, "Craft: paper + cocoa beans + dried kelp.");
-        add(ItemType.BONG, Category.SUPPLIES, null, "Craft: glass, glass bottle, iron nugget.");
-        add(ItemType.LAB_SOLVENT, Category.SUPPLIES, null, "Craft: bottle + sugar + redstone + gunpowder.");
-        add(ItemType.CATALYST, Category.SUPPLIES, null, "Craft: amethyst + glowstone dust + redstone.");
-        add(ItemType.FERTILIZER, Category.SUPPLIES, null, "Craft: 2 bone meal + rotten flesh.");
-        add(ItemType.GROWER_GUIDE, Category.SUPPLIES, null, "Craft: book + wheat seeds. Opens this menu.");
-        // blocks
-        add(ItemType.LAB_STATION, Category.BLOCKS, null, "Craft: bottle, brewing stand, bottle /",
-                "iron, cauldron, iron / iron, _, iron.");
-        add(ItemType.PLANTER_BOX, Category.BLOCKS, null, "Craft: planks, bone meal, planks /",
-                "planks, dirt, planks / 3 planks (gives 2).");
-        add(ItemType.GROW_LAMP, Category.BLOCKS, null, "Craft: 3 iron / glowstone dust,",
-                "redstone lamp, glowstone dust / _, iron, _.");
-        add(ItemType.DEALER, Category.BLOCKS, null, "Craft: 3 emerald / planks, chest, planks /",
-                "3 planks.");
+        add(ItemType.GUMMIES, Category.WEED, "Very long strain effects", "Drug Lab > Cook: hash + 2 sugar + slime ball.");
+        // psychedelics
+        drug(ItemType.MAGIC_MUSHROOM, Category.PSYCH, "Harvest grown magic mushrooms.");
+        drug(ItemType.SHROOM_TEA, Category.PSYCH, "Drug Lab > Cook: 2 magic mushrooms + bottle.");
+        drug(ItemType.LUCID_TAB, Category.PSYCH, "Drug Lab > Cook: solvent + 2 mushrooms + paper.");
+        drug(ItemType.PEYOTE_BUTTON, Category.PSYCH, "Harvest a flowering peyote cactus.");
+        drug(ItemType.MESCALINE, Category.PSYCH, "Drug Lab > Cook: 4 peyote buttons + solvent.");
+        drug(ItemType.DMT, Category.PSYCH, "Drug Lab > Cook: solvent + catalyst + 3 glow berries.");
+        // uppers
+        drug(ItemType.COCAINE, Category.UPPERS, "Drug Lab > Cook: 8 coca leaves + solvent + sugar.");
+        drug(ItemType.CRACK, Category.UPPERS, "Drug Lab > Cook: 2 cocaine + bone meal.");
+        drug(ItemType.BLUE_CRYSTAL, Category.UPPERS, "Drug Lab > Cook: solvent + catalyst + 4 lapis + 2 sugar.");
+        drug(ItemType.ECSTASY, Category.UPPERS, "Drug Lab > Cook: solvent + catalyst + 2 pink dye + sugar.");
+        drug(ItemType.PIXIE_DUST, Category.UPPERS, "Drug Lab > Cook: solvent + 4 glowstone dust + 2 sugar.");
+        drug(ItemType.ANGEL_DUST, Category.UPPERS, "Drug Lab > Cook: solvent + catalyst + 2 gunpowder + blaze powder.");
+        // downers
+        drug(ItemType.OPIUM, Category.DOWNERS, "Drug Lab > Cook: 3 poppy pods + glass bottle.");
+        drug(ItemType.HEROIN, Category.DOWNERS, "Drug Lab > Cook: 6 poppy pods + solvent + catalyst.");
+        drug(ItemType.LEAN, Category.DOWNERS, "Drug Lab > Cook: bottle + 2 sugar + purple dye + 2 sweet berries.");
+        drug(ItemType.KETAMINE, Category.DOWNERS, "Drug Lab > Cook: solvent + 2 nether wart + 2 sugar.");
+        // seeds & harvest
+        add(ItemType.SEED_PACK, Category.GROW, null,
+                "Break grass/ferns (biome decides the strain),", "buy at the Shop or breed your own.");
+        add(ItemType.COCA_SEEDS, Category.GROW, null, "Break grass in jungles/savannas or buy them.");
+        add(ItemType.POPPY_SEEDS, Category.GROW, null, "Break red poppy flowers or buy them.");
+        add(ItemType.PEYOTE_SEEDS, Category.GROW, null, "Break dead bushes in deserts or buy them.");
+        add(ItemType.MUSHROOM_SPORES, Category.GROW, null, "Break small mushrooms or buy them.");
+        add(ItemType.BUD_FRESH, Category.GROW, null, "Harvest a fully grown cannabis plant.");
+        add(ItemType.COCA_LEAVES, Category.GROW, null, "Harvest a fully grown coca bush.");
+        add(ItemType.POPPY_POD, Category.GROW, null, "Harvest fully grown opium poppies.");
+        // supplies & blocks
+        add(ItemType.ROLLING_PAPERS, Category.GEAR, null, "Craft: 3 paper + sugar cane (gives 6).");
+        add(ItemType.BLUNT_WRAP, Category.GEAR, null, "Craft: paper + cocoa beans + dried kelp.");
+        add(ItemType.BONG, Category.GEAR, null, "Craft: glass, glass bottle, iron nugget.");
+        add(ItemType.LAB_SOLVENT, Category.GEAR, null, "Craft: bottle + sugar + redstone + gunpowder.");
+        add(ItemType.CATALYST, Category.GEAR, null, "Craft: amethyst + glowstone dust + redstone.");
+        add(ItemType.FERTILIZER, Category.GEAR, null, "Craft: 2 bone meal + rotten flesh.");
+        add(ItemType.GROWER_GUIDE, Category.GEAR, null, "Craft: book + wheat seeds. Opens the menu.");
+        add(ItemType.LAB_STATION, Category.GEAR, null, "Crafting table (see the recipe).");
+        add(ItemType.PLANTER_BOX, Category.GEAR, null, "Crafting table (see the recipe).");
+        add(ItemType.GROW_LAMP, Category.GEAR, null, "Crafting table (see the recipe).");
+        add(ItemType.DEALER, Category.GEAR, null, "Crafting table (see the recipe).");
     }
 
     private Catalog() {
@@ -132,15 +140,39 @@ public final class Catalog {
                     .delay(5, "<light_purple>The tea starts to work...");
             case LUCID_TAB -> new Dose().add(EffectType.TRIPPY, 300).add(EffectType.CREATIVE, 300)
                     .add(EffectType.FOCUS, 200).high(30).delay(10, "<light_purple>The colours start to breathe...");
+            case PEYOTE_BUTTON -> new Dose().add(EffectType.VISIONS, 90).add(EffectType.TRIPPY, 60)
+                    .add(EffectType.DIZZY, 30).high(16);
+            case MESCALINE -> new Dose().add(EffectType.VISIONS, 300).add(EffectType.TRIPPY, 240)
+                    .add(EffectType.EUPHORIA, 120).high(30).delay(15, "<light_purple>The desert spirits arrive...");
+            case DMT -> new Dose().add(EffectType.VISIONS, 90).add(EffectType.TRIPPY, 90).add(EffectType.CREATIVE, 60)
+                    .high(34);
             case BLUE_CRYSTAL -> new Dose().add(EffectType.HYPER, 150).add(EffectType.FOCUS, 90).high(30);
             case COCAINE -> new Dose().add(EffectType.ENERGY, 150).add(EffectType.FOCUS, 150)
                     .add(EffectType.PARANOIA, 60).high(22);
-            case HEROIN -> new Dose().add(EffectType.EUPHORIA, 240).add(EffectType.COUCH_LOCK, 240)
-                    .add(EffectType.PAIN_RELIEF, 240).add(EffectType.SLEEPY, 120).high(42);
+            case CRACK -> new Dose().add(EffectType.HYPER, 60).add(EffectType.ENERGY, 90).add(EffectType.PARANOIA, 150)
+                    .high(32);
+            case ECSTASY -> new Dose().add(EffectType.LOVED_UP, 240).add(EffectType.ENERGY, 180).add(EffectType.GLOW, 60)
+                    .high(28).delay(10, "<light_purple>The pill kicks in - you love everyone!");
             case PIXIE_DUST -> new Dose().add(EffectType.GLOW, 120).add(EffectType.FLOATY, 120)
                     .add(EffectType.EUPHORIA, 120).high(24);
+            case ANGEL_DUST -> new Dose().add(EffectType.RAGE, 180).add(EffectType.PAIN_RELIEF, 180)
+                    .add(EffectType.PARANOIA, 90).add(EffectType.BAD_TRIP, 40).high(36);
+            case OPIUM -> new Dose().add(EffectType.COUCH_LOCK, 180).add(EffectType.PAIN_RELIEF, 180)
+                    .add(EffectType.SLEEPY, 120).high(24);
+            case HEROIN -> new Dose().add(EffectType.EUPHORIA, 240).add(EffectType.COUCH_LOCK, 240)
+                    .add(EffectType.PAIN_RELIEF, 240).add(EffectType.SLEEPY, 120).high(42);
+            case LEAN -> new Dose().add(EffectType.SYRUPY, 240).add(EffectType.SLEEPY, 120).add(EffectType.EUPHORIA, 120)
+                    .high(18);
+            case KETAMINE -> new Dose().add(EffectType.DISSOCIATED, 150).add(EffectType.FLOATY, 120)
+                    .add(EffectType.DIZZY, 60).high(30);
             default -> null;
         };
+    }
+
+    /** Psychedelics can turn into a bad trip when you're already very high. */
+    public static boolean psychedelic(ItemType t) {
+        Entry e = of(t);
+        return e != null && e.category() == Category.PSYCH;
     }
 
     /** "Energy Rush 2:30, Focus 2:30" for a fixed drug. */

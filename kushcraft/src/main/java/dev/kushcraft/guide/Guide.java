@@ -58,8 +58,8 @@ public final class Guide {
         sections.add(new Section("Drug Lab", lab()));
         int recipesAt = sections.size();
         sections.add(new Section("Recipes (pictures)", null));
-        sections.add(new Section("Money & jobs", money()));
-        sections.add(new Section("Your own strain", strain()));
+        sections.add(new Section("Money & ranks", money()));
+        sections.add(new Section("Breeding strains", strain()));
         sections.add(new Section("Effects", effects()));
         sections.add(new Section("Strains", strains()));
 
@@ -77,7 +77,7 @@ public final class Guide {
         out.add("<dark_green><bold>   KUSHCRAFT</bold>\n<dark_gray>    Handbook\n\n"
                 + "<black>Grow plants, cook in the Drug Lab, roll joints and get rich.\n\n"
                 + "<dark_gray>Open the menu:\n<black>/kush <dark_gray>or <black>Shift+F\n<dark_gray>or right-click the\n"
-                + "<black>KushCraft Menu<dark_gray> book.\n\n"
+                + "<black>KushCraft Menu<dark_gray> book.\n"
                 + "<click:run_command:/kush><dark_green><u>> Open the menu</u></dark_green></click>");
         StringBuilder toc = new StringBuilder("<dark_green><bold>Contents</bold>\n<dark_gray>click a line\n\n");
         for (Map.Entry<String, Integer> e : start.entrySet()) {
@@ -135,8 +135,8 @@ public final class Guide {
     private static List<String> quickStart() {
         return List.of("<dark_green><bold>Quick start</bold>\n\n<black>1. Break <dark_green>grass</dark_green>: seeds\n"
                 + "2. Plant on farmland\n3. Harvest when grown\n4. Craft a <dark_green>Drug Lab</dark_green>\n"
-                + "5. Dry, roll & cook\n6. Sell at the <gold>Market</gold>\n\n"
-                + "<dark_gray>All recipes have pictures!\n" + run("/kush recipes", "> Recipe viewer"));
+                + "5. Dry, roll & cook\n6. Sell at the <gold>Shop</gold>\n7. Rank up, unlock more\n\n"
+                + run("/kush drugs", "> Drugs & recipes"));
     }
 
     private static List<String> blocks() {
@@ -150,23 +150,23 @@ public final class Guide {
         return List.of(
                 "<dark_green><bold>Getting seeds</bold>\n\n<black>Break <dark_green>grass</dark_green> or ferns for"
                         + " seeds - the <dark_aqua>biome</dark_aqua> picks the strain.\n\nJungle grass: <dark_green>coca"
-                        + "</dark_green>.\nRed poppies: <red>poppy</red>.\nSmall mushrooms: <gold>spores</gold>.\n\n"
-                        + "Or buy seeds at the Market.",
+                        + "</dark_green>.\nRed poppies: <red>poppy</red>.\nDesert dead bushes: <gold>peyote</gold>.\n"
+                        + "Small mushrooms: <gold>spores</gold>.\nOr buy seeds at the Shop.",
                 "<dark_green><bold>Growing</bold>\n\n<black>Right-click the <dark_aqua>top</dark_aqua> of farmland,"
                         + " grass, dirt or a <dark_green>Planter</dark_green>.\n\nNeeds <gold>light 9+</gold> or a"
                         + " <dark_purple>Grow Lamp</dark_purple>. Mushrooms like the dark.\nWater, Planters and"
                         + " Fertilizer help.\nClick a plant to check it.",
                 "<dark_green><bold>Biomes</bold>\n\n<gold>Sativa</gold><black>, <dark_green>coca</dark_green>:"
                         + " warm biomes.\n<dark_purple>Indica</dark_purple><black>: cold biomes.\n<dark_green>Hybrid"
-                        + "</dark_green><black>, <red>poppy</red>: mild biomes.\n\nRight climate = faster growth and more"
-                        + " <gold>★</gold> quality. Cold is bad for coca and poppies.");
+                        + "</dark_green><black>, <red>poppy</red>: mild biomes.\n<gold>Peyote</gold><black>: deserts, on sand."
+                        + "\n\nRight climate = faster growth and more <gold>★</gold> quality.");
     }
 
     private static List<String> lab() {
-        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: hash, brownies, tea,"
-                + " cocaine, heroin, LSD, meth...\n<bold>Roll</bold>: joints & blunts\n<bold>Dry</bold>: fresh"
-                + " -> dried buds\n<bold>Mix</bold>: new strains\n\n<dark_gray>Ingredients come from your"
-                + " inventory.");
+        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: 18 drugs\n<bold>Roll</bold>:"
+                + " joints & blunts\n<bold>Dry</bold>: fresh -> dried\n<bold>Mix</bold>: breed strains\n"
+                + "<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Your dealer rank unlocks more recipes."
+                + " Ingredients come from your inventory.");
     }
 
     private static List<String> recipes(List<RecipeBook.Entry> recipes, int firstRecipe, boolean pictures) {
@@ -228,25 +228,24 @@ public final class Guide {
 
     private static List<String> money() {
         return List.of(
-                "<dark_green><bold>Market</bold>\n\n<black>Sell your product at the <gold>Market</gold>. Selling lots of"
-                        + " one thing drops its price - sell a mix!\n\nThe <gold>HOT</gold> item pays +50%.\n"
-                        + "<gold>Daily Orders</gold> pay ~75% extra for big batches.\n\n" + run("/kush market", "> Market"),
-                "<dark_green><bold>Exchange</bold>\n\n<black>Trade money for <dark_aqua>ores, food, wood, blocks"
-                        + "</dark_aqua> and more - and sell them back.\n\nPrices are fair: rare things cost more. They"
-                        + " move a little with what people buy and sell.\n\n" + run("/kush exchange", "> Exchange"),
-                "<dark_green><bold>Jobs</bold>\n\n<black>You get paid for normal work:\n<dark_gray>Miner</dark_gray>"
-                        + " - ores\n<dark_gray>Farmer</dark_gray> - grown crops\n<dark_gray>Woodcutter</dark_gray> - logs\n"
-                        + "<dark_gray>Hunter</dark_gray> - monsters\n<dark_gray>Grower</dark_gray> - harvests\n\n"
-                        + "<dark_gray>Placed blocks don't pay.\n" + run("/kush jobs", "> Jobs"),
-                "<dark_green><bold>Send money</bold>\n\n<black>/kush > Send $ and click a player, or type\n"
-                        + "<dark_gray>/kush pay \\<name> \\<amount>\n\n<black>Top Dealers shows the richest players.");
+                "<dark_green><bold>Shop</bold>\n\n<black>Sell your product at the <gold>Shop</gold>. Selling lots of"
+                        + " one thing drops its price - sell a mix!\n\n<gold>HOT</gold> item: +50%.\n"
+                        + "<gold>Daily Orders</gold> (Home tab) pay extra for big batches.\n" + run("/kush shop", "> Shop"),
+                "<dark_green><bold>Dealer ranks</bold>\n<black>Sell product to rank up:"
+                        + "\n<dark_gray>Street Seller\nCorner Dealer\nHustler\nSupplier\nThe Plug\nKingpin\nCartel Boss"
+                        + "\n\n<black>Ranks unlock recipes and pay up to +30%.",
+                "<dark_green><bold>Trade & jobs</bold>\n\n<black><bold>Trade</bold>: buy and sell ores, food,"
+                        + " wood and blocks.\n\n<bold>Jobs</bold>: paid for mining, farming, chopping, hunting and"
+                        + " growing. Placed blocks don't pay.\n\n" + run("/kush jobs", "> Jobs"),
+                "<dark_green><bold>Bank</bold>\n\n<black>Your balance, the ranks and the top dealers.\n\nSend money:"
+                        + "\n<dark_gray>/kush pay \\<name> \\<amount>\n\n" + run("/kush bank", "> Bank"));
     }
 
     private static List<String> strain() {
-        return List.of("<dark_green><bold>Your own strain</bold>\n\n<black>/kush > Strains > <dark_green>Mix</dark_green>"
-                + " (or the Drug Lab). Click two seeds, pick up to <gold>3 effects</gold>, type and colour, then"
-                + " <dark_green>Create</dark_green> and type a <bold>name</bold>.\n\nRename your strains later in"
-                + " the Strains list.");
+        return List.of("<dark_green><bold>Breeding</bold>\n\n<black>Breed tab > <dark_green>Mix</dark_green>."
+                + " Click two seeds and press MIX.\n\nThe child is <bold>random</bold>: parent effects,"
+                + " maybe a <dark_purple>mutation</dark_purple>, random potency and rarity.\n\nKeep and name it, or"
+                + " try again.");
     }
 
     private static List<String> effects() {

@@ -1267,3 +1267,385 @@ icon("ui_pay", [
     "................",
     "................",
 ], {"K": "4a3000", "y": "f8d84a", "Y": "c89a20", "a": "6ae84a"})
+
+
+# --------------------------------------------------------------------------
+# v1.3 drugs
+# --------------------------------------------------------------------------
+item("peyote_seeds", _SEED_ART, dict(_SEED_PAL, w="7ac8a0", v="3a7a5a", S="e86aa8", s="8a2a5a",
+                                     Q="d8b878", p="f4e2b0", q="dcc690"))
+item("ketamine", ITEMS["blue_crystal"]["art"], {"K": "3a4a5a", "b": "eef4fa", "B": "aebccc", "w": "ffffff"})
+item("dmt", ITEMS["blue_crystal"]["art"], {"K": "5a2a0a", "b": "f8b040", "B": "c87a1a", "w": "fff0c0"})
+item("angel_dust", _BAG_ART, {"K": "4a3a2a", "r": "d83a2a", "w": "f0f0ff60", "p": "d8b880", "P": "f0d8a8"})
+item("crack", ITEMS["moon_rock"]["art"], {"K": "5a5040", "k": "f4ecd0", "j": "d8c890", "b": "bcae80"})
+item("opium", ITEMS["hash"]["art"], {"K": "140a04", "t": "5a3a1a", "T": "3a2410", "h": "4a2e14", "d": "2a180a",
+                                     "S": "8a5a2a"})
+
+item("ecstasy", [
+    "................",
+    "................",
+    "................",
+    ".....KKKKKK.....",
+    "...KKppppppKK...",
+    "..KppPPppppppK..",
+    "..KpPpppKKpppK..",
+    ".KppppppKKppppK.",
+    ".KppKpppppKpppK.",
+    ".KpppKKKKKppppK.",
+    ".KppppppppppddK.",
+    "..KppppppppddK..",
+    "..KdppppppdddK..",
+    "...KKddddddKK...",
+    ".....KKKKKK.....",
+    "................",
+], {"K": "6a1a4a", "p": "ff8ad0", "P": "ffd8f0", "d": "d85aa8"})
+
+item("mescaline", [
+    "................",
+    "................",
+    "...........KKK..",
+    "..........KwwwK.",
+    ".........KwwwwK.",
+    "........KwwwwwK.",
+    ".......KwwwwwK..",
+    "......KyKwwwK...",
+    ".....KyyyKKK....",
+    "....KyyyyyK.....",
+    "...KyYyyyK......",
+    "..KyYyyyK.......",
+    "..KyyyyK........",
+    "...KKKK.........",
+    "................",
+    "................",
+], {"K": "4a3a10", "w": "f4f0e0", "y": "e8c84a", "Y": "fff0a0"})
+
+item("lean", [
+    "................",
+    "................",
+    "..KKKKKKKKKKKK..",
+    "..KppppPppppwK..",
+    "..KwwwwwwwwwwK..",
+    "...KwwwwwwwwK...",
+    "...KwgwwwwwwK...",
+    "...KwgwwwwwwK...",
+    "...KwwwwwwwwK...",
+    "....KwwwwwwK....",
+    "....KwwwwwwK....",
+    "....KwwwwwwK....",
+    "....KwwwwwwK....",
+    ".....KKKKKK.....",
+    "................",
+    "................",
+], {"K": "4a4a5a", "w": "f8f8fc", "g": "d8d8e4", "p": "a050d8", "P": "d098ff"})
+
+item("peyote_button", [
+    "................",
+    "................",
+    "................",
+    ".......KK.......",
+    "......KpPK......",
+    "....KKKppKKK....",
+    "...KggGgGggGK...",
+    "..KgGggggggGgK..",
+    "..KgwgGgggGgwK..",
+    ".KggggGgGgggggK.",
+    ".KgGgggggggggGK.",
+    ".KggwgGggGgwggK.",
+    "..KgggggggggGK..",
+    "...KKdddddddK...",
+    ".....KKKKKK.....",
+    "................",
+], {"K": "1e3a2a", "g": "7ac8a0", "G": "4a9a7a", "w": "e8f0e0", "p": "f07ab8", "P": "ffd0e8", "d": "a87a4a"})
+
+item("gummies", [
+    "................",
+    "................",
+    "...KK....KK.....",
+    "..KggK..KggK....",
+    "..KgwgKKgggK....",
+    "...KggggggK.....",
+    "...KgEggEgK.....",
+    "..KggggggggK....",
+    ".KggggGGggggK...",
+    ".KgggGggGgggK...",
+    "..KggggggggK.KK.",
+    "..KggKKKKggKKggK",
+    "..KgK....KgKgwgK",
+    "...K......K.KggK",
+    ".............KK.",
+    "................",
+], {"K": ("5a5a5a", T), "g": ("e8e8e8", T), "G": ("b8b8b8", T), "w": "ffffff", "E": "2a2a2a"})
+
+# --------------------------------------------------------------------------
+# v1.3 effects
+# --------------------------------------------------------------------------
+icon("effect_lucky", [
+    "................",
+    ".....KK..KK.....",
+    "....KggKKggK....",
+    "....KgGggGgK....",
+    ".KK.KggggggK.KK.",
+    "KggKKKggggKKKggK",
+    "KgGgggKggKgggGgK",
+    "KggggggKKggggggK",
+    "KgGgggKggKgggGgK",
+    "KggKKKggggKKKggK",
+    ".KK.KggggggK.KK.",
+    "....KgGggGgK....",
+    "....KggKKggK....",
+    ".....KK.Ks......",
+    "........Ks......",
+    ".........K......",
+], {"K": "0e3a14", "g": "5ae87a", "G": "2ea84a", "s": "3a6a2a"})
+
+icon("effect_night_owl", [
+    "................",
+    "..KK........KK..",
+    "..KbK......KbK..",
+    "..KbbKKKKKKbbK..",
+    "..KbbbbbbbbbbK..",
+    ".KbKKKbbbbKKKbK.",
+    ".KKyyyKbbKyyyKK.",
+    ".KKyEyKbbKyEyKK.",
+    ".KKyyyKooKyyyKK.",
+    ".KbKKKbooKKKbbK.",
+    "..KbbbbKKbbbbK..",
+    "..KBbbbbbbbbBK..",
+    "...KBBbbbbBBK...",
+    "....KKBBBBKK....",
+    "......KKKK......",
+    "................",
+], {"K": "1a1a3a", "b": "7a6aa8", "B": "5a4a88", "y": "ffe24a", "E": "1a1a1a", "o": "f0a03a"})
+
+icon("effect_aquatic", [
+    "................",
+    "...........KK...",
+    "..........KwK...",
+    "...KK......KK...",
+    "..KwwK..........",
+    "..KwwK...KKKK...",
+    "...KK...KbbbbK..",
+    ".......KbbbbbbK.",
+    "..KKK.KbbEbbbbbK",
+    ".KbbbKbbbbbbbbK.",
+    "KbbbbbKbbbbbbK..",
+    ".KbbbKKBbbbbBK..",
+    "..KKK..KBBBBK...",
+    "........KKKK....",
+    "................",
+    "................",
+], {"K": "0a2a4a", "b": "4ac8f0", "B": "2a88c0", "w": "d8f4ff", "E": "0a1a2a"})
+
+icon("effect_fireproof", [
+    "................",
+    "......KKKK......",
+    ".....KssssK.....",
+    "....KsssssK.....",
+    "...KssKrrKsK....",
+    "...KsKrrrKsK....",
+    "...KsKroorKsK...",
+    "...KsKroyorKsK..",
+    "...KsKroyyoKsK..",
+    "...KsKroyyorKsK.",
+    "...KsKrooyorKsK.",
+    "....KsKrooorKsK.",
+    "....KsKKrrrKKsK.",
+    ".....KssKKKssK..",
+    "......KKsssKK...",
+    "........KKK.....",
+], {"K": "2a2a3a", "s": "a8b8c8", "r": "e8402a", "o": "f8902a", "y": "fff04a"})
+
+icon("effect_ghost", [
+    "................",
+    ".....KKKKKK.....",
+    "...KKwwwwwwKK...",
+    "..KwwwwwwwwwwK..",
+    "..KwwwwwwwwwwK..",
+    ".KwwwEEwwEEwwwK.",
+    ".KwwwEEwwEEwwwK.",
+    ".KwwwwwwwwwwwwK.",
+    ".KwwwwwEEwwwwwK.",
+    ".KwwwwwEEwwwwwK.",
+    ".KwwwwwwwwwwwwK.",
+    ".KwwwwwwwwwwwwK.",
+    ".KwgwwwgwwwgwwK.",
+    ".KgKgwgKgwgKgwK.",
+    ".KK.KgK.KgK.KgK.",
+    "................",
+], {"K": "5a6a7a", "w": "eef2f6", "g": "c0c8d0", "E": "2a2a3a"})
+
+icon("effect_loved_up", [
+    "................",
+    ".KKK..KKK.......",
+    "KrrrKKrrrK......",
+    "KrwrrrrrrK......",
+    "KrrrrrrrrK......",
+    ".KrrrrrrK..KK.KK",
+    "..KrrrrK.KppKppK",
+    "...KrrK..KpwpppK",
+    "....KK...KpppppK",
+    "..........KpppK.",
+    "...........KpK..",
+    "............K...",
+    "................",
+    "................",
+    "................",
+    "................",
+], {"K": "5a0a2a", "r": "ff5aa8", "R": "c83a84", "w": "ffd8ec", "p": "ff9ad0"})
+
+icon("effect_visions", [
+    "................",
+    "................",
+    "....KKKKKKKK....",
+    "..KKwwwwwwwwKK..",
+    ".KwwwwKKKKwwwwK.",
+    "KwwwwKppppKwwwwK",
+    "KwwwKppPPppKwwwK",
+    "KwwwKpPEEPpKwwwK",
+    "KwwwKpPEEPpKwwwK",
+    "KwwwKppPPppKwwwK",
+    "KwwwwKppppKwwwwK",
+    ".KwwwwKKKKwwwwK.",
+    "..KKwwwwwwwwKK..",
+    "....KKKKKKKK....",
+    "................",
+    "................",
+], {"K": "2a1a4a", "w": "e8dcff", "p": "9a6af0", "P": "c8a8ff", "E": "1a0a2a"})
+
+icon("effect_rage", FACE, {"K": "5a0a0a", "y": "e84a3a", "E": "2a0000", "M": "2a0000", "m": "ffd0d0"})
+
+icon("effect_dizzy", [
+    "................",
+    ".....KKKKKK.....",
+    "...KKyyyyyyKK...",
+    "..KyyKKKKKKyyK..",
+    ".KyyKyyyyyyKyyK.",
+    ".KyKyyKKKKyyKyK.",
+    "KyKyyKyyyyKyyKyK",
+    "KyKyKyyKKyyKyKyK",
+    "KyKyKyKyyKyKyKyK",
+    "KyKyKyyyyKyKyKyK",
+    "KyKyyKKKKyyKyKyK",
+    ".KyKyyyyyyyKyyK.",
+    ".KyyKKKKKKKyyK..",
+    "..KyyyyyyyyyK...",
+    "...KKKKKKKKK....",
+    "................",
+], {"K": "4a5a10", "y": "d8e84a"})
+
+icon("effect_dissociated", [
+    "................",
+    "......KKKK......",
+    ".....KccccK.....",
+    ".....KccccK.....",
+    "......KKKK......",
+    "....KKccccKK....",
+    "...KcKccccKcK...",
+    "...KcKccccKcK...",
+    "....K.KccK.K....",
+    "......KccK......",
+    ".....KcKKcK.....",
+    "....KcK..KcK....",
+    "................",
+    "..d...d....d..d.",
+    "...dd...dd...dd.",
+    "................",
+], {"K": "3a4a5a", "c": "b8d0dc80", "d": "8aa8b8"})
+
+icon("effect_syrupy", [
+    "................",
+    ".......KK.......",
+    "......KppK......",
+    "......KppK......",
+    ".....KppppK.....",
+    ".....KpwppK.....",
+    "....KpwpppPK....",
+    "....KppppppK....",
+    "...KpppppppPK...",
+    "...KppppppPPK...",
+    "...KpppppPPPK...",
+    "....KppPPPPK....",
+    ".....KKKKKK.....",
+    "................",
+    "................",
+    "................",
+], {"K": "3a1a5a", "p": "b060e8", "P": "7a3aa8", "w": "f0d8ff"})
+
+icon("effect_bad_trip", [
+    "................",
+    "....KKKKKKKK....",
+    "...KwwwwwwwwK...",
+    "..KwwwwwwwwwwK..",
+    "..KwwwwwwwwwwK..",
+    "..KwKKKwwKKKwK..",
+    "..KwKKKwwKKKwK..",
+    "..KwwKwwwwKwwK..",
+    "...KwwwKKwwwK...",
+    "....KwwwwwwK....",
+    "....KwKwKwKK....",
+    "....KKwKwKwK....",
+    ".....KKKKKK.....",
+    "................",
+    "................",
+    "................",
+], {"K": "2a0a14", "w": "d8c8c0"})
+
+# --------------------------------------------------------------------------
+# v1.3 menu icons
+# --------------------------------------------------------------------------
+icon("ui_home", [
+    "................",
+    ".......KK.......",
+    "......KrrK......",
+    ".....KrrrrK.KK..",
+    "....KrrrrrrKbK..",
+    "...KrrrrrrrrKK..",
+    "..KrrrrrrrrrrK..",
+    ".KKKKKKKKKKKKKK.",
+    "..KwwwwwwwwwwK..",
+    "..KwKKwwwKKKwK..",
+    "..KwKbKwwKdKwK..",
+    "..KwKKwwwKdKwK..",
+    "..KwwwwwwKdKwK..",
+    "..KwwwwwwKdKwK..",
+    "..KKKKKKKKKKKK..",
+    "................",
+], {"K": "2a1a0a", "r": "d84a3a", "w": "f0e0c0", "b": "6ac8f0", "d": "8a5a2e"})
+
+icon("ui_bank", [
+    "................",
+    ".......KK.......",
+    ".....KKyyKK.....",
+    "...KKyyyyyyKK...",
+    ".KKyyyyyyyyyyKK.",
+    "KKKKKKKKKKKKKKKK",
+    ".KwK.KwK.KwK.KwK"[:16],
+    ".KwK.KwK.KwK.KwK"[:16],
+    ".KwK.KwK.KwK.KwK"[:16],
+    ".KwK.KwK.KwK.KwK"[:16],
+    ".KwK.KwK.KwK.KwK"[:16],
+    "KKKKKKKKKKKKKKKK",
+    "KyyyyyyyyyyyyyyK",
+    "KKKKKKKKKKKKKKKK",
+    "................",
+    "................",
+], {"K": "3a2a0a", "y": "f8d84a", "w": "e8e0d0"})
+
+icon("ui_lock", [
+    "................",
+    ".....KKKKKK.....",
+    "....KssssssK....",
+    "...KsK....KsK...",
+    "...KsK....KsK...",
+    "...KsK....KsK...",
+    "..KKKKKKKKKKKK..",
+    "..KyyyyyyyyyyK..",
+    "..KyyyyKKyyyyK..",
+    "..KyyyKKKKyyyK..",
+    "..KyyyyKKyyyyK..",
+    "..KyyyyKKyyyyK..",
+    "..KYYYYYYYYYYK..",
+    "..KKKKKKKKKKKK..",
+    "................",
+    "................",
+], {"K": "3a2a0a", "s": "b8c0c8", "y": "f8c83a", "Y": "c8982a"})

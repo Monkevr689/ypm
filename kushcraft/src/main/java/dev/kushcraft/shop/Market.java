@@ -32,8 +32,10 @@ public final class Market {
     }
 
     private static final List<ItemType> POOL = List.of(ItemType.BUD_DRIED, ItemType.JOINT, ItemType.BLUNT,
-            ItemType.HASH, ItemType.MOON_ROCK, ItemType.SPACE_BROWNIE, ItemType.MAGIC_MUSHROOM, ItemType.SHROOM_TEA,
-            ItemType.LUCID_TAB, ItemType.BLUE_CRYSTAL, ItemType.COCAINE, ItemType.HEROIN, ItemType.PIXIE_DUST,
+            ItemType.HASH, ItemType.MOON_ROCK, ItemType.SPACE_BROWNIE, ItemType.GUMMIES, ItemType.MAGIC_MUSHROOM,
+            ItemType.SHROOM_TEA, ItemType.LUCID_TAB, ItemType.PEYOTE_BUTTON, ItemType.MESCALINE, ItemType.DMT,
+            ItemType.COCAINE, ItemType.CRACK, ItemType.BLUE_CRYSTAL, ItemType.ECSTASY, ItemType.PIXIE_DUST,
+            ItemType.ANGEL_DUST, ItemType.OPIUM, ItemType.HEROIN, ItemType.LEAN, ItemType.KETAMINE,
             ItemType.COCA_LEAVES, ItemType.POPPY_POD);
 
     private final KushCraft plugin;
@@ -174,8 +176,9 @@ public final class Market {
         }
         ItemType t = pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
         double base = plugin.shop().basePrice(t);
-        int amount = (int) Math.max(2, Math.min(32, Math.round(240 / Math.max(1, base))));
-        double bonus = plugin.getConfig().getDouble("market.order-bonus", 1.75);
+        // big batches: you need to sell a lot to fill an order
+        int amount = (int) Math.max(4, Math.min(64, Math.round(600 / Math.max(1, base))));
+        double bonus = plugin.getConfig().getDouble("market.order-bonus", 1.6);
         double reward = Math.max(5, Math.round(base * amount * bonus / 5.0) * 5.0);
         long minutes = plugin.getConfig().getLong("market.order-minutes", 60);
         return new Order(nextId++, t, amount, reward, System.currentTimeMillis() + minutes * 60_000L);
@@ -245,6 +248,7 @@ public final class Market {
         }
         InventoryUtil.remove(p, it -> Items.type(it) == o.type(), o.amount());
         plugin.economy().deposit(p, o.reward());
+        plugin.ranks().sold(p, o.reward());
         orders.remove(o);
         Order next = newOrder();
         if (next != null) {

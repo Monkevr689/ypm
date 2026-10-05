@@ -20,6 +20,7 @@ public final class Keys {
     public static NamespacedKey GOT_GUIDE;
     public static NamespacedKey ICON;
     public static NamespacedKey PLACED;
+    public static NamespacedKey LEVEL;
 
     private Keys() {
     }
@@ -36,6 +37,7 @@ public final class Keys {
         GOT_GUIDE = new NamespacedKey(plugin, "got_guide");
         ICON = new NamespacedKey(plugin, "icon");
         PLACED = new NamespacedKey(plugin, "placed");
+        LEVEL = new NamespacedKey(plugin, "level");
     }
 
     /** kush:&lt;path&gt; - a model / item definition from our resource pack. */

@@ -29,6 +29,9 @@ public enum ItemType {
             "<gray>Smoke it in a <aqua>Bong</aqua>. <red>Very strong."),
     SPACE_BROWNIE("Space Brownie", "space_brownie", true, false,
             "<gray>Right-click to eat. Kicks in after a bit..."),
+    GUMMIES("THC Gummies", "gummies", true, true,
+            "<gray>Right-click to eat. Slow but long.",
+            "<gray>Effects come from the strain."),
     // --- mushrooms ------------------------------------------------------
     MAGIC_MUSHROOM("Magic Mushroom", "magic_mushroom", false, false,
             "<gray>Right-click to eat. Trippy!",
@@ -64,6 +67,36 @@ public enum ItemType {
     HEROIN("Heroin", "heroin", false, false,
             "<gray>Right-click to use.",
             "<red>Very strong - easy to overdo."),
+    CRACK("Crack Rock", "crack", false, false,
+            "<gray>Right-click to smoke.",
+            "<red>Short, wild rush. Very paranoid."),
+    OPIUM("Opium", "opium", false, false,
+            "<gray>Right-click to use.",
+            "<gold>Warm, heavy and sleepy."),
+    LEAN("Lean", "lean", false, false,
+            "<gray>Right-click to sip.",
+            "<light_purple>Everything goes slow-motion."),
+    ECSTASY("Ecstasy", "ecstasy", false, false,
+            "<gray>Right-click to take a pill.",
+            "<light_purple>Love everyone, dance all night."),
+    KETAMINE("Ketamine", "ketamine", false, false,
+            "<gray>Right-click to use.",
+            "<aqua>Float outside your body."),
+    DMT("DMT", "dmt", false, false,
+            "<gray>Right-click to smoke.",
+            "<light_purple>A short trip to another world."),
+    PEYOTE_SEEDS("Peyote Seeds", "peyote_seeds", false, false,
+            "<gray>Plant on sand, dirt, farmland or a Planter.",
+            "<gold>Loves deserts</gold> <gray>(hot and dry)."),
+    PEYOTE_BUTTON("Peyote Button", "peyote_button", false, false,
+            "<gray>Right-click to chew. Visions!",
+            "<gray>Cook into <white>Mescaline</white> in a Drug Lab."),
+    MESCALINE("Mescaline", "mescaline", false, false,
+            "<gray>Right-click to swallow.",
+            "<light_purple>Long trip full of visions."),
+    ANGEL_DUST("Angel Dust", "angel_dust", false, false,
+            "<gray>Right-click to use.",
+            "<red>Rage, no pain... and bad trips."),
     // --- supplies -------------------------------------------------------
     ROLLING_PAPERS("Rolling Papers", "rolling_papers", false, false,
             "<gray>Used in the Drug Lab to roll joints."),
@@ -178,8 +211,9 @@ public enum ItemType {
     /** Things players consume for an effect. */
     public boolean isDrug() {
         return switch (this) {
-            case JOINT, BLUNT, SPACE_BROWNIE, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL, PIXIE_DUST,
-                 COCAINE, HEROIN -> true;
+            case JOINT, BLUNT, SPACE_BROWNIE, GUMMIES, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL,
+                 PIXIE_DUST, COCAINE, HEROIN, CRACK, OPIUM, LEAN, ECSTASY, KETAMINE, DMT, PEYOTE_BUTTON, MESCALINE,
+                 ANGEL_DUST -> true;
             default -> false;
         };
     }

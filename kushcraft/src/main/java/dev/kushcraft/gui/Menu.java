@@ -21,8 +21,12 @@ public abstract class Menu implements InventoryHolder {
     private int backSlot = -1;
 
     protected Menu(Player player, int rows, String gui, String title) {
+        this(player, rows, gui, title, true);
+    }
+
+    protected Menu(Player player, int rows, String gui, String title, boolean showTitle) {
         this.player = player;
-        this.inv = Bukkit.createInventory(this, rows * 9, GuiFont.title(player, gui, title));
+        this.inv = Bukkit.createInventory(this, rows * 9, GuiFont.title(player, gui, title, showTitle));
     }
 
     @Override

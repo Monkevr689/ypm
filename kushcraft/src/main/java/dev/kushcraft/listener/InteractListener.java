@@ -3,9 +3,7 @@ package dev.kushcraft.listener;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.effect.Dose;
 import dev.kushcraft.effect.EffectType;
-import dev.kushcraft.gui.DealerMenu;
 import dev.kushcraft.gui.RollerMenu;
-import dev.kushcraft.gui.StrainMakerMenu;
 import dev.kushcraft.catalog.Catalog;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
@@ -135,9 +133,9 @@ public final class InteractListener implements Listener {
     private void openMachine(Player p, Machine m) {
         switch (m.type()) {
             case LAB_STATION -> new dev.kushcraft.gui.LabHubMenu(p, m).open();
-            case STRAIN_MAKER -> new StrainMakerMenu(p).open();
+            case STRAIN_MAKER -> dev.kushcraft.gui.MixerMenu.openFor(p, null);
             case ROLLING_TABLE -> new RollerMenu(p).open();
-            case DEALER -> new DealerMenu(p).open();
+            case DEALER -> new dev.kushcraft.gui.ShopMenu(p, true).open();
             case DRYING_RACK -> plugin.machines().useRack(p, m);
             case GROW_LAMP -> p.sendActionBar(Text.mm("<light_purple>Grow Lamp <gray>- lights up and speeds up plants within "
                     + plugin.getConfig().getInt("growth.lamp-radius", 6) + " blocks."));
@@ -154,6 +152,7 @@ public final class InteractListener implements Listener {
             case MUSHROOM_SPORES -> Plant.Kind.MUSHROOM;
             case COCA_SEEDS -> Plant.Kind.COCA;
             case POPPY_SEEDS -> Plant.Kind.POPPY;
+            case PEYOTE_SEEDS -> Plant.Kind.PEYOTE;
             default -> null;
         };
     }
@@ -187,7 +186,7 @@ public final class InteractListener implements Listener {
     private boolean use(Player p, ItemStack item, ItemType type) {
         switch (type) {
             case GROWER_GUIDE -> {
-                new dev.kushcraft.gui.MainMenu(p).open();
+                dev.kushcraft.gui.HomeMenu.open(p);
                 return true;
             }
             case JOINT, BLUNT -> {
@@ -202,7 +201,7 @@ public final class InteractListener implements Listener {
                 }
                 return true;
             }
-            case SPACE_BROWNIE, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL, PIXIE_DUST, COCAINE, HEROIN -> {
+            case SPACE_BROWNIE, GUMMIES -> {
                 if (!onCooldown(p, 800)) {
                     consume(p, item, type);
                 }
@@ -226,6 +225,12 @@ public final class InteractListener implements Listener {
                 return true;
             }
             default -> {
+                if (Catalog.dose(type) != null) {
+                    if (!onCooldown(p, 800)) {
+                        consume(p, item, type);
+                    }
+                    return true;
+                }
                 return false;
             }
         }
@@ -312,52 +317,67 @@ public final class InteractListener implements Listener {
         Dose d;
         String sound = "minecraft:entity.generic.eat";
         int food = 0;
-        switch (type) {
-            case SPACE_BROWNIE -> {
-                Strain s = Items.strain(item);
-                if (s == null) {
-                    return;
-                }
-                d = Dose.strain(s, Items.quality(item), 300, 30).add(EffectType.MUNCHIES, 120)
-                        .delay(15, "<green>The brownie kicks in...");
-                food = 5;
-                p.sendActionBar(Text.mm("<gray>Tasty. <dark_gray>Doesn't feel like anything... yet."));
-            }
-            case MAGIC_MUSHROOM -> {
-                d = Catalog.dose(type);
-                food = 1;
-            }
-            case SHROOM_TEA -> {
-                d = Catalog.dose(type);
-                sound = "minecraft:entity.generic.drink";
-                food = 2;
-            }
-            case LUCID_TAB -> {
-                d = Catalog.dose(type);
-                sound = "minecraft:block.amethyst_block.chime";
-            }
-            case BLUE_CRYSTAL, COCAINE -> {
-                d = Catalog.dose(type);
-                sound = "minecraft:entity.sniffer.sniffing";
-                p.getWorld().spawnParticle(Particle.DUST, p.getEyeLocation(), 12, 0.15, 0.1, 0.15, 0,
-                        new Particle.DustOptions(org.bukkit.Color.fromRGB(type == ItemType.COCAINE ? 0xFFFFFF : 0x72D6FF), 1f));
-            }
-            case HEROIN -> {
-                d = Catalog.dose(type);
-                sound = "minecraft:block.beacon.deactivate";
-                p.sendActionBar(Text.mm("<gray>A heavy warmth washes over you..."));
-            }
-            case PIXIE_DUST -> {
-                d = Catalog.dose(type);
-                sound = "minecraft:block.amethyst_block.resonate";
-                p.getWorld().spawnParticle(Particle.WAX_ON, p.getLocation().add(0, 1.2, 0), 30, 0.4, 0.6, 0.4, 0.5);
-            }
-            default -> {
+        if (type == ItemType.SPACE_BROWNIE || type == ItemType.GUMMIES) {
+            Strain s = Items.strain(item);
+            if (s == null) {
                 return;
+            }
+            d = type == ItemType.SPACE_BROWNIE
+                    ? Dose.strain(s, Items.quality(item), 300, 30).add(EffectType.MUNCHIES, 120)
+                    .delay(15, "<green>The brownie kicks in...")
+                    : Dose.strain(s, Items.quality(item), 420, 26).delay(25, "<green>The gummies kick in...");
+            food = type == ItemType.SPACE_BROWNIE ? 5 : 1;
+            p.sendActionBar(Text.mm("<gray>Tasty. <dark_gray>Doesn't feel like anything... yet."));
+        } else {
+            d = Catalog.dose(type);
+            if (d == null) {
+                return;
+            }
+            Particle.DustOptions dust = null;
+            switch (type) {
+                case MAGIC_MUSHROOM, PEYOTE_BUTTON -> food = 1;
+                case SHROOM_TEA, LEAN -> {
+                    sound = "minecraft:entity.generic.drink";
+                    food = 2;
+                }
+                case LUCID_TAB, MESCALINE, ECSTASY -> sound = "minecraft:block.amethyst_block.chime";
+                case BLUE_CRYSTAL -> {
+                    sound = "minecraft:entity.sniffer.sniffing";
+                    dust = new Particle.DustOptions(org.bukkit.Color.fromRGB(0x72D6FF), 1f);
+                }
+                case COCAINE, KETAMINE, ANGEL_DUST -> {
+                    sound = "minecraft:entity.sniffer.sniffing";
+                    dust = new Particle.DustOptions(org.bukkit.Color.fromRGB(type == ItemType.ANGEL_DUST ? 0xD8B880
+                            : 0xFFFFFF), 1f);
+                }
+                case CRACK, DMT -> {
+                    sound = "minecraft:block.fire.extinguish";
+                    smokeFx(p, 1.4);
+                }
+                case HEROIN, OPIUM -> {
+                    sound = "minecraft:block.beacon.deactivate";
+                    p.sendActionBar(Text.mm("<gray>A heavy warmth washes over you..."));
+                }
+                case PIXIE_DUST -> {
+                    sound = "minecraft:block.amethyst_block.resonate";
+                    p.getWorld().spawnParticle(Particle.WAX_ON, p.getLocation().add(0, 1.2, 0), 30, 0.4, 0.6, 0.4, 0.5);
+                }
+                default -> {
+                }
+            }
+            if (dust != null) {
+                p.getWorld().spawnParticle(Particle.DUST, p.getEyeLocation(), 12, 0.15, 0.1, 0.15, 0, dust);
+            }
+            // too high already? psychedelics can go wrong
+            double limit = Math.max(1, plugin.getConfig().getDouble("effects.green-out-at", 100));
+            if (Catalog.psychedelic(type) && plugin.effects().high(p) > limit * 0.6
+                    && ThreadLocalRandom.current().nextDouble() < 0.5) {
+                d.add(EffectType.BAD_TRIP, 45);
+                p.sendMessage(Text.msg("<dark_red>Uh oh... this one is going wrong."));
             }
         }
         item.setAmount(item.getAmount() - 1);
-        if (type == ItemType.SHROOM_TEA) {
+        if (type == ItemType.SHROOM_TEA || type == ItemType.LEAN) {
             InventoryUtil.give(p, new ItemStack(Material.GLASS_BOTTLE));
         }
         if (food > 0) {

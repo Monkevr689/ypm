@@ -124,7 +124,8 @@ public final class Jobs implements Listener {
 
     /** Pay for one block/mob of this key ("diamond_ore", "zombie", "logs", "cannabis"...). */
     public double rate(Job j, String key) {
-        return rates(j).getOrDefault(key.toLowerCase(Locale.ROOT), 0.0);
+        double r = rates(j).getOrDefault(key.toLowerCase(Locale.ROOT), 0.0);
+        return Math.round(r * plugin.getConfig().getDouble("jobs.pay-multiplier", 1.0) * 100) / 100.0;
     }
 
     private boolean tracked(Block b) {
@@ -182,11 +183,24 @@ public final class Jobs implements Listener {
         Block b = e.getBlock();
         Material m = b.getType();
         boolean wasPlaced = placed.unmark(b);
-        if (wasPlaced || !enabled()) {
+        if (wasPlaced) {
             return;
         }
         String k = m.name().toLowerCase(Locale.ROOT);
         Player p = e.getPlayer();
+        if (rate(Job.MINER, k) > 0) {
+            // the Lucky effect: natural ores sometimes drop double
+            if (e.isDropItems() && plugin.effects().luckyDouble(p)) {
+                for (org.bukkit.inventory.ItemStack drop : b.getDrops(p.getInventory().getItemInMainHand(), p)) {
+                    b.getWorld().dropItemNaturally(b.getLocation().add(0.5, 0.5, 0.5), drop);
+                }
+                b.getWorld().spawnParticle(org.bukkit.Particle.HAPPY_VILLAGER, b.getLocation().add(0.5, 0.5, 0.5), 8,
+                        0.3, 0.3, 0.3, 0);
+            }
+        }
+        if (!enabled()) {
+            return;
+        }
         double ore = rate(Job.MINER, k);
         if (ore > 0) {
             pay(p, Job.MINER, ore);

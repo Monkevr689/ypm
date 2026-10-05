@@ -54,6 +54,29 @@ public final class Items {
         return item;
     }
 
+    /** A machine item that remembers its Drug Lab upgrade level. */
+    public static ItemStack machine(ItemType type, int level) {
+        ItemStack it = create(type);
+        if (level > 1) {
+            it.editMeta(m -> {
+                m.getPersistentDataContainer().set(Keys.LEVEL, PersistentDataType.INTEGER, level);
+                List<net.kyori.adventure.text.Component> lore = m.lore() == null ? new ArrayList<>() : new ArrayList<>(m.lore());
+                lore.add(0, Text.mm("<gold>Upgrade level " + level));
+                m.lore(lore);
+                m.setMaxStackSize(1);
+            });
+        }
+        return it;
+    }
+
+    public static int level(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return 1;
+        }
+        Integer l = item.getItemMeta().getPersistentDataContainer().get(Keys.LEVEL, PersistentDataType.INTEGER);
+        return l == null ? 1 : l;
+    }
+
     /** An item tied to a strain (seeds, buds, joints, ...). quality = 1..5 stars. */
     public static ItemStack strainItem(ItemType type, Strain strain, int quality, int amount) {
         return strainItem(type, strain, quality, amount, type == ItemType.JOINT ? JOINT_HITS
@@ -67,7 +90,8 @@ public final class Items {
         meta.setItemModel(Keys.model(type.model()));
         meta.itemName(Text.mm(strain.colored() + " <white>" + type.display()));
         List<String> lore = new ArrayList<>();
-        lore.add(strain.type().colored() + " <dark_gray>•</dark_gray> <gray>THC <white>" + strain.potency() + "%");
+        lore.add(strain.type().colored() + " <dark_gray>•</dark_gray> <gray>THC <white>" + strain.potency() + "%"
+                + " <dark_gray>•</dark_gray> " + strain.rarity().colored());
         if (type != ItemType.SEED_PACK) {
             lore.add("<gray>Quality " + Text.stars(quality));
         }

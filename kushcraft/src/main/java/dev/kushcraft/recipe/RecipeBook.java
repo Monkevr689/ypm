@@ -114,8 +114,8 @@ public final class RecipeBook {
         int seeds = KushCraft.get().getConfig().getInt("strain-maker.seeds-given", 3);
         out.add(new Entry("mix_strain", Kind.MIX, ItemType.SEED_PACK, seeds,
                 spread(List.of(sample(ItemType.SEED_PACK, 1), sample(ItemType.SEED_PACK, 1))),
-                List.of("Two different seeds + " + KushCraft.get().economy().format(cost) + ".",
-                        "Pick effects and colour, then name it."), null));
+                List.of("Two seeds + " + KushCraft.get().economy().format(cost) + ". The result is random.",
+                        "Keep and name it, or try again."), null));
         return out;
     }
 

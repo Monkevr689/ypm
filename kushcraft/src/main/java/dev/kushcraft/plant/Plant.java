@@ -8,7 +8,7 @@ import java.util.UUID;
 public final class Plant {
 
     public enum Kind {
-        CANNABIS, MUSHROOM, COCA, POPPY;
+        CANNABIS, MUSHROOM, COCA, POPPY, PEYOTE;
 
         /** Cannabis has 5 stages (0-4), everything else 4 (0-3). */
         public int lastStage() {
@@ -21,6 +21,7 @@ public final class Plant {
                 case MUSHROOM -> "Magic Mushrooms";
                 case COCA -> "Coca Bush";
                 case POPPY -> "Opium Poppy";
+                case PEYOTE -> "Peyote Cactus";
             };
         }
     }
@@ -117,6 +118,7 @@ public final class Plant {
             case MUSHROOM -> st == 0 ? "Mycelium" : st == 1 ? "Pinning" : st == 2 ? "Fruiting" : "Ready to pick";
             case COCA -> st == 0 ? "Sprout" : st == 1 ? "Young bush" : st == 2 ? "Leafy bush" : "Ready to pick";
             case POPPY -> st == 0 ? "Sprout" : st == 1 ? "Budding" : st == 2 ? "Flowering" : "Pods ready";
+            case PEYOTE -> st == 0 ? "Sprout" : st == 1 ? "Small cactus" : st == 2 ? "Budding" : "Flowering - ready";
             case CANNABIS -> st == 0 ? "Seedling" : st == 1 ? "Young plant" : st == 2 ? "Vegetative"
                     : st == 3 ? "Flowering" : "Ready to harvest";
         };

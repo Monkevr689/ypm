@@ -34,6 +34,7 @@ public final class Economy {
     private final File file;
     private final Map<UUID, Double> wallet = new HashMap<>();
     private final Map<UUID, String> names = new HashMap<>();
+    private final Map<UUID, Double> sales = new HashMap<>();
     private boolean dirty;
     private Object vault;
     private Method vGet, vWithdraw, vDeposit, vSuccess;
@@ -50,6 +51,7 @@ public final class Economy {
     public void load() {
         wallet.clear();
         names.clear();
+        sales.clear();
         if (!file.exists()) {
             return;
         }
@@ -65,6 +67,9 @@ public final class Economy {
                 if (sec.isSet(k + ".balance")) {
                     wallet.put(id, sec.getDouble(k + ".balance"));
                 }
+                if (sec.isSet(k + ".sales")) {
+                    sales.put(id, sec.getDouble(k + ".sales"));
+                }
             } catch (IllegalArgumentException ignored) {
             }
         }
@@ -78,6 +83,10 @@ public final class Economy {
             Double b = wallet.get(e.getKey());
             if (b != null) {
                 y.set(k + ".balance", Math.round(b * 100) / 100.0);
+            }
+            Double sold = sales.get(e.getKey());
+            if (sold != null) {
+                y.set(k + ".sales", Math.round(sold * 100) / 100.0);
             }
         }
         try {
@@ -216,6 +225,32 @@ public final class Economy {
         }
         wallet.put(p.getUniqueId(), Math.max(0, amount));
         dirty = true;
+    }
+
+    /** Lifetime money made selling product (Market and orders) - decides the dealer rank. */
+    public double sales(OfflinePlayer p) {
+        return sales.getOrDefault(p.getUniqueId(), 0.0);
+    }
+
+    public void addSales(OfflinePlayer p, double amount) {
+        sales.merge(p.getUniqueId(), amount, Double::sum);
+        dirty = true;
+    }
+
+    /** Admin: set lifetime sales (and so the rank). */
+    public void setSales(OfflinePlayer p, double amount) {
+        sales.put(p.getUniqueId(), Math.max(0, amount));
+        dirty = true;
+    }
+
+    /** Players who sold the most product. */
+    public List<Rich> topSales(int limit) {
+        List<Rich> out = new ArrayList<>();
+        for (Map.Entry<UUID, String> e : names.entrySet()) {
+            out.add(new Rich(e.getKey(), e.getValue(), sales.getOrDefault(e.getKey(), 0.0)));
+        }
+        out.sort((a, b) -> Double.compare(b.balance(), a.balance()));
+        return out.size() > limit ? out.subList(0, limit) : out;
     }
 
     /** Richest players (everyone that ever joined since KushCraft was installed). */

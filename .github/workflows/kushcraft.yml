@@ -141,7 +141,7 @@ jobs:
             echo "::error::built-in web server must not start when resource-pack.url is set"; exit 1
           fi
           echo "External URL test passed"
-          grep -q "Updated config.yml to version 3" server2.log || { echo "::error::config was not upgraded"; exit 1; }
+          grep -q "Updated config.yml to version 4" server2.log || { echo "::error::config was not upgraded"; exit 1; }
           grep -q "^exchange:" plugins/KushCraft/config.yml || { echo "::error::exchange section not added"; exit 1; }
           grep -q "^jobs:" plugins/KushCraft/config.yml || { echo "::error::jobs section not added"; exit 1; }
           grep -q "url: .*127.0.0.1:9000/pack.zip" plugins/KushCraft/config.yml \

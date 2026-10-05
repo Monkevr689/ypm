@@ -252,6 +252,20 @@ public final class EffectManager {
                     PotionEffectType.HUNGER, PotionEffectType.MINING_FATIGUE};
             case GREEN_OUT -> new PotionEffectType[]{PotionEffectType.NAUSEA, PotionEffectType.SLOWNESS,
                     PotionEffectType.BLINDNESS};
+            case LUCKY -> new PotionEffectType[]{PotionEffectType.LUCK};
+            case NIGHT_OWL -> new PotionEffectType[]{PotionEffectType.NIGHT_VISION};
+            case AQUATIC -> new PotionEffectType[]{PotionEffectType.WATER_BREATHING, PotionEffectType.DOLPHINS_GRACE};
+            case FIREPROOF -> new PotionEffectType[]{PotionEffectType.FIRE_RESISTANCE};
+            case GHOST -> new PotionEffectType[]{PotionEffectType.INVISIBILITY};
+            case LOVED_UP -> new PotionEffectType[]{PotionEffectType.REGENERATION};
+            case VISIONS -> new PotionEffectType[]{PotionEffectType.NIGHT_VISION};
+            case RAGE -> new PotionEffectType[]{PotionEffectType.STRENGTH, PotionEffectType.SPEED};
+            case DIZZY -> new PotionEffectType[]{PotionEffectType.NAUSEA};
+            case DISSOCIATED -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.SLOW_FALLING,
+                    PotionEffectType.BLINDNESS};
+            case SYRUPY -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.SLOW_FALLING};
+            case BAD_TRIP -> new PotionEffectType[]{PotionEffectType.DARKNESS, PotionEffectType.HUNGER,
+                    PotionEffectType.WEAKNESS};
         };
     }
 
@@ -380,7 +394,127 @@ public final class EffectManager {
                 }
                 p.getWorld().spawnParticle(Particle.SNEEZE, head, 2, 0.2, 0.1, 0.2, 0.01);
             }
+            case LUCKY -> {
+                pot(p, PotionEffectType.LUCK, 1);
+                if (random.nextInt(8) == 0) {
+                    p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, head.clone().add(0, 0.4, 0), 3, 0.4, 0.3, 0.4, 0);
+                }
+            }
+            case NIGHT_OWL -> pot(p, PotionEffectType.NIGHT_VISION, 0, 260);
+            case AQUATIC -> {
+                pot(p, PotionEffectType.WATER_BREATHING, 0);
+                pot(p, PotionEffectType.DOLPHINS_GRACE, 0);
+                if (p.isInWater() && random.nextInt(3) == 0) {
+                    p.getWorld().spawnParticle(Particle.BUBBLE, head, 6, 0.3, 0.3, 0.3, 0.05);
+                }
+            }
+            case FIREPROOF -> {
+                pot(p, PotionEffectType.FIRE_RESISTANCE, 0);
+                if (random.nextInt(6) == 0) {
+                    p.getWorld().spawnParticle(Particle.SMALL_FLAME, p.getLocation().add(0, 0.2, 0), 3, 0.3, 0.1, 0.3, 0.01);
+                }
+            }
+            case GHOST -> {
+                // fade in and out of sight
+                if (left % 10 < 4) {
+                    pot(p, PotionEffectType.INVISIBILITY, 0, 85);
+                }
+                if (random.nextInt(5) == 0) {
+                    p.getWorld().spawnParticle(Particle.WHITE_ASH, p.getLocation().add(0, 1, 0), 8, 0.4, 0.6, 0.4, 0.01);
+                }
+            }
+            case LOVED_UP -> {
+                pot(p, PotionEffectType.REGENERATION, 0);
+                if (random.nextInt(3) == 0) {
+                    p.getWorld().spawnParticle(Particle.HEART, head.clone().add(0, 0.5, 0), 2, 0.5, 0.3, 0.5, 0);
+                }
+                if (left % 5 == 0) {
+                    for (Player other : p.getWorld().getPlayers()) {
+                        if (other != p && other.getLocation().distanceSquared(p.getLocation()) < 36) {
+                            pot(other, PotionEffectType.REGENERATION, 0, 110);
+                            other.spawnParticle(Particle.HEART, other.getEyeLocation().add(0, 0.5, 0), 1, 0.2, 0.2, 0.2, 0);
+                        }
+                    }
+                }
+            }
+            case VISIONS -> {
+                pot(p, PotionEffectType.NIGHT_VISION, 0, 260);
+                double a = (left % 12) / 12.0 * Math.PI * 2;
+                for (int i = 0; i < 3; i++) {
+                    double ang = a + i * Math.PI * 2 / 3;
+                    Location l = head.clone().add(Math.cos(ang) * 1.6, -0.2 + 0.3 * Math.sin(ang * 2), Math.sin(ang) * 1.6);
+                    p.spawnParticle(i == 0 ? Particle.SOUL : Particle.END_ROD, l, 1, 0, 0, 0, 0);
+                }
+                if (random.nextInt(14) == 0) {
+                    p.playSound(p.getLocation(), pick("minecraft:ambient.soul_sand_valley.mood",
+                            "minecraft:ambient.basalt_deltas.additions", "minecraft:block.beacon.ambient"),
+                            SoundCategory.AMBIENT, 0.6f, 0.8f);
+                    p.sendActionBar(Text.mm(pick("<light_purple>the spirits are talking...",
+                            "<light_purple>you see the code of the world", "<light_purple>everything is connected")));
+                }
+            }
+            case RAGE -> {
+                pot(p, PotionEffectType.STRENGTH, 1);
+                pot(p, PotionEffectType.SPEED, 0);
+                if (random.nextInt(4) == 0) {
+                    p.getWorld().spawnParticle(Particle.ANGRY_VILLAGER, head.clone().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0);
+                }
+                if (left % 4 == 0) {
+                    p.playSound(p.getLocation(), "minecraft:block.note_block.basedrum", SoundCategory.PLAYERS, 0.5f, 0.6f);
+                }
+            }
+            case DIZZY -> {
+                if (nausea && left % 15 == 0) {
+                    pot(p, PotionEffectType.NAUSEA, 0, 120);
+                }
+                if (random.nextInt(10) == 0) {
+                    Location l = p.getLocation();
+                    l.setYaw(l.getYaw() + (random.nextBoolean() ? 25 : -25));
+                    p.setRotation(l.getYaw(), l.getPitch());
+                }
+            }
+            case DISSOCIATED -> {
+                pot(p, PotionEffectType.SLOWNESS, 1);
+                pot(p, PotionEffectType.SLOW_FALLING, 0);
+                if (left % 9 == 0) {
+                    pot(p, PotionEffectType.BLINDNESS, 0, 30);
+                }
+                if (random.nextInt(10) == 0) {
+                    p.sendActionBar(Text.mm(pick("<gray>you're watching yourself from above...",
+                            "<gray>is this your body?", "<gray>everything is very far away")));
+                }
+                p.spawnParticle(Particle.REVERSE_PORTAL, head, 6, 0.6, 0.6, 0.6, 0.01);
+            }
+            case SYRUPY -> {
+                pot(p, PotionEffectType.SLOWNESS, 0);
+                pot(p, PotionEffectType.SLOW_FALLING, 0);
+                if (random.nextInt(8) == 0) {
+                    p.playSound(p.getLocation(), pick("minecraft:block.honey_block.slide", "minecraft:entity.slime.squish",
+                            "minecraft:block.bubble_column.whirlpool_ambient"), SoundCategory.PLAYERS, 0.5f, 0.5f);
+                }
+                p.spawnParticle(Particle.DRIPPING_HONEY, head.clone().add(0, 0.6, 0), 1, 0.3, 0.1, 0.3, 0);
+            }
+            case BAD_TRIP -> {
+                pot(p, PotionEffectType.HUNGER, 0);
+                pot(p, PotionEffectType.WEAKNESS, 0);
+                if (left % 8 == 0) {
+                    pot(p, PotionEffectType.DARKNESS, 0, 80);
+                }
+                if (random.nextInt(7) == 0) {
+                    Vector back = p.getLocation().getDirection().setY(0).normalize().multiply(-2);
+                    p.playSound(p.getLocation().add(back), pick("minecraft:entity.warden.heartbeat",
+                            "minecraft:ambient.cave", "minecraft:entity.ghast.scream", "minecraft:entity.vex.ambient"),
+                            SoundCategory.HOSTILE, 0.8f, 0.7f);
+                    p.sendActionBar(Text.mm(pick("<dark_red>make it stop...", "<dark_red>the walls are breathing",
+                            "<dark_red>you shouldn't have taken that")));
+                }
+            }
         }
+    }
+
+    /** Lucky players sometimes get double drops from natural ores (called by the miner job). */
+    public boolean luckyDouble(Player p) {
+        return has(p, EffectType.LUCKY) && random.nextDouble() < plugin.getConfig().getDouble("effects.lucky-double-chance", 0.2);
     }
 
     @SafeVarargs
@@ -413,11 +547,13 @@ public final class EffectManager {
         }
         Component name = Text.mm(b.toString());
         BossBar.Color color = BossBar.Color.GREEN;
-        if (s.effects.containsKey(EffectType.TRIPPY) || s.effects.containsKey(EffectType.GLOW)) {
+        if (s.effects.containsKey(EffectType.TRIPPY) || s.effects.containsKey(EffectType.GLOW)
+                || s.effects.containsKey(EffectType.VISIONS) || s.effects.containsKey(EffectType.DISSOCIATED)) {
             color = BossBar.Color.PURPLE;
         }
         if (s.effects.containsKey(EffectType.GREEN_OUT) || s.effects.containsKey(EffectType.CRASH)
-                || s.effects.containsKey(EffectType.HYPER)) {
+                || s.effects.containsKey(EffectType.HYPER) || s.effects.containsKey(EffectType.RAGE)
+                || s.effects.containsKey(EffectType.BAD_TRIP)) {
             color = BossBar.Color.RED;
         }
         if (s.bar == null) {

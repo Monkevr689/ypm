@@ -17,6 +17,7 @@ import dev.kushcraft.jobs.Jobs;
 import dev.kushcraft.shop.Economy;
 import dev.kushcraft.shop.Exchange;
 import dev.kushcraft.shop.Market;
+import dev.kushcraft.shop.Ranks;
 import dev.kushcraft.shop.Shop;
 import dev.kushcraft.strain.StrainRegistry;
 import org.bukkit.Bukkit;
@@ -26,6 +27,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.List;
 
 /**
  * KushCraft - custom plants, strains, a lab, rolling, a dealer and custom
@@ -43,6 +46,7 @@ public final class KushCraft extends JavaPlugin {
     private Economy economy;
     private Shop shop;
     private Market market;
+    private Ranks ranks;
     private Exchange exchange;
     private Jobs jobs;
     private ResourcePackManager pack;
@@ -64,6 +68,8 @@ public final class KushCraft extends JavaPlugin {
         economy.load();
         shop = new Shop(this);
         shop.load();
+        ranks = new Ranks(this);
+        ranks.load();
         market = new Market(this);
         market.load();
         exchange = new Exchange(this);
@@ -150,6 +156,7 @@ public final class KushCraft extends JavaPlugin {
         reloadConfig();
         strains.load();
         shop.load();
+        ranks.load();
         exchange.load();
         jobs.load();
         economy.hook();
@@ -185,6 +192,10 @@ public final class KushCraft extends JavaPlugin {
         return market;
     }
 
+    public Ranks ranks() {
+        return ranks;
+    }
+
     public Exchange exchange() {
         return exchange;
     }
@@ -201,7 +212,7 @@ public final class KushCraft extends JavaPlugin {
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 3) {
+        if (version >= 4) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -210,20 +221,26 @@ public final class KushCraft extends JavaPlugin {
         }
         YamlConfiguration def = YamlConfiguration.loadConfiguration(
                 new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
-        if (version < 2) {
-            getConfig().set("shop.buy", def.getMapList("shop.buy"));
-            ConfigurationSection sell = def.getConfigurationSection("shop.sell");
-            if (sell != null) {
-                for (String k : sell.getKeys(false)) {
-                    getConfig().set("shop.sell." + k, sell.get(k));
-                }
+        // 1.3 rebalanced the economy (everything costs more, product is worth
+        // a bit less, ranks): take over the new shop lists and prices
+        getConfig().set("shop.buy", def.getMapList("shop.buy"));
+        getConfig().set("shop.sell", null);
+        ConfigurationSection sell = def.getConfigurationSection("shop.sell");
+        if (sell != null) {
+            for (String k : sell.getKeys(false)) {
+                getConfig().set("shop.sell." + k, sell.get(k));
             }
+        }
+        for (String key : List.of("strain-maker.cost", "economy.starting-balance", "market.demand-drop",
+                "market.recovery-per-minute", "market.order-bonus", "exchange.sell-ratio", "jobs.hourly-cap")) {
+            getConfig().set(key, def.get(key));
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 3);
+        getConfig().set("config-version", 4);
         saveConfig();
-        getLogger().info("Updated config.yml to version 3 (exchange, jobs and menu options added).");
+        getLogger().info("Updated config.yml to version 4 (new prices, dealer ranks, lab upgrades, new drugs)."
+                + " Your resource pack settings were kept.");
     }
 
     public ResourcePackManager pack() {

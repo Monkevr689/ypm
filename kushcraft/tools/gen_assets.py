@@ -241,7 +241,7 @@ def main():
         "block/drying_rack_dry", "block/grow_lamp", "block/planter_box", "block/dealer"], "blocks_preview.png")
     render_models.generate(sys.modules[__name__], [
         "plant/sativa_2", "plant/sativa_4", "plant/indica_3", "plant/indica_4", "plant/hybrid_4",
-        "plant/coca_3", "plant/poppy_2", "plant/poppy_3", "plant/mushroom_3"], "plants3d_preview.png", tint=0xb05ae0)
+        "plant/coca_3", "plant/poppy_2", "plant/poppy_3", "plant/mushroom_3", "plant/peyote_2", "plant/peyote_3"], "plants3d_preview.png", tint=0xb05ae0)
     print(f"generated {len(GENERATED)} flat items into {PACK}")
 
 

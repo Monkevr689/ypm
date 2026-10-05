@@ -92,7 +92,7 @@ public final class Shop {
         if (t.strainBound()) {
             Strain s = Items.strain(item);
             if (s != null) {
-                price *= s.potencyFactor();
+                price *= s.potencyFactor() * s.rarity().priceFactor();
             }
             if (t != ItemType.SEED_PACK) {
                 price *= Dose.qualityFactor(Items.quality(item)) / Dose.qualityFactor(3);
@@ -104,5 +104,11 @@ public final class Shop {
             }
         }
         return Math.max(0.01, Math.round(price * 100) / 100.0);
+    }
+
+    /** What this player gets for ONE item right now, including their rank bonus. */
+    public double sellPrice(ItemStack item, org.bukkit.entity.Player p) {
+        double base = sellPrice(item);
+        return base <= 0 ? 0 : Math.round(base * plugin.ranks().multiplier(p) * 100) / 100.0;
     }
 }

@@ -1,5 +1,6 @@
 package dev.kushcraft.gui;
 
+import dev.kushcraft.KushCraft;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.lab.LabRecipe;
 import dev.kushcraft.machine.Machine;
@@ -18,7 +19,7 @@ public final class LabHubMenu extends Menu {
     private static final int DRY = 14;
     private static final int MIX = 16;
     private static final int BACK = 18;
-    private static final int INFO = 26;
+    private static final int UPGRADE = 26;
 
     private final Machine machine;
 
@@ -32,8 +33,8 @@ public final class LabHubMenu extends Menu {
         inv.clear();
         backButton(BACK);
         List<String> cook = new ArrayList<>(List.of(
-                "<gray>Hash, moon rocks, brownies, shroom tea,",
-                "<gray>cocaine, heroin, LSD and meth."));
+                "<gray>18 recipes: weed edibles, psychedelics,",
+                "<gray>uppers and downers. Ranks unlock more."));
         LabRecipe job = machine.busy() ? LabRecipe.parse(machine.job()) : null;
         if (job != null) {
             cook.add("");
@@ -51,13 +52,52 @@ public final class LabHubMenu extends Menu {
         }
         set(DRY, Items.glint(Items.icon("bud_fresh", "<green><bold>Dry", dry), machine.rackDry()));
         set(MIX, Items.icon("ui_dna", "<green><bold>Mix Strains",
-                "<gray>Cross two seeds, pick effects,",
-                "<gray>colour and a <white>name</white> - your own strain!"));
-        set(INFO, Items.icon("ui_info", "<aqua>Drug Lab",
-                "<gray>Everything is made here.",
-                "<gray>Ingredients come from your inventory.",
-                "",
-                "<gray>Punch the lab to pick it up."));
+                "<gray>Cross two seeds - random effects,",
+                "<gray>mutations and rarity. Name your strain!"));
+        int level = machine.level();
+        java.util.List<Double> costs = costs();
+        List<String> up = new ArrayList<>();
+        up.add("<gray>Level <white>" + level + "</white> of " + (costs.size() + 1));
+        up.add("<gray>Cooking: <green>" + Math.round((1 - LabMenu.timeFactor(machine)
+                / Math.max(0.01, KushCraft.get().getConfig().getDouble("lab.time-multiplier", 1.0))) * 100) + "% faster");
+        up.add("<gray>Bonus item chance: <green>" + Math.round(LabMenu.bonusChance(machine) * 100) + "%");
+        up.add("");
+        if (level - 1 < costs.size()) {
+            up.add("<gray>Next level: <green>15% faster, +8% bonus");
+            up.add("<gray>Costs <gold>" + KushCraft.get().economy().format(costs.get(level - 1)));
+            up.add("<yellow>Click to upgrade");
+        } else {
+            up.add("<gold>Fully upgraded!");
+        }
+        up.add("");
+        up.add("<dark_gray>Punch the lab to pick it up -");
+        up.add("<dark_gray>it keeps its level.");
+        set(UPGRADE, Items.icon("ui_crown", "<gold><bold>Upgrade lab", up));
+    }
+
+    private static java.util.List<Double> costs() {
+        return KushCraft.get().getConfig().getDoubleList("lab.upgrade-costs");
+    }
+
+    private void upgrade() {
+        java.util.List<Double> costs = costs();
+        int level = machine.level();
+        if (level - 1 >= costs.size()) {
+            player.sendActionBar(Text.mm("<gold>This lab is fully upgraded."));
+            failSound();
+            return;
+        }
+        double cost = costs.get(level - 1);
+        if (!KushCraft.get().economy().withdraw(player, cost)) {
+            player.sendActionBar(Text.mm("<red>Upgrading costs " + KushCraft.get().economy().format(cost) + "."));
+            failSound();
+            return;
+        }
+        machine.level(level + 1);
+        KushCraft.get().machines().markDirty();
+        player.playSound(player.getLocation(), "minecraft:block.anvil.use", org.bukkit.SoundCategory.BLOCKS, 0.7f, 1.2f);
+        player.sendMessage(Text.msg("<green>Drug Lab upgraded to level " + (level + 1) + "!"));
+        render();
     }
 
     @Override
@@ -66,14 +106,8 @@ public final class LabHubMenu extends Menu {
             case COOK -> openChild(new LabMenu(player, machine));
             case ROLL -> openChild(new RollerMenu(player));
             case DRY -> openChild(new DryMenu(player, machine));
-            case MIX -> {
-                if (!player.hasPermission("kushcraft.strainmaker")) {
-                    player.sendActionBar(Text.mm("<red>You are not allowed to create strains."));
-                    failSound();
-                    return;
-                }
-                openChild(new StrainMakerMenu(player));
-            }
+            case MIX -> MixerMenu.openFor(player, this);
+            case UPGRADE -> upgrade();
             default -> {
             }
         }

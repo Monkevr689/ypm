@@ -457,12 +457,82 @@ def small_crops():
             PREVIEW.append(canvas)
 
 
+# ---------------------------------------------------------------------------
+# peyote: little round cacti made of boxes, pink flowers when ripe
+# ---------------------------------------------------------------------------
+def peyote_textures():
+    rgba = G.rgba
+    rng = random.Random("peyote")
+    side = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            c = rgba("6aa88a") if x % 4 else rgba("4a8a6a")
+            side.putpixel((x, y), G.shade(c, rng.uniform(0.93, 1.05)))
+    for x in range(2, 16, 4):
+        for y in (2, 7, 12):
+            side.putpixel((x, y), rgba("eef4e8"))
+    top = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            a = math.atan2(y - 7.5, x - 7.5)
+            rib = int((a + math.pi) / (2 * math.pi) * 8) % 2
+            c = rgba("78b898") if rib else rgba("5a9a7a")
+            top.putpixel((x, y), G.shade(c, rng.uniform(0.95, 1.05)))
+    for (x, y) in ((7, 7), (8, 7), (7, 8), (8, 8), (4, 4), (11, 4), (4, 11), (11, 11), (7, 2), (2, 8), (13, 7), (8, 13)):
+        top.putpixel((x, y), rgba("f4f8ee"))
+    flower = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            d = math.hypot(x - 7.5, y - 7.5)
+            flower.putpixel((x, y), rgba("ffe070") if d < 2.5 else rgba("f07ab8") if (x + y) % 3 else rgba("ff9ad0"))
+    G.save_png(side, "block/plant/peyote_side")
+    G.save_png(top, "block/plant/peyote_top")
+    G.save_png(flower, "block/plant/peyote_flower")
+
+
+def cactus(x, z, w, h):
+    faces = {d: {"uv": [0, 0, 16, 16], "texture": "#side"} for d in ("north", "south", "east", "west")}
+    faces["up"] = {"uv": [0, 0, 16, 16], "texture": "#top"}
+    els = [box([x - w / 2, 0, z - w / 2], [x + w / 2, h, z + w / 2], faces)]
+    if w >= 3:
+        d = w - 1.5
+        dome = {k: {"uv": [0, 0, 16, 4], "texture": "#side"} for k in ("north", "south", "east", "west")}
+        dome["up"] = {"uv": [0, 0, 16, 16], "texture": "#top"}
+        els.append(box([x - d / 2, h, z - d / 2], [x + d / 2, h + 0.75, z + d / 2], dome))
+    return els
+
+
+def bloom(x, z, y):
+    f = {k: {"uv": [0, 0, 16, 16], "texture": "#flower"} for k in ("north", "south", "east", "west", "up")}
+    return [box([x - 1, y, z - 1], [x + 1, y + 1.25, z + 1], f)]
+
+
+def peyote():
+    peyote_textures()
+    ns = G.NS
+    stages = {
+        0: cactus(8, 8, 2, 1),
+        1: cactus(8, 8, 4, 2.5),
+        2: cactus(7, 8, 5, 3.5) + cactus(11, 10.5, 3, 2) + cactus(5, 11.5, 3, 2),
+        3: cactus(7, 8, 6, 4) + bloom(7, 8, 4.75) + cactus(11.5, 10.5, 4, 3) + bloom(11.5, 10.5, 3.75)
+           + cactus(4.5, 11.5, 3.5, 2.5),
+    }
+    for stage, els in stages.items():
+        model = {"ambientocclusion": False,
+                 "textures": {"particle": f"{ns}:block/plant/peyote_top", "side": f"{ns}:block/plant/peyote_side",
+                              "top": f"{ns}:block/plant/peyote_top", "flower": f"{ns}:block/plant/peyote_flower"},
+                 "elements": els}
+        G.save_json(model, f"models/plant/peyote_{stage}.json")
+        G.save_json(G.item_definition(f"{ns}:plant/peyote_{stage}"), f"items/plant_peyote_{stage}.json")
+
+
 def generate(g):
     global G
     G = g
     cannabis()
     small_crops()
     mushrooms()
+    peyote()
     # plant preview strip
     import os
     sheet = Image.new("RGBA", (len(PREVIEW) * 18 * 4 + 8, 32 * 4 + 8), (60, 80, 120, 255))

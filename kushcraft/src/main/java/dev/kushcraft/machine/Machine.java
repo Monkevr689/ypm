@@ -14,6 +14,7 @@ public final class Machine {
     private final UUID owner;
 
     // lab station
+    int level = 1;
     String job;
     long jobEnd;
     long jobStart;
@@ -34,6 +35,15 @@ public final class Machine {
         this.type = type;
         this.yaw = yaw;
         this.owner = owner;
+    }
+
+    /** Drug Lab upgrade level (1-5): faster cooking and bonus output. */
+    public int level() {
+        return level;
+    }
+
+    public void level(int level) {
+        this.level = Math.max(1, level);
     }
 
     public BlockKey key() {

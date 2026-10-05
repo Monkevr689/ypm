@@ -89,6 +89,19 @@ def check_menus():
             h = Image.open(path).height
             if h != 114 + int(rows) * 18:
                 errors.append(f"{fn}: {rows}-row menu but gui/{name}.png is drawn for {(h - 114) // 18} rows")
+    # tab pages: TabMenu.Tab names, 6 rows each, same order as the tab bar in gui.py
+    tab_src = open(os.path.join(gui_dir, "TabMenu.java"), encoding="utf-8").read()
+    tabs = re.findall(r'^        ([A-Z]+)\("', tab_src, re.M)
+    import gui
+    if [t for t in tabs] != gui.TABS[:len(tabs)]:
+        errors.append(f"TabMenu tabs {tabs} != gui.TABS {gui.TABS}")
+    for t in tabs:
+        name = t.lower()
+        path = os.path.join(ASSETS, "kush", "textures", "gui", name + ".png")
+        if name not in pack_meta.GUIS or not os.path.exists(path):
+            errors.append(f"tab page '{name}' has no background")
+        elif Image.open(path).height != 114 + 6 * 18:
+            errors.append(f"tab page '{name}' background is not 6 rows")
 
 
 def check_recipe_book():
@@ -174,7 +187,7 @@ def main():
         for st in range(5):
             used.add(f"plant_{kind}_{st}")
     for st in range(4):
-        for kind in ("mushroom", "coca", "poppy"):
+        for kind in ("mushroom", "coca", "poppy", "peyote"):
             used.add(f"plant_{kind}_{st}")
     for u in sorted(used):
         if u not in item_defs:

@@ -36,7 +36,7 @@ public final class MachineListener implements Listener {
             e.setCancelled(true);
             return;
         }
-        plugin.machines().place(e.getPlayer(), e.getBlockPlaced(), t.machine());
+        plugin.machines().place(e.getPlayer(), e.getBlockPlaced(), t.machine(), Items.level(e.getItemInHand()));
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)

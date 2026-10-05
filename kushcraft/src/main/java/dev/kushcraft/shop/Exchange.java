@@ -61,7 +61,8 @@ public final class Exchange {
                         plugin.getLogger().warning("exchange: unknown item " + m.get("item"));
                         continue;
                     }
-                    double price = m.get("price") instanceof Number n ? n.doubleValue() : 0;
+                    double price = (m.get("price") instanceof Number n ? n.doubleValue() : 0)
+                            * Math.max(0, plugin.getConfig().getDouble("exchange.price-multiplier", 1.0));
                     int amount = m.get("amount") instanceof Number n ? n.intValue() : 1;
                     if (price <= 0 || byMaterial.containsKey(mat)) {
                         continue;

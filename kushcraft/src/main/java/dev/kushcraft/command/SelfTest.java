@@ -59,6 +59,8 @@ final class SelfTest {
         try {
             items();
             shop();
+            ranks();
+            breeding();
             recipes();
             exchange();
             money();
@@ -104,9 +106,9 @@ final class SelfTest {
         check(Items.hits(Items.strainItem(ItemType.JOINT, s, 3, 1)) == Items.JOINT_HITS, "joint hits");
         check(Dose.strain(s, 5, 60, 10).effects().size() == s.effects().size(), "dose effects");
         check(GuiFont.space(-169).length() == 4, "negative space builder");
-        check(LabRecipe.values().length == 9, "lab recipes");
+        check(LabRecipe.values().length == 18, "lab recipes");
         for (ItemType t : ItemType.values()) {
-            if (!t.retired() && t != ItemType.MOON_ROCK && dev.kushcraft.catalog.Catalog.of(t) == null
+            if (!t.retired() && dev.kushcraft.catalog.Catalog.of(t) == null
                     && t.machine() == null) {
                 // every non-block item should be explained in the catalog
                 check(false, "catalog entry for " + t);
@@ -157,7 +159,7 @@ final class SelfTest {
 
     private void plants(World w, int x, int y, int z) {
         PlantManager pm = plugin.plants();
-        String[] kinds = {"SATIVA", "INDICA", "HYBRID", "MUSHROOM", "COCA", "POPPY"};
+        String[] kinds = {"SATIVA", "INDICA", "HYBRID", "MUSHROOM", "COCA", "POPPY", "PEYOTE"};
         for (int i = 0; i < kinds.length; i++) {
             Block soil = w.getBlockAt(x, y, z + i * 2);
             soil.setType(i == 3 ? Material.MYCELIUM : Material.FARMLAND);
@@ -230,6 +232,11 @@ final class SelfTest {
             if (type == MachineType.LAB_STATION) {
                 m.startJob(LabRecipe.HASH.name(), 1, Items.create(ItemType.LUCID_TAB, 2));
                 check(m.busy(), "lab busy");
+                double slow = dev.kushcraft.gui.LabMenu.timeFactor(m);
+                m.level(3);
+                check(dev.kushcraft.gui.LabMenu.timeFactor(m) < slow && dev.kushcraft.gui.LabMenu.bonusChance(m) > 0,
+                        "lab upgrades cook faster");
+                check(Items.level(Items.machine(ItemType.LAB_STATION, 3)) == 3, "picked-up lab keeps its level");
             }
             if (type == MachineType.GROW_LAMP) {
                 check(b.getRelative(0, 1, 0).getType() == Material.LIGHT, "lamp light block");
@@ -267,6 +274,50 @@ final class SelfTest {
             }
         }
         check(pictures == RecipeBook.all().size(), "a picture page for every recipe (" + pictures + ")");
+    }
+
+    private void ranks() {
+        var ranks = plugin.ranks();
+        check(ranks.all().size() == 7, "7 dealer ranks, got " + ranks.all().size());
+        check(ranks.of(0).level() == 1, "everyone starts at rank 1");
+        check(ranks.of(1e12).level() == ranks.all().size(), "top rank reachable");
+        for (int i = 1; i < ranks.all().size(); i++) {
+            check(ranks.all().get(i).sales() > ranks.all().get(i - 1).sales(), "rank thresholds increase");
+        }
+        for (LabRecipe r : LabRecipe.values()) {
+            check(r.rank() >= 1 && r.rank() <= ranks.all().size(), "recipe rank in range: " + r);
+        }
+        check(LabRecipe.HASH.rank() == 1 && LabRecipe.COCAINE.rank() > 1, "hard drugs need a higher rank");
+        var a = Bukkit.getOfflinePlayer(UUID.randomUUID());
+        plugin.economy().addSales(a, ranks.all().get(1).sales());
+        check(ranks.of(a).level() == 2, "selling raises the rank");
+        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() >= 5000),
+                "the Drug Lab is expensive to buy");
+    }
+
+    private void breeding() {
+        var all = new ArrayList<>(plugin.strains().all());
+        Strain a = all.get(0), b = all.get(Math.min(1, all.size() - 1));
+        java.util.Random r = new java.util.Random(42);
+        java.util.Set<java.util.List<dev.kushcraft.effect.EffectType>> seen = new java.util.HashSet<>();
+        boolean mutated = false;
+        for (int i = 0; i < 200; i++) {
+            var res = dev.kushcraft.strain.Breeding.cross(a, b, r);
+            check(!res.effects().isEmpty() && res.effects().size() <= dev.kushcraft.strain.Breeding.MAX_EFFECTS,
+                    "bred strain has 1-4 effects");
+            check(new java.util.HashSet<>(res.effects()).size() == res.effects().size(), "no duplicate effects");
+            check(res.potency() >= 5 && res.potency() <= 35, "bred potency in range");
+            for (var e : res.effects()) {
+                check(e.selectable(), "bred effect is a strain effect: " + e);
+            }
+            mutated |= !res.mutations().isEmpty();
+            seen.add(res.effects());
+        }
+        check(mutated, "mutations happen");
+        check(seen.size() > 3, "breeding is random (" + seen.size() + " different results)");
+        check(dev.kushcraft.strain.Rarity.of(35, 4) == dev.kushcraft.strain.Rarity.LEGENDARY
+                && dev.kushcraft.strain.Rarity.of(5, 1) == dev.kushcraft.strain.Rarity.COMMON, "rarity tiers");
+        check(dev.kushcraft.effect.EffectType.values().length >= 28, "28 effects");
     }
 
     /** The recipe pictures in the resource pack must show the real recipes. */

@@ -3,7 +3,7 @@ package dev.kushcraft.listener;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.Keys;
 import dev.kushcraft.effect.EffectType;
-import dev.kushcraft.gui.MainMenu;
+import dev.kushcraft.gui.HomeMenu;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.recipe.Recipes;
@@ -69,7 +69,7 @@ public final class PlayerListener implements Listener {
             return;
         }
         e.setCancelled(true);
-        new MainMenu(p).open();
+        HomeMenu.open(p);
     }
 
     @EventHandler
