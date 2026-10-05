@@ -266,12 +266,13 @@ public final class Guide {
     private static List<String> strains() {
         List<String> out = new ArrayList<>();
         List<Strain> strains = new ArrayList<>(KushCraft.get().strains().all());
-        for (int i = 0; i < strains.size() && i < 60; i += 5) {
+        // 3 per page: long names wrap onto a second line
+        for (int i = 0; i < strains.size() && i < 60; i += 3) {
             StringBuilder b = new StringBuilder("<dark_green><bold>Strains</bold>\n");
-            for (int j = i; j < Math.min(strains.size(), i + 5); j++) {
+            for (int j = i; j < Math.min(strains.size(), i + 3); j++) {
                 Strain s = strains.get(j);
-                b.append("\n<black><bold>").append(Text.escape(s.name())).append("</bold> <dark_gray>")
-                        .append(s.type().display()).append(" ").append(s.potency()).append("%\n");
+                b.append("\n<black><bold>").append(Text.escape(s.name())).append("</bold>\n<dark_gray>")
+                        .append(s.type().display()).append(", ").append(s.potency()).append("% THC\n");
             }
             out.add(b.toString());
         }
