@@ -51,6 +51,20 @@ joins.
 
 > Players who decline the pack still have every feature, but items and plants will look like placeholder textures. Set `resource-pack.required: true` to make the pack mandatory.
 
+### Hosted server (Shockbyte etc.) - "FAILED_DOWNLOAD"
+
+Game hosts usually only open the game port, so players can't reach port 8163 and the console shows
+`could not load the resource pack (FAILED_DOWNLOAD)`. Host the zip somewhere else instead:
+
+1. In `plugins/KushCraft/config.yml` set `resource-pack.url` to a **direct** link to the zip:
+   * GitHub (easiest, the zip is in this repo):
+     `https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip`
+   * or upload `KushCraft-pack.zip` (also written to `plugins/KushCraft/`) to Dropbox and use the share link ending in `?dl=1`.
+2. Restart the server (or `/kush reload`).
+
+The plugin downloads that file itself on start-up and sends players its hash, so any copy of the zip works.
+The console prints `Resource pack: downloaded ... sha1 ...` when it is set up correctly.
+
 ## How to play
 
 1. **Seeds:** break grass, ferns or dead bushes (about a 4% chance; the strain depends on the biome) or buy them from a Dealer. Break small mushrooms to get spores.

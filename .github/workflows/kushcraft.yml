@@ -89,6 +89,34 @@ jobs:
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
 
+      - name: Run server again with an external resource-pack.url
+        working-directory: server
+        run: |
+          # hosted servers often cannot open port 8163: the pack is then hosted elsewhere
+          mkdir -p ../host && cp plugins/KushCraft/KushCraft-pack.zip ../host/pack.zip
+          sha1sum ../host/pack.zip | cut -d' ' -f1 > ../host/sha1.txt
+          python3 -m http.server 9000 --directory ../host --bind 127.0.0.1 > /dev/null 2>&1 &
+          sleep 1
+          sed -i "s#^  url: .*#  url: 'http://127.0.0.1:9000/pack.zip'#" plugins/KushCraft/config.yml
+          grep -n "url:" plugins/KushCraft/config.yml
+          rm -f console && mkfifo console
+          java -Xmx2G -jar paper.jar --nogui < console > server2.log 2>&1 &
+          PID=$!
+          exec 3>console
+          for i in $(seq 1 240); do grep -q "Done (" server2.log && break; sleep 2; done
+          grep -q "Done (" server2.log || { tail -100 server2.log; echo "::error::server did not start"; exit 1; }
+          for i in $(seq 1 30); do grep -q "Resource pack: downloaded" server2.log && break; sleep 1; done
+          echo "stop" >&3
+          timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
+          exec 3>&-
+          grep -iE "kushcraft|resource pack" server2.log || true
+          grep -q "Resource pack: downloaded .* sha1 $(cat ../host/sha1.txt)" server2.log \
+            || { echo "::error::external pack hash not computed correctly"; exit 1; }
+          if grep -q "Resource pack hosted on port" server2.log; then
+            echo "::error::built-in web server must not start when resource-pack.url is set"; exit 1
+          fi
+          echo "External URL test passed"
+
       - name: Check log
         if: always()
         working-directory: server
@@ -106,4 +134,6 @@ jobs:
         if: always()
         with:
           name: server-log
-          path: server/server.log
+          path: |
+            server/server.log
+            server/server2.log

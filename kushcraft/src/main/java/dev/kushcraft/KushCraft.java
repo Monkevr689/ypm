@@ -121,6 +121,7 @@ public final class KushCraft extends JavaPlugin {
         shop.load();
         economy.hook();
         Recipes.register(this);
+        pack.refreshExternal();
     }
 
     public StrainRegistry strains() {

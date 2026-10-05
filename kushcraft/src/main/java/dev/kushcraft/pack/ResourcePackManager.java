@@ -17,6 +17,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.MessageDigest;
@@ -49,6 +54,8 @@ public final class ResourcePackManager implements Listener {
     private byte[] zip;
     private byte[] sha1;
     private String hashHex;
+    /** SHA-1 of the zip found at resource-pack.url (clients reject a download whose hash differs). */
+    private volatile byte[] externalSha1;
     private HttpServer server;
     private ExecutorService pool;
     private final Set<UUID> loaded = ConcurrentHashMap.newKeySet();
@@ -71,6 +78,7 @@ public final class ResourcePackManager implements Listener {
         String external = plugin.getConfig().getString("resource-pack.url", "");
         if (external != null && !external.isBlank()) {
             plugin.getLogger().info("Resource pack: players download it from " + external);
+            refreshExternal();
             return;
         }
         int port = plugin.getConfig().getInt("resource-pack.port", 8163);
@@ -116,6 +124,46 @@ public final class ResourcePackManager implements Listener {
                     + "KushCraft-pack.zip somewhere and set 'resource-pack.url'.");
             server = null;
         }
+    }
+
+    /**
+     * With an external URL the hash sent to players must be the hash of the file
+     * hosted there, so download it once (async) and hash it. Falls back to the
+     * hash of the zip this plugin builds if the download fails.
+     */
+    public void refreshExternal() {
+        String url = plugin.getConfig().getString("resource-pack.url", "");
+        externalSha1 = null;
+        if (url == null || url.isBlank()) {
+            return;
+        }
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL)
+                        .connectTimeout(Duration.ofSeconds(15)).build();
+                HttpResponse<byte[]> res = client.send(HttpRequest.newBuilder(URI.create(url.trim()))
+                        .timeout(Duration.ofSeconds(60)).header("User-Agent", "KushCraft").GET().build(),
+                        HttpResponse.BodyHandlers.ofByteArray());
+                if (res.statusCode() != 200) {
+                    plugin.getLogger().warning("resource-pack.url returned HTTP " + res.statusCode()
+                            + " - it must be a DIRECT link to the zip. Players will not be able to download the pack.");
+                    return;
+                }
+                byte[] body = res.body();
+                if (body.length < 4 || body[0] != 'P' || body[1] != 'K') {
+                    plugin.getLogger().warning("resource-pack.url does not point to a zip file (it looks like a web page)."
+                            + " Use a direct download link (Dropbox: ?dl=1, GitHub: raw link).");
+                    return;
+                }
+                externalSha1 = MessageDigest.getInstance("SHA-1").digest(body);
+                String hex = HexFormat.of().formatHex(externalSha1);
+                plugin.getLogger().info("Resource pack: downloaded " + body.length / 1024 + " KB from resource-pack.url,"
+                        + " sha1 " + hex + (hex.equals(hashHex) ? " (same as this plugin's pack)" : " (custom pack)"));
+            } catch (Exception e) {
+                plugin.getLogger().warning("Could not check resource-pack.url from the server (" + e + "). Players"
+                        + " still try it, using the hash of the pack this plugin builds.");
+            }
+        });
     }
 
     public void stop() {
@@ -192,7 +240,8 @@ public final class ResourcePackManager implements Listener {
             return;
         }
         String prompt = plugin.getConfig().getString("resource-pack.prompt", "KushCraft textures");
-        p.setResourcePack(PACK_ID, url(p), sha1, Text.mm(prompt),
+        byte[] hash = external && externalSha1 != null ? externalSha1 : sha1;
+        p.setResourcePack(PACK_ID, url(p), hash, Text.mm(prompt),
                 plugin.getConfig().getBoolean("resource-pack.required", false));
     }
 
@@ -232,7 +281,11 @@ public final class ResourcePackManager implements Listener {
             case FAILED_DOWNLOAD, INVALID_URL, FAILED_RELOAD, DISCARDED -> {
                 loaded.remove(p.getUniqueId());
                 plugin.getLogger().warning(p.getName() + " could not load the resource pack (" + e.getStatus()
-                        + ") from " + url(p) + " - check resource-pack.port / host in config.yml");
+                        + ") from " + url(p) + (server != null
+                        ? " - players cannot reach port " + plugin.getConfig().getInt("resource-pack.port", 8163)
+                        + " on this server. Open it, or host KushCraft-pack.zip elsewhere and set resource-pack.url"
+                        + " (see README)."
+                        : " - check that resource-pack.url is a direct link to the zip."));
             }
             default -> {
             }

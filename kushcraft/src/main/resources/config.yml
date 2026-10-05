@@ -17,9 +17,13 @@ resource-pack:
   # Public address players use to reach the pack server. Leave empty to use
   # the same address the player typed to join the server (works for most setups).
   host: ''
-  # Host the zip yourself instead (Dropbox/GitHub/your website, direct link).
-  # The zip is written to plugins/KushCraft/KushCraft-pack.zip on start-up.
-  # When set, the built-in web server is not started.
+  # No open port? (Shockbyte and most game hosts only open the game port.)
+  # Host the zip somewhere else and paste a DIRECT download link here, e.g.
+  #   https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip
+  #   https://www.dropbox.com/s/xxxx/KushCraft-pack.zip?dl=1
+  # The zip is also written to plugins/KushCraft/KushCraft-pack.zip on start-up.
+  # When set, the built-in web server is not started and the plugin works out
+  # the file's hash by itself (so any copy of the zip works). Then /kush reload.
   url: ''
   prompt: '<green><bold>KushCraft</bold></green> <gray>adds custom plants, machines and items. Accept the pack to see them!'
 
