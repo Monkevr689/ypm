@@ -25,9 +25,12 @@ jobs:
           POM
           mvn -q -B dependency:copy-dependencies -DoutputDirectory=libs -DincludeScope=compile
           ls -la libs
-          mkdir -p ../out && cp -r libs ../out/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: paper-libs
-          path: out/libs
-          retention-days: 3
+          sha256sum libs/paper-api-*.jar libs/bungeecord-chat-*.jar libs/brigadier-*.jar
+      - name: Dump jars
+        run: |
+          cd p/libs
+          for j in paper-api-*.jar bungeecord-chat-*.jar brigadier-*.jar; do
+            echo "@@BEGIN $j"
+            base64 -w 120 "$j" | sed 's/^/@@ /'
+            echo "@@END $j"
+          done
