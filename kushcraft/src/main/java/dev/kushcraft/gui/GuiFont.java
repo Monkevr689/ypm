@@ -7,7 +7,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * Builds inventory titles that paint a full custom background: the background
@@ -18,8 +18,14 @@ import java.util.Map;
 public final class GuiFont {
 
     private static final Key FONT = Key.key("kush", "gui");
-    private static final Map<String, Character> GLYPHS = Map.of(
-            "lab", '', "strain", '', "roller", '', "dealer", '');
+    /**
+     * Every menu background, in glyph order: the n-th name is drawn by
+     * character U+E000+n. Same list as GUIS in tools/pack_meta.py
+     * (tools/validate_pack.py checks that they match).
+     */
+    static final List<String> GUIS = List.of(
+            "lab", "strain", "roller", "dealer", "main", "list", "hub", "dry", "orders",
+            "recipe", "exchange", "jobs");
     private static final int GUI_WIDTH = 176;
     private static final int TITLE_X = 8;
 
@@ -42,11 +48,14 @@ public final class GuiFont {
     }
 
     public static Component title(Player viewer, String gui, String miniMessageTitle) {
-        Character glyph = GLYPHS.get(gui);
-        if (glyph == null || !KushCraft.get().pack().hasPack(viewer)) {
+        int index = GUIS.indexOf(gui);
+        if (index < 0) {
+            KushCraft.get().getLogger().warning("No menu background named " + gui);
+        }
+        if (index < 0 || !KushCraft.get().pack().hasPack(viewer)) {
             return Text.mm("<dark_gray>" + miniMessageTitle);
         }
-        String bg = space(-TITLE_X) + glyph + space(-(GUI_WIDTH + 1 - TITLE_X));
+        String bg = space(-TITLE_X) + (char) (0xE000 + index) + space(-(GUI_WIDTH + 1 - TITLE_X));
         Component background = Component.text(bg).font(FONT).color(NamedTextColor.WHITE);
         return Component.empty().append(background).append(Text.mm("<white>" + miniMessageTitle));
     }

@@ -13,7 +13,9 @@ import dev.kushcraft.machine.MachineManager;
 import dev.kushcraft.pack.ResourcePackManager;
 import dev.kushcraft.plant.PlantManager;
 import dev.kushcraft.recipe.Recipes;
+import dev.kushcraft.jobs.Jobs;
 import dev.kushcraft.shop.Economy;
+import dev.kushcraft.shop.Exchange;
 import dev.kushcraft.shop.Market;
 import dev.kushcraft.shop.Shop;
 import dev.kushcraft.strain.StrainRegistry;
@@ -41,6 +43,8 @@ public final class KushCraft extends JavaPlugin {
     private Economy economy;
     private Shop shop;
     private Market market;
+    private Exchange exchange;
+    private Jobs jobs;
     private ResourcePackManager pack;
 
     public static KushCraft get() {
@@ -62,6 +66,10 @@ public final class KushCraft extends JavaPlugin {
         shop.load();
         market = new Market(this);
         market.load();
+        exchange = new Exchange(this);
+        exchange.load();
+        jobs = new Jobs(this);
+        jobs.load();
         machines = new MachineManager(this);
         machines.load();
         plants = new PlantManager(this);
@@ -80,6 +88,8 @@ public final class KushCraft extends JavaPlugin {
         pm.registerEvents(new MachineListener(this), this);
         pm.registerEvents(new WorldListener(this), this);
         pm.registerEvents(new PlayerListener(this), this);
+        pm.registerEvents(jobs, this);
+        pm.registerEvents(jobs.placed(), this);
 
         PluginCommand cmd = getCommand("kush");
         if (cmd != null) {
@@ -91,6 +101,7 @@ public final class KushCraft extends JavaPlugin {
         pack.start();
         economy.start();
         market.start();
+        exchange.start();
         effects.start();
         machines.start();
         plants.start();
@@ -128,6 +139,9 @@ public final class KushCraft extends JavaPlugin {
         if (market != null) {
             market.save();
         }
+        if (exchange != null) {
+            exchange.save();
+        }
         Recipes.unregister();
     }
 
@@ -136,6 +150,8 @@ public final class KushCraft extends JavaPlugin {
         reloadConfig();
         strains.load();
         shop.load();
+        exchange.load();
+        jobs.load();
         economy.hook();
         Recipes.register(this);
         pack.refreshExternal();
@@ -169,13 +185,23 @@ public final class KushCraft extends JavaPlugin {
         return market;
     }
 
+    public Exchange exchange() {
+        return exchange;
+    }
+
+    public Jobs jobs() {
+        return jobs;
+    }
+
     /**
-     * v1.0 configs: replace the shop lists (the old stations were removed and
-     * new drugs added) and add every new option, keeping everything else
-     * (resource-pack url, prices you did not touch...).
+     * Older configs: v1 gets the new shop lists (the old stations were removed
+     * and new drugs added); every version gets the options added since
+     * (exchange, jobs, menu...). Everything you set yourself is kept,
+     * including resource-pack.url.
      */
     private void migrateConfig() {
-        if (getConfig().getInt("config-version", 1) >= 2) {
+        int version = getConfig().getInt("config-version", 1);
+        if (version >= 3) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -184,18 +210,20 @@ public final class KushCraft extends JavaPlugin {
         }
         YamlConfiguration def = YamlConfiguration.loadConfiguration(
                 new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
-        getConfig().set("shop.buy", def.getMapList("shop.buy"));
-        ConfigurationSection sell = def.getConfigurationSection("shop.sell");
-        if (sell != null) {
-            for (String k : sell.getKeys(false)) {
-                getConfig().set("shop.sell." + k, sell.get(k));
+        if (version < 2) {
+            getConfig().set("shop.buy", def.getMapList("shop.buy"));
+            ConfigurationSection sell = def.getConfigurationSection("shop.sell");
+            if (sell != null) {
+                for (String k : sell.getKeys(false)) {
+                    getConfig().set("shop.sell." + k, sell.get(k));
+                }
             }
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 2);
+        getConfig().set("config-version", 3);
         saveConfig();
-        getLogger().info("Updated config.yml to version 2 (new shop list, market & strain options).");
+        getLogger().info("Updated config.yml to version 3 (exchange, jobs and menu options added).");
     }
 
     public ResourcePackManager pack() {

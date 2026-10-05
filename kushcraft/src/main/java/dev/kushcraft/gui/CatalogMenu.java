@@ -4,6 +4,7 @@ import dev.kushcraft.KushCraft;
 import dev.kushcraft.catalog.Catalog;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
+import dev.kushcraft.recipe.RecipeBook;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.Text;
 import org.bukkit.entity.Player;
@@ -59,6 +60,9 @@ public final class CatalogMenu extends ListMenu {
             if (give) {
                 lore.add("");
                 lore.add("<green>Click: get 1  <yellow>Shift-click: get a stack");
+            } else if (!RecipeBook.making(e.type()).isEmpty()) {
+                lore.add("");
+                lore.add("<green>Click to see the recipe");
             }
             it.editMeta(m -> m.lore(Text.lines(lore)));
             out.add(it);
@@ -99,7 +103,17 @@ public final class CatalogMenu extends ListMenu {
 
     @Override
     protected void clickEntry(int index, ClickType click) {
-        if (!give || !player.hasPermission("kushcraft.admin") || index >= current.size()) {
+        if (index >= current.size()) {
+            return;
+        }
+        if (!give) {
+            List<RecipeBook.Entry> recipes = RecipeBook.making(current.get(index).type());
+            if (!recipes.isEmpty()) {
+                openChild(new RecipeViewMenu(player, recipes, 0));
+            }
+            return;
+        }
+        if (!player.hasPermission("kushcraft.admin")) {
             return;
         }
         ItemStack it = sample(current.get(index).type());

@@ -63,7 +63,7 @@
    "type": "bitmap",
    "file": "kush:gui/main.png",
    "ascent": 13,
-   "height": 204,
+   "height": 222,
    "chars": [
     "\ue004"
    ]
@@ -102,6 +102,33 @@
    "height": 168,
    "chars": [
     "\ue008"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/recipe.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue009"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/exchange.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue00a"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/jobs.png",
+   "ascent": 13,
+   "height": 186,
+   "chars": [
+    "\ue00b"
    ]
   }
  ]

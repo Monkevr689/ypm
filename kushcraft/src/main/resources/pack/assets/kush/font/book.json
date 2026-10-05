@@ -1,0 +1,220 @@
+{
+ "providers": [
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_lab_station.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue100"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_grow_lamp.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue101"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_planter_box.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue102"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_dealer.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue103"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_bong.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue104"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_rolling_papers.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue105"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_blunt_wrap.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue106"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_fertilizer.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue107"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_lab_solvent.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue108"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_catalyst.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue109"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/craft_grower_guide.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue10a"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_hash.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue10b"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_moon_rock.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue10c"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_space_brownie.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue10d"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_shroom_tea.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue10e"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_lucid_tab.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue10f"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_blue_crystal.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue110"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_cocaine.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue111"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_heroin.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue112"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_pixie_dust.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue113"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/roll_joint.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue114"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/roll_blunt.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue115"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/dry_bud.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue116"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/mix_strain.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue117"
+   ]
+  }
+ ]
+}

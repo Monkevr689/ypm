@@ -36,6 +36,10 @@ FONT = {
     " ": ["000", "000", "000", "000", "000"], "/": ["001", "001", "010", "100", "100"],
     "!": ["010", "010", "010", "000", "010"], "(": ["010", "100", "100", "100", "010"],
     ")": ["010", "001", "001", "001", "010"], "=": ["000", "111", "000", "111", "000"],
+    "6": ["011", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "110"],
+    "%": ["101", "001", "010", "100", "101"], ",": ["000", "000", "000", "010", "100"],
+    "'": ["010", "010", "000", "000", "000"], "*": ["000", "101", "010", "101", "000"],
     ":": ["000", "010", "000", "010", "000"], ".": ["000", "000", "000", "000", "010"], "?": ["110", "001", "010", "000", "010"],
 }
 
@@ -65,6 +69,9 @@ THEMES = {
     "main": dict(base="25402f", light="4a7a58", dark="10200f", slot="142518", accent="8ae85a"),
     "list": dict(base="2e3a42", light="52646e", dark="151c20", slot="1a2328", accent="7ad0e8"),
     "dry": dict(base="6a4a2c", light="9a7048", dark="34220f", slot="3a2814", accent="f0c850"),
+    "recipe": dict(base="4a3a2a", light="7a6448", dark="241a10", slot="2a2016", accent="f0b860"),
+    "exchange": dict(base="2a3e4a", light="4e6e80", dark="121e24", slot="16242c", accent="5ae0f0"),
+    "jobs": dict(base="4a3a24", light="7a6440", dark="241a0e", slot="2a2012", accent="f8d050"),
 }
 
 
@@ -272,21 +279,43 @@ def centered_label(img, row, col, text_, th):
     label(img, cx - text_width(text_) // 2, 17 + row * 18 + 6, text_, th)
 
 
+SECTIONS = {
+    # row: (band colour, [(col, line 1, line 2), ...])  -  MUST match MainMenu.java
+    1: ("3a8a4a", [(0, "GUIDE", "HOW TO"), (3, "RECIPES", "CRAFTING"), (6, "CATALOG", "ALL DRUGS")]),
+    2: ("b08a2a", [(0, "MARKET", "BUY+SELL"), (3, "EXCHANGE", "ORES+MORE"), (6, "ORDERS", "BONUS $")]),
+    3: ("b05a2a", [(0, "JOBS", "PAID WORK"), (3, "SEND $", "TO PLAYER"), (6, "TOP 10", "RICHEST")]),
+    4: ("4a5ab0", [(0, "STRAINS", "MIX+NAME"), (3, "STATUS", "MY HIGH"), (6, "PACK", "TEXTURES")]),
+}
+
+
 def main_menu():
-    """/kush. Wallet (0,0), admin (0,8); buttons (1,1..7 odd) and (3,1..7 odd)
-    with labels under them."""
-    rows = 5
+    """/kush. Info (0,0), wallet (0,4), admin (0,8); four colour-coded rows of
+    three buttons at cols 0/3/6 with their name baked in next to them;
+    close (5,0) and the hotkey hint."""
+    rows = 6
     rng = random.Random(5)
     img, th = panel(rows, THEMES["main"], rng)
     cslot(img, 0, 0, th)
-    cslot(img, 0, 8, th)
-    for r, names in ((1, ("GUIDE", "MARKET", "CATALOG", "STRAINS")), (3, ("ORDERS", "TOP", "STATUS", "PACK"))):
-        for i, c in enumerate((1, 3, 5, 7)):
-            cslot(img, r, c, th, "big")
-            centered_label(img, r + 1, c, names[i], th)
-    leaf_y = 17 + 2
-    for x0 in (60, 105):
-        paste_icon(img, "type_hybrid", x0, leaf_y - 2, folder="icon")
+    cslot(img, 0, 4, th, "big")
+    label(img, 7 + 18 * 5 + 4, 17 + 6, "BALANCE", th)
+    for r, (band, buttons) in SECTIONS.items():
+        bc = G.rgba(band)
+        y0 = 17 + 18 * r
+        for y in range(y0, y0 + 18):
+            for x in range(5, 171):
+                img.putpixel((x, y), G.mix(img.getpixel((x, y)), bc, 0.28))
+        d = ImageDraw.Draw(img)
+        d.line((5, y0, 170, y0), fill=G.shade(bc, 0.55))
+        for x in range(2, 5):
+            for y in range(y0 + 1, y0 + 17):
+                img.putpixel((x, y), G.shade(bc, 1.1))
+        for c, l1, l2 in buttons:
+            cslot(img, r, c, th, "normal")
+            x = 7 + 18 * (c + 1) + 1
+            text(img, x, y0 + 3, l1, G.shade(bc, 1.9), shadow=G.shade(bc, 0.35))
+            text(img, x, y0 + 10, l2, G.rgba("e8e8e0"), shadow=G.shade(bc, 0.35))
+    cslot(img, 5, 0, th)
+    label(img, 7 + 18 + 4, 17 + 5 * 18 + 7, "SHIFT+F OR /KUSH = THIS MENU", th)
     player_inv(img, rows, th)
     return "main", img, rows
 
@@ -363,11 +392,80 @@ def orders():
     return "orders", img, rows
 
 
+def recipe():
+    """Recipe viewer: station (0,8); 3x3 grid rows 1-3 cols 1-3; result (2,6);
+    back (4,0), prev/page/next (4,3-5), info (4,8)."""
+    rows = 5
+    rng = random.Random(10)
+    img, th = panel(rows, THEMES["recipe"], rng)
+    label(img, 7 + 18 + 1, 17 + 6, "INGREDIENTS", th)
+    label(img, 7 + 18 * 6 + 2, 17 + 6, "MADE AT", th)
+    cslot(img, 0, 8, th)
+    for r in (1, 2, 3):
+        for c in (1, 2, 3):
+            cslot(img, r, c, th)
+    y = 17 + 18 * 2 + 1
+    paste_icon(img, "ui_arrow", 7 + 18 * 4 + 2, y, folder="icon")
+    paste_icon(img, "ui_arrow", 7 + 18 * 5 - 2, y, folder="icon")
+    cslot(img, 2, 6, th, "big")
+    centered_label(img, 3, 6, "RESULT", th)
+    cslot(img, 4, 0, th)
+    for c in (3, 4, 5):
+        cslot(img, 4, c, th)
+    cslot(img, 4, 8, th)
+    player_inv(img, rows, th)
+    return "recipe", img, rows
+
+
+def exchange():
+    """Resource exchange: info (0,0), category tabs (0,1..7), wallet (0,8);
+    rows 1-4 items; back (5,0), prev/page/next (5,3-5)."""
+    rows = 6
+    rng = random.Random(11)
+    img, th = panel(rows, THEMES["exchange"], rng)
+    cslot(img, 0, 0, th)
+    for c in range(1, 8):
+        cslot(img, 0, c, th)
+    cslot(img, 0, 8, th)
+    frame(img, 4, 17 + 18 - 1, 171, 17 + 18 * 5 + 1, th["accent"], G.shade(th["base"], 0.7))
+    for r in range(1, 5):
+        for c in range(9):
+            cslot(img, r, c, th)
+    for c in (0, 3, 4, 5):
+        cslot(img, 5, c, th)
+    label(img, 29, 17 + 5 * 18 + 4, "CLICK", th)
+    label(img, 29, 17 + 5 * 18 + 10, "= BUY", th)
+    label(img, 7 + 18 * 6 + 2, 17 + 5 * 18 + 4, "CLICK YOUR", th)
+    label(img, 7 + 18 * 6 + 2, 17 + 5 * 18 + 10, "ITEMS = SELL", th)
+    player_inv(img, rows, th)
+    return "exchange", img, rows
+
+
+JOBS = [(0, "MINER"), (2, "FARMER"), (4, "WOODCUT"), (6, "HUNTER"), (8, "GROWER")]
+
+
+def jobs():
+    """Jobs: miner (1,0), farmer (1,2), woodcutter (1,4), hunter (1,6),
+    grower (1,8) with names under them; back (3,0), earnings (3,4), info (3,8)."""
+    rows = 4
+    rng = random.Random(12)
+    img, th = panel(rows, THEMES["jobs"], rng)
+    label(img, 9, 17 + 6, "YOU GET PAID FOR YOUR WORK!", th)
+    for c, name in JOBS:
+        cslot(img, 1, c, th, "big")
+        centered_label(img, 2, c, name, th)
+    cslot(img, 3, 0, th)
+    cslot(img, 3, 4, th, "big")
+    cslot(img, 3, 8, th)
+    player_inv(img, rows, th)
+    return "jobs", img, rows
+
+
 def generate(g):
     global G
     G = g
     out = []
-    for fn in (lab, strain, roller, dealer, main_menu, list_menu, hub, dry, orders):
+    for fn in (lab, strain, roller, dealer, main_menu, list_menu, hub, dry, orders, recipe, exchange, jobs):
         name, img, rows = fn()
         G.save_png(img, f"gui/{name}")
         LAYOUTS[name] = (img.width, img.height, rows)

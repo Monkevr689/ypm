@@ -82,8 +82,8 @@ public enum ItemType {
             "<gray>and <gold>+1 quality</gold> at harvest."),
     GROWER_GUIDE("KushCraft Menu", "grower_guide", false, false,
             "<gray>Right-click to open the KushCraft menu:",
-            "<gray>guide, market, catalog, strains and more.",
-            "<dark_gray>(same as /kush)"),
+            "<gray>market, exchange, jobs, recipes, strains...",
+            "<dark_gray>(same as /kush or Shift+F)"),
     // --- blocks (placed like a block, punch to pick up) ------------------
     LAB_STATION("Drug Lab", "machine_lab_station", MachineType.LAB_STATION,
             "<gray>One station for everything:",

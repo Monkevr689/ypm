@@ -2,7 +2,16 @@ package dev.kushcraft.command;
 
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.effect.EffectType;
+import dev.kushcraft.gui.CatalogMenu;
 import dev.kushcraft.gui.DealerMenu;
+import dev.kushcraft.gui.ExchangeMenu;
+import dev.kushcraft.gui.JobsMenu;
+import dev.kushcraft.gui.LeaderboardMenu;
+import dev.kushcraft.gui.MainMenu;
+import dev.kushcraft.gui.OrdersMenu;
+import dev.kushcraft.gui.PayMenu;
+import dev.kushcraft.gui.RecipesMenu;
+import dev.kushcraft.gui.StrainsMenu;
 import dev.kushcraft.guide.Guide;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
@@ -15,14 +24,15 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * /kush - players only need "guide", "pack" and "balance"; everything else
- * happens with items and machines. The rest is for admins.
+ * /kush opens the menu (and hands out the menu book); the other sub
+ * commands are shortcuts to menu pages. give/money/reload are for admins.
  */
 public final class KushCommand implements CommandExecutor, TabCompleter {
 
@@ -40,10 +50,46 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             sub = "help";
         }
         switch (sub) {
-            case "menu" -> new dev.kushcraft.gui.MainMenu((Player) sender).open();
-            case "guide", "book" -> {
+            case "menu" -> {
+                Player p = (Player) sender;
+                giveMenuBook(p);
+                new MainMenu(p).open();
+            }
+            case "guide", "book", "handbook" -> {
                 if (sender instanceof Player p) {
-                    p.openBook(Guide.book());
+                    p.openBook(Guide.book(p));
+                }
+            }
+            case "recipes", "recipe" -> open(sender, p -> new RecipesMenu(p));
+            case "catalog" -> open(sender, p -> new CatalogMenu(p, false));
+            case "market" -> {
+                if (!plugin.getConfig().getBoolean("market.anywhere", true) && !admin) {
+                    sender.sendMessage(Text.msg("<yellow>Find a <green>Dealer Stand</green> to use the market."));
+                } else {
+                    open(sender, DealerMenu::new);
+                }
+            }
+            case "exchange", "trade" -> {
+                if (!plugin.exchange().enabled()) {
+                    sender.sendMessage(Text.msg("<red>The exchange is turned off on this server."));
+                } else {
+                    open(sender, ExchangeMenu::new);
+                }
+            }
+            case "jobs", "job" -> open(sender, JobsMenu::new);
+            case "orders" -> open(sender, OrdersMenu::new);
+            case "top" -> open(sender, LeaderboardMenu::new);
+            case "pay", "send" -> {
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(Text.msg("<red>Only players can send money."));
+                } else if (args.length < 3) {
+                    if (args.length == 1) {
+                        new PayMenu(p).open();
+                    } else {
+                        p.sendMessage(Text.msg("<red>/kush pay <player> <amount>"));
+                    }
+                } else {
+                    PayMenu.send(p, Bukkit.getPlayerExact(args[1]), args[2]);
                 }
             }
             case "pack" -> {
@@ -73,6 +119,10 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "strains" -> {
+                if (sender instanceof Player p && args.length == 1) {
+                    new StrainsMenu(p).open();
+                    return true;
+                }
                 sender.sendMessage(Text.msg("<gray>Strains (" + plugin.strains().all().size() + "):"));
                 for (Strain s : plugin.strains().all()) {
                     StringBuilder eff = new StringBuilder();
@@ -114,12 +164,15 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Text.msg("<green>KushCraft reloaded (config, strains, shop, recipes)."));
             }
             default -> {
-                sender.sendMessage(Text.msg("<green>KushCraft <gray>- type <white>/kush</white> to open the menu!"));
-                sender.sendMessage(Text.mm(" <white>/kush <gray>- main menu (market, catalog, strains, orders...)"));
-                sender.sendMessage(Text.mm(" <white>/kush guide <gray>- open the guide book"));
+                sender.sendMessage(Text.msg("<green>KushCraft <gray>- type <white>/kush</white> (or press <white>Shift+F</white>)"
+                        + " to open the menu!"));
+                sender.sendMessage(Text.mm(" <white>/kush <gray>- the menu (everything is in there)"));
+                sender.sendMessage(Text.mm(" <white>/kush market|exchange|jobs|recipes|catalog|orders|top|strains"
+                        + " <gray>- open a page directly"));
+                sender.sendMessage(Text.mm(" <white>/kush pay <player> <amount> <gray>- send money"));
+                sender.sendMessage(Text.mm(" <white>/kush guide <gray>- the handbook"));
                 sender.sendMessage(Text.mm(" <white>/kush pack <gray>- re-download the texture pack"));
                 sender.sendMessage(Text.mm(" <white>/kush balance <gray>- your money"));
-                sender.sendMessage(Text.mm(" <white>/kush strains <gray>- list every strain"));
                 if (admin) {
                     sender.sendMessage(Text.mm(" <red>/kush give <player> <item> [amount] [strain] [quality]"));
                     sender.sendMessage(Text.mm(" <red>/kush money <player> <amount> <gray>- set balance"));
@@ -129,6 +182,29 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             }
         }
         return true;
+    }
+
+    private static void open(CommandSender sender, java.util.function.Function<Player, dev.kushcraft.gui.Menu> menu) {
+        if (sender instanceof Player p) {
+            menu.apply(p).open();
+        } else {
+            sender.sendMessage(Text.msg("<red>Only players can open menus."));
+        }
+    }
+
+    /** /kush hands out the KushCraft Menu book once, so the menu is always one click away. */
+    private void giveMenuBook(Player p) {
+        if (!plugin.getConfig().getBoolean("menu.give-book-on-command", true)) {
+            return;
+        }
+        for (ItemStack it : p.getInventory().getContents()) {
+            if (Items.is(it, ItemType.GROWER_GUIDE)) {
+                return;
+            }
+        }
+        InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
+        p.sendMessage(Text.msg("<gray>Here's your <green>KushCraft Menu</green> book - right-click it any time."
+                + " <dark_gray>(or Shift+F)"));
     }
 
     private void give(CommandSender sender, String[] args) {
@@ -189,7 +265,8 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
-            out.addAll(List.of("menu", "guide", "pack", "balance", "strains", "help"));
+            out.addAll(List.of("menu", "market", "exchange", "jobs", "recipes", "catalog", "orders", "top", "pay",
+                    "strains", "guide", "pack", "balance", "help"));
             if (admin) {
                 out.addAll(List.of("give", "money", "shop", "reload"));
             }
@@ -207,6 +284,8 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             } else if (args.length == 6) {
                 out.addAll(List.of("1", "2", "3", "4", "5"));
             }
+        } else if (args[0].equalsIgnoreCase("pay") && args.length == 2) {
+            Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (admin && (args[0].equalsIgnoreCase("money") || args[0].equalsIgnoreCase("balance")) && args.length == 2) {
             Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         }

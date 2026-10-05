@@ -7,9 +7,9 @@ author: KushCraft
 softdepend: [Vault]
 commands:
   kush:
-    description: KushCraft guide, resource pack and admin tools
+    description: Opens the KushCraft menu (market, exchange, jobs, recipes, strains...)
     usage: /kush help
-    aliases: [kc, kushcraft]
+    aliases: [k, kc, kushcraft]
 permissions:
   kushcraft.use:
     description: Use KushCraft items, machines and menus

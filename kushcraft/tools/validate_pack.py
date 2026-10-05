@@ -65,6 +65,48 @@ def check_model(ref, seen):
         check_model(m["parent"], seen)
 
 
+def check_menus():
+    """Every menu background used by Java has a glyph in the same order as
+    tools/pack_meta.py, and the image has the right number of rows."""
+    sys.path.insert(0, HERE)
+    import pack_meta
+    gui_src = open(os.path.join(JAVA, "dev", "kushcraft", "gui", "GuiFont.java"), encoding="utf-8").read()
+    m = re.search(r"GUIS = List\.of\(([^;]*)\);", gui_src)
+    java_guis = re.findall(r'"([a-z_]+)"', m.group(1)) if m else []
+    if java_guis != pack_meta.GUIS:
+        errors.append(f"GuiFont.GUIS {java_guis} != pack_meta.GUIS {pack_meta.GUIS}")
+    gui_dir = os.path.join(JAVA, "dev", "kushcraft", "gui")
+    for fn in sorted(os.listdir(gui_dir)):
+        src = open(os.path.join(gui_dir, fn), encoding="utf-8").read()
+        for rows, name in re.findall(r'super\(player, (\d+), "([a-z_]+)"', src):
+            if name not in pack_meta.GUIS:
+                errors.append(f"{fn}: menu background '{name}' is not in GuiFont.GUIS")
+                continue
+            path = os.path.join(ASSETS, "kush", "textures", "gui", name + ".png")
+            if not os.path.exists(path):
+                errors.append(f"{fn}: background image gui/{name}.png missing")
+                continue
+            h = Image.open(path).height
+            if h != 114 + int(rows) * 18:
+                errors.append(f"{fn}: {rows}-row menu but gui/{name}.png is drawn for {(h - 114) // 18} rows")
+
+
+def check_recipe_book():
+    """Recipe images used in the handbook exist in the book font."""
+    index_path = os.path.join(PROJECT, "src", "main", "resources", "recipe_book.json")
+    if not os.path.exists(index_path):
+        errors.append("recipe_book.json missing (run tools/gen_assets.py)")
+        return
+    index = json.load(open(index_path, encoding="utf-8"))
+    font = json.load(open(os.path.join(ASSETS, "kush", "font", "book.json"), encoding="utf-8"))
+    chars = set()
+    for p in font["providers"]:
+        chars.update(p.get("chars", []))
+    for e in index["recipes"]:
+        if e["char"] not in chars:
+            errors.append(f"recipe image for {e['id']} has no glyph in font/book.json")
+
+
 def main():
     item_defs = set()
     seen = set()
@@ -74,9 +116,12 @@ def main():
         d = json.load(open(os.path.join(items_dir, fn)))
         check_model(d["model"]["model"], seen)
 
-    font = json.load(open(os.path.join(ASSETS, "kush", "font", "gui.json")))
-    for p in font["providers"]:
-        if p["type"] == "bitmap":
+    font_dir = os.path.join(ASSETS, "kush", "font")
+    for fn in sorted(os.listdir(font_dir)):
+        font = json.load(open(os.path.join(font_dir, fn)))
+        for p in font["providers"]:
+            if p["type"] != "bitmap":
+                continue
             _, path = res(p["file"], "textures", "")
             if not os.path.exists(path):
                 errors.append(f"font bitmap missing {p['file']}")
@@ -86,6 +131,11 @@ def main():
                 errors.append(f"font {p['file']}: ascent > height")
             if im.height != p["height"]:
                 errors.append(f"font {p['file']}: height {p['height']} != image {im.height}")
+            if im.width > 256 or im.height > 256:
+                errors.append(f"font {p['file']}: glyph larger than 256px")
+
+    check_menus()
+    check_recipe_book()
 
     meta = json.load(open(os.path.join(PACK, "pack.mcmeta")))
     pk = meta.get("pack")

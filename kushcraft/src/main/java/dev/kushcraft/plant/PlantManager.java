@@ -4,6 +4,7 @@ import dev.kushcraft.KushCraft;
 import dev.kushcraft.Keys;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
+import dev.kushcraft.jobs.Jobs;
 import dev.kushcraft.machine.Machine;
 import dev.kushcraft.machine.MachineType;
 import dev.kushcraft.strain.Climate;
@@ -281,38 +282,37 @@ public final class PlantManager {
         int q = cond.quality;
         ThreadLocalRandom r = ThreadLocalRandom.current();
         List<ItemStack> drops = new ArrayList<>();
+        String msg;
         if (p.kind() == Plant.Kind.CANNABIS) {
             Strain s = plugin.strains().getOrDefault(p.strainId());
             int buds = 2 + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + r.nextInt(2) + (p.fertilized() ? 1 : 0);
             int seeds = 1 + (r.nextDouble() < 0.4 ? 1 : 0);
             drops.add(Items.strainItem(ItemType.BUD_FRESH, s, q, buds));
             drops.add(Items.strainItem(ItemType.SEED_PACK, s, 3, seeds));
-            if (who != null) {
-                who.sendActionBar(Text.mm("<green>Harvested " + buds + "x " + s.colored() + " <gray>" + Text.stars(q)));
-            }
+            msg = "<green>Harvested " + buds + "x " + s.colored() + " <gray>" + Text.stars(q);
         } else if (p.kind() == Plant.Kind.COCA) {
             int leaves = 3 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
             drops.add(Items.create(ItemType.COCA_LEAVES, leaves));
             drops.add(Items.create(ItemType.COCA_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
-            if (who != null) {
-                who.sendActionBar(Text.mm("<green>Picked " + leaves + " Coca Leaves <gray>" + Text.stars(q)));
-            }
+            msg = "<green>Picked " + leaves + " Coca Leaves <gray>" + Text.stars(q);
         } else if (p.kind() == Plant.Kind.POPPY) {
             int pods = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
             drops.add(Items.create(ItemType.POPPY_POD, pods));
             drops.add(Items.create(ItemType.POPPY_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
-            if (who != null) {
-                who.sendActionBar(Text.mm("<green>Picked " + pods + " Poppy Pods <gray>" + Text.stars(q)));
-            }
+            msg = "<green>Picked " + pods + " Poppy Pods <gray>" + Text.stars(q);
         } else {
             int shrooms = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (p.fertilized() ? 1 : 0);
             drops.add(Items.create(ItemType.MAGIC_MUSHROOM, shrooms));
             if (r.nextDouble() < 0.4) {
                 drops.add(Items.create(ItemType.MUSHROOM_SPORES, 1));
             }
-            if (who != null) {
-                who.sendActionBar(Text.mm("<gold>Picked " + shrooms + " Magic Mushrooms"));
-            }
+            msg = "<gold>Picked " + shrooms + " Magic Mushrooms";
+        }
+        if (who != null) {
+            // Grower job: paid for every harvest
+            double earned = plugin.jobs().pay(who, Jobs.Job.GROWER,
+                    plugin.jobs().rate(Jobs.Job.GROWER, p.kind().name()), false);
+            who.sendActionBar(Text.mm(msg + (earned > 0 ? " <gold>+" + plugin.economy().format(earned) : "")));
         }
         for (ItemStack it : drops) {
             c.getWorld().dropItemNaturally(c.clone().add(0, 0.4, 0), it);

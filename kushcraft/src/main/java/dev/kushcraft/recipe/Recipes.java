@@ -19,8 +19,28 @@ import java.util.List;
 /** Crafting table recipes for machines and supplies (all vanilla ingredients). */
 public final class Recipes {
 
-    /** For the guide book: item -> human readable recipe. */
-    public record Info(ItemType result, int amount, String[] shape, String legend) {
+    /**
+     * For the guide and the recipe viewer. grid: 9 ingredient names (a lower
+     * case material name, "planks" or null for an empty cell); shapeless
+     * recipes fill it from the top-left.
+     */
+    public record Info(ItemType result, int amount, String[] shape, String legend, String[] grid) {
+
+        /** Same format as the "sig" written by tools/recipe_images.py. */
+        public String signature() {
+            List<String> cells = new ArrayList<>();
+            for (String c : grid) {
+                if (shape != null) {
+                    cells.add(c == null ? "-" : c);
+                } else if (c != null) {
+                    cells.add(c);
+                }
+            }
+            if (shape == null) {
+                java.util.Collections.sort(cells);
+            }
+            return "craft:kush:" + result.id() + "x" + amount + ":" + String.join(",", cells);
+        }
     }
 
     private static final List<NamespacedKey> KEYS = new ArrayList<>();
@@ -81,34 +101,45 @@ public final class Recipes {
         ItemStack result = Items.create(type, amount);
         ShapedRecipe r = new ShapedRecipe(key, result);
         r.shape(shape);
+        java.util.Map<Character, String> names = new java.util.HashMap<>();
         for (int i = 0; i < pairs.length; i += 2) {
             char c = (Character) pairs[i];
             Object v = pairs[i + 1];
             if (v instanceof Material m) {
                 r.setIngredient(c, m);
+                names.put(c, m.name().toLowerCase(java.util.Locale.ROOT));
             } else {
                 r.setIngredient(c, (RecipeChoice) v);
+                names.put(c, "planks");
+            }
+        }
+        String[] grid = new String[9];
+        for (int row = 0; row < shape.length; row++) {
+            for (int col = 0; col < shape[row].length(); col++) {
+                grid[row * 3 + col] = names.get(shape[row].charAt(col));
             }
         }
         r.setCategory(CraftingBookCategory.MISC);
         r.setGroup("kushcraft");
         if (Bukkit.addRecipe(r)) {
             KEYS.add(key);
-            INFO.add(new Info(type, amount, shape, legend));
+            INFO.add(new Info(type, amount, shape, legend, grid));
         }
     }
 
     private static void shapeless(KushCraft plugin, ItemType type, int amount, String legend, Material... in) {
         NamespacedKey key = new NamespacedKey(plugin, type.id());
         ShapelessRecipe r = new ShapelessRecipe(key, Items.create(type, amount));
-        for (Material m : in) {
-            r.addIngredient(m);
+        String[] grid = new String[9];
+        for (int i = 0; i < in.length; i++) {
+            r.addIngredient(in[i]);
+            grid[i] = in[i].name().toLowerCase(java.util.Locale.ROOT);
         }
         r.setCategory(CraftingBookCategory.MISC);
         r.setGroup("kushcraft");
         if (Bukkit.addRecipe(r)) {
             KEYS.add(key);
-            INFO.add(new Info(type, amount, null, legend));
+            INFO.add(new Info(type, amount, null, legend, grid));
         }
     }
 }

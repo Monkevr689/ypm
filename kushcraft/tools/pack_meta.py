@@ -12,8 +12,11 @@ for i, n in enumerate((1, 2, 4, 8, 16, 32, 64, 128, 256)):
     SPACES[chr(0xF801 + i)] = -n
     SPACES[chr(0xF821 + i)] = n
 
-GUI_GLYPHS = {"lab": "\ue000", "strain": "\ue001", "roller": "\ue002", "dealer": "\ue003", "main": "\ue004",
-              "list": "\ue005", "hub": "\ue006", "dry": "\ue007", "orders": "\ue008"}
+# Menu backgrounds in glyph order: the n-th one is drawn by U+E000+n.
+# Must be the same list as GUIS in dev.kushcraft.gui.GuiFont (validate_pack.py checks).
+GUIS = ["lab", "strain", "roller", "dealer", "main", "list", "hub", "dry", "orders",
+        "recipe", "exchange", "jobs"]
+GUI_GLYPHS = {name: chr(0xE000 + i) for i, name in enumerate(GUIS)}
 
 
 def generate(g):

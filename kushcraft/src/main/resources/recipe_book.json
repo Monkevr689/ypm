@@ -1,0 +1,145 @@
+{
+ "lines": 7,
+ "recipes": [
+  {
+   "id": "craft_lab_station",
+   "char": "",
+   "title": "Drug Lab",
+   "sig": "craft:kush:lab_stationx1:glass_bottle,brewing_stand,glass_bottle,iron_ingot,cauldron,iron_ingot,iron_ingot,-,iron_ingot"
+  },
+  {
+   "id": "craft_grow_lamp",
+   "char": "",
+   "title": "Grow Lamp",
+   "sig": "craft:kush:grow_lampx1:iron_ingot,iron_ingot,iron_ingot,glowstone_dust,redstone_lamp,glowstone_dust,-,iron_ingot,-"
+  },
+  {
+   "id": "craft_planter_box",
+   "char": "",
+   "title": "Planter",
+   "sig": "craft:kush:planter_boxx2:planks,bone_meal,planks,planks,dirt,planks,planks,planks,planks"
+  },
+  {
+   "id": "craft_dealer",
+   "char": "",
+   "title": "Dealer Stand",
+   "sig": "craft:kush:dealerx1:emerald,emerald,emerald,planks,chest,planks,planks,planks,planks"
+  },
+  {
+   "id": "craft_bong",
+   "char": "",
+   "title": "Bong",
+   "sig": "craft:kush:bongx1:-,glass,-,-,glass,iron_nugget,glass,glass_bottle,glass"
+  },
+  {
+   "id": "craft_rolling_papers",
+   "char": "",
+   "title": "Rolling Papers",
+   "sig": "craft:kush:rolling_papersx6:paper,paper,paper,sugar_cane"
+  },
+  {
+   "id": "craft_blunt_wrap",
+   "char": "",
+   "title": "Blunt Wrap",
+   "sig": "craft:kush:blunt_wrapx3:cocoa_beans,dried_kelp,paper"
+  },
+  {
+   "id": "craft_fertilizer",
+   "char": "",
+   "title": "Fertilizer",
+   "sig": "craft:kush:fertilizerx3:bone_meal,bone_meal,rotten_flesh"
+  },
+  {
+   "id": "craft_lab_solvent",
+   "char": "",
+   "title": "Lab Solvent",
+   "sig": "craft:kush:lab_solventx2:glass_bottle,gunpowder,redstone,sugar"
+  },
+  {
+   "id": "craft_catalyst",
+   "char": "",
+   "title": "Catalyst",
+   "sig": "craft:kush:catalystx2:amethyst_shard,glowstone_dust,redstone"
+  },
+  {
+   "id": "craft_grower_guide",
+   "char": "",
+   "title": "KushCraft Menu",
+   "sig": "craft:kush:grower_guidex1:book,wheat_seeds"
+  },
+  {
+   "id": "cook_hash",
+   "char": "",
+   "title": "Hash",
+   "sig": "cook:kush:hashx2:30s:kush:bud_dried*4,ice*1"
+  },
+  {
+   "id": "cook_moon_rock",
+   "char": "",
+   "title": "Moon Rock",
+   "sig": "cook:kush:moon_rockx1:45s:kush:bud_dried*1,kush:hash*1,honey_bottle*1"
+  },
+  {
+   "id": "cook_space_brownie",
+   "char": "",
+   "title": "Space Brownie",
+   "sig": "cook:kush:space_browniex3:40s:kush:bud_dried*2,cocoa_beans*1,wheat*2,sugar*1"
+  },
+  {
+   "id": "cook_shroom_tea",
+   "char": "",
+   "title": "Shroom Tea",
+   "sig": "cook:kush:shroom_teax1:20s:kush:magic_mushroom*2,glass_bottle*1"
+  },
+  {
+   "id": "cook_lucid_tab",
+   "char": "",
+   "title": "LSD",
+   "sig": "cook:kush:lucid_tabx6:60s:kush:lab_solvent*1,kush:magic_mushroom*2,paper*1"
+  },
+  {
+   "id": "cook_blue_crystal",
+   "char": "",
+   "title": "Meth",
+   "sig": "cook:kush:blue_crystalx4:90s:kush:lab_solvent*1,kush:catalyst*1,lapis_lazuli*4,sugar*2"
+  },
+  {
+   "id": "cook_cocaine",
+   "char": "",
+   "title": "Cocaine",
+   "sig": "cook:kush:cocainex4:60s:kush:coca_leaves*8,kush:lab_solvent*1,sugar*1"
+  },
+  {
+   "id": "cook_heroin",
+   "char": "",
+   "title": "Heroin",
+   "sig": "cook:kush:heroinx3:75s:kush:poppy_pod*6,kush:lab_solvent*1,kush:catalyst*1"
+  },
+  {
+   "id": "cook_pixie_dust",
+   "char": "",
+   "title": "Pixie Dust",
+   "sig": "cook:kush:pixie_dustx4:60s:kush:lab_solvent*1,glowstone_dust*4,sugar*2"
+  },
+  {
+   "id": "roll_joint",
+   "char": "",
+   "title": "Joint"
+  },
+  {
+   "id": "roll_blunt",
+   "char": "",
+   "title": "Blunt"
+  },
+  {
+   "id": "dry_bud",
+   "char": "",
+   "title": "Dried Bud"
+  },
+  {
+   "id": "mix_strain",
+   "char": "",
+   "title": "Your own strain"
+  }
+ ]
+}

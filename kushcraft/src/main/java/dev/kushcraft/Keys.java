@@ -19,6 +19,7 @@ public final class Keys {
     public static NamespacedKey BALANCE;
     public static NamespacedKey GOT_GUIDE;
     public static NamespacedKey ICON;
+    public static NamespacedKey PLACED;
 
     private Keys() {
     }
@@ -34,6 +35,7 @@ public final class Keys {
         BALANCE = new NamespacedKey(plugin, "balance");
         GOT_GUIDE = new NamespacedKey(plugin, "got_guide");
         ICON = new NamespacedKey(plugin, "icon");
+        PLACED = new NamespacedKey(plugin, "placed");
     }
 
     /** kush:&lt;path&gt; - a model / item definition from our resource pack. */

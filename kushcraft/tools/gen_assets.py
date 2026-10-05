@@ -219,9 +219,11 @@ def main():
     import machines
     import gui
     import pack_meta
+    import recipe_images
     plants.generate(sys.modules[__name__])
     machines.generate(sys.modules[__name__])
     gui.generate(sys.modules[__name__])
+    recipe_images.generate(sys.modules[__name__])
     pack_meta.generate(sys.modules[__name__])
 
     # preview -----------------------------------------------------------

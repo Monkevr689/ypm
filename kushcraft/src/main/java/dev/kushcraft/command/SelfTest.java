@@ -11,6 +11,7 @@ import dev.kushcraft.machine.Machine;
 import dev.kushcraft.machine.MachineType;
 import dev.kushcraft.plant.Plant;
 import dev.kushcraft.plant.PlantManager;
+import dev.kushcraft.recipe.RecipeBook;
 import dev.kushcraft.strain.Strain;
 import dev.kushcraft.strain.StrainType;
 import dev.kushcraft.util.BlockKey;
@@ -58,6 +59,9 @@ final class SelfTest {
         try {
             items();
             shop();
+            recipes();
+            exchange();
+            money();
             World w = Bukkit.getWorlds().get(0);
             Location spawn = w.getSpawnLocation();
             int bx = spawn.getBlockX() + 4, bz = spawn.getBlockZ() + 4;
@@ -65,6 +69,7 @@ final class SelfTest {
             plants(w, bx, y, bz);
             machines(w, bx + 3, y, bz);
             guide();
+            jobs(w, bx - 4, y, bz);
         } catch (Throwable t) {
             fails.add("exception: " + t);
             plugin.getLogger().log(java.util.logging.Level.SEVERE, "selftest crashed", t);
@@ -243,7 +248,101 @@ final class SelfTest {
     }
 
     private void guide() {
-        ItemStack book = Guide.book();
+        ItemStack book = Guide.book(null);
         check(book.getItemMeta() instanceof BookMeta bm && bm.getPageCount() > 10, "guide book pages");
+        List<String> pages = Guide.pages(true);
+        check(pages.size() > 30 && pages.size() <= 100, "handbook has 30-100 pages, got " + pages.size());
+        int pictures = 0;
+        for (boolean pics : new boolean[]{true, false}) {
+            for (String p : Guide.pages(pics)) {
+                String plain = dev.kushcraft.util.Text.plain(dev.kushcraft.util.Text.mm(p));
+                int lines = Guide.lines(plain);
+                check(lines <= 14, "handbook page needs " + lines + " lines (max 14): "
+                        + plain.substring(0, Math.min(40, plain.length())).replace('\n', ' '));
+            }
+        }
+        for (String p : pages) {
+            if (p.contains("<font:kush:book>")) {
+                pictures++;
+            }
+        }
+        check(pictures == RecipeBook.all().size(), "a picture page for every recipe (" + pictures + ")");
+    }
+
+    /** The recipe pictures in the resource pack must show the real recipes. */
+    private void recipes() {
+        List<RecipeBook.Entry> all = RecipeBook.all();
+        check(all.size() >= 20, "recipe book has every recipe, got " + all.size());
+        for (RecipeBook.Entry e : all) {
+            RecipeBook.Picture pic = RecipeBook.pictures().get(e.id());
+            check(pic != null, "recipe picture for " + e.id());
+            if (pic != null && e.signature() != null) {
+                check(e.signature().equals(pic.sig()), "recipe picture of " + e.id() + " is out of date: game "
+                        + e.signature() + " vs picture " + pic.sig());
+            }
+            check(e.grid().length == 9, "recipe grid " + e.id());
+        }
+        check(!RecipeBook.making(dev.kushcraft.item.ItemType.COCAINE).isEmpty(), "catalog -> recipe link");
+    }
+
+    private void exchange() {
+        var ex = plugin.exchange();
+        check(ex.enabled(), "exchange enabled with items");
+        check(ex.categories().size() >= 1 && ex.categories().size() <= 7, "exchange has 1-7 tabs");
+        for (var c : ex.categories()) {
+            for (var o : c.offers()) {
+                check(ex.sellPrice(o.material()) < ex.buyPrice(o), "exchange sells cheaper than it buys: " + o.material());
+            }
+        }
+        var diamond = ex.offer(Material.DIAMOND);
+        check(diamond != null, "exchange trades diamonds");
+        if (diamond != null) {
+            double buy = ex.buyPrice(diamond);
+            ex.bought(Material.DIAMOND, 5);
+            check(ex.buyPrice(diamond) > buy, "buying raises the price");
+            check(ex.sellPrice(Material.DIAMOND) < buy, "no profit from buying and selling back");
+            ex.sold(Material.DIAMOND, 50);
+            check(ex.buyPrice(diamond) < buy, "selling lowers the price");
+            check(ex.multiplier(Material.DIAMOND) >= plugin.getConfig().getDouble("exchange.min-price", 0.8) - 1e-9,
+                    "price stays above min-price");
+            for (int i = 0; i < 30; i++) {
+                ex.tick();
+            }
+            check(Math.abs(ex.multiplier(Material.DIAMOND) - 1) < 1e-9, "price recovers to normal");
+        }
+        check(ex.sellable(new ItemStack(Material.DIAMOND, 3)), "plain diamonds can be sold");
+        ItemStack named = new ItemStack(Material.DIAMOND);
+        named.editMeta(m -> m.customName(net.kyori.adventure.text.Component.text("x")));
+        check(!ex.sellable(named), "renamed items can't be sold");
+        check(!ex.sellable(Items.create(ItemType.COCAINE)), "KushCraft items don't sell at the exchange");
+    }
+
+    private void money() {
+        var eco = plugin.economy();
+        var a = Bukkit.getOfflinePlayer(UUID.randomUUID());
+        var b = Bukkit.getOfflinePlayer(UUID.randomUUID());
+        eco.set(a, 100);
+        eco.set(b, 0);
+        check(eco.withdraw(a, 40) && Math.abs(eco.balance(a) - 60) < 1e-6, "withdraw");
+        eco.deposit(b, 40);
+        check(Math.abs(eco.balance(b) - 40) < 1e-6, "deposit");
+        check(!eco.withdraw(a, 1000), "can't spend more than you have");
+    }
+
+    private void jobs(World w, int x, int y, int z) {
+        var jobs = plugin.jobs();
+        check(jobs.rate(dev.kushcraft.jobs.Jobs.Job.MINER, "diamond_ore") > 0, "miner pays for diamonds");
+        check(jobs.rate(dev.kushcraft.jobs.Jobs.Job.HUNTER, "ZOMBIE") > 0, "hunter pays for zombies");
+        check(jobs.rate(dev.kushcraft.jobs.Jobs.Job.GROWER, Plant.Kind.CANNABIS.name()) > 0, "grower pays for cannabis");
+        Block b = w.getBlockAt(x, y + 1, z);
+        b.setType(Material.DIAMOND_ORE);
+        check(!jobs.placed().isPlaced(b), "natural ore is not marked as placed");
+        jobs.placed().mark(b);
+        jobs.placed().mark(b.getRelative(0, 1, 0));
+        check(jobs.placed().isPlaced(b), "placed ore is remembered");
+        check(jobs.placed().unmark(b), "unmark finds the placed ore");
+        check(!jobs.placed().isPlaced(b) && jobs.placed().isPlaced(b.getRelative(0, 1, 0)), "unmark only that block");
+        jobs.placed().unmark(b.getRelative(0, 1, 0));
+        b.setType(Material.AIR);
     }
 }

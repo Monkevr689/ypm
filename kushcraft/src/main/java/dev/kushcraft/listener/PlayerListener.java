@@ -3,6 +3,7 @@ package dev.kushcraft.listener;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.Keys;
 import dev.kushcraft.effect.EffectType;
+import dev.kushcraft.gui.MainMenu;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.recipe.Recipes;
@@ -22,6 +23,7 @@ import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -52,11 +54,22 @@ public final class PlayerListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (p.isOnline()) {
                     InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
-                    p.sendMessage(Text.msg("<gray>This server runs <green>KushCraft</green>! Type <white>/kush</white>"
-                            + " or right-click the <green>KushCraft Menu</green> item to get started."));
+                    p.sendMessage(Text.msg("<gray>This server runs <green>KushCraft</green>! Type <white>/kush</white>, press"
+                            + " <white>Shift+F</white> or right-click the <green>KushCraft Menu</green> book to start."));
                 }
             }, 60L);
         }
+    }
+
+    /** Shift + F (sneak + swap hands) opens the menu from anywhere. */
+    @EventHandler(ignoreCancelled = true)
+    public void onSwapHands(PlayerSwapHandItemsEvent e) {
+        Player p = e.getPlayer();
+        if (!p.isSneaking() || !plugin.getConfig().getBoolean("menu.shift-f", true) || !p.hasPermission("kushcraft.use")) {
+            return;
+        }
+        e.setCancelled(true);
+        new MainMenu(p).open();
     }
 
     @EventHandler
