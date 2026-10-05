@@ -29,8 +29,9 @@ jobs:
       - name: Dump jars
         run: |
           cd p/libs
-          for j in paper-api-*.jar bungeecord-chat-*.jar brigadier-*.jar; do
+          for j in paper-api-*.jar; do
             echo "@@BEGIN $j"
-            base64 -w 120 "$j" | sed 's/^/@@ /'
+            base64 -w 6000 "$j" | sed 's/^/@@ /'
             echo "@@END $j"
+            sha256sum "$j"
           done
