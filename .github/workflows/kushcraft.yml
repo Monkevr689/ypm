@@ -72,7 +72,8 @@ jobs:
           echo "eula=true" > eula.txt
           printf 'online-mode=false\nlevel-type=minecraft\\:flat\nview-distance=4\nsimulation-distance=4\nspawn-protection=0\ngenerate-structures=false\n' > server.properties
           mkfifo console
-          (tail -f console | java -Xmx2G -jar paper.jar --nogui > server.log 2>&1; echo "exit=$?" >> server.log) &
+          java -Xmx2G -jar paper.jar --nogui < console > server.log 2>&1 &
+          PID=$!
           exec 3>console
           for i in $(seq 1 240); do grep -q "Done (" server.log && break; sleep 2; done
           grep -q "Done (" server.log || { tail -100 server.log; echo "::error::server did not start"; exit 1; }
@@ -85,7 +86,7 @@ jobs:
           unzip -p pack.zip pack.mcmeta
           unzip -l pack.zip | grep -q "assets/kush/items/machine_lab_station.json"
           echo "stop" >&3
-          for i in $(seq 1 60); do grep -q "^exit=" server.log && break; sleep 2; done
+          timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
 
       - name: Check log

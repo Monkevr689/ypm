@@ -84,8 +84,8 @@ public final class InteractListener implements Listener {
                 return;
             }
             if (a == Action.RIGHT_CLICK_BLOCK) {
-                if (p.isSneaking() && item != null && item.getType().isBlock() && type == null) {
-                    return; // sneak-place blocks against the machine like vanilla
+                if (p.isSneaking() && item != null && item.getType().isBlock() && (type == null || type.machine() != null)) {
+                    return; // sneak-place blocks / machines against the machine like vanilla
                 }
                 e.setCancelled(true);
                 if (!p.hasPermission("kushcraft.use")) {
@@ -94,9 +94,6 @@ public final class InteractListener implements Listener {
                 if (m.type() == dev.kushcraft.machine.MachineType.PLANTER_BOX
                         && (type == ItemType.SEED_PACK || type == ItemType.MUSHROOM_SPORES)) {
                     plant(p, item, type, b);
-                    return;
-                }
-                if (p.isSneaking() && type != null && type.machine() != null) {
                     return;
                 }
                 openMachine(p, m);

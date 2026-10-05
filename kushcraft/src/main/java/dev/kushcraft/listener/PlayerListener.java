@@ -16,6 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -110,6 +111,20 @@ public final class PlayerListener implements Listener {
         }
         if (Items.isCustom(moving)) {
             e.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onGuardedDrag(InventoryDragEvent e) {
+        int topSize = e.getView().getTopInventory().getSize();
+        if (!NO_CUSTOM.contains(e.getView().getTopInventory().getType()) || !Items.isCustom(e.getOldCursor())) {
+            return;
+        }
+        for (int raw : e.getRawSlots()) {
+            if (raw < topSize) {
+                e.setCancelled(true);
+                return;
+            }
         }
     }
 }
