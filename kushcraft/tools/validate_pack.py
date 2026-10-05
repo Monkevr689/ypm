@@ -84,8 +84,17 @@ def main():
                 errors.append(f"font {p['file']}: height {p['height']} != image {im.height}")
 
     meta = json.load(open(os.path.join(PACK, "pack.mcmeta")))
-    if "pack" not in meta:
+    pk = meta.get("pack")
+    if not isinstance(pk, dict):
         errors.append("pack.mcmeta has no pack section")
+    else:
+        if "min_format" not in pk or "max_format" not in pk:
+            errors.append("pack.mcmeta needs min_format and max_format")
+        for legacy in ("pack_format", "supported_formats"):
+            if legacy in pk:
+                errors.append(f"pack.mcmeta must not mix legacy '{legacy}' with min/max_format")
+        if "description" not in pk:
+            errors.append("pack.mcmeta has no description")
 
     # model ids used by Java
     used = set()
