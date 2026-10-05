@@ -8,34 +8,26 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
-      - name: Versions
+      - name: Resolve paper-api and deps
         run: |
-          curl -sS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml | grep -oE "<version>[^<]*</version>" | tail -40
-      - name: Pick and download
-        run: |
-          V=$(curl -sS https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml | grep -oE "<version>[^<]*</version>" | sed -E 's/<\/?version>//g' | grep -E '^26\.' | tail -1)
-          echo "PICKED=$V"
-          echo "V=$V" >> $GITHUB_ENV
-          BASE=https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/$V
-          curl -sS $BASE/maven-metadata.xml | head -40
-          SNAP=$(curl -sS $BASE/maven-metadata.xml | grep -oE "<value>[^<]*</value>" | head -1 | sed -E 's/<\/?value>//g')
-          echo "SNAP=$SNAP"
-          curl -sSfo api.jar $BASE/paper-api-$SNAP.jar || curl -sSfo api.jar $BASE/paper-api-$V.jar
-          curl -sSfo api.pom $BASE/paper-api-$SNAP.pom || curl -sSfo api.pom $BASE/paper-api-$V.pom
-          cat api.pom
-          ls -la api.jar
-      - name: Javap
-        run: |
-          mkdir x && cd x && unzip -q ../api.jar && cd ..
-          for c in org.bukkit.Bukkit org.bukkit.inventory.ItemStack org.bukkit.inventory.meta.ItemMeta org.bukkit.entity.Player org.bukkit.entity.Display org.bukkit.entity.ItemDisplay org.bukkit.entity.Interaction org.bukkit.inventory.meta.components.CustomModelDataComponent org.bukkit.boss.BossBar org.bukkit.inventory.Inventory org.bukkit.inventory.InventoryView org.bukkit.event.inventory.InventoryClickEvent org.bukkit.block.Block org.bukkit.World org.bukkit.plugin.java.JavaPlugin org.bukkit.potion.PotionEffect org.bukkit.potion.PotionEffectType org.bukkit.Sound org.bukkit.Particle org.bukkit.Material org.bukkit.inventory.ShapedRecipe org.bukkit.entity.HumanEntity org.bukkit.entity.LivingEntity org.bukkit.entity.Entity org.bukkit.command.CommandSender org.bukkit.inventory.PlayerInventory io.papermc.paper.event.player.AsyncChatEvent net.kyori.adventure.resource.ResourcePackRequest org.bukkit.event.player.PlayerResourcePackStatusEvent org.bukkit.util.Transformation org.bukkit.Registry org.bukkit.block.Biome org.bukkit.NamespacedKey org.bukkit.persistence.PersistentDataContainer org.bukkit.persistence.PersistentDataType org.bukkit.Server org.bukkit.Location org.bukkit.Chunk org.bukkit.inventory.Recipe org.bukkit.event.inventory.PrepareItemCraftEvent org.bukkit.inventory.CraftingInventory org.bukkit.inventory.RecipeChoice org.bukkit.plugin.Plugin org.bukkit.scheduler.BukkitScheduler org.bukkit.configuration.file.YamlConfiguration org.bukkit.configuration.ConfigurationSection org.bukkit.configuration.file.FileConfiguration org.bukkit.Color org.bukkit.entity.Item org.bukkit.inventory.EquipmentSlot org.bukkit.event.player.PlayerInteractEvent org.bukkit.event.player.PlayerInteractEntityEvent org.bukkit.event.entity.EntityDamageByEntityEvent; do
-            echo "=================== $c"; javap -cp api.jar -public $c 2>&1 | head -400
-          done
-      - name: List packages
-        run: |
-          unzip -l api.jar | awk '{print $4}' | grep -E '\.class$' | sed -E 's#/[^/]*$##' | sort -u | head -300
-          unzip -p api.jar paper-plugin.yml 2>/dev/null | head; unzip -l api.jar | grep -iE "META-INF/MANIFEST" ; unzip -p api.jar META-INF/MANIFEST.MF
-          javap -v -cp api.jar org.bukkit.Bukkit | grep major
+          mkdir p && cd p
+          cat > pom.xml <<'POM'
+          <project xmlns="http://maven.apache.org/POM/4.0.0">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>x</groupId><artifactId>x</artifactId><version>1</version>
+            <repositories><repository><id>papermc</id><url>https://repo.papermc.io/repository/maven-public/</url></repository></repositories>
+            <dependencies><dependency><groupId>io.papermc.paper</groupId><artifactId>paper-api</artifactId><version>26.3.build.152-beta</version></dependency></dependencies>
+          </project>
+          POM
+          mvn -q -B dependency:copy-dependencies -DoutputDirectory=libs -DincludeScope=compile
+          ls -la libs
+          mkdir -p ../out && cp -r libs ../out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-libs
+          path: out/libs
+          retention-days: 3
