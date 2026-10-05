@@ -157,9 +157,11 @@ public final class ResourcePackManager implements Listener {
                 }
                 externalSha1 = MessageDigest.getInstance("SHA-1").digest(body);
                 String hex = HexFormat.of().formatHex(externalSha1);
+                // compare the files inside, not the zip bytes (zip tools pack the same files differently)
+                boolean same = hex.equals(hashHex) || contents(body).equals(contents(zip));
                 plugin.getLogger().info("Resource pack: downloaded " + body.length / 1024 + " KB from resource-pack.url,"
-                        + " sha1 " + hex + (hex.equals(hashHex) ? " (same as this plugin's pack)" : " (custom pack)"));
-                if (!hex.equals(hashHex)) {
+                        + " sha1 " + hex + (same ? " (same as this plugin's pack)" : " (custom pack)"));
+                if (!same) {
                     plugin.getLogger().warning("The zip at resource-pack.url is not the pack this KushCraft version"
                             + " builds - new textures will be missing. Upload plugins/KushCraft/KushCraft-pack.zip"
                             + " there again (ignore this if you edited the pack on purpose).");
@@ -169,6 +171,29 @@ public final class ResourcePackManager implements Listener {
                         + " still try it, using the hash of the pack this plugin builds.");
             }
         });
+    }
+
+    /** file name -> CRC32 of every file in a zip. */
+    private static java.util.Map<String, Long> contents(byte[] data) {
+        java.util.Map<String, Long> out = new java.util.TreeMap<>();
+        try (java.util.zip.ZipInputStream in = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(data))) {
+            ZipEntry e;
+            byte[] buf = new byte[8192];
+            while ((e = in.getNextEntry()) != null) {
+                if (e.isDirectory()) {
+                    continue;
+                }
+                java.util.zip.CRC32 crc = new java.util.zip.CRC32();
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    crc.update(buf, 0, n);
+                }
+                out.put(e.getName(), crc.getValue());
+            }
+        } catch (IOException ex) {
+            return java.util.Map.of();
+        }
+        return out;
     }
 
     public void stop() {

@@ -93,7 +93,16 @@ jobs:
         working-directory: server
         run: |
           # hosted servers often cannot open port 8163: the pack is then hosted elsewhere
-          mkdir -p ../host && cp plugins/KushCraft/KushCraft-pack.zip ../host/pack.zip
+          # re-zip it with Python: different zip bytes, same files (like a re-uploaded copy)
+          mkdir -p ../host
+          python3 - <<'PY'
+          import zipfile
+          src = zipfile.ZipFile("plugins/KushCraft/KushCraft-pack.zip")
+          with zipfile.ZipFile("../host/pack.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as out:
+              for n in sorted(src.namelist()):
+                  out.writestr(n, src.read(n))
+          PY
+          cmp -s plugins/KushCraft/KushCraft-pack.zip ../host/pack.zip && echo "zips identical?" || echo "re-zipped copy differs in bytes"
           sha1sum ../host/pack.zip | cut -d' ' -f1 > ../host/sha1.txt
           python3 -m http.server 9000 --directory ../host --bind 127.0.0.1 > /dev/null 2>&1 &
           sleep 1
@@ -112,6 +121,8 @@ jobs:
           grep -iE "kushcraft|resource pack" server2.log || true
           grep -q "Resource pack: downloaded .* sha1 $(cat ../host/sha1.txt)" server2.log \
             || { echo "::error::external pack hash not computed correctly"; exit 1; }
+          grep -q "(same as this plugin's pack)" server2.log \
+            || { echo "::error::re-zipped copy of the same pack was not recognised"; exit 1; }
           if grep -q "Resource pack hosted on port" server2.log; then
             echo "::error::built-in web server must not start when resource-pack.url is set"; exit 1
           fi
