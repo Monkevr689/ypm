@@ -233,7 +233,21 @@ public final class Awards implements Listener {
                     + a.title() + "]"));
         }
         p.sendMessage(Text.msg("<" + a.color() + ">" + a.title() + " <gray>- " + a.description() + reward));
+        for (Starter s : Starter.values()) {
+            if (s.justDoneBy(p, a)) {
+                Starter next = Starter.next(p);
+                if (next != null) {
+                    p.sendMessage(Text.msg("<aqua>Next step (" + (next.ordinal() + 1) + "/" + Starter.values().length
+                            + "): <white>" + next.title() + " <gray>- " + next.how().get(0) + " " + next.how().get(1)));
+                } else {
+                    p.sendMessage(Text.msg("<aqua>You know the basics now! <gray>Breed strains (Drug Lab > Mix),"
+                            + " start a cartel and climb Top Dealers."));
+                }
+                break;
+            }
+        }
     }
+
 
     private int add(Player p, String stat, int n) {
         Data d = of(p.getUniqueId());
@@ -287,6 +301,14 @@ public final class Awards implements Listener {
     public void labLevel(Player p, int level, int max) {
         if (level >= max) {
             grant(p, Award.MAX_LAB);
+        }
+    }
+
+    /** A worker was hired (count = how many the player has now). */
+    public void hired(Player p, int count) {
+        grant(p, Award.HIRED);
+        if (count >= 4) {
+            grant(p, Award.WORKFORCE);
         }
     }
 

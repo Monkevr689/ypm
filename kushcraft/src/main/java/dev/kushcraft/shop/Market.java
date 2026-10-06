@@ -45,6 +45,8 @@ public final class Market {
     private final List<Order> orders = new ArrayList<>();
     private ItemType hot;
     private long hotUntil;
+    private double boost = 1;
+    private long boostUntil;
     private int nextId = 1;
     private boolean dirty;
 
@@ -75,6 +77,8 @@ public final class Market {
         }
         hot = ItemType.parse(y.getString("hot.item"));
         hotUntil = y.getLong("hot.until");
+        boost = y.getDouble("boost.multiplier", 1);
+        boostUntil = y.getLong("boost.until");
         nextId = y.getInt("next-id", 1);
         for (Map<?, ?> m : y.getMapList("orders")) {
             ItemType t = ItemType.parse(String.valueOf(m.get("item")));
@@ -94,6 +98,10 @@ public final class Market {
         if (hot != null) {
             y.set("hot.item", hot.id());
             y.set("hot.until", hotUntil);
+        }
+        if (boost() > 1) {
+            y.set("boost.multiplier", boost);
+            y.set("boost.until", boostUntil);
         }
         y.set("next-id", nextId);
         List<Map<String, Object>> list = new ArrayList<>();
@@ -210,13 +218,78 @@ public final class Market {
         return Math.max(0, (hotUntil - System.currentTimeMillis()) / 60_000L);
     }
 
-    /** Price multiplier right now (demand x hot bonus). */
+    /** Price multiplier right now (demand x hot bonus x market boom). */
     public double multiplier(ItemType t) {
-        double m = demand(t);
+        double m = demand(t) * boost();
         if (isHot(t)) {
             m *= plugin.getConfig().getDouble("market.hot-item-bonus", 1.5);
         }
         return m;
+    }
+
+    /**
+     * Every item sold lowers the price of the next one, so a big pile sells
+     * for less than (amount x today's price). Returns the average price of
+     * {@code amount} items after {@code already} were sold in the same go,
+     * as a fraction of today's price.
+     */
+    public double bulkFactor(ItemType t, int already, int amount) {
+        if (amount <= 0) {
+            return 1;
+        }
+        double drop = plugin.getConfig().getDouble("market.demand-drop", 0.01);
+        double min = plugin.getConfig().getDouble("market.min-price", 0.5);
+        double d = demand(t);
+        double sum = 0;
+        for (int k = already; k < already + amount; k++) {
+            sum += Math.max(Math.min(min, d), d - drop * k);
+        }
+        return sum / amount / d;
+    }
+
+    /** A market boom (admin panel): every price x multiplier for a while. */
+    public double boost() {
+        return System.currentTimeMillis() < boostUntil ? boost : 1;
+    }
+
+    public long boostMinutesLeft() {
+        return Math.max(0, (boostUntil - System.currentTimeMillis()) / 60_000L);
+    }
+
+    public void startBoost(double multiplier, int minutes) {
+        boost = Math.max(1, multiplier);
+        boostUntil = minutes <= 0 ? 0 : System.currentTimeMillis() + minutes * 60_000L;
+        dirty = true;
+    }
+
+    /** Picks a new hot item now (admin panel). */
+    public void rerollHot() {
+        hotUntil = 0;
+        tick();
+    }
+
+    /** All prices back to normal (admin panel). */
+    public void resetPrices() {
+        demand.clear();
+        dirty = true;
+    }
+
+    /** New contracts (admin panel). */
+    public void newOrders() {
+        orders.clear();
+        tick();
+    }
+
+    /** Products selling below 85% right now, cheapest first. */
+    public List<ItemType> flooded() {
+        List<ItemType> out = new ArrayList<>();
+        for (Map.Entry<ItemType, Double> e : demand.entrySet()) {
+            if (e.getValue() < 0.85 && plugin.shop().basePrice(e.getKey()) > 0) {
+                out.add(e.getKey());
+            }
+        }
+        out.sort(java.util.Comparator.comparingDouble(this::demand));
+        return out;
     }
 
     /** "<green>100%" style text for lore. */

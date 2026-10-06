@@ -14,7 +14,8 @@ for i, n in enumerate((1, 2, 4, 8, 16, 32, 64, 128, 256)):
 
 # Menu backgrounds in glyph order: the n-th one is drawn by U+E000+n.
 # Must be the same list as GUIS in dev.kushcraft.gui.GuiFont (validate_pack.py checks).
-GUIS = ["shop", "drugs", "trade", "cartel", "top", "awards", "cook", "roll", "dry", "mix", "recipe", "list"]
+GUIS = ["shop", "drugs", "trade", "cartel", "top", "awards", "cook", "roll", "dry", "mix", "recipe", "list",
+        "gear", "worker", "guide", "admin"]
 GUI_GLYPHS = {name: chr(0xE000 + i) for i, name in enumerate(GUIS)}
 
 

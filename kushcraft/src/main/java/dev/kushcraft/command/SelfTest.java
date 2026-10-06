@@ -75,6 +75,7 @@ final class SelfTest {
             int y = w.getHighestBlockYAt(bx, bz);
             plants(w, bx, y, bz);
             machines(w, bx + 3, y, bz);
+            workers(w, bx + 8, y, bz);
             guide();
             jobs(w, bx - 4, y, bz);
         } catch (Throwable t) {
@@ -116,23 +117,26 @@ final class SelfTest {
         check(Dose.strain(s, 5, 60, 10).effects().size() == s.effects().size(), "dose effects");
         check(GuiFont.space(-169).length() == 4, "negative space builder");
         check(LabRecipe.values().length == 21, "lab recipes");
+        int seconds = 0;
         for (LabRecipe r : LabRecipe.values()) {
-            check(r.ingredients().size() <= 2, "easy recipe (1-2 ingredients): " + r);
+            check(r.ingredients().size() <= 3, "recipe needs 1-3 kinds of things: " + r);
             int count = 0;
             for (LabRecipe.Ingredient in : r.ingredients()) {
                 check(in.custom() != ItemType.CATALYST, "no catalyst needed: " + r);
                 count += in.amount();
             }
-            check(count <= 5, "cheap recipe (5 items at most): " + r);
-            check(r.seconds() <= 40, "quick recipe (40s at most): " + r);
+            check(count <= 8, "recipe needs 8 items at most: " + r);
+            check(r.seconds() <= 60, "recipe takes a minute at most: " + r);
+            seconds += r.seconds();
         }
+        check(seconds / LabRecipe.values().length >= 30, "cooking takes some effort (30s+ on average)");
         check(LabRecipe.LUCID_TAB.ingredients().stream().anyMatch(i -> i.custom() == ItemType.ERGOT),
                 "LSD is made from ergot");
         check(LabRecipe.ERGOT.ingredients().stream().anyMatch(i -> i.vanilla() == Material.WHEAT),
                 "ergot comes from wheat");
         for (ItemType t : ItemType.values()) {
             if (!t.retired() && dev.kushcraft.catalog.Catalog.of(t) == null
-                    && t.machine() == null) {
+                    && t.machine() == null && dev.kushcraft.worker.WorkerType.of(t) == null) {
                 // every non-block item should be explained in the catalog
                 check(false, "catalog entry for " + t);
             }
@@ -146,7 +150,8 @@ final class SelfTest {
         check(!plugin.shop().buyEntries().isEmpty(), "shop has buy entries");
         var shopStrains = plugin.strains().shopStrains();
         check(shopStrains.size() >= 20, "20+ strains for sale, got " + shopStrains.size());
-        check(plugin.shop().seeds().size() <= 27 && plugin.shop().gear().size() <= 9, "shop fits its rows");
+        check(plugin.shop().seeds().size() <= 36 && plugin.shop().gear().size() <= 18
+                && plugin.shop().hires().size() == dev.kushcraft.worker.WorkerType.values().length, "shop fits its rows");
         for (Strain s : shopStrains) {
             check(plugin.shop().seeds().stream().anyMatch(e -> s.id().equals(e.strain())), "seeds for sale: " + s.id());
         }
@@ -158,7 +163,10 @@ final class SelfTest {
                 .average().orElse(1e9);
         check(epicAvg > commonAvg, "epic seeds cost more than common ones");
         for (var e : plugin.shop().gear()) {
-            check(e.price() <= 400, "gear is cheap: " + e.type() + " " + e.price());
+            check(e.price() <= 800, "gear is affordable: " + e.type() + " " + e.price());
+        }
+        for (var e : plugin.shop().hires()) {
+            check(e.price() >= 1000, "workers cost real money: " + e.type() + " " + e.price());
         }
         for (var e : plugin.shop().buyEntries()) {
             check(Items.type(plugin.shop().create(e)) == e.type(), "shop item " + e.type());
@@ -179,6 +187,20 @@ final class SelfTest {
             check(o.reward() >= plugin.shop().basePrice(o.type()) * o.amount(), "order pays a bonus: " + o.type());
         }
         check(plugin.market().hot() != null, "a hot item is picked");
+        // selling a big pile pays less per item than selling one
+        double one = plugin.market().bulkFactor(ItemType.HEROIN, 0, 1);
+        double pile = plugin.market().bulkFactor(ItemType.HEROIN, 0, 200);
+        check(one > 0.99 && pile < 0.8 && pile >= plugin.getConfig().getDouble("market.min-price", 0.4) - 1e-9,
+                "dumping 200 of one thing pays less (" + pile + ")");
+        check(plugin.market().bulkFactor(ItemType.HEROIN, 100, 100) < plugin.market().bulkFactor(ItemType.HEROIN, 0, 100),
+                "the second hundred pays less than the first");
+        double base = plugin.shop().sellPrice(Items.create(ItemType.HEROIN));
+        plugin.market().startBoost(1.5, 5);
+        check(plugin.shop().sellPrice(Items.create(ItemType.HEROIN)) > base * 1.4, "a market boom raises prices");
+        plugin.market().startBoost(1, 0);
+        check(plugin.market().boost() == 1, "the boom can be stopped");
+        plugin.market().resetPrices();
+        check(plugin.market().demand(ItemType.COCAINE) == 1 && plugin.market().flooded().isEmpty(), "admin price reset");
         for (var e : plugin.shop().buyEntries()) {
             check(!e.type().retired(), "retired block not sold: " + e.type());
         }
@@ -309,6 +331,110 @@ final class SelfTest {
         }
     }
 
+    /** A Farmhand harvests and replants, a Dryer fetches, hangs and collects - all for one owner. */
+    private void workers(World w, int x, int y, int z) {
+        var ws = plugin.workers();
+        var eco = plugin.economy();
+        UUID boss = UUID.randomUUID();
+        var owner = Bukkit.getOfflinePlayer(boss);
+        eco.set(owner, 1000);
+        check(ws.enabled() && ws.maxPerPlayer() >= 1, "workers are on");
+        // a ripe plant on farmland, an empty farmland next to it, the farmhand standing beside them
+        for (int dx = -1; dx <= 6; dx++) {
+            for (int dz = -1; dz <= 4; dz++) {
+                w.getBlockAt(x + dx, y, z + dz).setType(Material.STONE);
+                w.getBlockAt(x + dx, y + 1, z + dz).setType(Material.AIR);
+                w.getBlockAt(x + dx, y + 2, z + dz).setType(Material.AIR);
+            }
+        }
+        w.getBlockAt(x, y, z).setType(Material.FARMLAND);
+        w.getBlockAt(x, y, z + 2).setType(Material.FARMLAND);
+        Strain s = plugin.strains().get("og_kush");
+        if (s == null) {
+            s = plugin.strains().all().iterator().next();
+        }
+        BlockKey key = BlockKey.of(w.getBlockAt(x, y + 1, z));
+        Plant ripe = plugin.plants().plantAt(key, Plant.Kind.CANNABIS, s, boss);
+        ripe.growth(100);
+        var farm = ws.hireAt(new Location(w, x + 2.5, y + 1, z + 0.5), dev.kushcraft.worker.WorkerType.FARMHAND, boss, 1);
+        check(ws.of(boss).contains(farm), "farmhand hired");
+        check(farm.entityId() != null && Bukkit.getEntity(farm.entityId()) instanceof org.bukkit.entity.Mannequin,
+                "the farmhand is a mannequin in the world");
+        if (farm.entityId() != null && Bukkit.getEntity(farm.entityId()) != null) {
+            check(ws.fromEntity(Bukkit.getEntity(farm.entityId())) == farm, "mannequin -> worker lookup");
+        }
+        check(ws.workNow(farm), "the farmhand harvests a ripe plant");
+        Plant again = plugin.plants().at(key);
+        check(again != null && again != ripe && !again.mature() && s.id().equals(again.strainId())
+                && boss.equals(again.owner()), "and plants it again");
+        int fresh = 0;
+        for (ItemStack it : farm.satchel().getStorageContents()) {
+            if (Items.type(it) == ItemType.BUD_FRESH) {
+                fresh += it.getAmount();
+            }
+        }
+        check(fresh > 0, "the harvest is in the satchel (" + fresh + " buds)");
+        check(eco.balance(owner) < 1000 && farm.jobs() == 1, "the farmhand was paid");
+        // seeds in the satchel go on the empty farmland
+        ws.stash(farm, List.of(Items.create(ItemType.COCA_SEEDS, 2)));
+        BlockKey empty = BlockKey.of(w.getBlockAt(x, y + 1, z + 2));
+        boolean planted = false;
+        for (int i = 0; i < 3 && !planted; i++) {
+            ws.workNow(farm);
+            planted = plugin.plants().at(empty) != null;
+        }
+        check(planted, "the farmhand plants seeds from the satchel on empty farmland");
+        // the dryer next to a Drug Lab fetches the buds, hangs them and collects them dry
+        Block labBlock = w.getBlockAt(x + 5, y + 1, z);
+        Machine lab = plugin.machines().placeAt(labBlock, MachineType.LAB_STATION, 0f, boss);
+        var dryer = ws.hireAt(new Location(w, x + 5.5, y + 1, z + 2.5), dev.kushcraft.worker.WorkerType.DRYER, boss, 1);
+        check(ws.workNow(dryer), "the dryer fetches fresh buds from the farmhand");
+        check(dryer.carried() > 0, "the dryer carries the buds");
+        check(ws.workNow(dryer) && lab.racksInUse() > 0, "the dryer hangs them on the racks");
+        lab.finishNow();
+        check(lab.racksDry() > 0, "admin finish dries the racks");
+        check(ws.workNow(dryer) && lab.racksInUse() == 0, "the dryer takes them off dry");
+        boolean dried = false;
+        for (ItemStack it : dryer.satchel().getStorageContents()) {
+            dried |= Items.type(it) == ItemType.BUD_DRIED;
+        }
+        check(dried, "dried buds in the dryer's satchel");
+        // nobody to pay: no work
+        eco.set(owner, 0);
+        ripe = plugin.plants().at(key);
+        if (ripe != null) {
+            ripe.growth(100);
+        }
+        check(!ws.workNow(farm) && farm.status().contains("Not paid"), "unpaid workers stop");
+        // level up, save, dismiss
+        ws.save();
+        var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new File(plugin.getDataFolder(), "workers.yml"));
+        check(saved.isConfigurationSection("workers." + dryer.id()) && saved.isConfigurationSection(
+                "workers." + dryer.id() + ".satchel"), "workers and their satchels are saved");
+        check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
+                dev.kushcraft.worker.WorkerType.FARMHAND, boss, 3)), "trained workers reach further");
+        check(Items.level(Items.machine(ItemType.FARMHAND, 2)) == 2, "a dismissed worker keeps their level");
+        for (var wk : ws.of(boss)) {
+            UUID ent = wk.entityId();
+            ws.dismiss(wk, null);
+            check(ent == null || Bukkit.getEntity(ent) == null || Bukkit.getEntity(ent).isDead(), "mannequin removed");
+        }
+        check(ws.of(boss).isEmpty(), "workers dismissed");
+        plugin.machines().breakMachine(lab, null);
+        for (BlockKey k : List.of(key, empty)) {
+            Plant p = plugin.plants().at(k);
+            if (p != null) {
+                plugin.plants().remove(p);
+            }
+        }
+        for (Entity e : w.getNearbyEntities(new Location(w, x + 2, y + 1, z + 1), 6, 3, 6)) {
+            if (e instanceof Item) {
+                e.remove();
+            }
+        }
+    }
+
     private void guide() {
         ItemStack book = Guide.book(null);
         check(book.getItemMeta() instanceof BookMeta bm && bm.getPageCount() > 10, "guide book pages");
@@ -356,8 +482,8 @@ final class SelfTest {
         }
         ranks.refresh();
         check(ranks.place(a) == 0, "test sellers removed");
-        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() <= 500),
-                "the Drug Lab is cheap to start with");
+        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() <= 800),
+                "the Drug Lab is affordable to start with");
     }
 
     private void breeding() {
@@ -411,7 +537,8 @@ final class SelfTest {
                 "exotic = Mythic");
         check(dev.kushcraft.strain.Rarity.MYTHIC.priceFactor() > dev.kushcraft.strain.Rarity.LEGENDARY.priceFactor(),
                 "Mythic sells for the most");
-        check(dev.kushcraft.effect.EffectType.values().length >= 28, "28 effects");
+        check(dev.kushcraft.effect.EffectType.values().length >= 34, "34 effects");
+        check(!plugin.effects().greenThumbNear(Bukkit.getWorlds().get(0).getSpawnLocation()), "no Green Thumb nearby");
     }
 
     /** The recipe pictures in the resource pack must show the real recipes. */
@@ -471,7 +598,7 @@ final class SelfTest {
     private void awards() {
         var aw = plugin.awards();
         dev.kushcraft.award.Award[] all = dev.kushcraft.award.Award.values();
-        check(all.length >= 40 && all.length <= 45, "40-45 awards (one menu page), got " + all.length);
+        check(all.length >= 45 && all.length <= 90, "45-90 awards (two menu pages), got " + all.length);
         for (var a : all) {
             check(a.parent() == null || a.parent().ordinal() < a.ordinal(), "award parent comes first: " + a);
             var adv = Bukkit.getAdvancement(dev.kushcraft.award.Awards.key(a.id()));
@@ -488,6 +615,10 @@ final class SelfTest {
         check(!aw.has(p, dev.kushcraft.award.Award.FIRST_SEED) && aw.count(p) == 0, "new players have no awards");
         check("0/100".equals(aw.progress(p, dev.kushcraft.award.Award.HARVEST_100)), "award progress");
         check(dev.kushcraft.award.Awards.drugs().size() >= 20, "drugs to try");
+        check(dev.kushcraft.award.Starter.next(p) == dev.kushcraft.award.Starter.PLANT
+                && dev.kushcraft.award.Starter.doneCount(p) == 0, "new players start at step 1");
+        check(dev.kushcraft.award.Starter.values().length == 7, "7 getting-started steps");
+        check(!plugin.getConfig().getMapList("new-players.starter-kit").isEmpty(), "a starter kit is set up");
     }
 
     /** Every page fits its layout (tools/gui.py draws the matching backgrounds). */
@@ -504,13 +635,16 @@ final class SelfTest {
             }
         }
         check(GuiFont.GUIS.contains("top"), "background for Top Dealers");
+        for (String g : List.of("gear", "worker", "guide", "admin")) {
+            check(GuiFont.GUIS.contains(g), "background for " + g);
+        }
         check(LabRecipe.values().length <= 27, "cook page fits 3 rows");
         check(dev.kushcraft.gui.TabMenu.Tab.values().length == 5, "5 main panels");
     }
 
     private void strains() {
         var all = new ArrayList<>(plugin.strains().all());
-        check(all.size() >= 25, "25+ strains, got " + all.size());
+        check(all.size() >= 34, "34+ strains, got " + all.size());
         java.util.Set<String> names = new java.util.HashSet<>(), looks = new java.util.HashSet<>();
         java.util.Set<dev.kushcraft.strain.Climate> climates = java.util.EnumSet.noneOf(dev.kushcraft.strain.Climate.class);
         java.util.Set<dev.kushcraft.strain.BudShape> shapes = java.util.EnumSet.noneOf(dev.kushcraft.strain.BudShape.class);
@@ -534,7 +668,7 @@ final class SelfTest {
         }
         check(climates.size() == dev.kushcraft.strain.Climate.values().length, "a strain for every climate");
         check(shapes.size() == dev.kushcraft.strain.BudShape.values().length, "every bud shape is used");
-        check(mythic >= 2, "Mythic strains exist");
+        check(mythic >= 3, "Mythic strains exist");
         // legacy strains (no look in strains.yml) still get one
         var legacy = dev.kushcraft.strain.Look.legacy(0xFF0000, dev.kushcraft.strain.StrainType.INDICA, "x");
         check(legacy.leaf() != 0 && legacy.pistil() == dev.kushcraft.strain.Look.DEFAULT_PISTIL, "legacy look");

@@ -2,7 +2,7 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 6
+config-version: 7
 
 # Custom textures/models are delivered with a server resource pack that
 # KushCraft builds and hosts by itself. Players get the usual
@@ -69,7 +69,7 @@ lab:
   time-multiplier: 1.0
   # Price of each Drug Lab upgrade (level 2, 3, 4, 5). Every level cooks
   # 15% faster and adds 8% chance of a bonus item.
-  upgrade-costs: [1500, 5000, 15000, 40000]
+  upgrade-costs: [2500, 8000, 20000, 50000]
 
 effects:
   # Show a boss bar with your high level and active effects.
@@ -83,7 +83,7 @@ effects:
 
 strain-maker:
   # Money every mix costs (Drug Lab > Mix; the result is random: keep it or try again).
-  cost: 150
+  cost: 250
   # Maximum strains one player can create.
   max-per-player: 25
   # Seed packs you receive for a new strain.
@@ -99,12 +99,13 @@ economy:
 market:
   # Players can open the market from /kush. false = only at a Dealer Stand.
   anywhere: true
-  # Every item sold lowers that product's price by this much (0.01 = 1%)...
-  demand-drop: 0.004
+  # Every item sold lowers that product's price by this much (0.01 = 1%),
+  # even inside one big sale, so dumping 200 of one thing pays less...
+  demand-drop: 0.006
   # ...down to this fraction of the normal price...
-  min-price: 0.5
-  # ...and it recovers this much per minute.
-  recovery-per-minute: 0.03
+  min-price: 0.4
+  # ...and it recovers this much per minute. Sell a mix of products!
+  recovery-per-minute: 0.02
   # A random "hot" product sells for extra for a while.
   hot-item-bonus: 1.5
   hot-item-minutes: 60
@@ -168,6 +169,47 @@ cartel:
 
 # Give new players the KushCraft Menu book on their first join.
 give-guide-on-first-join: true
+
+new-players:
+  # Given once on the first join, together with the menu book.
+  starter-kit:
+    - {item: seed_pack, strain: og_kush, amount: 2}
+    - {item: fertilizer, amount: 2}
+
+harvest:
+  # Harvested buds, seeds and leaves go straight into your inventory
+  # (whatever doesn't fit drops). false = they drop on the ground.
+  to-inventory: true
+  # Sneak + right-click a ripe plant to harvest every ripe plant of yours
+  # within this many blocks. 0 = off.
+  sneak-radius: 4
+  # Tell players in the action bar when their plants are ready.
+  ripe-notice: true
+
+# =====================================================================
+#  WORKERS  (Shop > Gear & Workers)
+#  Hire people who work your farm: a Farmhand harvests your ripe plants
+#  and plants a seed from the harvest again (and plants / fertilizes from
+#  their satchel), a Dryer hangs fresh buds on your Drug Lab racks and
+#  collects them dry. They only touch the plants and labs of the player
+#  who hired them. Right-click a worker for their satchel and buttons.
+# =====================================================================
+workers:
+  enabled: true
+  # Most workers one player can have (admins: no limit).
+  max-per-player: 4
+  # Per level (1, 2, 3): how far from where they stand they work, and the
+  # seconds they rest between jobs.
+  radius: [6, 9, 12]
+  rest-seconds: [6, 4, 2]
+  # Price to train a worker to level 2 and 3.
+  upgrade-costs: [3000, 8000]
+  # Wage for every job (one harvest, one planting, one trip to the racks),
+  # paid from the owner's wallet. No money = no work.
+  farmhand:
+    wage: 3
+  dryer:
+    wage: 2
 
 menu:
   # Shift + F (sneak + swap hands) opens the /kush menu from anywhere.
@@ -513,21 +555,24 @@ jobs:
 #          quality (1-5 stars), potency and rarity, so better weed = more money.
 # =====================================================================
 shop:
-  seed-price-multiplier: 1.0
+  seed-price-multiplier: 1.25
+  # Workers (farmhand, dryer) are listed here too: they show on the hiring board.
   buy:
-    - {item: mushroom_spores, amount: 1, price: 25}
-    - {item: coca_seeds, amount: 1, price: 40}
-    - {item: poppy_seeds, amount: 1, price: 45}
-    - {item: peyote_seeds, amount: 1, price: 40}
-    - {item: rolling_papers, amount: 8, price: 5}
-    - {item: blunt_wrap, amount: 4, price: 8}
-    - {item: fertilizer, amount: 4, price: 10}
-    - {item: lab_solvent, amount: 8, price: 10}
-    - {item: bong, amount: 1, price: 60}
-    - {item: planter_box, amount: 2, price: 30}
-    - {item: grow_lamp, amount: 1, price: 120}
-    - {item: dealer, amount: 1, price: 200}
-    - {item: lab_station, amount: 1, price: 400}
+    - {item: mushroom_spores, amount: 1, price: 30}
+    - {item: coca_seeds, amount: 1, price: 50}
+    - {item: poppy_seeds, amount: 1, price: 55}
+    - {item: peyote_seeds, amount: 1, price: 50}
+    - {item: rolling_papers, amount: 8, price: 8}
+    - {item: blunt_wrap, amount: 4, price: 12}
+    - {item: fertilizer, amount: 4, price: 16}
+    - {item: lab_solvent, amount: 8, price: 18}
+    - {item: bong, amount: 1, price: 90}
+    - {item: planter_box, amount: 2, price: 50}
+    - {item: grow_lamp, amount: 1, price: 200}
+    - {item: dealer, amount: 1, price: 300}
+    - {item: lab_station, amount: 1, price: 650}
+    - {item: farmhand, amount: 1, price: 2500}
+    - {item: dryer, amount: 1, price: 2000}
   sell:
     # weed
     bud_fresh: 4

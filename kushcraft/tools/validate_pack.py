@@ -179,13 +179,34 @@ def check_menus():
     for t in lab_tabs:
         if rows_of(t.lower()) not in (None, lab_rows):
             errors.append(f"lab page '{t.lower()}' background is not {lab_rows} rows")
-    # other menus: super(player, rows, "name", ...)
+    # other menus: super(player, rows, "name", ...) (rows may be the class's ROWS constant)
     for fn in sorted(os.listdir(gui_dir)):
         src = open(os.path.join(gui_dir, fn), encoding="utf-8").read()
-        for rows, name in re.findall(r'super\(player, (\d+), "([a-z_]+)"', src):
+        const = re.search(r"static final int ROWS = (\d+);", src)
+        for rows, name in re.findall(r'super\(player, (\w+), "([a-z_]+)"', src):
+            if rows.startswith("Tab."):
+                rows = "6"  # a page inside a /kush tab
+            elif rows == "ROWS" and const:
+                rows = const.group(1)
+            if not rows.isdigit():
+                continue
             r = rows_of(name)
             if r is not None and r != int(rows):
                 errors.append(f"{fn}: {rows}-row menu but gui/{name}.png is drawn for {r} rows")
+
+    def java_int(fn, const):
+        src = open(os.path.join(gui_dir, fn), encoding="utf-8").read()
+        m = re.search(r"static final int " + const + r" = (\d+);", src)
+        return int(m.group(1)) if m else None
+
+    for fn, const, expect in (("ShopMenu.java", "SEEDS", gui.SHOP_SEEDS), ("GearMenu.java", "GEAR", gui.GEAR_SLOTS),
+                              ("AwardsMenu.java", "SLOTS", gui.AWARD_SLOTS)):
+        if java_int(fn, const) != expect:
+            errors.append(f"{fn} {const} = {java_int(fn, const)} but tools/gui.py draws {expect}")
+    starter = open(os.path.join(JAVA, "dev", "kushcraft", "award", "Starter.java"), encoding="utf-8").read()
+    steps = len(re.findall(r'^    [A-Z]+\("', starter, re.M))
+    if steps != gui.GUIDE_STEPS:
+        errors.append(f"{steps} starter steps but tools/gui.py guide() draws {gui.GUIDE_STEPS}")
     # slot frames drawn for the right number of things
     cat_src = open(os.path.join(JAVA, "dev", "kushcraft", "catalog", "Catalog.java"), encoding="utf-8").read()
     counts = [len(re.findall(r"Category\." + c + r"[,)]", cat_src)) for c in ("WEED", "PSYCH", "UPPERS", "DOWNERS", "GEAR")]
@@ -198,6 +219,22 @@ def check_menus():
     import recipe_images
     if [c[0] for c in recipe_images.COOK] != enums:
         errors.append(f"recipe_images.COOK order {[c[0] for c in recipe_images.COOK]} != LabRecipe {enums}")
+
+
+def check_workers():
+    """Every worker has a 64x64 skin and a hat model (dev.kushcraft.worker.WorkerType)."""
+    src = open(os.path.join(JAVA, "dev", "kushcraft", "worker", "WorkerType.java"), encoding="utf-8").read()
+    for name in re.findall(r'^    ([A-Z]+)\("', src, re.M):
+        t = name.lower()
+        skin = os.path.join(ASSETS, "kush", "textures", "entity", "worker", t + ".png")
+        if not os.path.exists(skin):
+            errors.append(f"worker {t} has no skin")
+        elif Image.open(skin).size != (64, 64):
+            errors.append(f"worker {t} skin is not 64x64")
+        if not os.path.exists(os.path.join(ASSETS, "kush", "items", f"worker_hat_{t}.json")):
+            errors.append(f"worker {t} has no hat item")
+        if not os.path.exists(os.path.join(ASSETS, "kush", "items", f"worker_{t}.json")):
+            errors.append(f"worker {t} has no contract item")
 
 
 def check_recipe_book():
@@ -248,6 +285,7 @@ def main():
                 errors.append(f"font {p['file']}: glyph larger than 256px")
 
     check_menus()
+    check_workers()
     check_recipe_book()
     check_animations()
     check_strain_looks()

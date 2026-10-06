@@ -169,6 +169,69 @@ public final class Machine {
         return n;
     }
 
+    /** Most buds one rack holds. */
+    public static final int RACK_CAPACITY = 64;
+
+    /**
+     * Hangs fresh buds: tops up a drying rack with the same buds first (its
+     * timer restarts), then fills empty racks. Returns how many were hung.
+     */
+    public int hang(String strain, int quality, int amount, long now, long done) {
+        int hung = 0;
+        for (int pass = 0; pass < 2 && hung < amount; pass++) {
+            for (int i = 0; i < RACKS && hung < amount; i++) {
+                Rack r = racks[i];
+                boolean ok = pass == 0 ? r != null && !r.dry() && r.strain().equals(strain) && r.quality() == quality
+                        && r.amount() < RACK_CAPACITY : r == null;
+                if (!ok) {
+                    continue;
+                }
+                int have = r == null ? 0 : r.amount();
+                int add = Math.min(RACK_CAPACITY - have, amount - hung);
+                racks[i] = new Rack(strain, quality, have + add, now, done);
+                hung += add;
+            }
+        }
+        return hung;
+    }
+
+    /** Takes every dry rack off (returns them, null-free). */
+    public java.util.List<Rack> takeDry() {
+        java.util.List<Rack> out = new java.util.ArrayList<>();
+        for (int i = 0; i < RACKS; i++) {
+            if (racks[i] != null && racks[i].dry()) {
+                out.add(racks[i]);
+                racks[i] = null;
+            }
+        }
+        return out;
+    }
+
+    /** True when fresh buds of this strain/quality could be hung right now. */
+    public boolean canHang(String strain, int quality) {
+        for (Rack r : racks) {
+            if (r == null || (!r.dry() && r.strain().equals(strain) && r.quality() == quality
+                    && r.amount() < RACK_CAPACITY)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Admin: the batch and every drying rack are done right now. */
+    public void finishNow() {
+        long now = System.currentTimeMillis();
+        if (job != null) {
+            jobEnd = Math.min(jobEnd, now);
+        }
+        for (int i = 0; i < RACKS; i++) {
+            Rack r = racks[i];
+            if (r != null && !r.dry()) {
+                racks[i] = new Rack(r.strain(), r.quality(), r.amount(), Math.min(r.start(), now - 1), now);
+            }
+        }
+    }
+
     // old single-rack API (Drying Rack block): the first rack
     public String rackStrain() {
         return racks[0] == null ? null : racks[0].strain();

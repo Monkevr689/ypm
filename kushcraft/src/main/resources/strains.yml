@@ -16,14 +16,15 @@
 #  effects:     up to 4 of GIGGLES, MUNCHIES, COUCH_LOCK, ENERGY, EUPHORIA,
 #               CREATIVE, FLOATY, PARANOIA, SLEEPY, FOCUS, PAIN_RELIEF, TRIPPY,
 #               LUCKY, NIGHT_OWL, AQUATIC, FIREPROOF, GHOST, LOVED_UP, VISIONS,
-#               RAGE, DIZZY
+#               RAGE, DIZZY, GREEN_THUMB, SMOOTH_TALKER, FROSTY, MAGNETIC,
+#               SIXTH_SENSE, ZEN
 #  flavor:      shown on the seeds and buds
 #  price:       Shop price of one seed (leave out: by rarity and potency)
 #  shop:        false = not sold in the Shop (find it wild or breed it)
 #  wild-biomes: biomes where breaking grass can drop these seeds
 #  wild-weight: how often it drops there compared to the others (1 = normal)
 # =====================================================================
-version: 3
+version: 4
 strains:
   og_kush:
     name: OG Kush
@@ -324,6 +325,110 @@ strains:
     flavor: Dragon fruit
     price: 240
     wild-biomes: []
+  mango_kush:
+    name: Mango Kush
+    type: HYBRID
+    color: '#FFC24A'
+    leaf: '#2E6A2A'
+    pistil: '#E83A5A'
+    shape: classic
+    climate: tropical
+    potency: 22
+    effects: [EUPHORIA, MUNCHIES, GREEN_THUMB]
+    flavor: Ripe mango
+    price: 65
+    wild-biomes: []
+  green_crack:
+    name: Green Crack
+    type: SATIVA
+    color: '#4AE84A'
+    leaf: '#1E8A2A'
+    pistil: '#FF8A00'
+    shape: spear
+    climate: tropical
+    potency: 24
+    effects: [ENERGY, FOCUS, MAGNETIC]
+    flavor: Tangy citrus
+    price: 80
+    wild-biomes: []
+  red_congolese:
+    name: Red Congolese
+    type: SATIVA
+    color: '#C82A1A'
+    leaf: '#6A8A2A'
+    pistil: '#FFD040'
+    shape: spear
+    climate: tropical
+    potency: 23
+    effects: [ENERGY, RAGE, FIREPROOF]
+    flavor: Spicy cherry
+    price: 95
+    wild-biomes: []
+  durban_poison:
+    name: Durban Poison
+    type: SATIVA
+    color: '#9AE83A'
+    leaf: '#2A7A2A'
+    pistil: '#F0A03A'
+    shape: popcorn
+    climate: desert
+    potency: 24
+    effects: [ENERGY, SMOOTH_TALKER, CREATIVE]
+    flavor: Sweet anise
+    price: 100
+    wild-biomes: []
+  blueberry:
+    name: Blueberry
+    type: INDICA
+    color: '#4A4AD8'
+    leaf: '#3A5A7A'
+    pistil: '#FF8AC8'
+    shape: popcorn
+    climate: mountain
+    potency: 25
+    effects: [EUPHORIA, ZEN, SIXTH_SENSE]
+    flavor: Blueberry jam
+    price: 115
+    wild-biomes: []
+  wedding_cake:
+    name: Wedding Cake
+    type: HYBRID
+    color: '#F0D8F0'
+    leaf: '#4A6A4A'
+    pistil: '#D86AE8'
+    shape: classic
+    climate: temperate
+    potency: 26
+    effects: [EUPHORIA, LOVED_UP, ZEN]
+    flavor: Vanilla & pepper
+    price: 135
+    wild-biomes: []
+  girl_scout_cookies:
+    name: Girl Scout Cookies
+    type: HYBRID
+    color: '#6A8A4A'
+    leaf: '#5A3A6A'
+    pistil: '#F0A040'
+    shape: classic
+    climate: temperate
+    potency: 27
+    effects: [EUPHORIA, GIGGLES, SMOOTH_TALKER]
+    flavor: Sweet & earthy
+    price: 145
+    wild-biomes: []
+  ice_cream_cake:
+    name: Ice Cream Cake
+    type: INDICA
+    color: '#F8E8D0'
+    leaf: '#6A8A5A'
+    pistil: '#F8A8C8'
+    shape: spear
+    climate: cold
+    potency: 27
+    effects: [SLEEPY, FROSTY, EUPHORIA]
+    flavor: Vanilla frosting
+    price: 150
+    wild-biomes: []
   # --- Mythic: never sold, found in the wild once in a blue moon --------
   aurora_kush:
     name: Aurora Kush
@@ -354,4 +459,19 @@ strains:
     flavor: Candy
     shop: false
     wild-biomes: [jungle, sparse_jungle, bamboo_jungle]
+    wild-weight: 0.01
+  solar_flare:
+    name: Solar Flare
+    type: SATIVA
+    color: '#FFD040'
+    leaf: '#3A8A2A'
+    pistil: '#FF6A00'
+    shape: foxtail
+    exotic: golden
+    climate: desert
+    potency: 31
+    effects: [ENERGY, FIREPROOF, SMOOTH_TALKER, GREEN_THUMB]
+    flavor: Sun-baked honey
+    shop: false
+    wild-biomes: [desert, badlands, wooded_badlands, eroded_badlands]
     wild-weight: 0.01

@@ -288,12 +288,12 @@ public final class PlantManager {
                 (p.kind() == Plant.Kind.MUSHROOM ? Material.BROWN_MUSHROOM_BLOCK : Material.AZALEA_LEAVES).createBlockData());
     }
 
-    public void harvest(Plant p, Player who) {
-        Location c = p.key().bottomCenter();
-        if (c == null) {
-            remove(p);
-            return;
-        }
+    /** What a ripe plant gives: the items, the action bar message and the conditions it grew in. */
+    public record Harvest(List<ItemStack> drops, String message, Conditions conditions) {
+    }
+
+    /** Works out the harvest of a ripe plant (does not remove it). */
+    public Harvest harvestDrops(Plant p) {
         Conditions cond = conditions(p);
         int q = cond.quality;
         ThreadLocalRandom r = ThreadLocalRandom.current();
@@ -334,23 +334,90 @@ public final class PlantManager {
             }
             msg = "<gold>Picked " + shrooms + " Magic Mushrooms";
         }
+        return new Harvest(drops, msg, cond);
+    }
+
+    public void harvest(Plant p, Player who) {
+        Location c = p.key().bottomCenter();
+        if (c == null) {
+            remove(p);
+            return;
+        }
+        Harvest h = harvestDrops(p);
         if (who != null) {
             // Grower job: paid for every harvest
             double earned = plugin.jobs().pay(who, Jobs.Job.GROWER,
                     plugin.jobs().rate(Jobs.Job.GROWER, p.kind().name()), false);
-            who.sendActionBar(Text.mm(msg + (earned > 0 ? " <gold>+" + plugin.economy().format(earned) : "")));
+            who.sendActionBar(Text.mm(h.message() + (earned > 0 ? " <gold>+" + plugin.economy().format(earned) : "")));
         }
-        for (ItemStack it : drops) {
-            c.getWorld().dropItemNaturally(c.clone().add(0, 0.4, 0), it);
+        if (who != null && plugin.getConfig().getBoolean("harvest.to-inventory", true)) {
+            dev.kushcraft.util.InventoryUtil.give(who, h.drops().toArray(new ItemStack[0]));
+        } else {
+            for (ItemStack it : h.drops()) {
+                c.getWorld().dropItemNaturally(c.clone().add(0, 0.4, 0), it);
+            }
         }
         if (who != null) {
             who.giveExp(3);
-            plugin.awards().harvested(who, p.kind(), p.strainId(), cond.fit(), Climate.of(p.key().block()));
+            plugin.awards().harvested(who, p.kind(), p.strainId(), h.conditions().fit(), Climate.of(p.key().block()));
+        }
+        pickEffect(p);
+        remove(p);
+    }
+
+    /**
+     * A worker picks a ripe plant: returns what it gave (minus the seed it
+     * replanted, when replant is true and a seed came off the plant).
+     */
+    public List<ItemStack> pick(Plant p, boolean replant) {
+        Harvest h = harvestDrops(p);
+        List<ItemStack> drops = new ArrayList<>(h.drops());
+        pickEffect(p);
+        remove(p);
+        if (replant) {
+            ItemType seed = seedOf(p.kind());
+            for (ItemStack it : drops) {
+                if (Items.type(it) == seed && it.getAmount() > 0) {
+                    it.setAmount(it.getAmount() - 1);
+                    Strain s = p.kind() == Plant.Kind.CANNABIS ? plugin.strains().getOrDefault(p.strainId()) : null;
+                    plantAt(p.key(), p.kind(), s, p.owner());
+                    break;
+                }
+            }
+            drops.removeIf(it -> it.getAmount() <= 0);
+        }
+        return drops;
+    }
+
+    /** The seed item a plant kind grows from. */
+    public static ItemType seedOf(Plant.Kind kind) {
+        return switch (kind) {
+            case CANNABIS -> ItemType.SEED_PACK;
+            case MUSHROOM -> ItemType.MUSHROOM_SPORES;
+            case COCA -> ItemType.COCA_SEEDS;
+            case POPPY -> ItemType.POPPY_SEEDS;
+            case PEYOTE -> ItemType.PEYOTE_SEEDS;
+        };
+    }
+
+    /** The plant kind a seed item grows, or null. */
+    public static Plant.Kind kindOf(ItemType seed) {
+        for (Plant.Kind k : Plant.Kind.values()) {
+            if (seedOf(k) == seed) {
+                return k;
+            }
+        }
+        return null;
+    }
+
+    private void pickEffect(Plant p) {
+        Location c = p.key().bottomCenter();
+        if (c == null) {
+            return;
         }
         c.getWorld().playSound(c, "minecraft:block.sweet_berry_bush.pick_berries", SoundCategory.BLOCKS, 1f, 0.9f);
         c.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, c.clone().add(0, 0.6, 0), 12, 0.35, 0.4, 0.35, 0);
         breakEffect(p);
-        remove(p);
     }
 
     public boolean fertilize(Plant p) {
@@ -513,6 +580,9 @@ public final class PlantManager {
             quality++;
         }
         mult *= 1 + plugin.cartels().growBonus(p.owner());
+        if (plugin.effects().greenThumbNear(at.getLocation())) {
+            mult *= 1.25;
+        }
         quality = Math.max(1, Math.min(5, quality));
         return new Conditions(mult, quality, lightText, soilText, climateText, problem, fit);
     }
@@ -523,6 +593,7 @@ public final class PlantManager {
         double cocaMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.coca-minutes", 16));
         double poppyMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.poppy-minutes", 14));
         double peyoteMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.peyote-minutes", 18));
+        Map<UUID, Integer> ripened = new HashMap<>();
         for (Plant p : new ArrayList<>(plants.values())) {
             if (p.mature() || !p.key().isLoaded()) {
                 continue;
@@ -554,8 +625,21 @@ public final class PlantManager {
                 if (p.mature()) {
                     Location l = p.key().center();
                     l.getWorld().spawnParticle(Particle.WAX_ON, l.add(0, 0.4, 0), 10, 0.3, 0.4, 0.3, 0);
+                    if (p.owner() != null) {
+                        ripened.merge(p.owner(), 1, Integer::sum);
+                    }
                 }
             }
+        }
+        if (plugin.getConfig().getBoolean("harvest.ripe-notice", true)) {
+            ripened.forEach((id, n) -> {
+                Player o = Bukkit.getPlayer(id);
+                if (o != null) {
+                    o.sendActionBar(Text.mm("<green>☘ " + (n == 1 ? "One of your plants is" : n + " of your plants are")
+                            + " ready to harvest!"));
+                    o.playSound(o.getLocation(), "minecraft:block.note_block.bell", SoundCategory.PLAYERS, 0.4f, 1.6f);
+                }
+            });
         }
     }
 

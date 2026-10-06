@@ -34,6 +34,9 @@ public enum Award {
     MAX_LAB("State of the Art", "Upgrade a Drug Lab to the top level.", "award_upgrade", 10000, Frame.GOAL, BUILD_LAB, false),
     FULL_RACKS("Drying Room", "Fill all 5 drying racks at once.", "award_racks", 300, Frame.TASK, FIRST_DRY, false),
     ACID("Acid Test", "Cook LSD from ergot.", "ergot", 500, Frame.TASK, FIRST_COOK, false),
+    // workers
+    HIRED("Hired Help", "Hire a worker.", "award_worker", 250, Frame.TASK, FIRST_HARVEST, false),
+    WORKFORCE("Workforce", "Have 4 workers at once.", "award_workforce", 2500, Frame.GOAL, HIRED, false),
     // money
     FIRST_SALE("First Deal", "Sell some product.", "cash", 100, Frame.TASK, null, false),
     SOLD_10K("Hustler", "Sell $10,000 of product.", "award_cash_stack", 500, Frame.TASK, FIRST_SALE, false),

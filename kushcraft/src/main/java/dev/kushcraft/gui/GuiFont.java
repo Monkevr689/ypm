@@ -24,7 +24,8 @@ public final class GuiFont {
      * (tools/validate_pack.py checks that they match).
      */
     public static final List<String> GUIS = List.of(
-            "shop", "drugs", "trade", "cartel", "top", "awards", "cook", "roll", "dry", "mix", "recipe", "list");
+            "shop", "drugs", "trade", "cartel", "top", "awards", "cook", "roll", "dry", "mix", "recipe", "list",
+            "gear", "worker", "guide", "admin");
     private static final int GUI_WIDTH = 176;
     private static final int TITLE_X = 8;
 

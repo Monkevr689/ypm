@@ -46,6 +46,7 @@ public final class EffectManager {
         double high;
         BossBar bar;
         long tripTime = -1;
+        Location last;
     }
 
     private record Pending(Dose dose, int[] secondsLeft) {
@@ -53,6 +54,75 @@ public final class EffectManager {
 
     public void start() {
         Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::fast, 4L, 4L);
+    }
+
+    /** Five times a second: Frosty freezes water underfoot, Magnetic pulls items in. */
+    private void fast() {
+        for (Map.Entry<UUID, State> e : states.entrySet()) {
+            State s = e.getValue();
+            boolean frosty = s.effects.containsKey(EffectType.FROSTY);
+            boolean magnetic = s.effects.containsKey(EffectType.MAGNETIC);
+            if (!frosty && !magnetic) {
+                continue;
+            }
+            Player p = Bukkit.getPlayer(e.getKey());
+            if (p == null || p.isDead()) {
+                continue;
+            }
+            if (frosty) {
+                freeze(p);
+            }
+            if (magnetic) {
+                for (org.bukkit.entity.Entity en : p.getNearbyEntities(7, 4, 7)) {
+                    if (en instanceof org.bukkit.entity.Item item && item.getPickupDelay() <= 0 && item.isValid()) {
+                        Vector to = p.getLocation().add(0, 0.6, 0).toVector().subtract(item.getLocation().toVector());
+                        if (to.lengthSquared() > 0.5) {
+                            item.setVelocity(to.normalize().multiply(0.32));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Frost Walker: still water around your feet turns to frosted ice (it melts by itself). */
+    private void freeze(Player p) {
+        Location l = p.getLocation();
+        org.bukkit.block.Block under = l.getBlock().getRelative(0, -1, 0);
+        if (p.isInWater() || under.getType().isAir()) {
+            return;
+        }
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (dx * dx + dz * dz > 5) {
+                    continue;
+                }
+                org.bukkit.block.Block b = under.getRelative(dx, 0, dz);
+                if (b.getType() == org.bukkit.Material.WATER && b.getBlockData() instanceof org.bukkit.block.data.Levelled lv
+                        && lv.getLevel() == 0 && b.getRelative(0, 1, 0).getType().isAir()
+                        && dev.kushcraft.util.Protection.canBuild(p, b)) {
+                    b.setType(org.bukkit.Material.FROSTED_ICE);
+                }
+            }
+        }
+    }
+
+    /** Green Thumb: a player with it stands within 10 blocks. */
+    public boolean greenThumbNear(Location l) {
+        if (l == null || l.getWorld() == null) {
+            return false;
+        }
+        for (Map.Entry<UUID, State> e : states.entrySet()) {
+            if (!e.getValue().effects.containsKey(EffectType.GREEN_THUMB)) {
+                continue;
+            }
+            Player p = Bukkit.getPlayer(e.getKey());
+            if (p != null && p.getWorld().equals(l.getWorld()) && p.getLocation().distanceSquared(l) <= 100) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------
@@ -268,6 +338,8 @@ public final class EffectManager {
             case VISIONS -> new PotionEffectType[]{PotionEffectType.NIGHT_VISION};
             case RAGE -> new PotionEffectType[]{PotionEffectType.STRENGTH, PotionEffectType.SPEED};
             case DIZZY -> new PotionEffectType[]{PotionEffectType.NAUSEA};
+            case ZEN -> new PotionEffectType[]{PotionEffectType.REGENERATION, PotionEffectType.RESISTANCE};
+            case GREEN_THUMB, SMOOTH_TALKER, FROSTY, MAGNETIC, SIXTH_SENSE -> new PotionEffectType[0];
             case DISSOCIATED -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.SLOW_FALLING,
                     PotionEffectType.BLINDNESS};
             case SYRUPY -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.SLOW_FALLING};
@@ -478,6 +550,59 @@ public final class EffectManager {
                     Location l = p.getLocation();
                     l.setYaw(l.getYaw() + (random.nextBoolean() ? 25 : -25));
                     p.setRotation(l.getYaw(), l.getPitch());
+                }
+            }
+            case GREEN_THUMB -> {
+                if (random.nextInt(3) == 0) {
+                    p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, p.getLocation().add(0, 0.2, 0), 3, 0.5, 0.1, 0.5, 0);
+                }
+                if (random.nextInt(25) == 0) {
+                    p.sendActionBar(Text.mm(pick("<green>you can hear the plants growing...",
+                            "<green>the leaves lean towards you", "<green>grow, little buds, grow")));
+                }
+            }
+            case SMOOTH_TALKER -> {
+                if (random.nextInt(8) == 0) {
+                    p.getWorld().spawnParticle(Particle.NOTE, head.clone().add(0, 0.5, 0), 1, 0.3, 0.1, 0.3, 1);
+                }
+                if (random.nextInt(30) == 0) {
+                    p.sendActionBar(Text.mm(pick("<gold>you could sell sand in a desert",
+                            "<gold>every word is pure gold", "<gold>the dealers love you today")));
+                }
+            }
+            case FROSTY -> {
+                p.setFreezeTicks(0);
+                if (random.nextInt(2) == 0) {
+                    p.getWorld().spawnParticle(Particle.SNOWFLAKE, p.getLocation().add(0, 0.3, 0), 4, 0.4, 0.2, 0.4, 0.01);
+                }
+            }
+            case MAGNETIC -> {
+                if (random.nextInt(3) == 0) {
+                    p.getWorld().spawnParticle(Particle.PORTAL, p.getLocation().add(0, 1, 0), 8, 0.4, 0.5, 0.4, 0.3);
+                }
+            }
+            case SIXTH_SENSE -> {
+                if (left % 2 == 0) {
+                    for (org.bukkit.entity.Entity en : p.getNearbyEntities(24, 12, 24)) {
+                        if (en instanceof org.bukkit.entity.Monster m) {
+                            m.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 50, 0, true, false, false));
+                        }
+                    }
+                }
+                if (random.nextInt(20) == 0) {
+                    p.sendActionBar(Text.mm(pick("<light_purple>you can feel them out there...",
+                            "<light_purple>nothing can sneak up on you", "<light_purple>eyes everywhere")));
+                }
+            }
+            case ZEN -> {
+                Location now = p.getLocation();
+                boolean still = s.last != null && s.last.getWorld().equals(now.getWorld())
+                        && s.last.distanceSquared(now) < 0.01;
+                s.last = now;
+                if (still) {
+                    pot(p, PotionEffectType.REGENERATION, 1);
+                    pot(p, PotionEffectType.RESISTANCE, 1);
+                    p.getWorld().spawnParticle(Particle.ENCHANT, head, 10, 0.6, 0.4, 0.6, 0.4);
                 }
             }
             case DISSOCIATED -> {

@@ -114,6 +114,17 @@ public final class InteractListener implements Listener {
             return;
         }
 
+        // ---- hiring a worker -----------------------------------------------
+        if (dev.kushcraft.worker.WorkerType.of(type) != null) {
+            if (a == Action.RIGHT_CLICK_BLOCK) {
+                e.setCancelled(true);
+                plugin.workers().hire(p, item, b, e.getBlockFace());
+            } else if (a == Action.RIGHT_CLICK_AIR) {
+                p.sendActionBar(Text.mm("<yellow>Right-click the ground where they should work."));
+            }
+            return;
+        }
+
         if (a != Action.RIGHT_CLICK_AIR && a != Action.RIGHT_CLICK_BLOCK) {
             return;
         }

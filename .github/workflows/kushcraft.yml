@@ -88,11 +88,10 @@ jobs:
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
-          # how this Minecraft version writes advancements (for the KushCraft tab)
+          # worker skins are resolved like other client assets: textures/<path>.png
           VJAR=$(find versions -name "*.jar" | head -1)
           echo "vanilla jar: $VJAR"
-          unzip -p "$VJAR" data/minecraft/advancement/adventure/root.json 2>/dev/null | head -c 1200 || true
-          echo
+          unzip -l "$VJAR" | grep -iE "ClientAsset|PlayerSkin" | head -5 || true
 
       - name: Run server again with an external resource-pack.url
         working-directory: server
@@ -113,33 +112,29 @@ jobs:
           sleep 1
           sed -i "s#^  url: .*#  url: 'http://127.0.0.1:9000/pack.zip'#" plugins/KushCraft/config.yml
           grep -n "url:" plugins/KushCraft/config.yml
-          # also pretend this is a 2.0 config (version 5: one Trade list, drying in
-          # minutes, no cartel section) and a 2.0 strains.yml (10 strains, no looks
-          # or climates, plus a bred strain) to test the upgrade to 3.0
+          # also pretend this is a 3.0 config (version 6: no workers / new-players /
+          # harvest sections, the old cheaper shop, the softer market) and a 2.0
+          # strains.yml (no looks or climates, plus a bred strain) to test the upgrade to 4.0
           python3 - <<'PY'
           lines = open("plugins/KushCraft/config.yml").read().split("\n")
           out, skip = [], False
           for l in lines:
               if l and not l[0].isspace() and not l.startswith("#"):
-                  skip = l.split(":")[0] in ("exchange", "cartel", "drying", "shop")
+                  skip = l.split(":")[0] in ("workers", "new-players", "harvest", "shop")
               if l.startswith("config-version:"):
-                  l = "config-version: 5"
+                  l = "config-version: 6"
+              if l.startswith("  demand-drop:"):
+                  l = "  demand-drop: 0.004"
               if not skip:
                   out.append(l)
           out += [
-              "drying:",
-              "  minutes: 3",
               "shop:",
+              "  seed-price-multiplier: 1.0",
               "  buy:",
-              "    - {item: seed_pack, strain: og_kush, amount: 1, price: 40}",
-              "    - {item: lab_station, amount: 1, price: 900}",
+              "    - {item: rolling_papers, amount: 8, price: 5}",
+              "    - {item: lab_station, amount: 1, price: 400}",
               "  sell:",
               "    bud_dried: 15",
-              "exchange:",
-              "  enabled: true",
-              "  price-multiplier: 1.0",
-              "  items:",
-              "    - {item: diamond, price: 1500, amount: 1}",
           ]
           open("plugins/KushCraft/config.yml", "w").write("\n".join(out) + "\n")
           open("plugins/KushCraft/strains.yml", "w").write("""strains:
@@ -191,19 +186,24 @@ jobs:
             echo "::error::built-in web server must not start when resource-pack.url is set"; exit 1
           fi
           echo "External URL test passed"
-          grep -q "Updated config.yml to version 6" server2.log || { echo "::error::config was not upgraded"; exit 1; }
-          grep -q "Updated strains.yml: 23 new strains" server2.log || { echo "::error::strains.yml was not upgraded"; exit 1; }
-          grep -q "^cartel:" plugins/KushCraft/config.yml || { echo "::error::cartel section not added"; exit 1; }
-          grep -q "^  categories:" plugins/KushCraft/config.yml || { echo "::error::Trade shelves not added"; exit 1; }
-          if grep -q "^  items:" plugins/KushCraft/config.yml; then echo "::error::old Trade list kept"; exit 1; fi
-          grep -q "^  seconds: 30" plugins/KushCraft/config.yml || { echo "::error::drying seconds not added"; exit 1; }
-          if grep -q "^  minutes: 3" plugins/KushCraft/config.yml; then echo "::error::old drying minutes kept"; exit 1; fi
-          if grep -q "seed_pack, strain" plugins/KushCraft/config.yml; then echo "::error::old seed prices kept"; exit 1; fi
+          grep -q "Updated config.yml to version 7" server2.log || { echo "::error::config was not upgraded"; exit 1; }
+          grep -q "Updated strains.yml: 32 new strains" server2.log || { echo "::error::strains.yml was not upgraded"; exit 1; }
+          grep -q "^workers:" plugins/KushCraft/config.yml || { echo "::error::workers section not added"; exit 1; }
+          grep -q "^new-players:" plugins/KushCraft/config.yml || { echo "::error::starter kit not added"; exit 1; }
+          grep -q "^harvest:" plugins/KushCraft/config.yml || { echo "::error::harvest section not added"; exit 1; }
+          grep -q "item: farmhand" plugins/KushCraft/config.yml || { echo "::error::workers not in the shop"; exit 1; }
+          grep -q "item: lab_station, amount: 1, price: 650" plugins/KushCraft/config.yml || { echo "::error::new shop prices not written"; exit 1; }
+          if grep -q "price: 400}" plugins/KushCraft/config.yml; then echo "::error::old shop prices kept"; exit 1; fi
+          grep -q "^  demand-drop: 0.006" plugins/KushCraft/config.yml || { echo "::error::market not updated"; exit 1; }
+          grep -q "^cartel:" plugins/KushCraft/config.yml || { echo "::error::cartel section lost"; exit 1; }
+          grep -q "^  categories:" plugins/KushCraft/config.yml || { echo "::error::Trade shelves lost"; exit 1; }
+          grep -q "^  seconds: 30" plugins/KushCraft/config.yml || { echo "::error::drying seconds lost"; exit 1; }
           grep -q "^  titles:" plugins/KushCraft/config.yml || { echo "::error::leaderboard ranks lost"; exit 1; }
           grep -q "^jobs:" plugins/KushCraft/config.yml || { echo "::error::jobs section lost"; exit 1; }
           grep -q "^awards:" plugins/KushCraft/config.yml || { echo "::error::awards section lost"; exit 1; }
-          grep -q "^version: 3" plugins/KushCraft/strains.yml || { echo "::error::strains.yml version not set"; exit 1; }
+          grep -q "^version: 4" plugins/KushCraft/strains.yml || { echo "::error::strains.yml version not set"; exit 1; }
           grep -q "creator-name: Tester" plugins/KushCraft/strains.yml || { echo "::error::bred strain lost"; exit 1; }
+          grep -q "^  solar_flare:" plugins/KushCraft/strains.yml || { echo "::error::new strains not added"; exit 1; }
           awk '/^  og_kush:$/{f=1;next} /^  [a-z0-9_]+:$/{f=0} f' plugins/KushCraft/strains.yml > og.txt
           cat og.txt
           grep -q "color: '#A8E05A'" og.txt || { echo "::error::own strain colour was overwritten"; exit 1; }
@@ -224,6 +224,9 @@ jobs:
           echo "-----"
           grep -q "KushCraft enabled" server.log || { echo "::error::plugin did not enable"; exit 1; }
           grep -q "SELFTEST PASS" server.log || { echo "::error::selftest failed"; exit 1; }
+          if grep -qE "Worker skins are not supported|Could not spawn worker mannequins" server.log; then
+            echo "::error::worker mannequins or skins do not work"; exit 1
+          fi
           if grep -nE "Exception|Error" server.log | grep -iE "kushcraft"; then
             echo "::error::KushCraft errors in log"; exit 1
           fi

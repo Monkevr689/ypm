@@ -68,6 +68,25 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "top", "ranks", "leaderboard" -> open(sender, TopMenu::new);
+            case "gear" -> open(sender, dev.kushcraft.gui.GearMenu::new);
+            case "workers", "worker" -> open(sender, dev.kushcraft.gui.MyWorkersMenu::new);
+            case "start", "steps", "help-me", "tutorial" -> open(sender, dev.kushcraft.gui.StarterMenu::new);
+            case "sell" -> {
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(Text.msg("<red>Only players can sell."));
+                } else if (!admin && !plugin.getConfig().getBoolean("market.anywhere", true)) {
+                    p.sendMessage(Text.msg("<red>Sell at a Dealer Stand on this server."));
+                } else {
+                    dev.kushcraft.gui.Selling.all(p);
+                }
+            }
+            case "admin" -> {
+                if (!admin) {
+                    noPerm(sender);
+                    return true;
+                }
+                open(sender, dev.kushcraft.gui.AdminMenu::new);
+            }
             case "cartel", "gang", "c" -> cartel(sender, args);
             case "awards", "achievements" -> open(sender, AwardsMenu::new);
             case "items" -> {
@@ -172,11 +191,15 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Text.mm(" <white>/kush <gray>- the menu (everything is in there)"));
                 sender.sendMessage(Text.mm(" <white>/kush shop|drugs|trade|cartel|top|awards <gray>- open a tab directly"));
                 sender.sendMessage(Text.mm(" <white>/kush cartel invite|join|leave <gray>- cartels"));
+                sender.sendMessage(Text.mm(" <white>/kush sell <gray>- sell all your product"));
+                sender.sendMessage(Text.mm(" <white>/kush workers <gray>- your workers"));
+                sender.sendMessage(Text.mm(" <white>/kush start <gray>- getting started: your next steps"));
                 sender.sendMessage(Text.mm(" <white>/kush pay <player> <amount> <gray>- send money"));
                 sender.sendMessage(Text.mm(" <white>/kush guide <gray>- the handbook"));
                 sender.sendMessage(Text.mm(" <white>/kush pack <gray>- re-download the texture pack"));
                 sender.sendMessage(Text.mm(" <white>/kush balance <gray>- your money"));
                 if (admin) {
+                    sender.sendMessage(Text.mm(" <red>/kush admin <gray>- the admin panel"));
                     sender.sendMessage(Text.mm(" <red>/kush give <player> <item> [amount] [strain] [quality]"));
                     sender.sendMessage(Text.mm(" <red>/kush items <gray>- click any item to get it"));
                     sender.sendMessage(Text.mm(" <red>/kush money <player> <amount> <gray>- set balance"));
@@ -337,10 +360,10 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
-            out.addAll(List.of("menu", "shop", "drugs", "trade", "cartel", "top", "awards", "pay", "guide", "pack",
-                    "balance", "strains", "help"));
+            out.addAll(List.of("menu", "shop", "gear", "drugs", "trade", "cartel", "top", "awards", "sell", "workers",
+                    "start", "pay", "guide", "pack", "balance", "strains", "help"));
             if (admin) {
-                out.addAll(List.of("give", "items", "money", "sales", "reload"));
+                out.addAll(List.of("admin", "give", "items", "money", "sales", "reload"));
             }
         } else if (admin && args[0].equalsIgnoreCase("give")) {
             if (args.length == 2) {

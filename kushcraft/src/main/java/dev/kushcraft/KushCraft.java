@@ -22,6 +22,7 @@ import dev.kushcraft.shop.Market;
 import dev.kushcraft.shop.Ranks;
 import dev.kushcraft.shop.Shop;
 import dev.kushcraft.strain.StrainRegistry;
+import dev.kushcraft.worker.Workers;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -52,6 +53,7 @@ public final class KushCraft extends JavaPlugin {
     private Jobs jobs;
     private Awards awards;
     private Cartels cartels;
+    private Workers workers;
     private ResourcePackManager pack;
 
     public static KushCraft get() {
@@ -87,6 +89,8 @@ public final class KushCraft extends JavaPlugin {
         machines.load();
         plants = new PlantManager(this);
         plants.load();
+        workers = new Workers(this);
+        workers.load();
         effects = new EffectManager(this);
         pack = new ResourcePackManager(this, getFile());
 
@@ -104,6 +108,7 @@ public final class KushCraft extends JavaPlugin {
         pm.registerEvents(jobs, this);
         pm.registerEvents(jobs.placed(), this);
         pm.registerEvents(awards, this);
+        pm.registerEvents(workers, this);
 
         PluginCommand cmd = getCommand("kush");
         if (cmd != null) {
@@ -122,6 +127,7 @@ public final class KushCraft extends JavaPlugin {
         effects.start();
         machines.start();
         plants.start();
+        workers.start();
         MenuListener.start(this);
         // Vault's economy provider registers on enable, so hook one tick later
         Bukkit.getScheduler().runTask(this, economy::hook);
@@ -133,7 +139,8 @@ public final class KushCraft extends JavaPlugin {
             pack.send(p);
         }
         getLogger().info("KushCraft enabled - " + strains.all().size() + " strains, "
-                + plants.all().size() + " plants, " + machines.all().size() + " machines.");
+                + plants.all().size() + " plants, " + machines.all().size() + " machines, " + workers.all().size()
+                + " workers.");
     }
 
     @Override
@@ -141,6 +148,9 @@ public final class KushCraft extends JavaPlugin {
         MenuListener.closeAll();
         if (effects != null) {
             effects.shutdown();
+        }
+        if (workers != null) {
+            workers.shutdown();
         }
         if (plants != null) {
             plants.shutdown();
@@ -232,16 +242,22 @@ public final class KushCraft extends JavaPlugin {
         return cartels;
     }
 
+    public Workers workers() {
+        return workers;
+    }
+
     /**
      * Older configs are brought up to date. 2.0 (version 5) brought new shop
      * prices, the leaderboard ranks and the Trade list; 3.0 (version 6)
      * cheaper gear and recipes, strain seed prices from strains.yml, Trade
-     * shelves, 30 second drying and cartels. Options added since are filled
-     * in; everything else you set yourself is kept, including resource-pack.url.
+     * shelves, 30 second drying and cartels; 4.0 (version 7) workers, new
+     * shop prices, a tougher market and the new-player kit. Options added
+     * since are filled in; everything else you set yourself is kept,
+     * including resource-pack.url.
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 6) {
+        if (version >= 7) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -254,24 +270,29 @@ public final class KushCraft extends JavaPlugin {
             for (String key : List.of("ranks", "strain-maker.anywhere")) {
                 getConfig().set(key, null);
             }
-            for (String key : List.of("economy.starting-balance", "market.demand-drop", "market.recovery-per-minute",
-                    "market.order-bonus", "exchange.price-multiplier", "exchange.sell-ratio")) {
+            for (String key : List.of("economy.starting-balance", "exchange.price-multiplier", "exchange.sell-ratio")) {
                 getConfig().set(key, def.get(key));
             }
         }
-        // removed here, filled in again from the defaults below
-        for (String key : List.of("shop.buy", "shop.sell", "exchange.categories", "exchange.items", "drying.minutes")) {
-            getConfig().set(key, null);
+        if (version < 6) {
+            // removed here, filled in again from the defaults below
+            for (String key : List.of("exchange.categories", "exchange.items", "drying.minutes")) {
+                getConfig().set(key, null);
+            }
         }
-        for (String key : List.of("strain-maker.cost", "lab.upgrade-costs")) {
+        // 4.0: new shop prices (with the workers), lab / mix costs and the tougher market
+        getConfig().set("shop.buy", null);
+        getConfig().set("shop.sell", null);
+        for (String key : List.of("strain-maker.cost", "lab.upgrade-costs", "shop.seed-price-multiplier",
+                "market.demand-drop", "market.min-price", "market.recovery-per-minute")) {
             getConfig().set(key, def.get(key));
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 6);
+        getConfig().set("config-version", 7);
         saveConfig();
-        getLogger().info("Updated config.yml to version 6 (3.0: cheaper shop and recipes, Trade shelves, cartels,"
-                + " 30s drying). Your resource pack settings were kept.");
+        getLogger().info("Updated config.yml to version 7 (4.0: workers, new shop prices, a tougher market)."
+                + " Your resource pack settings were kept.");
     }
 
     public ResourcePackManager pack() {

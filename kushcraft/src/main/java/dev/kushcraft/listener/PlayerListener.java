@@ -55,11 +55,38 @@ public final class PlayerListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (p.isOnline()) {
                     InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
+                    int kit = starterKit(p);
                     p.sendMessage(Text.msg("<gray>This server runs <green>KushCraft</green>! Type <white>/kush</white>, press"
                             + " <white>Shift+F</white> or right-click the <green>KushCraft Menu</green> book to start."));
+                    p.sendMessage(Text.msg("<aqua>New here? <gray>The glowing <aqua>Next</aqua> button in the menu shows"
+                            + " your next step." + (kit > 0 ? " <green>You got a starter kit!" : "")));
                 }
             }, 60L);
         }
+    }
+
+    /** Gives the new-players.starter-kit from config.yml. Returns how many stacks were given. */
+    public static int starterKit(Player p) {
+        KushCraft plugin = KushCraft.get();
+        int n = 0;
+        for (java.util.Map<?, ?> m : plugin.getConfig().getMapList("new-players.starter-kit")) {
+            ItemType t = ItemType.parse(String.valueOf(m.get("item")));
+            int amount = m.get("amount") instanceof Number num ? num.intValue() : 1;
+            if (t == null) {
+                continue;
+            }
+            if (t.strainBound()) {
+                var s = plugin.strains().get(String.valueOf(m.get("strain")));
+                if (s == null) {
+                    continue;
+                }
+                InventoryUtil.give(p, Items.strainItem(t, s, 3, amount));
+            } else {
+                InventoryUtil.give(p, Items.create(t, amount));
+            }
+            n++;
+        }
+        return n;
     }
 
     /** Shift + F (sneak + swap hands) opens the menu from anywhere. */

@@ -18,16 +18,16 @@ import java.util.List;
 
 /**
  * Shop: seeds of every strain (cheapest first) and the other seeds in rows
- * 1-3, gear in row 4, and selling: click product below, or Sell all.
- * Layout: tools/gui.py shop().
+ * 1-4; the bottom row has Gear &amp; Workers, Sell all (or click product
+ * below to sell it) and the market news. Layout: tools/gui.py shop().
  */
 public final class ShopMenu extends TabMenu {
 
     static final int FIRST_SEED = 9;
-    static final int SEEDS = 27;
-    static final int FIRST_GEAR = 36;
-    static final int GEAR = 9;
+    static final int SEEDS = 36;
+    static final int GEAR = at(5, 1);
     static final int SELL_ALL = at(5, 4);
+    static final int MARKET = at(5, 7);
 
     private final boolean atDealer;
     private int ticks;
@@ -47,7 +47,7 @@ public final class ShopMenu extends TabMenu {
                 || KushCraft.get().getConfig().getBoolean("market.anywhere", true);
     }
 
-    private Shop shop() {
+    private static Shop shop() {
         return KushCraft.get().shop();
     }
 
@@ -64,10 +64,9 @@ public final class ShopMenu extends TabMenu {
         for (int i = 0; i < SEEDS && i < seeds.size(); i++) {
             set(FIRST_SEED + i, entryIcon(seeds.get(i), bal));
         }
-        List<Shop.BuyEntry> gear = shop().gear();
-        for (int i = 0; i < GEAR && i < gear.size(); i++) {
-            set(FIRST_GEAR + i, entryIcon(gear.get(i), bal));
-        }
+        set(GEAR, Items.icon("ui_gear", "<aqua><bold>Gear & Workers",
+                "<gray>Papers, solvent, lamps, the Drug Lab...", "<gray>and workers who farm for you."));
+        set(MARKET, marketIcon());
         double value = Selling.allValue(player);
         List<String> sell = new ArrayList<>();
         sell.add("<gray>Or click product below to sell it.");
@@ -84,7 +83,33 @@ public final class ShopMenu extends TabMenu {
                 : "<gray>Sell all", sell), value > 0));
     }
 
-    private ItemStack entryIcon(Shop.BuyEntry e, double bal) {
+    /** Hot item and what sells best right now. */
+    private ItemStack marketIcon() {
+        KushCraft plugin = KushCraft.get();
+        List<String> lore = new ArrayList<>();
+        ItemType hot = plugin.market().hot();
+        if (hot != null) {
+            lore.add("<gold>Hot: " + hot.display() + " " + plugin.market().trend(hot) + " <dark_gray>("
+                    + plugin.market().hotMinutesLeft() + " min)");
+        }
+        double boom = plugin.market().boost();
+        if (boom > 1.001) {
+            lore.add("<light_purple>Market boom: everything +" + Math.round((boom - 1) * 100) + "% <dark_gray>("
+                    + plugin.market().boostMinutesLeft() + " min)");
+        }
+        List<ItemType> flooded = plugin.market().flooded();
+        if (!flooded.isEmpty()) {
+            lore.add("<red>Flooded:");
+            for (int i = 0; i < flooded.size() && i < 4; i++) {
+                lore.add("<red> " + flooded.get(i).display() + " " + plugin.market().trend(flooded.get(i)));
+            }
+        }
+        lore.add("<dark_gray>Selling lots of one thing drops its");
+        lore.add("<dark_gray>price; it climbs back over time.");
+        return Items.icon("ui_market", "<yellow>Market news", lore);
+    }
+
+    static ItemStack entryIcon(Shop.BuyEntry e, double bal) {
         ItemStack show = shop().create(e);
         ItemMeta meta = show.getItemMeta();
         List<String> lore = new ArrayList<>();
@@ -93,6 +118,8 @@ public final class ShopMenu extends TabMenu {
             lore.add(s.rarity().colored() + " <dark_gray>·</dark_gray> <white>" + s.potency() + "% THC"
                     + " <dark_gray>·</dark_gray> " + s.type().colored());
             lore.add(Items.climateLine(s));
+        } else if (!e.type().lore().isEmpty()) {
+            lore.add(e.type().lore().get(0));
         }
         String price = e.price() <= 0 ? "FREE" : money(e.price()) + (e.amount() > 1 ? " for " + e.amount() : "");
         lore.add((bal >= e.price() ? "<gold>" : "<red>") + price + " <dark_gray>· Shift: buy 5");
@@ -114,32 +141,37 @@ public final class ShopMenu extends TabMenu {
             }
             return;
         }
-        List<Shop.BuyEntry> list = slot < FIRST_GEAR ? shop().seeds() : shop().gear();
-        int idx = slot < FIRST_GEAR ? slot - FIRST_SEED : slot - FIRST_GEAR;
-        if (idx >= 0 && idx < list.size() && idx < (slot < FIRST_GEAR ? SEEDS : GEAR)) {
-            buy(list.get(idx), click.isShiftClick() ? 5 : 1);
+        if (slot == GEAR) {
+            clickSound();
+            new GearMenu(player).open();
+            return;
+        }
+        int idx = slot - FIRST_SEED;
+        if (idx >= 0 && idx < SEEDS && idx < shop().seeds().size()) {
+            buy(player, shop().seeds().get(idx), click.isShiftClick() ? 5 : 1);
+            render();
         }
     }
 
-    private void buy(Shop.BuyEntry e, int times) {
+    /** Buys an entry {@code times} times (as long as the money lasts). */
+    static void buy(Player player, Shop.BuyEntry e, int times) {
         KushCraft plugin = KushCraft.get();
         int bought = 0;
         for (int i = 0; i < times; i++) {
             if (!plugin.economy().withdraw(player, e.price())) {
                 break;
             }
-            InventoryUtil.give(player, shop().create(e));
+            InventoryUtil.give(player, plugin.shop().create(e));
             bought++;
         }
         if (bought == 0) {
             player.sendActionBar(Text.mm("<red>You need " + money(e.price())));
-            failSound();
+            player.playSound(player.getLocation(), "minecraft:block.note_block.bass", SoundCategory.MASTER, 0.7f, 0.6f);
         } else {
             player.playSound(player.getLocation(), "minecraft:entity.villager.yes", SoundCategory.PLAYERS, 0.7f, 1.1f);
             player.sendActionBar(Text.mm("<green>Bought " + (bought * e.amount()) + "x " + e.type().display()
                     + " <gray>for <gold>" + money(bought * e.price())));
         }
-        render();
     }
 
     @Override

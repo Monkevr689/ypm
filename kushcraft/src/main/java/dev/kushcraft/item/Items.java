@@ -54,14 +54,14 @@ public final class Items {
         return item;
     }
 
-    /** A machine item that remembers its Drug Lab upgrade level. */
+    /** A machine (or worker) item that remembers its upgrade level. */
     public static ItemStack machine(ItemType type, int level) {
         ItemStack it = create(type);
         if (level > 1) {
             it.editMeta(m -> {
                 m.getPersistentDataContainer().set(Keys.LEVEL, PersistentDataType.INTEGER, level);
                 List<net.kyori.adventure.text.Component> lore = m.lore() == null ? new ArrayList<>() : new ArrayList<>(m.lore());
-                lore.add(0, Text.mm("<gold>Upgrade level " + level));
+                lore.add(0, Text.mm("<gold>Level " + level));
                 m.lore(lore);
                 m.setMaxStackSize(1);
             });

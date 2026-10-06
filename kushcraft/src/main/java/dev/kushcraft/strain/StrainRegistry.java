@@ -26,7 +26,7 @@ import java.util.logging.Level;
 public final class StrainRegistry {
 
     /** strains.yml files older than this get the new built-in strains and looks added. */
-    static final int FILE_VERSION = 3;
+    static final int FILE_VERSION = 4;
 
     private final KushCraft plugin;
     private final File file;

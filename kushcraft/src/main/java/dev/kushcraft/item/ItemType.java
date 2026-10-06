@@ -94,6 +94,11 @@ public enum ItemType {
             "<gray>Right-click a plant: faster, better."),
     GROWER_GUIDE("KushCraft Menu", "grower_guide", false, false,
             "<gray>Right-click to open the menu."),
+    // --- workers (right-click the ground to hire them there) -------------
+    FARMHAND("Farmhand", "worker_farmhand", false, false,
+            "<gray>Harvests and replants your plants.", "<gray>Right-click the ground to hire them there."),
+    DRYER("Dryer", "worker_dryer", false, false,
+            "<gray>Dries your buds at your Drug Lab.", "<gray>Right-click the ground near a lab to hire them."),
     // --- blocks (placed like a block, punch to pick up) ------------------
     LAB_STATION("Drug Lab", "machine_lab_station", MachineType.LAB_STATION,
             "<gray>Cook, roll, dry and breed."),
@@ -172,7 +177,7 @@ public enum ItemType {
         if (this == BONG || this == GROWER_GUIDE || this == VAPE_PEN) {
             return 1;
         }
-        return machine != null ? 16 : 64;
+        return machine != null || this == FARMHAND || this == DRYER ? 16 : 64;
     }
 
     /** Old stations replaced by the Drug Lab: still work, but not sold or crafted any more. */

@@ -25,7 +25,6 @@ public final class DryMenu extends LabTabMenu {
     static final int[] GAUGES = {at(3, 2), at(3, 3), at(3, 4), at(3, 5), at(3, 6)};
     /** Steps of the gauge_N icons under each rack. */
     static final int GAUGE_STEPS = 8;
-    private static final int CAPACITY = 64;
 
     public DryMenu(Player player, Machine machine) {
         super(player, machine, Tab.DRY);
@@ -68,13 +67,9 @@ public final class DryMenu extends LabTabMenu {
     /** Collects every dry rack. */
     private void collect() {
         int total = 0;
-        for (int i = 0; i < Machine.RACKS; i++) {
-            Machine.Rack r = machine.rack(i);
-            if (r != null && r.dry()) {
-                InventoryUtil.give(player, Items.strainItem(ItemType.BUD_DRIED, strain(r), r.quality(), r.amount()));
-                total += r.amount();
-                machine.emptyRack(i);
-            }
+        for (Machine.Rack r : machine.takeDry()) {
+            InventoryUtil.give(player, Items.strainItem(ItemType.BUD_DRIED, strain(r), r.quality(), r.amount()));
+            total += r.amount();
         }
         if (total == 0) {
             player.sendActionBar(Text.mm(machine.racksInUse() > 0 ? "<yellow>Still drying..."
@@ -127,33 +122,11 @@ public final class DryMenu extends LabTabMenu {
             return 0;
         }
         Strain s = Items.strain(inSlot);
-        int q = Items.quality(inSlot);
         long now = System.currentTimeMillis();
-        long done = now + KushCraft.get().machines().dryingSeconds() * 1000L;
-        int target = -1;
-        for (int i = 0; i < Machine.RACKS && target < 0; i++) {
-            Machine.Rack r = machine.rack(i);
-            if (r != null && !r.dry() && r.strain().equals(s.id()) && r.quality() == q && r.amount() < CAPACITY) {
-                target = i; // top up a rack with the same buds (its timer restarts)
-            }
-        }
-        for (int i = 0; i < Machine.RACKS && target < 0; i++) {
-            if (machine.rack(i) == null) {
-                target = i;
-            }
-        }
-        if (target < 0) {
-            return 0;
-        }
-        Machine.Rack r = machine.rack(target);
-        int have = r == null ? 0 : r.amount();
-        int add = Math.min(CAPACITY - have, inSlot.getAmount());
+        int add = machine.hang(s.id(), Items.quality(inSlot), inSlot.getAmount(), now,
+                now + KushCraft.get().machines().dryingSeconds() * 1000L);
         inSlot.setAmount(inSlot.getAmount() - add);
         player.getInventory().setItem(slot, inSlot.getAmount() <= 0 ? null : inSlot);
-        machine.rack(target, new Machine.Rack(s.id(), q, have + add, now, done));
-        if (inSlot.getAmount() > 0) {
-            return add + hang(slot, inSlot);
-        }
         return add;
     }
 

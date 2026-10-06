@@ -148,9 +148,46 @@ def crafting_side(x, y, rng):
 
 cube("crafting_table", texture(crafting_top, 12), texture(crafting_side, 13))
 
+def stone(x, y, rng):
+    return shade(rgba("8a8a8a"), rng.choice((0.78, 0.9, 1.0, 1.0, 1.1)))
+
+
+def furnace_front(x, y, rng):
+    if x in (0, 15) or y in (0, 15):
+        return shade(rgba("6a6a6a"), 0.9)
+    if 4 <= x <= 11 and 8 <= y <= 13:
+        if y >= 11:
+            return rgba("f8a83a") if (x + y) % 2 else rgba("e8622a")
+        return rgba("1a1a1a")
+    if 4 <= x <= 11 and y in (2, 3):
+        return rgba("2a2a2a")
+    return stone(x, y, rng)
+
+
+cube("furnace", texture(stone, 14), texture(furnace_front, 15), texture(stone, 16))
+
 # ---------------------------------------------------------------------------
 # items
 # ---------------------------------------------------------------------------
+art("glass_pane", [
+    "................",
+    ".......KK.......",
+    ".......KhK......",
+    ".......KwK......",
+    ".......KhK......",
+    ".......KwK......",
+    ".......KhK......",
+    ".......KwK......",
+    ".......KhK......",
+    ".......KwK......",
+    ".......KhK......",
+    ".......KwK......",
+    ".......KhK......",
+    ".......KwK......",
+    ".......KK.......",
+    "................",
+], {"K": "a8c8d8", "h": "f4fcff", "w": "d8eef8"})
+
 INGOT = [
     "................",
     "................",

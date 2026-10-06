@@ -574,7 +574,23 @@ public final class Cartels {
         dirty = true;
     }
 
-    /** Selftest clean-up. */
+    /** Admin: put money in a cartel's bank. */
+    public void addBank(Cartel c, double amount) {
+        c.bank = Math.max(0, c.bank + amount);
+        dirty = true;
+    }
+
+    /** Admin: every cartel gets a new shipment now. */
+    public void newShipments() {
+        for (Cartel c : cartels.values()) {
+            c.shipment = null;
+            c.nextShipment = 0;
+        }
+        tick();
+        dirty = true;
+    }
+
+    /** Selftest clean-up, admin panel. */
     public void disband(Cartel c) {
         for (UUID m : new ArrayList<>(c.members)) {
             byMember.remove(m);

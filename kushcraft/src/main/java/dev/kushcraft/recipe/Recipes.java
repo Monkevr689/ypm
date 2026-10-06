@@ -62,23 +62,24 @@ public final class Recipes {
         RecipeChoice planks = new RecipeChoice.MaterialChoice(Tag.PLANKS);
 
         // everything is shapeless: put the ingredients anywhere in the grid
-        shapeless(plugin, ItemType.LAB_STATION, 1, "Crafting Table + 2 Iron Ingots + Glass Bottle",
-                Material.CRAFTING_TABLE, Material.IRON_INGOT, Material.IRON_INGOT, Material.GLASS_BOTTLE);
-        shapeless(plugin, ItemType.GROW_LAMP, 1, "Lantern + Iron Ingot + Redstone",
-                Material.LANTERN, Material.IRON_INGOT, Material.REDSTONE);
-        shapeless(plugin, ItemType.PLANTER_BOX, 2, "Dirt + Bone Meal + 2 any Planks",
-                Material.DIRT, Material.BONE_MEAL, planks, planks);
-        shapeless(plugin, ItemType.DEALER, 1, "Chest + Gold Ingot",
-                Material.CHEST, Material.GOLD_INGOT);
-        shapeless(plugin, ItemType.BONG, 1, "Glass Bottle + 2 Glass",
-                Material.GLASS_BOTTLE, Material.GLASS, Material.GLASS);
-        shapeless(plugin, ItemType.ROLLING_PAPERS, 4, "Paper",
+        shapeless(plugin, ItemType.LAB_STATION, 1, "Crafting Table + Furnace + 3 Iron Ingots + 2 Glass Bottles",
+                Material.CRAFTING_TABLE, Material.FURNACE, Material.IRON_INGOT, Material.IRON_INGOT, Material.IRON_INGOT,
+                Material.GLASS_BOTTLE, Material.GLASS_BOTTLE);
+        shapeless(plugin, ItemType.GROW_LAMP, 1, "Lantern + 2 Iron Ingots + Redstone + Glowstone Dust",
+                Material.LANTERN, Material.IRON_INGOT, Material.IRON_INGOT, Material.REDSTONE, Material.GLOWSTONE_DUST);
+        shapeless(plugin, ItemType.PLANTER_BOX, 2, "2 Dirt + Bone Meal + 3 any Planks",
+                Material.DIRT, Material.DIRT, Material.BONE_MEAL, planks, planks, planks);
+        shapeless(plugin, ItemType.DEALER, 1, "Chest + 2 Gold Ingots",
+                Material.CHEST, Material.GOLD_INGOT, Material.GOLD_INGOT);
+        shapeless(plugin, ItemType.BONG, 1, "Glass Bottle + 3 Glass",
+                Material.GLASS_BOTTLE, Material.GLASS, Material.GLASS, Material.GLASS);
+        shapeless(plugin, ItemType.ROLLING_PAPERS, 3, "Paper",
                 Material.PAPER);
-        shapeless(plugin, ItemType.BLUNT_WRAP, 3, "Paper + Cocoa Beans",
+        shapeless(plugin, ItemType.BLUNT_WRAP, 2, "Paper + Cocoa Beans",
                 Material.PAPER, Material.COCOA_BEANS);
-        shapeless(plugin, ItemType.FERTILIZER, 4, "Bone Meal + Rotten Flesh",
-                Material.BONE_MEAL, Material.ROTTEN_FLESH);
-        shapeless(plugin, ItemType.LAB_SOLVENT, 4, "Glass Bottle + Sugar",
+        shapeless(plugin, ItemType.FERTILIZER, 4, "2 Bone Meal + Rotten Flesh",
+                Material.BONE_MEAL, Material.BONE_MEAL, Material.ROTTEN_FLESH);
+        shapeless(plugin, ItemType.LAB_SOLVENT, 3, "Glass Bottle + Sugar",
                 Material.GLASS_BOTTLE, Material.SUGAR);
         shapeless(plugin, ItemType.GROWER_GUIDE, 1, "Book + Wheat Seeds",
                 Material.BOOK, Material.WHEAT_SEEDS);

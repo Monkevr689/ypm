@@ -30,6 +30,8 @@ public final class LabMenu extends LabTabMenu {
     static final int SLOTS = 27;
     static final int[] PROGRESS = {at(4, 0), at(4, 1), at(4, 2), at(4, 3), at(4, 4), at(4, 5), at(4, 6)};
     static final int OUTPUT = at(4, 8);
+    /** Shift-click cooks up to this many batches in one go (each takes the full time). */
+    static final int MAX_BATCHES = 4;
 
     private String pickStrain;
     private int pickQuality;
@@ -86,7 +88,8 @@ public final class LabMenu extends LabTabMenu {
             all &= ok;
             lore.add((ok ? "<green>✔ " : "<red>✘ ") + "<white>" + ing.amount() + " " + ing.name());
         }
-        lore.add("<dark_gray>⌚ " + Text.time((int) Math.round(r.seconds() * timeFactor(machine))));
+        lore.add("<dark_gray>⌚ " + Text.time((int) Math.round(r.seconds() * timeFactor(machine)))
+                + " · Shift: up to " + MAX_BATCHES + " batches");
         boolean ready = all && !machine.busy();
         ItemMeta meta = icon.getItemMeta();
         meta.itemName(Text.mm((ready ? "<green>" : "<white>") + r.output().display() + " <gray>x" + r.amount()));
@@ -111,7 +114,7 @@ public final class LabMenu extends LabTabMenu {
         }
         int i = slot - FIRST;
         if (i >= 0 && i < SLOTS && i < LabRecipe.values().length) {
-            start(LabRecipe.values()[i]);
+            start(LabRecipe.values()[i], click.isShiftClick() ? MAX_BATCHES : 1);
         }
     }
 
@@ -127,7 +130,7 @@ public final class LabMenu extends LabTabMenu {
         render();
     }
 
-    private void start(LabRecipe r) {
+    private void start(LabRecipe r, int wanted) {
         if (machine.busy()) {
             if (machine.jobDone()) {
                 collect(); // one click: collect the old batch, then start the new one
@@ -153,22 +156,36 @@ public final class LabMenu extends LabTabMenu {
                 return;
             }
         }
+        // how many batches: what you have, the shift-click limit and one stack of output
+        int batches = Math.max(1, Math.min(wanted, r.output().maxStack() / Math.max(1, r.amount())));
+        for (LabRecipe.Ingredient ing : r.ingredients()) {
+            int have = ing.strainSource() ? g.count() : InventoryUtil.count(player, ing::matches);
+            batches = Math.max(1, Math.min(batches, have / ing.amount()));
+        }
         for (LabRecipe.Ingredient ing : r.ingredients()) {
             if (ing.strainSource()) {
-                StrainStock.take(player, ing.custom(), g, ing.amount());
+                StrainStock.take(player, ing.custom(), g, ing.amount() * batches);
             } else {
-                InventoryUtil.remove(player, ing::matches, ing.amount());
+                InventoryUtil.remove(player, ing::matches, ing.amount() * batches);
             }
         }
-        ItemStack result = r.output().strainBound() && g != null
-                ? Items.strainItem(r.output(), g.strain(), g.quality(), r.amount())
-                : Items.create(r.output(), r.amount());
-        if (ThreadLocalRandom.current().nextDouble() < bonusChance(machine)
-                && result.getAmount() < result.getMaxStackSize()) {
-            result.setAmount(result.getAmount() + 1);
-            player.sendActionBar(Text.mm("<green>Lab bonus: +1 " + r.output().display()));
+        int amount = r.amount() * batches;
+        int bonus = 0;
+        for (int b = 0; b < batches; b++) {
+            if (ThreadLocalRandom.current().nextDouble() < bonusChance(machine)) {
+                bonus++;
+            }
         }
-        machine.startJob(r.name(), (long) (r.seconds() * 1000L * timeFactor(machine)), result);
+        amount = Math.min(r.output().maxStack(), amount + bonus);
+        ItemStack result = r.output().strainBound() && g != null
+                ? Items.strainItem(r.output(), g.strain(), g.quality(), amount)
+                : Items.create(r.output(), amount);
+        if (bonus > 0) {
+            player.sendActionBar(Text.mm("<green>Lab bonus: +" + bonus + " " + r.output().display()));
+        } else if (batches > 1) {
+            player.sendActionBar(Text.mm("<green>Cooking " + batches + " batches at once."));
+        }
+        machine.startJob(r.name(), (long) (r.seconds() * 1000L * batches * timeFactor(machine)), result);
         KushCraft.get().machines().markDirty();
         KushCraft.get().awards().cooked(player, r);
         successSound();

@@ -24,6 +24,7 @@ public final class Shop {
     private final List<BuyEntry> buy = new ArrayList<>();
     private final List<BuyEntry> seeds = new ArrayList<>();
     private final List<BuyEntry> gear = new ArrayList<>();
+    private final List<BuyEntry> hires = new ArrayList<>();
     private final Map<ItemType, Double> sell = new EnumMap<>(ItemType.class);
 
     public Shop(KushCraft plugin) {
@@ -34,11 +35,14 @@ public final class Shop {
         buy.clear();
         seeds.clear();
         gear.clear();
+        hires.clear();
         sell.clear();
         // cannabis seeds: every built-in strain at its own price (strains.yml)
         double mult = Math.max(0, plugin.getConfig().getDouble("shop.seed-price-multiplier", 1.0));
         for (Strain s : plugin.strains().shopStrains()) {
-            seeds.add(new BuyEntry(ItemType.SEED_PACK, s.id(), 1, Math.round(s.seedPrice() * mult * 100) / 100.0));
+            // scaled prices are rounded to $5 so they stay easy to read
+            double price = mult == 1.0 ? s.seedPrice() : Math.max(5, Math.round(s.seedPrice() * mult / 5.0) * 5.0);
+            seeds.add(new BuyEntry(ItemType.SEED_PACK, s.id(), 1, price));
         }
         for (Map<?, ?> m : plugin.getConfig().getMapList("shop.buy")) {
             ItemType t = ItemType.parse(String.valueOf(m.get("item")));
@@ -57,10 +61,11 @@ public final class Shop {
             int amount = m.get("amount") instanceof Number n ? n.intValue() : 1;
             double price = m.get("price") instanceof Number n ? n.doubleValue() : 0;
             BuyEntry e = new BuyEntry(t, strain == null ? null : String.valueOf(strain), Math.max(1, amount), Math.max(0, price));
-            (isSeed(t) ? seeds : gear).add(e);
+            (isSeed(t) ? seeds : dev.kushcraft.worker.WorkerType.of(t) != null ? hires : gear).add(e);
         }
         buy.addAll(seeds);
         buy.addAll(gear);
+        buy.addAll(hires);
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("shop.sell");
         if (s != null) {
             for (String k : s.getKeys(false)) {
@@ -84,6 +89,11 @@ public final class Shop {
     /** Everything else: papers, solvent, blocks... */
     public List<BuyEntry> gear() {
         return Collections.unmodifiableList(gear);
+    }
+
+    /** Workers for hire (Shop > Gear & Workers). */
+    public List<BuyEntry> hires() {
+        return Collections.unmodifiableList(hires);
     }
 
     static boolean isSeed(ItemType t) {
@@ -138,8 +148,9 @@ public final class Shop {
         return base <= 0 ? 0 : Math.round(base * bonus(p) * 100) / 100.0;
     }
 
-    /** Sale multiplier of a player: dealer title + cartel level (1.2 = +20%). */
+    /** Sale multiplier of a player: dealer title + cartel level + Smooth Talker (1.2 = +20%). */
     public double bonus(org.bukkit.entity.Player p) {
-        return plugin.ranks().multiplier(p) + plugin.cartels().sellBonus(p.getUniqueId());
+        return plugin.ranks().multiplier(p) + plugin.cartels().sellBonus(p.getUniqueId())
+                + (plugin.effects().has(p, dev.kushcraft.effect.EffectType.SMOOTH_TALKER) ? 0.10 : 0);
     }
 }

@@ -13,7 +13,7 @@ import java.util.List;
 /** Admin: click any KushCraft item to get it. */
 public final class GiveMenu extends ListMenu {
 
-    private List<Catalog.Entry> current = List.of();
+    private List<ItemStack> current = List.of();
 
     public GiveMenu(Player player) {
         super(player, "Give Items (admin)");
@@ -21,11 +21,15 @@ public final class GiveMenu extends ListMenu {
 
     @Override
     protected List<ItemStack> entries() {
-        current = Catalog.entries(null);
         List<ItemStack> out = new ArrayList<>();
-        for (Catalog.Entry e : current) {
+        for (Catalog.Entry e : Catalog.entries(null)) {
             out.add(CatalogIcons.sample(e.type()));
         }
+        // workers are not in the catalog
+        for (dev.kushcraft.worker.WorkerType t : dev.kushcraft.worker.WorkerType.values()) {
+            out.add(dev.kushcraft.item.Items.create(t.item()));
+        }
+        current = out;
         return out;
     }
 
@@ -39,7 +43,7 @@ public final class GiveMenu extends ListMenu {
         if (!player.hasPermission("kushcraft.admin") || index >= current.size()) {
             return;
         }
-        ItemStack it = CatalogIcons.sample(current.get(index).type());
+        ItemStack it = current.get(index).clone();
         it.setAmount(click.isShiftClick() ? it.getMaxStackSize() : 1);
         InventoryUtil.give(player, it);
         successSound();

@@ -1676,3 +1676,307 @@ def award_mythic():
     s.glint(13, 11, big=True)
     s.outline(0.4)
     return s
+
+
+# ---------------------------------------------------------------------------
+# 4.0: workers, the guide, the admin panel, market news, new effects
+# ---------------------------------------------------------------------------
+def worker_face(s, kind, x0, y0, k=2):
+    """Pastes a worker's face from their skin (tools/workers.py), k times bigger, with their hat."""
+    import workers
+    face = workers.face_of(workers.skin(kind))
+    for y in range(8):
+        for x in range(8):
+            col = face.getpixel((x, y))
+            if col[3]:
+                for dy in range(k):
+                    for dx in range(k):
+                        s.put(x0 + x * k + dx, y0 + y * k + dy, col)
+    w = 8 * k
+    if kind == "farmhand":
+        # straw hat: wide brim and crown with a red band
+        s.shade(rect(x0 - 3, y0 - 1, x0 + w + 2, y0), ramp("e8c870", 3, spread=0.3), rim=False)
+        s.shade(rect(x0 + 2, y0 - 6, x0 + w - 3, y0 - 2), ramp("ecd078", 4, spread=0.3), dither=0.3)
+        s.fill(rect(x0 + 2, y0 - 3, x0 + w - 3, y0 - 2), c("c8302a"))
+    else:
+        s.shade(rect(x0, y0 - 4, x0 + w - 1, y0 + 1), ramp("2e8a44", 4, spread=0.3), dither=0.3)
+        s.fill(rect(x0 - 1, y0 + 1, x0 + w + 1, y0 + 2), c("1e5a2e"))
+        s.fill(rect(x0 + w // 2 - 1, y0 - 3, x0 + w // 2, y0 - 2), c("c8f05a"))
+
+
+def contract(kind, ribbon):
+    s = Sprite(seed=701 if kind == "farmhand" else 702)
+    card = rounded(4, 5, 27, 29, 2)
+    s.shade(card, ramp("f0e6c8", 4, spread=0.2), dither=0.3, rim=False)
+    s.fill(rect(4, 25, 27, 29), c(ribbon))
+    s.line(5, 25, 26, 25, scale(c(ribbon), 1.25))
+    worker_face(s, kind, 8, 9, 2)
+    for x in range(7, 25, 2):
+        s.put(x, 27, scale(c(ribbon), 0.6))
+    s.outline(0.4)
+    return s
+
+
+@item("worker_farmhand")
+def worker_farmhand():
+    return contract("farmhand", "4caa32")
+
+
+@item("worker_dryer")
+def worker_dryer():
+    return contract("dryer", "e8a832")
+
+
+@icon("ui_workers")
+def ui_workers():
+    s = Sprite(seed=703)
+    worker_face(s, "dryer", 15, 13, 2)
+    worker_face(s, "farmhand", 2, 10, 2)
+    s.outline(0.4)
+    return s
+
+
+@icon("award_worker")
+def award_worker():
+    s = Sprite(seed=704)
+    medal(s, 16, 20, 10, "e8c870", ribbon=("4caa32", "e8a832"))
+    worker_face(s, "farmhand", 12, 17, 1)
+    s.outline(0.4)
+    return s
+
+
+@icon("award_workforce")
+def award_workforce():
+    s = Sprite(seed=705)
+    for (kind, x, y) in (("dryer", 3, 9), ("farmhand", 17, 9), ("farmhand", 3, 22), ("dryer", 17, 22)):
+        worker_face(s, kind, x + 2, y - 1, 1)
+    for (x, y) in ((11, 4), (24, 4)):
+        s.glint(x, y, c("ffe070"), big=True)
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_gear")
+def ui_gear():
+    """A red toolbox with a wrench sticking out."""
+    s = Sprite(seed=706)
+    wrench = thick_line(8, 5, 18, 16, 2.4)
+    s.shade(wrench, ramp("c8d0d8", 4, spread=0.35), dither=0.2)
+    s.fill(ellipse(8, 5, 3.2, 3.2) - ellipse(7, 4, 1.4, 1.4), c("b8c0c8"))
+    box = rounded(3, 14, 28, 28, 2)
+    s.shade(box, ramp("d83a2a", 5, spread=0.35), dither=0.3)
+    s.fill(rect(3, 18, 28, 19), c("8a1e14"))
+    s.fill(rect(14, 17, 17, 20), c("e8e8e8"))
+    s.fill(rect(10, 10, 21, 11) | rect(10, 10, 11, 14) | rect(20, 10, 21, 14), c("3a3a44"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_market")
+def ui_market():
+    """A newspaper page with a price chart: one line up, one down."""
+    s = Sprite(seed=707)
+    paper = rect(4, 4, 27, 27)
+    s.shade(paper, ramp("f0ecdc", 3, spread=0.15), rim=False)
+    s.fill(rect(6, 6, 25, 8), c("3a3a3a"))
+    for y in (11, 13):
+        s.line(6, y, 13, y, c("9a9a9a"))
+    pts = [(6, 24), (10, 21), (13, 22), (17, 16), (21, 17), (25, 11)]
+    for a, b in zip(pts, pts[1:]):
+        s.fill(thick_line(a[0], a[1], b[0], b[1], 1.6), c("3ab43a"))
+    pts = [(15, 12), (18, 15), (21, 14), (25, 21)]
+    for a, b in zip(pts, pts[1:]):
+        s.line(a[0], a[1], b[0], b[1], c("d83a2a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_guide")
+def ui_guide():
+    """A glowing light bulb: the next step."""
+    s = Sprite(seed=708)
+    for k in range(8):
+        a = math.radians(k * 45)
+        x0, y0 = 16 + math.cos(a) * 11, 12 + math.sin(a) * 11
+        x1, y1 = 16 + math.cos(a) * 14, 12 + math.sin(a) * 14
+        if y1 < 22:
+            s.fill(thick_line(x0, y0, x1, y1, 1.5), c("ffe680"), 2)
+    bulb = ellipse(16, 12, 7.5, 7.5) | poly([(11, 15), (21, 15), (19, 21), (13, 21)])
+    s.shade(bulb, ramp("ffd83a", 5, spread=0.4), dither=0.3)
+    s.fill(ellipse(13.5, 9.5, 2, 2.5), c("fffbe0"))
+    s.line(14, 14, 15, 18, c("c88a1a"))
+    s.line(18, 14, 17, 18, c("c88a1a"))
+    base = rect(12, 22, 20, 27)
+    s.shade(base, ramp("a8b0b8", 4, spread=0.3), rim=False)
+    for y in (23, 25):
+        s.line(12, y, 20, y, c("6a727a"))
+    s.fill(rect(14, 28, 18, 28), c("4a525a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_admin")
+def ui_admin():
+    """A red shield with a gold gavel."""
+    s = Sprite(seed=709)
+    shield = poly([(5, 4), (27, 4), (27, 15), (16, 29), (5, 15)])
+    s.shade(shield, ramp("c82a2a", 5, spread=0.35), dither=0.3)
+    s.fill(poly([(7, 6), (25, 6), (25, 8), (7, 8)]), c("e84a4a"))
+    s.fill(thick_line(11, 22, 19, 13, 1.8), c("8a5a2a"))
+    head = poly([(15, 10), (19, 6), (25, 12), (21, 16)])
+    s.shade(head, ramp(GOLD, 4, spread=0.35), dither=0.2)
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_rename")
+def ui_rename():
+    """A name tag."""
+    s = Sprite(seed=710)
+    tag = poly([(4, 13), (10, 7), (28, 7), (28, 21), (10, 21)])
+    s.shade(tag, ramp("e8d8b0", 4, spread=0.25), dither=0.2)
+    s.fill(ellipse(9, 14, 1.6, 1.6), c("6a5a3a"))
+    s.fill(thick_line(2, 10, 8, 14, 1.0), c("c8c8c8"))
+    for y in (11, 14, 17):
+        s.line(14, y, 25 - (y % 3), y, c("8a7a5a"))
+    s.outline(0.4)
+    return s
+
+
+def round_button(seed, col):
+    s = Sprite(seed=seed)
+    s.shade(ellipse(16, 16, 12, 12), ramp(col, 5, spread=0.4), dither=0.3)
+    return s
+
+
+@icon("ui_pause")
+def ui_pause():
+    s = round_button(711, "f0a03a")
+    s.fill(rect(11, 9, 14, 23), c("fff4e0"))
+    s.fill(rect(18, 9, 21, 23), c("fff4e0"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_play")
+def ui_play():
+    s = round_button(712, "4cc84a")
+    s.fill(poly([(12, 8), (24, 16), (12, 24)]), c("f4fff0"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_dismiss")
+def ui_dismiss():
+    """A pink slip with a red X stamp."""
+    s = Sprite(seed=713)
+    slip = poly([(6, 4), (26, 6), (24, 29), (5, 27)])
+    s.shade(slip, ramp("f8c8d0", 3, spread=0.2), rim=False)
+    for y in (9, 12):
+        s.line(9, y, 22, y + 1, c("c890a0"))
+    s.fill(thick_line(10, 15, 21, 25, 2.4), c("d82a2a"))
+    s.fill(thick_line(21, 15, 10, 25, 2.4), c("d82a2a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_take")
+def ui_take():
+    """A sack with an arrow coming out: take everything."""
+    s = Sprite(seed=714)
+    sack = ellipse(14, 21, 10, 8) | poly([(9, 12), (19, 12), (22, 18), (6, 18)])
+    s.shade(sack, ramp("b8945a", 5, spread=0.35), dither=0.4)
+    s.fill(rect(9, 11, 19, 12), c("6a4a2a"))
+    s.speckle(sack, [scale(c("b8945a"), 0.8)], 0.12)
+    arrow(s, 18, 14, 28, 4, "5ae85a", w=2.6, head=4.2)
+    s.outline(0.4)
+    return s
+
+
+# ---- the new effects ------------------------------------------------------
+@icon("effect_green_thumb")
+def effect_green_thumb():
+    """A green thumbs-up with a sprout."""
+    s = Sprite(seed=720)
+    thumb = rounded(8, 14, 22, 28, 3) | rounded(12, 6, 17, 17, 2)
+    s.shade(thumb, ramp("5ad84a", 5, spread=0.4), dither=0.3)
+    for y in (18, 21, 24):
+        s.line(16, y, 21, y, c("2a8a2a"))
+    s.fill(thick_line(24, 16, 24, 9, 1.2), c("3a8a2a"))
+    s.fill(ellipse(21, 8, 3, 1.8), c("7ae85a"))
+    s.fill(ellipse(27, 7, 3, 1.8), c("5ac84a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("effect_smooth_talker")
+def effect_smooth_talker():
+    """A speech bubble with a gold coin."""
+    s = Sprite(seed=721)
+    bubble = rounded(3, 4, 28, 21, 5) | poly([(8, 20), (14, 20), (6, 27)])
+    s.shade(bubble, ramp("fff4d8", 4, spread=0.2), dither=0.2)
+    coin(s, 16, 12.5, 5.5)
+    s.fill(rect(15, 9, 16, 16), c("b88a1a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("effect_frosty")
+def effect_frosty():
+    """A snowflake."""
+    s = Sprite(seed=722)
+    for k in range(6):
+        a = math.radians(k * 60 + 90)
+        x1, y1 = 16 + math.cos(a) * 12, 16 + math.sin(a) * 12
+        s.fill(thick_line(16, 16, x1, y1, 1.8), c("bfeeff"))
+        for side in (-1, 1):
+            bx, by = 16 + math.cos(a) * 7, 16 + math.sin(a) * 7
+            s.line(bx, by, bx + math.cos(a + side * 0.8) * 4, by + math.sin(a + side * 0.8) * 4, c("8ad8ff"))
+    s.fill(ellipse(16, 16, 2.5, 2.5), c("ffffff"))
+    s.outline(0.4, fixed=c("2a5a8a"))
+    return s
+
+
+@icon("effect_magnetic")
+def effect_magnetic():
+    """A red horseshoe magnet pulling sparks."""
+    s = Sprite(seed=723)
+    ring = ellipse(16, 14, 11, 11) - ellipse(16, 14, 5.5, 5.5)
+    shape = (ring - rect(0, 15, 31, 31)) | rect(5, 14, 10, 25) | rect(22, 14, 27, 25)
+    s.shade(shape, ramp("e83a3a", 5, spread=0.35), dither=0.3)
+    s.fill(rect(5, 22, 10, 25) | rect(22, 22, 27, 25), c("dce4ec"))
+    for (x, y) in ((8, 29), (16, 27), (24, 29), (16, 30)):
+        s.glint(x, y, c("c88aff"), big=True)
+    s.outline(0.4)
+    return s
+
+
+@icon("effect_sixth_sense")
+def effect_sixth_sense():
+    """An eye with a glowing violet iris."""
+    s = Sprite(seed=724)
+    eye = poly([(3, 16), (9, 9), (16, 7), (23, 9), (29, 16), (23, 23), (16, 25), (9, 23)])
+    s.shade(eye, ramp("f4f0ff", 3, spread=0.15), rim=False)
+    s.shade(ellipse(16, 16, 6.5, 6.5), ramp("9a5af0", 5, spread=0.4), dither=0.3)
+    s.fill(ellipse(16, 16, 2.6, 2.6), c("1a0a2a"))
+    s.put(14, 13, c("ffffff"))
+    for (x, y) in ((4, 5), (28, 5), (16, 2)):
+        s.glint(x, y, c("e0c8ff"), big=True)
+    s.outline(0.4)
+    return s
+
+
+@icon("effect_zen")
+def effect_zen():
+    """A lotus flower."""
+    s = Sprite(seed=725)
+    for (pts, col) in (
+            ([(16, 5), (21, 14), (16, 22), (11, 14)], "f8a8d8"),
+            ([(5, 11), (14, 15), (15, 22), (8, 19)], "e88ac8"),
+            ([(27, 11), (18, 15), (17, 22), (24, 19)], "e88ac8"),
+            ([(3, 19), (13, 20), (14, 24), (6, 24)], "c86aa8"),
+            ([(29, 19), (19, 20), (18, 24), (26, 24)], "c86aa8")):
+        s.shade(poly(pts), ramp(col, 4, spread=0.3), dither=0.2)
+    s.shade(ellipse(16, 26, 11, 2.5), ramp("4ab89a", 4, spread=0.3), rim=False)
+    s.outline(0.4)
+    return s

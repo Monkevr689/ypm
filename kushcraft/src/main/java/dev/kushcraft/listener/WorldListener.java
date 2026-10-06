@@ -60,6 +60,7 @@ public final class WorldListener implements Listener {
             if (w.isChunkLoaded(x, z)) {
                 plugin.plants().chunkLoaded(w, x, z);
                 plugin.machines().chunkLoaded(w, x, z);
+                plugin.workers().chunkLoaded(w, x, z);
             }
         });
     }
@@ -68,6 +69,7 @@ public final class WorldListener implements Listener {
     public void onChunkUnload(ChunkUnloadEvent e) {
         plugin.plants().chunkUnloaded(e.getWorld(), e.getChunk().getX(), e.getChunk().getZ());
         plugin.machines().chunkUnloaded(e.getWorld(), e.getChunk().getX(), e.getChunk().getZ());
+        plugin.workers().chunkUnloaded(e.getWorld(), e.getChunk().getX(), e.getChunk().getZ());
     }
 
     /** Our display entities are never saved; if one ever was, remove it. */

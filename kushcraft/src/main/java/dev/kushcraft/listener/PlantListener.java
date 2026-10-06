@@ -84,13 +84,36 @@ public final class PlantListener implements Listener {
         }
         if (plant.mature()) {
             if (Protection.canBuild(p, plant.key().block())) {
+                int around = p.isSneaking() ? harvestAround(p, plant) : 0;
                 plugin.plants().harvest(plant, p);
+                if (around > 0) {
+                    p.sendActionBar(Text.mm("<green>Harvested " + (around + 1) + " plants."));
+                }
             } else {
                 p.sendActionBar(Text.mm("<red>That's not your plant."));
             }
             return;
         }
         plugin.plants().showInfo(p, plant);
+    }
+
+    /** Sneak + right-click a ripe plant: every other ripe plant of yours close by is harvested too. */
+    private int harvestAround(Player p, Plant clicked) {
+        int r = plugin.getConfig().getInt("harvest.sneak-radius", 4);
+        if (r <= 0) {
+            return 0;
+        }
+        int n = 0;
+        for (Plant other : new java.util.ArrayList<>(plugin.plants().all())) {
+            if (other == clicked || !other.mature() || !p.getUniqueId().equals(other.owner())
+                    || !other.key().world().equals(clicked.key().world()) || other.key().distanceSq(clicked.key()) > r * r
+                    || !Protection.canBuild(p, other.key().block())) {
+                continue;
+            }
+            plugin.plants().harvest(other, p);
+            n++;
+        }
+        return n;
     }
 
     @EventHandler(priority = EventPriority.HIGH)

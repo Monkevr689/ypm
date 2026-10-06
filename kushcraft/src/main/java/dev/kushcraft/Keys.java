@@ -21,6 +21,7 @@ public final class Keys {
     public static NamespacedKey ICON;
     public static NamespacedKey PLACED;
     public static NamespacedKey LEVEL;
+    public static NamespacedKey WORKER;
 
     private Keys() {
     }
@@ -38,6 +39,7 @@ public final class Keys {
         ICON = new NamespacedKey(plugin, "icon");
         PLACED = new NamespacedKey(plugin, "placed");
         LEVEL = new NamespacedKey(plugin, "level");
+        WORKER = new NamespacedKey(plugin, "worker");
     }
 
     /** kush:&lt;path&gt; - a model / item definition from our resource pack. */

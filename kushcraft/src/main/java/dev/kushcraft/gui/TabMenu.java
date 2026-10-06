@@ -14,9 +14,10 @@ import java.util.function.Function;
 
 /**
  * The /kush menu: five tabs along the top (Shop, Drugs, Trade, Cartel,
- * Awards) and your money in the corner. Rows 1-5 belong to the page. The
- * active tab is drawn into each page's background (tools/gui.py tab_page()).
- * Top Dealers is a page inside the Cartel tab.
+ * Awards), then a free slot for the page (5), the admin panel (6, admins
+ * only), the guide button (7: your next step) and your money (8). Rows 1-5
+ * belong to the page. The active tab is drawn into each page's background
+ * (tools/gui.py tab_page()). Top Dealers is a page inside the Cartel tab.
  */
 public abstract class TabMenu extends Menu {
 
@@ -50,6 +51,10 @@ public abstract class TabMenu extends Menu {
         }
     }
 
+    /** A button of the page itself (e.g. Awards: next page). */
+    static final int EXTRA = 5;
+    static final int ADMIN = 6;
+    static final int GUIDE = 7;
     static final int WALLET = 8;
     private static final Map<UUID, Tab> LAST = new HashMap<>();
 
@@ -87,6 +92,10 @@ public abstract class TabMenu extends Menu {
         set(WALLET, Items.icon("ui_wallet", "<gold>" + money(plugin.economy().balance(player)),
                 cartel == null ? java.util.List.of(plugin.ranks().label(player))
                         : java.util.List.of(plugin.ranks().label(player), cartel.colored())));
+        set(GUIDE, StarterMenu.button(player));
+        if (player.hasPermission("kushcraft.admin")) {
+            set(ADMIN, Items.icon("ui_admin", "<red>Admin panel", "<dark_gray>Only admins see this button."));
+        }
         page();
     }
 
@@ -103,7 +112,15 @@ public abstract class TabMenu extends Menu {
             }
             return;
         }
-        if (slot >= 9) {
+        if (slot == GUIDE) {
+            openChild(new StarterMenu(player));
+            return;
+        }
+        if (slot == ADMIN && player.hasPermission("kushcraft.admin")) {
+            openChild(new AdminMenu(player));
+            return;
+        }
+        if (slot >= 9 || slot == EXTRA) {
             clickPage(slot, click);
         }
     }

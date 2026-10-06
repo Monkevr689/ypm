@@ -130,6 +130,42 @@
    "chars": [
     "\ue00b"
    ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/gear.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue00c"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/worker.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue00d"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/guide.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue00e"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/admin.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue00f"
+   ]
   }
  ]
 }

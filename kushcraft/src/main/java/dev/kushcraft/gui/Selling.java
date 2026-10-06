@@ -15,7 +15,7 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /** Selling product from your inventory - used by the Shop and Trade tabs. */
-final class Selling {
+public final class Selling {
 
     private Selling() {
     }
@@ -31,16 +31,25 @@ final class Selling {
     /** What "Sell all" would pay right now. */
     static double allValue(Player p) {
         double total = 0;
+        Map<ItemType, Integer> sold = new EnumMap<>(ItemType.class);
         for (ItemStack it : p.getInventory().getStorageContents()) {
             if (sellable(it)) {
-                total += shop().sellPrice(it, p) * it.getAmount();
+                total += value(p, it, it.getAmount(), sold);
             }
         }
         return total;
     }
 
+    /** n of this stack, after the items in {@code sold} went first (prices drop as you sell). */
+    private static double value(Player p, ItemStack it, int n, Map<ItemType, Integer> sold) {
+        ItemType t = Items.type(it);
+        int before = sold.getOrDefault(t, 0);
+        sold.put(t, before + n);
+        return shop().sellPrice(it, p) * n * KushCraft.get().market().bulkFactor(t, before, n);
+    }
+
     /** Sells every bud, drug and harvest in the inventory. */
-    static boolean all(Player p) {
+    public static boolean all(Player p) {
         KushCraft plugin = KushCraft.get();
         PlayerInventory pi = p.getInventory();
         ItemStack[] contents = pi.getStorageContents();
@@ -50,9 +59,8 @@ final class Selling {
         for (int i = 0; i < contents.length; i++) {
             ItemStack it = contents[i];
             if (sellable(it)) {
-                total += shop().sellPrice(it, p) * it.getAmount();
+                total += value(p, it, it.getAmount(), sold);
                 count += it.getAmount();
-                sold.merge(Items.type(it), it.getAmount(), Integer::sum);
                 contents[i] = null;
             }
         }
@@ -61,6 +69,7 @@ final class Selling {
             return false;
         }
         pi.setStorageContents(contents);
+        total = Math.round(total * 100) / 100.0;
         paid(p, total);
         sold.forEach((t, n) -> plugin.market().sold(t, n));
         p.sendActionBar(Text.mm("<green>Sold " + count + " items for <gold>" + plugin.economy().format(total)));
@@ -77,7 +86,7 @@ final class Selling {
         }
         KushCraft plugin = KushCraft.get();
         int amount = click.isShiftClick() || click.isRightClick() ? item.getAmount() : 1;
-        double total = shop().sellPrice(item, p) * amount;
+        double total = value(p, item, amount, new EnumMap<>(ItemType.class));
         ItemStack inSlot = p.getInventory().getItem(slot);
         if (inSlot == null || !inSlot.isSimilar(item)) {
             return true;

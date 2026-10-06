@@ -7,7 +7,7 @@ author: KushCraft
 softdepend: [Vault]
 commands:
   kush:
-    description: Opens the KushCraft menu (shop, drugs, trade, cartel, awards)
+    description: Opens the KushCraft menu (shop, drugs, trade, cartel, awards, workers, admin)
     usage: /kush help
     aliases: [k, kc, kushcraft]
 permissions:
@@ -18,5 +18,5 @@ permissions:
     description: Breed new strains (Drug Lab > Mix)
     default: true
   kushcraft.admin:
-    description: Admin commands (give, money, reload, shop anywhere)
+    description: The admin panel and admin commands (give, money, reload, shop anywhere, no worker limit)
     default: op
