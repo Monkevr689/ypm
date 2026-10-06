@@ -213,6 +213,11 @@ def check_menus():
                                                         encoding="utf-8").read(), re.M))
     if worker_types != len(gui.HIRE_SLOTS):
         errors.append(f"{worker_types} worker types but {len(gui.HIRE_SLOTS)} hiring posters")
+    trade_src = open(os.path.join(gui_dir, "TradeMenu.java"), encoding="utf-8").read()
+    shelves = re.search(r"static final int\[\] SHELVES = \{([^}]*)\};", trade_src)
+    shelf_slots = re.findall(r"at\((\d+), (\d+)\)", shelves.group(1)) if shelves else []
+    if len(shelf_slots) != gui.TRADE_SHELVES or {int(r) for r, _ in shelf_slots} != {1, 5}:
+        errors.append(f"TradeMenu SHELVES {shelf_slots} but tools/gui.py draws {gui.TRADE_SHELVES} in rows 1 and 5")
     cartel_src = open(os.path.join(gui_dir, "CartelMenu.java"), encoding="utf-8").read()
     for const, cell in (("HELP", (3, 1)), ("SHIPMENT", (3, 4)), ("TOP", (3, 7))):
         m = re.search(r"static final int " + const + r" = at\((\d+), (\d+)\);", cartel_src)

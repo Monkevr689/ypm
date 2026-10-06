@@ -21,9 +21,9 @@ public enum Starter {
     DRY("Dry your buds", "bud_dried", List.of(Award.FIRST_DRY),
             "Right-click the lab, open Dry and", "click your fresh buds. 30 seconds!"),
     MAKE("Roll or cook", "joint", List.of(Award.FIRST_ROLL, Award.FIRST_COOK),
-            "Drug Lab > Roll for joints, or Cook:", "dried buds > kief > hash, and more."),
+            "Drug Lab > Roll for joints, or Cook", "a vape pen from 4 dried buds."),
     SELL("Sell your product", "cash", List.of(Award.FIRST_SALE),
-            "Shop > Sell all, or click product", "in your inventory while it's open."),
+            "Selling drugs is how you make money:", "Shop > Sell all, or click product."),
     FORAGE("Pick a wild plant", "award_forager", List.of(Award.FORAGER),
             "Wild plants grow out in the world,", "away from farms. Go exploring!");
 

@@ -147,9 +147,20 @@ final class SelfTest {
                 "cocaine: leaves > paste > cocaine");
         check(uses(LabRecipe.HEROIN, ItemType.MORPHINE) && uses(LabRecipe.MORPHINE, ItemType.OPIUM),
                 "heroin: opium > morphine > heroin");
-        check(uses(LabRecipe.HASH, ItemType.KIEF) && uses(LabRecipe.KIEF, ItemType.BUD_DRIED), "hash: buds > kief > hash");
-        check(uses(LabRecipe.SPACE_BROWNIE, ItemType.CANNA_BUTTER) && uses(LabRecipe.LEAN, ItemType.COUGH_SYRUP),
-                "edibles and lean have their own step");
+        check(uses(LabRecipe.VAPE_PEN, ItemType.BUD_DRIED) && uses(LabRecipe.LEAN, ItemType.COUGH_SYRUP),
+                "vape pens are made from dried buds, lean has its own step");
+        check(uses(LabRecipe.AYAHUASCA, ItemType.DMT) && uses(LabRecipe.OXY, ItemType.MORPHINE)
+                && uses(LabRecipe.SHROOM_CHOCOLATE, ItemType.MAGIC_MUSHROOM), "new drugs build on old ones");
+        for (LabRecipe r : LabRecipe.values()) {
+            check(!r.output().strainBound() || r == LabRecipe.VAPE_PEN, "weed is just buds, joints, blunts and vape pens: " + r);
+            check(!r.output().legacy(), "old weed products are not made any more: " + r);
+        }
+        for (ItemType t : ItemType.values()) {
+            if (t.legacy()) {
+                check(plugin.shop().basePrice(t) > 0 && !dev.kushcraft.award.Awards.drugs().contains(t),
+                        "old weed products still sell: " + t);
+            }
+        }
         for (ItemType t : ItemType.values()) {
             if (!t.ingredient()) {
                 continue;
@@ -158,25 +169,34 @@ final class SelfTest {
             check(java.util.Arrays.stream(LabRecipe.values()).anyMatch(r -> uses(r, t)), "something uses " + t);
             check(plugin.shop().basePrice(t) > 0, "in-between product sells: " + t);
         }
-        // milk comes back as a bucket, water bottles as bottles
-        LabRecipe.Ingredient milk = LabRecipe.CANNA_BUTTER.ingredients().get(1);
-        check(milk.remainder() == Material.BUCKET && milk.matches(new ItemStack(Material.MILK_BUCKET)), "milk gives the bucket back");
+        // water bottles come back as bottles
         ItemStack water = new ItemStack(Material.POTION);
         water.editMeta(org.bukkit.inventory.meta.PotionMeta.class, m -> m.setBasePotionType(org.bukkit.potion.PotionType.WATER));
         ItemStack swift = new ItemStack(Material.POTION);
         swift.editMeta(org.bukkit.inventory.meta.PotionMeta.class, m -> m.setBasePotionType(org.bukkit.potion.PotionType.SWIFTNESS));
         LabRecipe.Ingredient w = LabRecipe.SHROOM_TEA.ingredients().get(1);
-        check(w.matches(water) && !w.matches(swift) && w.name().equals("Water Bottle"), "water bottle ingredient");
+        check(w.matches(water) && !w.matches(swift) && w.name().equals("Water Bottle")
+                && w.remainder() == Material.GLASS_BOTTLE, "water bottle ingredient");
         for (ItemType t : ItemType.values()) {
             if (!t.retired() && dev.kushcraft.catalog.Catalog.of(t) == null
                     && t.machine() == null && dev.kushcraft.worker.WorkerType.of(t) == null) {
                 // every non-block item should be explained in the catalog
                 check(false, "catalog entry for " + t);
             }
-            if (t.isDrug() && !t.strainBound() && t != ItemType.SPACE_BROWNIE) {
+            if (t.isDrug() && !t.strainBound() && !t.legacy()) {
                 check(dev.kushcraft.catalog.Catalog.dose(t) != null, "dose for " + t);
             }
         }
+    }
+
+    private static int count(org.bukkit.inventory.Inventory inv, ItemType t) {
+        int n = 0;
+        for (ItemStack it : inv.getStorageContents()) {
+            if (Items.type(it) == t) {
+                n += it.getAmount();
+            }
+        }
+        return n;
     }
 
     private static boolean uses(LabRecipe r, ItemType t) {
@@ -344,7 +364,7 @@ final class SelfTest {
                 var racks = saved.getConfigurationSection("machines." + BlockKey.of(b).serialize() + ".racks");
                 check(racks != null && racks.getKeys(false).size() == 5 && racks.getInt("3.amount") == 13,
                         "racks are saved");
-                m.startJob(LabRecipe.HASH.name(), 1, Items.create(ItemType.LUCID_TAB, 2));
+                m.startJob(LabRecipe.SPEED.name(), 1, Items.create(ItemType.LUCID_TAB, 2));
                 check(m.busy(), "lab busy");
                 double slow = dev.kushcraft.gui.LabMenu.timeFactor(m);
                 m.level(3);
@@ -419,7 +439,7 @@ final class SelfTest {
         UUID boss = UUID.randomUUID();
         var owner = Bukkit.getOfflinePlayer(boss);
         eco.set(owner, 1000);
-        check(ws.enabled() && ws.maxPerPlayer() >= 1, "workers are on");
+        check(ws.enabled(), "workers are on");
         // a ripe plant on farmland, an empty farmland next to it, the farmhand standing beside them
         for (int dx = -1; dx <= 6; dx++) {
             for (int dz = -1; dz <= 4; dz++) {
@@ -480,22 +500,59 @@ final class SelfTest {
             dried |= Items.type(it) == ItemType.BUD_DRIED;
         }
         check(dried, "dried buds in the dryer's satchel");
-        // the cook: picks up dried buds from the dryer, cooks kief at the lab and collects it
+        // the cook: rolls joints from the dryer's buds and papers from a chest next to them
         var cook = ws.hireAt(new Location(w, x + 4.5, y + 1, z + 2.5), dev.kushcraft.worker.WorkerType.COOK, boss, 1);
-        check(!ws.workNow(cook) && cook.status().contains("Pick"), "a new cook waits for a drug to cook");
-        ws.setRecipe(cook, LabRecipe.KIEF);
-        check(cook.recipe() == LabRecipe.KIEF, "the cook got their recipe");
+        check(!ws.workNow(cook) && cook.status().contains("Pick"), "a new cook waits for a drug to make");
+        ws.setJob(cook, dev.kushcraft.worker.Worker.ROLL_JOINT);
+        check(cook.rolls() == ItemType.JOINT && cook.product() == ItemType.JOINT, "the cook rolls joints");
         ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
-        check(ws.workNow(cook) && cook.carried() >= 4, "the cook fetches dried buds from the dryer");
-        check(ws.workNow(cook) && lab.busy() && "KIEF".equals(lab.job()), "the cook starts a batch at the lab");
-        check(cook.jobs() == 1, "the cook is paid per batch");
+        check(ws.workNow(cook) && cook.carried() >= 4, "the cook fetches dried buds from the dryer (work chain)");
+        check(!ws.workNow(cook) && cook.status().contains("Rolling Papers"), "the cook says what's missing");
+        Block chestBlock = w.getBlockAt(x + 3, y + 1, z + 3);
+        chestBlock.setType(Material.CHEST);
+        var chest = ((org.bukkit.block.Container) chestBlock.getState(false)).getInventory();
+        chest.addItem(Items.create(ItemType.ROLLING_PAPERS, 8));
+        check(ws.chests(cook).size() == 1, "a chest next to the cook is their work chest");
+        check(ws.workNow(cook) && count(cook.satchel(), ItemType.ROLLING_PAPERS) == 8, "the cook takes papers from the chest");
+        check(ws.workNow(cook) && count(cook.satchel(), ItemType.JOINT) == 8 && cook.jobs() == 1, "the cook rolls joints");
+        // the runner picks up the joints and sells them; the money goes to the owner, minus their cut
+        var runner = ws.hireAt(new Location(w, x + 0.5, y + 1, z + 4.5), dev.kushcraft.worker.WorkerType.RUNNER, boss, 1);
+        check(ws.chests(runner).isEmpty() && ws.crew(runner).size() == 4, "the runner is in the crew");
+        check(ws.workNow(runner) && count(runner.satchel(), ItemType.JOINT) == 8 && count(cook.satchel(), ItemType.JOINT) == 0,
+                "the runner picks up the cook's joints");
+        double before = eco.balance(owner);
+        check(ws.workNow(runner) && eco.balance(owner) > before && runner.carried() == 0 && runner.wages() > 0,
+                "the runner sells them for the owner and keeps a cut");
+        check(eco.sales(owner) > 0, "runner sales count for the leaderboard");
+        // nobody takes what another worker needs: the dryer needs fresh buds, so the runner leaves them
+        ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 5)));
+        check(ws.uses(dryer, Items.strainItem(ItemType.BUD_FRESH, s, 3, 1)) && !ws.workNow(runner)
+                && count(farm.satchel(), ItemType.BUD_FRESH) >= 5, "the runner leaves what the dryer needs");
+        // the cook cooks a vape pen at the lab, collects it and puts it in their chest
+        ws.setRecipe(cook, LabRecipe.VAPE_PEN);
+        ws.stash(cook, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4), Items.create(ItemType.LAB_SOLVENT, 1),
+                new ItemStack(Material.IRON_NUGGET, 2), new ItemStack(Material.GLASS_PANE, 1)));
+        check(ws.workNow(cook) && lab.busy() && "VAPE_PEN".equals(lab.job()), "the cook starts a batch at the lab");
+        check(cook.jobs() == 2, "the cook is paid per batch");
         lab.finishNow();
-        check(ws.workNow(cook) && !lab.busy(), "the cook collects the finished batch");
-        boolean kief = false;
-        for (ItemStack it : cook.satchel().getStorageContents()) {
-            kief |= Items.type(it) == ItemType.KIEF;
+        check(ws.workNow(cook) && !lab.busy() && count(cook.satchel(), ItemType.VAPE_PEN) == 1, "the cook collects the batch");
+        check(ws.workNow(cook) && count(chest, ItemType.VAPE_PEN) == 1 && count(cook.satchel(), ItemType.VAPE_PEN) == 0,
+                "an idle cook puts their work in the chest");
+        check(ws.workNow(runner) && count(runner.satchel(), ItemType.VAPE_PEN) == 1, "the runner takes it from the chest");
+        check(ws.maxPerPlayer() == 0, "no limit on workers");
+        // spare seeds become fertilizer when the satchel gets full
+        List<ItemStack> seeds = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            seeds.add(Items.create(ItemType.ROLLING_PAPERS, 64));
         }
-        check(kief, "kief in the cook's satchel");
+        for (int i = 0; i < 26; i++) {
+            seeds.add(Items.create(ItemType.COCA_SEEDS, 16));
+        }
+        farm.satchel().clear();
+        ws.stash(farm, seeds);
+        ws.compost(farm);
+        check(count(farm.satchel(), ItemType.COCA_SEEDS) == 16 && count(farm.satchel(), ItemType.FERTILIZER) == 100,
+                "spare seeds become fertilizer");
         // nobody to pay: no work
         eco.set(owner, 0);
         ripe = plugin.plants().at(key);
@@ -507,9 +564,10 @@ final class SelfTest {
         ws.save();
         var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 new File(plugin.getDataFolder(), "workers.yml"));
-        check(saved.isConfigurationSection("workers." + dryer.id()) && saved.isConfigurationSection(
-                "workers." + cook.id() + ".satchel") && "KIEF".equals(saved.getString("workers." + cook.id() + ".recipe")),
+        check(saved.isConfigurationSection("workers." + runner.id()) && saved.isConfigurationSection(
+                "workers." + farm.id() + ".satchel") && "VAPE_PEN".equals(saved.getString("workers." + cook.id() + ".recipe")),
                 "workers, their satchels and a cook's recipe are saved");
+        chestBlock.setType(Material.AIR);
         check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
                 dev.kushcraft.worker.WorkerType.FARMHAND, boss, 3)), "trained workers reach further");
         check(Items.level(Items.machine(ItemType.FARMHAND, 2)) == 2, "a dismissed worker keeps their level");
@@ -658,14 +716,34 @@ final class SelfTest {
     private void exchange() {
         var ex = plugin.exchange();
         check(ex.enabled(), "exchange enabled with items");
-        check(!ex.categories().isEmpty() && ex.categories().size() <= 7, "1-7 trade shelves, got " + ex.categories().size());
+        check(!ex.categories().isEmpty() && ex.categories().size() <= 18, "1-18 trade shelves, got " + ex.categories().size());
         for (var c : ex.categories()) {
             check(!c.offers().isEmpty() && c.offers().size() <= 27, "shelf fits 3 rows: " + c.id());
         }
-        check(ex.offers().size() >= 100, "100+ resources to trade, got " + ex.offers().size());
-        for (var o : ex.offers()) {
-            check(ex.sellPrice(o.material()) < ex.buyPrice(o), "exchange sells cheaper than it buys: " + o.material());
+        check(ex.categories().size() >= 10, "10+ trade shelves, got " + ex.categories().size());
+        check(ex.offers().size() >= 200, "200+ items to buy, got " + ex.offers().size());
+        // no OP PvP gear and nothing from the End
+        for (String banned : List.of("NETHERITE_INGOT", "NETHERITE_SCRAP", "TOTEM_OF_UNDYING", "GOLDEN_APPLE",
+                "ENCHANTED_GOLDEN_APPLE", "ENDER_PEARL", "ELYTRA", "END_CRYSTAL", "NETHER_STAR", "SHULKER_SHELL",
+                "DRAGON_BREATH", "DRAGON_HEAD", "END_STONE", "PURPUR_BLOCK", "CHORUS_FRUIT", "ENDER_EYE", "END_ROD",
+                "DIAMOND_SWORD", "MACE", "BREEZE_ROD", "WIND_CHARGE", "RESPAWN_ANCHOR", "CRYING_OBSIDIAN")) {
+            Material m = Material.matchMaterial(banned);
+            check(m == null || ex.offer(m) == null, "Trade doesn't sell " + banned);
         }
+        // the Lab Ingredients shelf has everything the recipes need (water: fill a bottle)
+        var lab = ex.categories().stream().filter(c -> c.id().equals("lab")).findFirst().orElse(null);
+        check(lab != null, "a Lab Ingredients shelf");
+        for (LabRecipe r : LabRecipe.values()) {
+            for (LabRecipe.Ingredient ing : r.ingredients()) {
+                if (lab != null && ing.vanilla() != null && ing.vanilla() != Material.POTION) {
+                    check(lab.offers().stream().anyMatch(o -> o.material() == ing.vanilla()),
+                            "Lab Ingredients sells " + ing.name());
+                }
+            }
+        }
+        var ores = ex.categories().stream().filter(c -> c.id().equals("ores")).findFirst().orElse(null);
+        check(ores != null && lab != null && ores.offers().stream().anyMatch(o -> lab.offers().contains(o)),
+                "one item can be on two shelves (same offer)");
         if (ex.offer(Material.DIAMOND) != null) {
             check(ex.buyPrice(ex.offer(Material.DIAMOND)) >= 10 * plugin.shop().basePrice(ItemType.COCAINE),
                     "resources cost a lot of product (a diamond >= 10 cocaine)");
@@ -676,21 +754,14 @@ final class SelfTest {
             double buy = ex.buyPrice(diamond);
             ex.bought(Material.DIAMOND, 5);
             check(ex.buyPrice(diamond) > buy, "buying raises the price");
-            check(ex.sellPrice(Material.DIAMOND) < buy, "no profit from buying and selling back");
-            ex.sold(Material.DIAMOND, 50);
-            check(ex.buyPrice(diamond) < buy, "selling lowers the price");
-            check(ex.multiplier(Material.DIAMOND) >= plugin.getConfig().getDouble("exchange.min-price", 0.8) - 1e-9,
-                    "price stays above min-price");
+            ex.bought(Material.DIAMOND, 5000);
+            check(ex.multiplier(Material.DIAMOND) <= plugin.getConfig().getDouble("exchange.max-price", 1.25) + 1e-9,
+                    "price stays under max-price");
             for (int i = 0; i < 30; i++) {
                 ex.tick();
             }
             check(Math.abs(ex.multiplier(Material.DIAMOND) - 1) < 1e-9, "price recovers to normal");
         }
-        check(ex.sellable(new ItemStack(Material.DIAMOND, 3)), "plain diamonds can be sold");
-        ItemStack named = new ItemStack(Material.DIAMOND);
-        named.editMeta(m -> m.customName(net.kyori.adventure.text.Component.text("x")));
-        check(!ex.sellable(named), "renamed items can't be sold");
-        check(!ex.sellable(Items.create(ItemType.COCAINE)), "KushCraft items don't sell at the exchange");
     }
 
     private void awards() {
@@ -853,6 +924,13 @@ final class SelfTest {
 
     private void jobs(World w, int x, int y, int z) {
         var jobs = plugin.jobs();
+        // money only comes from selling drugs
+        check(!jobs.enabled(), "jobs pay nothing by default");
+        check(dev.kushcraft.award.Award.FIRST_SALE.reward() == 0, "awards pay no cash by default");
+        for (ItemType t : List.of(ItemType.SEED_PACK, ItemType.COCA_SEEDS, ItemType.MUSHROOM_SPORES, ItemType.LAB_SOLVENT,
+                ItemType.FERTILIZER)) {
+            check(plugin.shop().basePrice(t) == 0, "only drugs sell, not " + t);
+        }
         check(jobs.rate(dev.kushcraft.jobs.Jobs.Job.MINER, "diamond_ore") > 0, "miner pays for diamonds");
         check(jobs.rate(dev.kushcraft.jobs.Jobs.Job.HUNTER, "ZOMBIE") > 0, "hunter pays for zombies");
         check(jobs.rate(dev.kushcraft.jobs.Jobs.Job.GROWER, Plant.Kind.CANNABIS.name()) > 0, "grower pays for cannabis");

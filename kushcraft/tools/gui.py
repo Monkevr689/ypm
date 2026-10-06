@@ -417,12 +417,14 @@ TITLES = {"SHOP": "SHOP", "DRUGS": "DRUGS", "TRADE": "TRADE", "CARTEL": "CARTEL"
           "TOP": "TOP DEALERS", "GEAR": "GEAR & WORKERS"}
 
 # items per row of the Drugs page (Catalog: weed, psych, uppers, downers, gear)
-DRUG_ROWS = [9, 6, 6, 4, 9]
+DRUG_ROWS = [5, 8, 7, 8, 9]
 DRUG_COLORS = ["5aa83a", "a05ad8", "3aa8d8", "d8803a", "8a8a96"]
 SHOP_SEEDS = 36
 GEAR_SLOTS = 18
-HIRE_SLOTS = ((3, 1), (3, 4), (3, 7))
-TRADE_SHELVES = 7
+HIRE_SLOTS = ((3, 1), (3, 3), (3, 5), (3, 7))
+HIRE_COLORS = ("4caa32", "e8a832", "3ac8e8", "c85ad8")
+# shelf buttons of the Trade page: row 1 and row 5, 9 each (TradeMenu.SHELVES)
+TRADE_SHELVES = 18
 TRADE_SLOTS = 27
 AWARD_SLOTS = 45
 DRY_RACKS = 5
@@ -484,7 +486,7 @@ def shop():
 
 def gear():
     """Shop > Gear & Workers: gear on two metal racks (rows 1-2), a hiring board with
-    three workers (3,1) (3,4) (3,7), back to seeds (5,0) and your workers (5,4). The Shop tab is lit."""
+    four workers (3,1) (3,3) (3,5) (3,7), back to seeds (5,0) and your workers (5,4). The Shop tab is lit."""
     img, a = tab_page("gear", 26, tab="shop")
     d = ImageDraw.Draw(img)
     x0, x1 = 5, 170
@@ -501,10 +503,10 @@ def gear():
     by0, by1 = slot_xy(3, 0)[1] - 8, slot_xy(4, 0)[1] + 17
     cork(img, 8, by0, 167, by1, 61)
     label_plate(img, 88, by1 - 8, "HIRING", plate="f8e8a8")
-    for (r, c), col in zip(HIRE_SLOTS, ("4caa32", "e8a832", "3ac8e8")):
+    for (r, c), col in zip(HIRE_SLOTS, HIRE_COLORS):
         x, y = slot_xy(r, c)
-        d.rectangle((x - 9, y - 3, x + 26, y + 26), fill=rgba("f4ecd4"), outline=rgba("8a7a5a"))
-        d.rectangle((x - 9, y + 22, x + 26, y + 26), fill=rgba(col))
+        d.rectangle((x - 7, y - 3, x + 24, y + 26), fill=rgba("f4ecd4"), outline=rgba("8a7a5a"))
+        d.rectangle((x - 7, y + 22, x + 24, y + 26), fill=rgba(col))
         pin(img, x + 8, y - 5)
         cslot(img, r, c, "big", col)
         # a wage line under the slot
@@ -538,18 +540,15 @@ def drugs():
 
 
 def trade():
-    """Shelf tabs (1,1..7); 27 offers on crates (rows 2-4); Sell all (5,4)."""
+    """Shelf buttons on two market sign boards (row 1 and row 5, 9 each); 27 offers on crates (rows 2-4).
+    Trade only sells, so there's no sell button."""
     img, a = tab_page("trade", 22)
     d = ImageDraw.Draw(img)
-    # shelf picker: a market sign board
-    y = slot_xy(1, 0)[1]
-    wood(img, 5, y - 1, 170, y + 18, "5a3e24", 22)
-    for c in range(1, 1 + TRADE_SHELVES):
-        cslot(img, 1, c, "big" if c == 1 else "normal", "5ad8e8")
-    # lanterns at both ends of the sign
-    for lx in (10, 160):
-        d.rectangle((lx - 2, y + 4, lx + 2, y + 12), fill=rgba("3a3020"), outline=rgba("1a140a"))
-        d.rectangle((lx - 1, y + 6, lx + 1, y + 10), fill=rgba("f8d870"))
+    for row in (1, 5):
+        y = slot_xy(row, 0)[1]
+        wood(img, 5, y - 1, 170, y + 18, "5a3e24", 22 + row)
+        for c in range(TRADE_SHELVES // 2):
+            cslot(img, row, c, tint="5ad8e8")
     # crates behind the goods
     for r in range(3):
         for blk in range(3):
@@ -557,10 +556,6 @@ def trade():
             crate(img, x0 - 1, y0 - 1, x0 + 18 * 3, y0 + 18, 30 + r * 3 + blk)
         for c in range(9):
             cslot(img, 2 + r, c)
-    cslot(img, 5, 4, "glow", "6ae05a")
-    sx, sy = slot_xy(5, 4)
-    coin_pile(img, sx - 14, sy + 13, 3, 9)
-    coin_pile(img, sx + 32, sy + 13, 4, 10)
     player_inv(img, 6)
     return "trade", img, 6
 
@@ -692,7 +687,7 @@ def awards():
 # ---------------------------------------------------------------------------
 LAB_TABS = ["COOK", "ROLL", "DRY", "MIX"]
 # recipes per group, in LabRecipe order: weed, psychedelics, uppers, downers
-COOK_GROUPS = [8, 6, 7, 6]
+COOK_GROUPS = [1, 8, 8, 10]
 COOK_RECIPES = sum(COOK_GROUPS)
 
 

@@ -1,12 +1,10 @@
 package dev.kushcraft.shop;
 
 import dev.kushcraft.KushCraft;
-import dev.kushcraft.item.Items;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,21 +16,20 @@ import java.util.Map;
 import java.util.logging.Level;
 
 /**
- * Trade: swap the money from your product for vanilla resources (ores,
- * farming, wood, building blocks, mob drops, nether & end, rare items) and
- * sell spare ones back.
+ * Trade: spend the money from your product on vanilla items (lab
+ * ingredients, ores, farming, wood, building blocks, colours, decoration,
+ * redstone, tools, mob drops, the Nether). It only sells: nothing can be
+ * sold back, so the only way to make money is selling drugs.
  *
- * Resources are expensive on purpose - a diamond costs a lot of weed. You
- * buy at the config price and sell for sell-ratio of it, so nothing can be
- * bought and sold back for a profit. Buying raises an item's price a
- * little, selling lowers it, and it drifts back to normal over time.
+ * Items are expensive on purpose - a diamond costs a lot of weed. Buying
+ * raises an item's price a little and it drifts back to normal over time.
  */
 public final class Exchange {
 
     public record Offer(Material material, double price, int amount) {
     }
 
-    /** A shelf of the Trade tab: ores, farming, wood, building, mob drops, nether & end, rare. */
+    /** A shelf of the Trade tab (an item can be on more than one shelf). */
     public record Category(String id, String name, Material icon, List<Offer> offers) {
     }
 
@@ -82,7 +79,7 @@ public final class Exchange {
                 for (String k : d.getKeys(false)) {
                     Material m = Material.matchMaterial(k);
                     if (m != null) {
-                        demand.put(m, d.getDouble(k));
+                        demand.put(m, Math.max(1, d.getDouble(k)));
                     }
                 }
             }
@@ -99,7 +96,15 @@ public final class Exchange {
             }
             double price = (m.get("price") instanceof Number n ? n.doubleValue() : 0) * mult;
             int amount = m.get("amount") instanceof Number n ? n.intValue() : 1;
-            if (price <= 0 || byMaterial.containsKey(mat)) {
+            if (price <= 0) {
+                continue;
+            }
+            Offer known = byMaterial.get(mat);
+            if (known != null) {
+                // already on another shelf: the same offer (one price) shows on both
+                if (!out.contains(known)) {
+                    out.add(known);
+                }
                 continue;
             }
             Offer o = new Offer(mat, price, Math.max(1, Math.min(64, amount)));
@@ -133,7 +138,7 @@ public final class Exchange {
     /** Once a minute every price drifts back towards normal. */
     public void tick() {
         double step = plugin.getConfig().getDouble("exchange.recovery-per-minute", 0.02);
-        demand.replaceAll((m, v) -> v > 1 ? Math.max(1, v - step) : Math.min(1, v + step));
+        demand.replaceAll((m, v) -> Math.max(1, v - step));
         demand.values().removeIf(v -> v == 1.0);
         dirty = true;
     }
@@ -165,47 +170,23 @@ public final class Exchange {
         return round(o.price() * multiplier(o.material()));
     }
 
-    /** What a player gets for one item right now (0 = not traded). */
-    public double sellPrice(Material m) {
-        Offer o = byMaterial.get(m);
-        if (o == null) {
-            return 0;
-        }
-        return round(o.price() * multiplier(m) * plugin.getConfig().getDouble("exchange.sell-ratio", 0.2));
-    }
-
-    /** Only plain items can be sold: no names, enchantments, damage or KushCraft items. */
-    public boolean sellable(ItemStack it) {
-        return it != null && !it.getType().isAir() && byMaterial.containsKey(it.getType()) && !Items.isCustom(it)
-                && it.isSimilar(new ItemStack(it.getType()));
-    }
-
     public void bought(Material m, int n) {
-        move(m, n, +1);
-    }
-
-    public void sold(Material m, int n) {
-        move(m, n, -1);
-    }
-
-    /** Each "unit" (the amount sold per click) moves the price by price-step. */
-    private void move(Material m, int n, int sign) {
         Offer o = byMaterial.get(m);
         if (o == null || n <= 0) {
             return;
         }
+        // each "unit" (the amount bought per click) raises the price by price-step
         double step = plugin.getConfig().getDouble("exchange.price-step", 0.01) * n / o.amount();
-        double min = plugin.getConfig().getDouble("exchange.min-price", 0.8);
         double max = plugin.getConfig().getDouble("exchange.max-price", 1.25);
-        demand.put(m, Math.max(min, Math.min(max, multiplier(m) + sign * step)));
+        demand.put(m, Math.max(1, Math.min(max, multiplier(m) + step)));
         dirty = true;
     }
 
     /** "<green>100%" style text for lore. */
     public String trend(Material m) {
         int pct = (int) Math.round(multiplier(m) * 100);
-        String col = pct > 102 ? "gold" : pct >= 98 ? "green" : "yellow";
-        return "<" + col + ">" + pct + "%" + (pct > 102 ? " ⬆" : pct < 98 ? " ⬇" : "") + "</" + col + ">";
+        String col = pct > 102 ? "gold" : "green";
+        return "<" + col + ">" + pct + "%" + (pct > 102 ? " ⬆" : "") + "</" + col + ">";
     }
 
     private static double round(double v) {

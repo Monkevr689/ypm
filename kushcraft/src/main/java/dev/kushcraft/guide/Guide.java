@@ -178,20 +178,25 @@ public final class Guide {
                 + " recipes\n<bold>Roll</bold>: joints & blunts\n<bold>Dry</bold>: 5 racks, 30s\n<bold>Mix</bold>:"
                 + " breed strains\n<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Glowing = you have it all."
                 + " Shift-click cooks up to 4 batches.",
-                "<dark_green><bold>Step by step</bold>\n\n<black>Most drugs take 2-3 cooks:\n<dark_gray>"
-                        + "buds > kief > hash\nbuds > butter > brownie\ncoca > paste > cocaine\n"
-                        + "opium > morphine > heroin\nergot > extract > LSD\n<black>Red = missing (it says"
-                        + " where to get it).");
+                "<dark_green><bold>Step by step</bold>\n\n<black>Many drugs take 2-3 cooks:\n<dark_gray>"
+                        + "coca > paste > cocaine\nopium > morphine > heroin\nmorphine > oxy\n"
+                        + "ergot > extract > LSD\nDMT > ayahuasca\n<black>Red = missing (it says where to get"
+                        + " it).");
     }
 
     private static List<String> workers() {
+        int chain = KushCraft.get() == null ? 32 : KushCraft.get().workers().chainRadius();
         return List.of("<dark_green><bold>Workers</bold>\n\n<black>Shop > <dark_aqua>Gear & Workers</dark_aqua>."
                         + " Right-click the ground to put them there.\n\n<dark_green>Farmhand</dark_green>:"
-                        + " harvests and replants.\n<gold>Dryer</gold>: dries your buds at your lab.\n"
-                        + "<dark_aqua>Cook</dark_aqua>: cooks the drug you pick, batch after batch.",
-                "<dark_green><bold>Your workers</bold>\n\n<black>Right-click one for their satchel: take what"
-                        + " they made, give seeds or ingredients.\n\nThey get a <gold>wage</gold> per job."
-                        + " <dark_gray>No money, no work!</dark_gray>\nTrain them to work further and faster.\n"
+                        + " harvests, replants\n<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>:"
+                        + " cooks or rolls\n<light_purple>Runner</light_purple>: sells it all",
+                "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks of each other"
+                        + " pass things along by themselves:\n<dark_gray>Farmhand > Dryer > Cook > Runner\n\n"
+                        + "<black>A <gold>chest</gold> next to a worker: they put their work in it and take"
+                        + " supplies from it.",
+                "<dark_green><bold>Your workers</bold>\n\n<black>Hire as many as you like. Right-click one for"
+                        + " their satchel.\n\nThey get a <gold>wage</gold> per job (Runners keep a cut)."
+                        + " <dark_gray>No money, no work!</dark_gray>\nTrain them: further, faster.\n"
                         + run("/kush workers", "> Your workers"));
     }
 
@@ -254,12 +259,12 @@ public final class Guide {
 
     private static List<String> money() {
         return List.of(
-                "<dark_green><bold>Shop</bold>\n\n<black>Seeds of every strain (rarer costs more), and"
-                        + " <dark_aqua>Gear & Workers</dark_aqua>.\n\nClick product to sell it, or <gold>Sell"
-                        + " all</gold>. The more of one thing you sell, the less it pays.\n" + run("/kush shop", "> Shop"),
-                "<dark_green><bold>Trade</bold>\n\n<black>7 shelves: ores, farming, wood, blocks, mob drops,"
-                        + " nether & end, tools. They cost a lot of product!\n\n<bold>Jobs</bold>: mining,"
-                        + " farming and hunting pay a little.\n" + run("/kush trade", "> Trade"),
+                "<dark_green><bold>Shop</bold>\n\n<black>Seeds, gear and workers.\n\n<gold>Selling drugs is"
+                        + " the only way to make money.</gold> Click product to sell it, or Sell all. The more of"
+                        + " one thing you sell, the less it pays.\n" + run("/kush shop", "> Shop"),
+                "<dark_green><bold>Trade</bold>\n\n<black>Spend it: lab ingredients, ores, food, wood,"
+                        + " blocks, colours, decor, redstone, tools, mob drops, Nether.\n\n<dark_gray>Trade only"
+                        + " sells - nothing can be sold back.\n" + run("/kush trade", "> Trade"),
                 "<dark_green><bold>Cartels</bold>\n\n<black>A team. A shared <gold>bank</gold> (+5% of every"
                         + " sale), levels that pay every member more, and big <gold>shipments</gold> to fill"
                         + " together.\n" + run("/kush cartel", "> Cartel"),
@@ -272,7 +277,7 @@ public final class Guide {
                         + "\n<dark_red>#1 Cartel Boss\n<red>#2 Kingpin\n<gold>#3 The Plug\n<dark_gray>top 5, 10, 25..."
                         + "\n\n<black>Titles pay extra on every sale.\n" + run("/kush top", "> Top"),
                 "<dark_green><bold>Awards</bold>\n\n<black>" + dev.kushcraft.award.Award.values().length
-                        + " achievements with cash rewards. They pop up like"
+                        + " achievements to collect. They pop up like"
                         + " advancements (press <dark_gray>L</dark_gray>).\n\nSend money:"
                         + "\n<dark_gray>/kush pay \\<name> \\<amount>\n" + run("/kush awards", "> Awards"));
     }

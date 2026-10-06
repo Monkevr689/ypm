@@ -39,8 +39,8 @@ public final class StarterMenu extends Menu {
         for (String l : next.how()) {
             lore.add("<gray>" + l);
         }
-        lore.add("<gold>+" + KushCraft.get().economy().format(next.reward()) + " <dark_gray>· step "
-                + (next.ordinal() + 1) + "/" + Starter.values().length);
+        lore.add((next.reward() > 0 ? "<gold>+" + KushCraft.get().economy().format(next.reward()) + " <dark_gray>· " : "<dark_gray>")
+                + "step " + (next.ordinal() + 1) + "/" + Starter.values().length);
         lore.add("<dark_gray>Click: all steps");
         return Items.glint(Items.icon("ui_guide", "<aqua><bold>Next: " + next.title(), lore), true);
     }
@@ -53,14 +53,18 @@ public final class StarterMenu extends Menu {
         int done = Starter.doneCount(player);
         set(SUMMARY, Items.icon("ui_guide", "<aqua><bold>Getting started <white>" + done + "/" + Starter.values().length,
                 next == null ? List.of("<green>All done! <gray>Now breed strains,", "<gray>start a cartel and get rich.")
-                        : List.of("<gray>Do these in order. Each one pays", "<gray>a reward. <white>Next: " + next.title())));
+                        : List.of("<gray>Do these in order to learn", "<gray>the basics. <white>Next: " + next.title())));
         for (Starter s : Starter.values()) {
             boolean ok = s.done(player);
             List<String> lore = new ArrayList<>();
             for (String l : s.how()) {
                 lore.add("<gray>" + l);
             }
-            lore.add(ok ? "<green>✔ Done" : "<gold>+" + KushCraft.get().economy().format(s.reward()));
+            if (ok) {
+                lore.add("<green>✔ Done");
+            } else if (s.reward() > 0) {
+                lore.add("<gold>+" + KushCraft.get().economy().format(s.reward()));
+            }
             String name = (ok ? "<green>✔ " : s == next ? "<aqua><bold>" : "<white>") + (s.ordinal() + 1) + ". " + s.title();
             ItemStack icon = Items.icon(ok || s == next ? s.icon() : "ui_lock", name, lore);
             set(STEPS[s.ordinal()], Items.glint(icon, s == next));

@@ -53,35 +53,38 @@ public final class Catalog {
     }
 
     static {
-        // weed (one row in the Drugs tab, max 9 per category)
-        add(ItemType.BUD_DRIED, Category.WEED, "Strain effects", "Dry fresh buds at a Drug Lab.");
+        // weed (one row in the Drugs tab, max 9 per category): buds, joints, blunts, vape pens
+        add(ItemType.BUD_FRESH, Category.WEED, null, "Harvest a grown cannabis plant.");
+        add(ItemType.BUD_DRIED, Category.WEED, "Strain effects (in a Bong)", "Dry fresh buds at a Drug Lab.");
         add(ItemType.JOINT, Category.WEED, "Strain effects, 3 hits", "Roll at a Drug Lab.");
         add(ItemType.BLUNT, Category.WEED, "Strain effects, 5 strong hits", "Roll at a Drug Lab.");
-        add(ItemType.HASH, Category.WEED, "Strong strain effects", "Buds > kief > hash.");
-        add(ItemType.MOON_ROCK, Category.WEED, "Very strong strain effects", "Cook at a Drug Lab.");
-        add(ItemType.SPACE_BROWNIE, Category.WEED, "Long strain effects + Munchies", "Buds > canna butter > brownies.");
-        add(ItemType.GUMMIES, Category.WEED, "Very long strain effects", "Cook at a Drug Lab.");
-        add(ItemType.WAX, Category.WEED, "Huge strain effects", "Cook at a Drug Lab.");
         add(ItemType.VAPE_PEN, Category.WEED, "Strain effects, 10 puffs", "Cook at a Drug Lab.");
         // psychedelics
         drug(ItemType.MAGIC_MUSHROOM, Category.PSYCH, "Grow magic mushrooms.");
         drug(ItemType.SHROOM_TEA, Category.PSYCH, "Cook at a Drug Lab.");
+        drug(ItemType.SHROOM_CHOCOLATE, Category.PSYCH, "Cook at a Drug Lab.");
         drug(ItemType.LUCID_TAB, Category.PSYCH, "Wheat > ergot > extract > tabs.");
         drug(ItemType.PEYOTE_BUTTON, Category.PSYCH, "Grow a peyote cactus.");
         drug(ItemType.MESCALINE, Category.PSYCH, "Cook at a Drug Lab.");
         drug(ItemType.DMT, Category.PSYCH, "Cook at a Drug Lab.");
+        drug(ItemType.AYAHUASCA, Category.PSYCH, "Glow berries > DMT > ayahuasca.");
         // uppers
         drug(ItemType.COCAINE, Category.UPPERS, "Coca leaves > coca paste > cocaine.");
         drug(ItemType.CRACK, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.BLUE_CRYSTAL, Category.UPPERS, "Cook at a Drug Lab.");
+        drug(ItemType.SPEED, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.ECSTASY, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.PIXIE_DUST, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.ANGEL_DUST, Category.UPPERS, "Cook at a Drug Lab.");
         // downers
         drug(ItemType.OPIUM, Category.DOWNERS, "Cook poppy pods at a Drug Lab.");
         drug(ItemType.HEROIN, Category.DOWNERS, "Opium > morphine base > heroin.");
+        drug(ItemType.OXY, Category.DOWNERS, "Opium > morphine base > oxy.");
         drug(ItemType.LEAN, Category.DOWNERS, "Opium > cough syrup > lean.");
+        drug(ItemType.XANNY_BARS, Category.DOWNERS, "Cook at a Drug Lab.");
         drug(ItemType.KETAMINE, Category.DOWNERS, "Cook at a Drug Lab.");
+        drug(ItemType.MOONSHINE, Category.DOWNERS, "Cook at a Drug Lab.");
+        drug(ItemType.LAUGHING_GAS, Category.DOWNERS, "Cook at a Drug Lab.");
         // supplies & blocks
         add(ItemType.LAB_STATION, Category.GEAR, null, "Crafting table.");
         add(ItemType.GROW_LAMP, Category.GEAR, null, "Crafting table.");
@@ -98,18 +101,21 @@ public final class Catalog {
         add(ItemType.COCA_SEEDS, Category.GROW, null, "Break grass in jungles and savannas.");
         add(ItemType.POPPY_SEEDS, Category.GROW, null, "Break red poppies.");
         add(ItemType.PEYOTE_SEEDS, Category.GROW, null, "Break dead bushes in deserts.");
-        add(ItemType.BUD_FRESH, Category.GROW, null, "Harvest a grown cannabis plant.");
         add(ItemType.COCA_LEAVES, Category.GROW, null, "Harvest a grown coca bush.");
         add(ItemType.POPPY_POD, Category.GROW, null, "Harvest grown poppies.");
         add(ItemType.ERGOT, Category.GROW, null, "Cook wheat at a Drug Lab, or find it harvesting wheat.");
         // in-between steps, all cooked at a Drug Lab
-        add(ItemType.KIEF, Category.GROW, null, "Cook dried buds at a Drug Lab.");
-        add(ItemType.CANNA_BUTTER, Category.GROW, null, "Cook dried buds + milk at a Drug Lab.");
         add(ItemType.ERGOT_EXTRACT, Category.GROW, null, "Cook ergot at a Drug Lab.");
         add(ItemType.COCA_PASTE, Category.GROW, null, "Cook coca leaves at a Drug Lab.");
         add(ItemType.MORPHINE, Category.GROW, null, "Cook opium at a Drug Lab.");
         add(ItemType.COUGH_SYRUP, Category.GROW, null, "Cook opium + honey at a Drug Lab.");
         add(ItemType.GROWER_GUIDE, Category.GROW, null, "Type /kush.");
+        // old weed products (not made any more; they still work and sell)
+        for (ItemType t : ItemType.values()) {
+            if (t.legacy()) {
+                add(t, Category.GROW, null, "Not made any more - sell old ones in the Shop.");
+            }
+        }
     }
 
     private Catalog() {
@@ -171,6 +177,21 @@ public final class Catalog {
                     .high(18);
             case KETAMINE -> new Dose().add(EffectType.DISSOCIATED, 150).add(EffectType.FLOATY, 120)
                     .add(EffectType.DIZZY, 60).high(30);
+            case SHROOM_CHOCOLATE -> new Dose().add(EffectType.TRIPPY, 150).add(EffectType.GIGGLES, 150)
+                    .add(EffectType.EUPHORIA, 120).high(22).delay(20, "<light_purple>The chocolate melts the walls...");
+            case AYAHUASCA -> new Dose().add(EffectType.VISIONS, 360).add(EffectType.TRIPPY, 300)
+                    .add(EffectType.CREATIVE, 120).add(EffectType.DIZZY, 40).high(36)
+                    .delay(20, "<light_purple>The vine pulls you under...");
+            case SPEED -> new Dose().add(EffectType.ENERGY, 240).add(EffectType.FOCUS, 120).add(EffectType.PARANOIA, 60)
+                    .high(24);
+            case OXY -> new Dose().add(EffectType.PAIN_RELIEF, 240).add(EffectType.EUPHORIA, 180)
+                    .add(EffectType.COUCH_LOCK, 120).add(EffectType.SLEEPY, 60).high(30);
+            case XANNY_BARS -> new Dose().add(EffectType.ZEN, 240).add(EffectType.SLEEPY, 180)
+                    .add(EffectType.COUCH_LOCK, 90).high(22);
+            case MOONSHINE -> new Dose().add(EffectType.SMOOTH_TALKER, 180).add(EffectType.EUPHORIA, 120)
+                    .add(EffectType.GIGGLES, 60).add(EffectType.DIZZY, 90).high(20);
+            case LAUGHING_GAS -> new Dose().add(EffectType.GIGGLES, 40).add(EffectType.FLOATY, 30)
+                    .add(EffectType.DIZZY, 20).high(10);
             default -> null;
         };
     }

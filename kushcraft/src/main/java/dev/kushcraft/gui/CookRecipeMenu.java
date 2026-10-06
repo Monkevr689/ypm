@@ -1,6 +1,7 @@
 package dev.kushcraft.gui;
 
 import dev.kushcraft.KushCraft;
+import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.lab.LabRecipe;
 import dev.kushcraft.util.Text;
@@ -12,43 +13,71 @@ import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Pick what a Cook makes: every Drug Lab recipe, click one. */
+/** Pick what a Cook makes: roll joints or blunts, or any Drug Lab recipe. Click one. */
 public final class CookRecipeMenu extends ListMenu {
+
+    /** The jobs in the order shown: rolling first, then every lab recipe. */
+    private static List<String> jobs() {
+        List<String> out = new ArrayList<>(List.of(Worker.ROLL_JOINT, Worker.ROLL_BLUNT));
+        for (LabRecipe r : LabRecipe.values()) {
+            out.add(r.name());
+        }
+        return out;
+    }
 
     private final Worker worker;
 
     public CookRecipeMenu(Player player, Worker worker) {
-        super(player, "What should " + worker.name() + " cook?");
+        super(player, "What should " + worker.name() + " make?");
         this.worker = worker;
     }
 
     @Override
     protected List<ItemStack> entries() {
         List<ItemStack> out = new ArrayList<>();
-        LabRecipe now = worker.recipe();
-        for (LabRecipe r : LabRecipe.values()) {
-            ItemStack it = CatalogIcons.sample(r.output());
-            it.setAmount(r.amount());
+        for (String job : jobs()) {
+            boolean now = job.equals(currentJob());
+            LabRecipe r = LabRecipe.parse(job);
+            ItemType made = r != null ? r.output() : job.equals(Worker.ROLL_JOINT) ? ItemType.JOINT : ItemType.BLUNT;
+            ItemStack it = CatalogIcons.sample(made);
             List<String> lore = new ArrayList<>();
-            for (LabRecipe.Ingredient ing : r.ingredients()) {
-                lore.add("<white>" + ing.amount() + " " + ing.name() + " <dark_gray>(" + ing.where() + ")");
+            if (r != null) {
+                it.setAmount(r.amount());
+                for (LabRecipe.Ingredient ing : r.ingredients()) {
+                    lore.add("<white>" + ing.amount() + " " + ing.name() + " <dark_gray>(" + ing.where() + ")");
+                }
+                lore.add("<dark_gray>" + r.seconds() + "s a batch at your Drug Lab, up to 4 at once");
+            } else {
+                lore.add("<white>" + (made == ItemType.JOINT ? "1 Dried Bud + 1 Rolling Papers" : "2 Dried Bud + 1 Blunt Wrap")
+                        + " <dark_gray>each");
+                lore.add("<dark_gray>Rolled where they stand, no lab needed");
             }
-            lore.add("<dark_gray>" + r.seconds() + "s a batch, up to 4 batches at once");
-            lore.add(r == now ? "<green>Cooking this now" : "<gray>Click: cook this");
+            lore.add(now ? "<green>Making this now" : "<gray>Click: make this");
+            String verb = r != null ? "" : "Roll ";
             it.editMeta(m -> {
-                m.itemName(Text.mm((r == now ? "<green>" : "<white>") + r.output().display() + " <gray>x" + r.amount()));
+                m.itemName(Text.mm((now ? "<green>" : "<white>") + verb + made.display() + (r != null ? " <gray>x" + r.amount() : "s")));
                 m.lore(Text.lines(lore));
             });
-            out.add(Items.glint(it, r == now));
+            out.add(Items.glint(it, now));
         }
         return out;
+    }
+
+    private String currentJob() {
+        LabRecipe r = worker.recipe();
+        if (r != null) {
+            return r.name();
+        }
+        ItemType roll = worker.rolls();
+        return roll == null ? "" : roll == ItemType.JOINT ? Worker.ROLL_JOINT : Worker.ROLL_BLUNT;
     }
 
     @Override
     protected ItemStack header() {
         return Items.icon("tab_cook", "<aqua>Pick a drug",
-                "<gray>" + Text.escape(worker.name()) + " cooks it at your Drug Lab,",
-                "<gray>using what is in their satchel.");
+                "<gray>" + Text.escape(worker.name()) + " makes it batch after batch,",
+                "<gray>fetching the ingredients from your other",
+                "<gray>workers and the chests next to them.");
     }
 
     @Override
@@ -57,9 +86,12 @@ public final class CookRecipeMenu extends ListMenu {
             player.closeInventory();
             return;
         }
-        LabRecipe r = LabRecipe.values()[index];
-        KushCraft.get().workers().setRecipe(worker, r);
-        player.sendActionBar(Text.mm("<aqua>" + Text.escape(worker.name()) + " now cooks <white>" + r.output().display()));
+        List<String> jobs = jobs();
+        if (index >= jobs.size()) {
+            return;
+        }
+        KushCraft.get().workers().setJob(worker, jobs.get(index));
+        player.sendActionBar(Text.mm("<aqua>" + Text.escape(worker.name()) + " now makes <white>" + worker.product().display()));
         successSound();
         new WorkerMenu(player, worker).open();
     }

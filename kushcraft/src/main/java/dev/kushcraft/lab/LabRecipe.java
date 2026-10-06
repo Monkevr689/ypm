@@ -11,35 +11,24 @@ import org.bukkit.potion.PotionType;
 import java.util.List;
 
 /**
- * Drug Lab recipes. They follow the real steps loosely (sift kief, press
- * hash, make coca paste first, morphine before heroin...) but with game
- * ingredients and a made-up Lab Solvent, never real chemistry. Most drugs
- * take two or three steps. The first strain-source ingredient decides the
- * strain of the product. Same order as tools/recipe_images.py COOK.
+ * Drug Lab recipes. They follow the real steps loosely (coca paste before
+ * cocaine, morphine before heroin...) but with game ingredients and a
+ * made-up Lab Solvent, never real chemistry. Many drugs take two or three
+ * steps. The first strain-source ingredient decides the strain of the
+ * product. Weed is just buds, joints and blunts (rolled) and vape pens.
+ * Same order as tools/recipe_images.py COOK and tools/gui.py COOK_GROUPS.
  */
 public enum LabRecipe {
-    // weed: sift, press, extract, bake
-    KIEF(ItemType.KIEF, 2, 20,
-            Ingredient.strain(ItemType.BUD_DRIED, 3)),
-    HASH(ItemType.HASH, 2, 30,
-            Ingredient.strain(ItemType.KIEF, 3), Ingredient.of(Material.PAPER, 1)),
-    WAX(ItemType.WAX, 2, 45,
-            Ingredient.strain(ItemType.HASH, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
-    MOON_ROCK(ItemType.MOON_ROCK, 2, 40,
-            Ingredient.strain(ItemType.BUD_DRIED, 2), Ingredient.of(ItemType.WAX, 1), Ingredient.of(ItemType.KIEF, 1)),
-    VAPE_PEN(ItemType.VAPE_PEN, 1, 30,
-            Ingredient.strain(ItemType.WAX, 1), Ingredient.of(Material.IRON_NUGGET, 2), Ingredient.of(Material.GLASS_PANE, 1)),
-    CANNA_BUTTER(ItemType.CANNA_BUTTER, 2, 40,
-            Ingredient.strain(ItemType.BUD_DRIED, 2), Ingredient.of(Material.MILK_BUCKET, 1)),
-    SPACE_BROWNIE(ItemType.SPACE_BROWNIE, 4, 40,
-            Ingredient.strain(ItemType.CANNA_BUTTER, 1), Ingredient.of(Material.COCOA_BEANS, 2),
-            Ingredient.of(Material.WHEAT, 2), Ingredient.of(Material.SUGAR, 1)),
-    GUMMIES(ItemType.GUMMIES, 4, 35,
-            Ingredient.strain(ItemType.KIEF, 1), Ingredient.of(Material.SUGAR, 2), Ingredient.of(Material.SLIME_BALL, 1),
-            Ingredient.of(Material.SWEET_BERRIES, 1)),
+    // weed: a vape pen is bud oil in a cartridge
+    VAPE_PEN(ItemType.VAPE_PEN, 1, 40,
+            Ingredient.strain(ItemType.BUD_DRIED, 4), Ingredient.of(ItemType.LAB_SOLVENT, 1),
+            Ingredient.of(Material.IRON_NUGGET, 2), Ingredient.of(Material.GLASS_PANE, 1)),
     // psychedelics
     SHROOM_TEA(ItemType.SHROOM_TEA, 2, 20,
             Ingredient.of(ItemType.MAGIC_MUSHROOM, 3), Ingredient.water(1)),
+    SHROOM_CHOCOLATE(ItemType.SHROOM_CHOCOLATE, 3, 35,
+            Ingredient.of(ItemType.MAGIC_MUSHROOM, 2), Ingredient.of(Material.COCOA_BEANS, 2),
+            Ingredient.of(Material.SUGAR, 1)),
     ERGOT(ItemType.ERGOT, 2, 15,
             Ingredient.of(Material.WHEAT, 4)),
     ERGOT_EXTRACT(ItemType.ERGOT_EXTRACT, 2, 45,
@@ -50,6 +39,8 @@ public enum LabRecipe {
             Ingredient.of(ItemType.PEYOTE_BUTTON, 4), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     DMT(ItemType.DMT, 3, 50,
             Ingredient.of(Material.GLOW_BERRIES, 3), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    AYAHUASCA(ItemType.AYAHUASCA, 2, 50,
+            Ingredient.of(ItemType.DMT, 1), Ingredient.of(Material.VINE, 2), Ingredient.water(1)),
     // uppers
     COCA_PASTE(ItemType.COCA_PASTE, 2, 40,
             Ingredient.of(ItemType.COCA_LEAVES, 6), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
@@ -65,6 +56,8 @@ public enum LabRecipe {
             Ingredient.of(Material.GLOWSTONE_DUST, 2), Ingredient.of(Material.SUGAR, 2)),
     ANGEL_DUST(ItemType.ANGEL_DUST, 3, 50,
             Ingredient.of(Material.GUNPOWDER, 3), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    SPEED(ItemType.SPEED, 4, 45,
+            Ingredient.of(Material.REDSTONE, 2), Ingredient.of(Material.SUGAR, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     // downers
     OPIUM(ItemType.OPIUM, 2, 30,
             Ingredient.of(ItemType.POPPY_POD, 3)),
@@ -72,12 +65,20 @@ public enum LabRecipe {
             Ingredient.of(ItemType.OPIUM, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     HEROIN(ItemType.HEROIN, 2, 60,
             Ingredient.of(ItemType.MORPHINE, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    OXY(ItemType.OXY, 3, 45,
+            Ingredient.of(ItemType.MORPHINE, 1), Ingredient.of(Material.SUGAR, 1), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     COUGH_SYRUP(ItemType.COUGH_SYRUP, 2, 30,
             Ingredient.of(ItemType.OPIUM, 1), Ingredient.of(Material.HONEY_BOTTLE, 1)),
     LEAN(ItemType.LEAN, 2, 30,
             Ingredient.of(ItemType.COUGH_SYRUP, 1), Ingredient.of(Material.SUGAR, 1), Ingredient.of(Material.PURPLE_DYE, 1)),
     KETAMINE(ItemType.KETAMINE, 4, 45,
-            Ingredient.of(Material.NETHER_WART, 3), Ingredient.of(ItemType.LAB_SOLVENT, 1));
+            Ingredient.of(Material.NETHER_WART, 3), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    XANNY_BARS(ItemType.XANNY_BARS, 6, 40,
+            Ingredient.of(Material.WHITE_DYE, 2), Ingredient.of(Material.SUGAR, 1), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    MOONSHINE(ItemType.MOONSHINE, 3, 50,
+            Ingredient.of(Material.WHEAT, 4), Ingredient.of(Material.SUGAR, 2), Ingredient.water(1)),
+    LAUGHING_GAS(ItemType.LAUGHING_GAS, 4, 30,
+            Ingredient.of(Material.SLIME_BALL, 1), Ingredient.of(Material.IRON_NUGGET, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1));
 
     private final ItemType output;
     private final int amount;
@@ -214,6 +215,9 @@ public enum LabRecipe {
                 case SLIME_BALL -> "slimes, or Trade";
                 case NETHER_WART -> "Nether fortresses, or Trade";
                 case LAPIS_LAZULI, REDSTONE -> "mining, or Trade";
+                case VINE -> "jungles and swamps, or Trade";
+                case WHITE_DYE -> "bone meal or lilies, or Trade";
+                case SUGAR -> "sugar cane, or Trade";
                 case GLOWSTONE_DUST -> "the Nether, or Trade";
                 case GUNPOWDER -> "creepers, or Trade";
                 case HONEY_BOTTLE -> "bee nests, or Trade";

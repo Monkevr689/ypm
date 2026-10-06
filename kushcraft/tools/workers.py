@@ -16,7 +16,7 @@ import random
 from PIL import Image
 
 G = None
-TYPES = ("farmhand", "dryer", "cook")
+TYPES = ("farmhand", "dryer", "cook", "runner")
 
 
 def rgba(h):
@@ -36,7 +36,7 @@ def face_of(skin):
 
 
 def skin(t):
-    return {"farmhand": farmhand_skin, "dryer": dryer_skin, "cook": cook_skin}[t]()
+    return {"farmhand": farmhand_skin, "dryer": dryer_skin, "cook": cook_skin, "runner": runner_skin}[t]()
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +376,87 @@ def cook_skin():
 
 
 # ---------------------------------------------------------------------------
+# the runner: purple tracksuit with white stripes, gold chain, shades, sneakers
+# ---------------------------------------------------------------------------
+def runner_skin():
+    rng = random.Random(87)
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    skin, hair, suit = "a8704a", "1a1410", "6a3aa8"
+
+    def head(f, x, y, w, h):
+        if f == "top":
+            return noisy(hair, rng, 0.1)
+        if f == "bottom":
+            return shade(rgba(skin), 0.82)
+        c = noisy(skin, rng, 0.03)
+        if f == "front":
+            if y == 0:
+                return noisy(hair, rng, 0.1)
+            if y == 3 and 1 <= x <= 6:
+                return rgba("1a1a1e")  # the shades' top bar
+            if y == 4 and x in (1, 2, 5, 6):
+                return rgba("2a2a34") if x in (2, 5) else rgba("4a4a5a")  # lenses
+            if y == 4 and x in (3, 4):
+                return rgba("1a1a1e")
+            if y == 5 and x in (3, 4):
+                return shade(rgba(skin), 0.84)
+            if y == 6 and 2 <= x <= 5:
+                return rgba("f4f4f0") if x in (3, 4) else rgba("7a3a2a")  # grin
+            return c
+        if f == "back":
+            return noisy(hair, rng, 0.1) if y < 4 else c
+        if y < 2:
+            return noisy(hair, rng, 0.1)
+        if y == 3:
+            return rgba("1a1a1e")  # the shades' arms
+        return c
+
+    def track(x, y):
+        return shade(rgba(suit), 1 + rng.uniform(-0.05, 0.05))
+
+    def body(f, x, y, w, h):
+        if f in ("top", "bottom"):
+            return track(x, y)
+        if f == "front":
+            if x in (3, 4) and y <= 9:
+                return rgba("e8e8ee") if x == 4 else shade(rgba(suit), 0.8)  # zip
+            if (y, x) in ((1, 1), (2, 2), (3, 3), (1, 6), (2, 5), (3, 4)):
+                return rgba("f0c83a")  # gold chain
+            if y >= 10:
+                return shade(rgba(suit), 0.8)
+            return track(x, y)
+        if f == "back" and y in (2, 3) and 1 <= x <= 6:
+            return rgba("f0f0f0")  # a white stripe across the back
+        return track(x, y)
+
+    def arm(f, x, y, w, h):
+        if f == "bottom" or (y >= 10 and f != "top"):
+            return noisy(skin, rng, 0.03)
+        if f in ("right", "left") and x in (1, 2):
+            return rgba("f4f4f4")  # stripes down the sleeve
+        if y == 9:
+            return shade(rgba(suit), 0.78)  # cuff
+        return track(x, y)
+
+    def leg(f, x, y, w, h):
+        if f == "bottom":
+            return rgba("e8e8e8")
+        if y >= 10:
+            return rgba("f4f4f4") if y == 10 or x % 3 else rgba("d83a3a")  # white sneakers
+        if f in ("right", "left") and x in (1, 2):
+            return rgba("f4f4f4")
+        return track(x, y)
+
+    paint(img, "head", head)
+    paint(img, "body", body)
+    paint(img, "right_arm", arm)
+    paint(img, "left_arm", arm)
+    paint(img, "right_leg", leg)
+    paint(img, "left_leg", leg)
+    return img
+
+
+# ---------------------------------------------------------------------------
 # hats: item models worn in the head slot
 # ---------------------------------------------------------------------------
 def straw_tex():
@@ -453,6 +534,27 @@ def hat_model(name, textures, elements):
     G.save_json(G.item_definition(f"{G.NS}:item/{name}"), f"items/{name}.json")
 
 
+def snapback_tex():
+    rng = random.Random(88)
+    img = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            c = rgba("f0c83a")
+            if x % 5 == 0:
+                c = shade(c, 0.86)
+            img.putpixel((x, y), shade(c, 1 + rng.uniform(-0.05, 0.05)))
+    for x in range(16):
+        img.putpixel((x, 15), rgba("2a2a2a"))
+    return img
+
+
+def snapback_visor_tex():
+    img = Image.new("RGBA", (16, 16), rgba("2a2a2a"))
+    for x in range(16):
+        img.putpixel((x, 0), rgba("4a4a4a"))
+    return img
+
+
 def toque_tex():
     rng = random.Random(86)
     img = Image.new("RGBA", (16, 16))
@@ -480,6 +582,15 @@ def hats():
     G.save_png(ribbon_tex(), "item/worker/ribbon")
     G.save_png(cap_tex(), "item/worker/cap")
     G.save_png(visor_tex(), "item/worker/visor")
+    G.save_png(snapback_tex(), "item/worker/snapback")
+    G.save_png(snapback_visor_tex(), "item/worker/snapback_visor")
+    # a snapback worn backwards: the visor sticks out at the back (south)
+    hat_model("worker_hat_runner", {"particle": "item/worker/snapback", "cap": "item/worker/snapback",
+                                    "visor": "item/worker/snapback_visor"}, [
+        box([1.2, 11.2, 1.2], [14.8, 15.4, 14.8], "#cap"),
+        box([2.4, 15.4, 2.4], [13.6, 16.4, 13.6], "#cap"),
+        box([3.4, 11.2, 14.8], [12.6, 11.9, 18.4], "#visor"),
+    ])
     # straw sun hat: a wide brim at forehead height and a round-ish crown
     hat_model("worker_hat_farmhand", {"particle": "item/worker/straw", "straw": "item/worker/straw",
                                       "ribbon": "item/worker/ribbon"}, [
@@ -537,6 +648,12 @@ def front_view(skin, hat=None):
         for y in range(0, 4):
             for x in range(3 if y < 3 else 4, 13 if y < 3 else 12):
                 out.putpixel((x, y), rgba("fafaf6") if (x + y) % 3 else rgba("e0e0da"))
+    elif hat == "runner":
+        for y in range(1, 4):
+            for x in range(4, 12):
+                out.putpixel((x, y), rgba("f0c83a"))
+        for x in range(4, 12):
+            out.putpixel((x, 4), rgba("c8a020"))
     elif hat == "dryer":
         for y in range(1, 4):
             for x in range(4, 12):

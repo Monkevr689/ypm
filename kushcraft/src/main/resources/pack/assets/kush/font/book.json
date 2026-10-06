@@ -92,7 +92,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_kief.png",
+   "file": "kush:book/cook_vape_pen.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -101,7 +101,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_hash.png",
+   "file": "kush:book/cook_shroom_tea.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -110,7 +110,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_wax.png",
+   "file": "kush:book/cook_shroom_chocolate.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -119,7 +119,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_moon_rock.png",
+   "file": "kush:book/cook_ergot.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -128,7 +128,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_vape_pen.png",
+   "file": "kush:book/cook_ergot_extract.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -137,7 +137,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_canna_butter.png",
+   "file": "kush:book/cook_lucid_tab.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -146,7 +146,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_space_brownie.png",
+   "file": "kush:book/cook_mescaline.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -155,7 +155,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_gummies.png",
+   "file": "kush:book/cook_dmt.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -164,7 +164,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_shroom_tea.png",
+   "file": "kush:book/cook_ayahuasca.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -173,7 +173,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_ergot.png",
+   "file": "kush:book/cook_coca_paste.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -182,7 +182,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_ergot_extract.png",
+   "file": "kush:book/cook_cocaine.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -191,7 +191,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_lucid_tab.png",
+   "file": "kush:book/cook_crack.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -200,7 +200,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_mescaline.png",
+   "file": "kush:book/cook_blue_crystal.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -209,7 +209,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_dmt.png",
+   "file": "kush:book/cook_ecstasy.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -218,7 +218,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_coca_paste.png",
+   "file": "kush:book/cook_pixie_dust.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -227,7 +227,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_cocaine.png",
+   "file": "kush:book/cook_angel_dust.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -236,7 +236,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_crack.png",
+   "file": "kush:book/cook_speed.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -245,7 +245,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_blue_crystal.png",
+   "file": "kush:book/cook_opium.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -254,7 +254,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_ecstasy.png",
+   "file": "kush:book/cook_morphine.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -263,7 +263,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_pixie_dust.png",
+   "file": "kush:book/cook_heroin.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -272,7 +272,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_angel_dust.png",
+   "file": "kush:book/cook_oxy.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -281,7 +281,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_opium.png",
+   "file": "kush:book/cook_cough_syrup.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -290,7 +290,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_morphine.png",
+   "file": "kush:book/cook_lean.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -299,7 +299,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_heroin.png",
+   "file": "kush:book/cook_ketamine.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -308,7 +308,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_cough_syrup.png",
+   "file": "kush:book/cook_xanny_bars.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -317,7 +317,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_lean.png",
+   "file": "kush:book/cook_moonshine.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -326,7 +326,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/cook_ketamine.png",
+   "file": "kush:book/cook_laughing_gas.png",
    "ascent": 7,
    "height": 58,
    "chars": [

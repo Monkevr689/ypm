@@ -185,7 +185,7 @@ public final class Awards implements Listener {
     public static List<ItemType> drugs() {
         List<ItemType> out = new ArrayList<>();
         for (ItemType t : ItemType.values()) {
-            if (t.isDrug()) {
+            if (t.isDrug() && !t.legacy()) {
                 out.add(t);
             }
         }
@@ -315,6 +315,11 @@ public final class Awards implements Listener {
 
     public void hiredCook(Player p) {
         grant(p, Award.HEAD_CHEF);
+    }
+
+    /** A Farmhand, Dryer, Cook and Runner working together. */
+    public void assemblyLine(Player p) {
+        grant(p, Award.ASSEMBLY_LINE);
     }
 
     public void hired(Player p, int count) {

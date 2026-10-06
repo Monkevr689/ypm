@@ -28,7 +28,7 @@ public enum Award {
     FIRST_DRY("Dry Season", "Dry your first buds.", "bud_dried", 100, Frame.TASK, BUILD_LAB, false),
     FIRST_ROLL("Roll One Up", "Roll a joint.", "joint", 100, Frame.TASK, FIRST_DRY, false),
     BLUNT("Blunt Force", "Roll a blunt.", "blunt", 150, Frame.TASK, FIRST_ROLL, false),
-    FIRST_COOK("Let Him Cook", "Cook your first batch.", "hash", 200, Frame.TASK, BUILD_LAB, false),
+    FIRST_COOK("Let Him Cook", "Cook your first batch.", "vape_pen", 200, Frame.TASK, BUILD_LAB, false),
     BLUE_SKY("Blue Sky", "Cook Meth.", "blue_crystal", 1000, Frame.TASK, FIRST_COOK, false),
     COOK_100("Head Chemist", "Cook 100 batches.", "lab_solvent", 5000, Frame.GOAL, FIRST_COOK, false),
     ALL_RECIPES("Mad Chemist", "Cook every Drug Lab recipe.", "award_chemist", 25000, Frame.CHALLENGE, COOK_100, false),
@@ -39,6 +39,8 @@ public enum Award {
     HIRED("Hired Help", "Hire a worker.", "award_worker", 250, Frame.TASK, FIRST_HARVEST, false),
     WORKFORCE("Workforce", "Have 4 workers at once.", "award_workforce", 2500, Frame.GOAL, HIRED, false),
     HEAD_CHEF("Head Chef", "Hire a Cook.", "award_chef", 1000, Frame.GOAL, HIRED, false),
+    ASSEMBLY_LINE("Assembly Line", "Have a Farmhand, Dryer, Cook and Runner work together.", "award_chain", 5000,
+            Frame.CHALLENGE, HIRED, false),
     // money
     FIRST_SALE("First Deal", "Sell some product.", "cash", 100, Frame.TASK, null, false),
     SOLD_10K("Hustler", "Sell $10,000 of product.", "award_cash_stack", 500, Frame.TASK, FIRST_SALE, false),
@@ -111,8 +113,10 @@ public enum Award {
         return icon;
     }
 
+    /** Cash for unlocking it: 0 unless awards.cash-rewards is on (money only comes from selling drugs). */
     public double reward() {
-        return reward;
+        dev.kushcraft.KushCraft k = dev.kushcraft.KushCraft.get();
+        return k != null && k.getConfig().getBoolean("awards.cash-rewards", false) ? reward : 0;
     }
 
     public Frame frame() {

@@ -2,7 +2,7 @@ name: KushCraft
 version: ${project.version}
 main: dev.kushcraft.KushCraft
 api-version: '1.21.4'
-description: Grow custom strains, cook step by step, hire workers and sell it all - with custom textures, no client mods.
+description: Grow custom strains, cook drugs step by step, hire workers that run the whole chain and sell it all - with custom textures, no client mods.
 author: KushCraft
 softdepend: [Vault]
 commands:
@@ -18,5 +18,5 @@ permissions:
     description: Breed new strains (Drug Lab > Mix)
     default: true
   kushcraft.admin:
-    description: The admin panel and admin commands (give, money, reload, shop anywhere, no worker limit)
+    description: The admin panel and admin commands (give, money, reload, shop anywhere)
     default: op

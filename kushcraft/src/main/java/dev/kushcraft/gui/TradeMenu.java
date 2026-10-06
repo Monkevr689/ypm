@@ -6,7 +6,6 @@ import dev.kushcraft.shop.Economy;
 import dev.kushcraft.shop.Exchange;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.Text;
-import org.bukkit.Material;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -20,17 +19,19 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Trade: turn the money from your product into vanilla resources. Pick a
- * shelf in row 1 (ores, farming, wood, building, mob drops, nether & end,
- * rare), buy from rows 2-4. Click your product below to sell it right here,
- * or spare resources to sell them back. Layout matches tools/gui.py trade().
+ * Trade: spend the money from your product on vanilla items. Pick a shelf
+ * in row 1 or row 5 (lab ingredients, ores, farming, wood, building,
+ * colours, decoration, redstone, tools, mob drops, the Nether), buy from
+ * rows 2-4. Trade never buys anything back - money only comes from selling
+ * drugs (your product can still be sold by clicking it below). Layout
+ * matches tools/gui.py trade().
  */
 public final class TradeMenu extends TabMenu {
 
-    static final int[] SHELVES = {at(1, 1), at(1, 2), at(1, 3), at(1, 4), at(1, 5), at(1, 6), at(1, 7)};
+    static final int[] SHELVES = {at(1, 0), at(1, 1), at(1, 2), at(1, 3), at(1, 4), at(1, 5), at(1, 6), at(1, 7),
+            at(1, 8), at(5, 0), at(5, 1), at(5, 2), at(5, 3), at(5, 4), at(5, 5), at(5, 6), at(5, 7), at(5, 8)};
     static final int FIRST = at(2, 0);
     static final int SLOTS = 27;
-    static final int SELL_ALL = at(5, 4);
     private static final Map<UUID, Integer> LAST_SHELF = new HashMap<>();
 
     private int shelf;
@@ -78,42 +79,25 @@ public final class TradeMenu extends TabMenu {
             set(SHELVES[i], icon);
         }
         double bal = eco().balance(player);
-        double ratio = KushCraft.get().getConfig().getDouble("exchange.sell-ratio", 0.2);
         for (int i = 0; i < SLOTS && i < offers.size(); i++) {
             Exchange.Offer o = offers.get(i);
             double each = ex().buyPrice(o);
             ItemStack show = new ItemStack(o.material(), Math.min(o.amount(), o.material().getMaxStackSize()));
             List<String> lore = new ArrayList<>();
-            lore.add((bal >= each * o.amount() ? "<gold>" : "<red>") + eco().format(each) + " <dark_gray>each · "
-                    + ex().trend(o.material()));
-            lore.add("<gray>Buy " + o.amount() + ": <white>" + eco().format(each * o.amount())
-                    + " <dark_gray>· Shift: " + o.amount() * 4);
-            if (ratio > 0) {
-                lore.add("<dark_gray>Sells back for " + eco().format(ex().sellPrice(o.material())));
-            }
+            lore.add((bal >= each * o.amount() ? "<gold>" : "<red>") + eco().format(each * o.amount())
+                    + " <gray>for " + o.amount() + " <dark_gray>· " + ex().trend(o.material()));
+            lore.add("<dark_gray>Shift-click: buy " + o.amount() * 4);
             show.editMeta(m -> {
                 m.lore(Text.lines(lore));
                 m.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             });
             set(FIRST + i, show);
         }
-        double value = Selling.allValue(player);
-        set(SELL_ALL, Items.glint(Items.icon("ui_sell", value > 0 ? "<green><bold>Sell all product</bold> <gold>"
-                + eco().format(value) : "<gray>Sell all product",
-                "<gray>Click items below to sell them."), value > 0));
     }
 
     @Override
     protected void clickPage(int slot, ClickType click) {
         if (!ex().enabled()) {
-            return;
-        }
-        if (slot == SELL_ALL) {
-            if (Selling.all(player)) {
-                render();
-            } else {
-                failSound();
-            }
             return;
         }
         for (int i = 0; i < SHELVES.length; i++) {
@@ -137,7 +121,7 @@ public final class TradeMenu extends TabMenu {
         double each = ex().buyPrice(o);
         double total = Math.round(each * amount * 100) / 100.0;
         if (!eco().withdraw(player, total)) {
-            player.sendActionBar(Text.mm("<red>You need " + eco().format(total)));
+            player.sendActionBar(Text.mm("<red>You need " + eco().format(total) + " <gray>- sell some drugs first."));
             failSound();
             return;
         }
@@ -159,41 +143,12 @@ public final class TradeMenu extends TabMenu {
 
     @Override
     public void clickOwn(int slot, ItemStack item, ClickType click) {
-        if (!ex().enabled()) {
-            return;
-        }
         if (Selling.clicked(player, slot, item, click)) {
             render();
             return;
         }
-        if (!ex().sellable(item)) {
-            if (item != null && !item.getType().isAir() && !Items.isCustom(item)) {
-                player.sendActionBar(Text.mm(ex().offer(item.getType()) != null
-                        ? "<gray>Only plain items can be sold." : "<gray>Trade doesn't buy that."));
-            }
-            return;
+        if (item != null && !item.getType().isAir()) {
+            player.sendActionBar(Text.mm("<gray>Trade only sells. <white>You make money by selling drugs</white> (click them)."));
         }
-        Material m = item.getType();
-        int amount;
-        if (click.isShiftClick()) {
-            amount = InventoryUtil.remove(player, it -> it.getType() == m && ex().sellable(it), Integer.MAX_VALUE);
-        } else {
-            ItemStack inSlot = player.getInventory().getItem(slot);
-            if (inSlot == null || !inSlot.isSimilar(item)) {
-                return;
-            }
-            amount = inSlot.getAmount();
-            player.getInventory().setItem(slot, null);
-        }
-        if (amount <= 0) {
-            return;
-        }
-        double total = Math.round(ex().sellPrice(m) * amount * 100) / 100.0;
-        eco().deposit(player, total);
-        ex().sold(m, amount);
-        player.playSound(player.getLocation(), "minecraft:entity.experience_orb.pickup", SoundCategory.PLAYERS, 0.7f, 1.4f);
-        player.sendActionBar(Text.mm("<green>Sold " + amount + "x <lang:" + m.translationKey() + "> <gray>for <gold>"
-                + eco().format(total)));
-        render();
     }
 }

@@ -51,7 +51,11 @@ public final class AwardsMenu extends TabMenu {
             if (progress != null) {
                 lore.add("<white>" + progress);
             }
-            lore.add(done ? "<green>✔ <gold>" + money(a.reward()) : "<gold>" + money(a.reward()));
+            if (a.reward() > 0) {
+                lore.add(done ? "<green>✔ <gold>" + money(a.reward()) : "<gold>" + money(a.reward()));
+            } else if (done) {
+                lore.add("<green>✔ Unlocked");
+            }
             String name = done ? "<" + a.color() + ">" + a.title()
                     : "<gray>" + (a.secret() ? "???" : a.title());
             set(FIRST + i, Items.icon(done ? a.icon() : a.icon() + "_locked", name, lore));
@@ -59,7 +63,7 @@ public final class AwardsMenu extends TabMenu {
         // the summary sits on this page's own tab
         int count = awards.count(player);
         set(Tab.AWARDS.ordinal(), Items.icon("tab_awards", "<green>Awards <gold>" + count + "/" + all.length,
-                "<gold>" + money(earned) + " <dark_gray>earned",
+                earned > 0 ? "<gold>" + money(earned) + " <dark_gray>earned" : "<gray>Achievements for bragging rights.",
                 "<dark_gray>Also in the advancements screen (L)."));
         if (pages() > 1) {
             set(EXTRA, Items.amount(Items.icon(page + 1 < pages() ? "ui_arrow" : "ui_back",

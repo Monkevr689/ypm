@@ -39,7 +39,7 @@ public final class Worker {
     boolean paused;
     int jobs;
     double wages;
-    /** Cook: the LabRecipe they make (null = not picked yet). */
+    /** Cook: the LabRecipe they make, or ROLL_JOINT / ROLL_BLUNT (null = not picked yet). */
     String recipe;
 
     // live state
@@ -109,9 +109,27 @@ public final class Worker {
         return wages;
     }
 
-    /** Cook: the recipe they make, or null. */
+    /** Cook recipe ids for rolling instead of cooking. */
+    public static final String ROLL_JOINT = "ROLL_JOINT";
+    public static final String ROLL_BLUNT = "ROLL_BLUNT";
+
+    /** Cook: the Drug Lab recipe they make, or null (nothing picked, or they roll). */
     public dev.kushcraft.lab.LabRecipe recipe() {
         return recipe == null ? null : dev.kushcraft.lab.LabRecipe.parse(recipe);
+    }
+
+    /** Cook: JOINT or BLUNT when they roll instead of cooking, else null. */
+    public dev.kushcraft.item.ItemType rolls() {
+        if (ROLL_JOINT.equals(recipe)) {
+            return dev.kushcraft.item.ItemType.JOINT;
+        }
+        return ROLL_BLUNT.equals(recipe) ? dev.kushcraft.item.ItemType.BLUNT : null;
+    }
+
+    /** Cook: what they make (a drug, or joints / blunts), or null. */
+    public dev.kushcraft.item.ItemType product() {
+        dev.kushcraft.lab.LabRecipe r = recipe();
+        return r != null ? r.output() : rolls();
     }
 
     /** What they're doing right now (shown in their menu). */

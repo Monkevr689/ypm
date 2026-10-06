@@ -743,6 +743,141 @@ def ketamine():
 
 
 # ---------------------------------------------------------------------------
+# 6.0 drugs
+# ---------------------------------------------------------------------------
+@item("shroom_chocolate")
+def shroom_chocolate():
+    """A chocolate bar, half out of its purple wrapper with a mushroom on it."""
+    s = Sprite(seed=141)
+    bar = poly([(3, 17), (17, 7), (29, 15), (15, 25)])
+    s.shade(bar, ramp("6a3a1e", 5, spread=0.3), dither=0.3, rim=False)
+    # the squares: grooves along both directions
+    for k in range(1, 4):
+        x0, y0 = 3 + k * 3.5, 17 - k * 2.5
+        s.line(int(x0), int(y0), int(x0 + 12), int(y0 + 8), c("3e1e0c"))
+        s.line(int(x0) + 1, int(y0), int(x0 + 13), int(y0 + 8), c("8a5030"))
+    # wrapper over the right half, with a foil edge
+    wrap = poly([(17, 7), (29, 15), (21, 21), (12, 12)])
+    s.shade(wrap, ramp("8a3ad8", 5, spread=0.35), dither=0.3)
+    s.line(12, 12, 17, 7, c("d8dce4"))
+    s.line(12, 13, 17, 8, c("a8acb4"))
+    # a little mushroom on the wrapper
+    s.fill(ellipse(21.5, 12.5, 3, 1.8), c("e85a3a"))
+    s.put(20, 12, c("fff0e0"))
+    s.put(23, 12, c("fff0e0"))
+    s.fill(rect(21, 14, 22, 16), c("f4ead8"))
+    s.outline(0.42)
+    s.glint(8, 16)
+    return s
+
+
+@item("ayahuasca")
+def ayahuasca():
+    """A clay cup of dark brew with a jungle vine curling round it."""
+    s = Sprite(seed=142)
+    cup = poly([(7, 11), (25, 11), (23, 26), (20, 29), (12, 29), (9, 26)])
+    s.shade(cup, ramp("b8643a", 5, spread=0.32), dither=0.4)
+    s.speckle(cup, [c("8a4424"), c("d0845a")], 0.12)
+    s.fill(ellipse(16, 11, 9, 2.4), c("8a4a2a"))
+    s.shade(ellipse(16, 11, 7.6, 1.6), ramp("3a2410", 3, spread=0.3), rim=False)
+    s.put(13, 11, c("6a4a2a"))
+    # a band of painted zig-zags
+    for x in range(9, 24):
+        s.put(x, 18 + (x % 4 == 0) - (x % 4 == 2), c("f0d8a0"))
+    # the vine: winds from the bottom left up over the rim
+    vine = [(4, 30), (6, 26), (8, 23), (7, 19), (9, 15), (12, 12), (15, 8), (19, 6), (23, 4)]
+    for (a, b) in zip(vine, vine[1:]):
+        s.fill(thick_line(a[0], a[1], b[0], b[1], 1.6), c("5a7a2a"))
+    for (x, y, ang) in ((7, 21, 150), (10, 14, 40), (17, 7, 120), (22, 5, 30)):
+        sugar_leaf(s, x, y, ang, 4, col="4f9a32", width=2.4)
+    s.outline(0.42)
+    return s
+
+
+@item("speed")
+def speed():
+    def bolt(s):
+        for (x, y) in ((17, 17), (16, 18), (15, 19), (16, 19), (17, 19), (16, 20), (15, 21), (14, 22)):
+            s.put(x, y, c("f0b81a"), 2)
+    s = Sprite(seed=143)
+    baggie(s, "f4c2d6", sticker=bolt, seal="e8a81a", chunky=True)
+    return s
+
+
+@item("oxy")
+def oxy():
+    """An orange pharmacy bottle with a white cap and two round pills."""
+    s = Sprite(seed=144)
+    bottle = rounded(6, 9, 19, 28, 2)
+    s.shade(bottle, [alpha(x, 225) for x in ramp("e8901a", 5, spread=0.35)], dither=0.3)
+    s.fill(rect(7, 14, 18, 22), c("f4f0e4"))
+    for y in (16, 18, 20):
+        s.line(9, y, 16 if y != 18 else 13, y, c("8a8a94"))
+    s.shade(rounded(5, 4, 20, 9, 1), ramp("f0f0ec", 4, spread=0.2), rim=False)
+    for x in range(6, 20, 2):
+        s.put(x, 5, c("c8c8c0"))
+    glass_shine(s, 8, 10, 8, 26)
+    tablet(s, 23, 24, 4.2, 2.8, "4a8ae8", lambda s, x, y, col: s.put(x, y, col))
+    tablet(s, 25, 18, 3.6, 2.4, "4a8ae8")
+    s.outline(0.42)
+    return s
+
+
+@item("xanny_bars")
+def xanny_bars():
+    """Three long scored pill bars: two white, one yellow."""
+    s = Sprite(seed=145)
+    for (x0, y0, col) in ((4, 8, "f4f4ee"), (6, 15, "f0d84a"), (8, 22, "f4f4ee")):
+        bar = rounded(x0, y0, x0 + 20, y0 + 5, 2)
+        r = ramp(col, 5, spread=0.25)
+        s.fill(bar, r[1])
+        s.shade(rounded(x0, y0, x0 + 20, y0 + 3, 2), r[2:], dither=0.3, rim=False)
+        for k in range(1, 4):
+            s.line(x0 + k * 5, y0 + 1, x0 + k * 5, y0 + 4, scale(r[1], 0.72))
+        s.line(x0 + 2, y0 + 1, x0 + 18, y0 + 1, r[4])
+    s.outline(0.4)
+    return s
+
+
+@item("moonshine")
+def moonshine():
+    """A mason jar of clear moonshine with an XXX label."""
+    s = Sprite(seed=146)
+    jar = rounded(7, 8, 24, 29, 3)
+    s.fill(jar, c("d8e8f0", 120))
+    liquid = rounded(8, 12, 23, 28, 2)
+    s.shade(liquid, [alpha(x, 190) for x in ramp("f2e2a0", 4, spread=0.25)], dither=0.2)
+    s.shade(rect(8, 3, 23, 7), ramp("a8acb4", 4, spread=0.4), rim=False)
+    for x in range(8, 24, 2):
+        s.put(x, 4, c("d8dce4"))
+    s.fill(rect(10, 16, 21, 22), c("e8d8a8"))
+    for x0 in (11, 14.5, 18):
+        s.line(int(x0), 17, int(x0) + 2, 21, c("2a2a2a"))
+        s.line(int(x0) + 2, 17, int(x0), 21, c("2a2a2a"))
+    glass_shine(s, 10, 9, 10, 26)
+    s.outline(0.42)
+    return s
+
+
+@item("laughing_gas")
+def laughing_gas():
+    """A blue balloon on a string next to a silver cartridge."""
+    s = Sprite(seed=147)
+    balloon = ellipse(13, 11, 8.5, 9)
+    s.shade(balloon, ramp("4ab4f0", 5, spread=0.4), dither=0.4)
+    s.fill(poly([(12, 19), (14, 19), (13, 21)]), c("2a7ab8"))
+    for (a, b) in (((13, 21), (12, 24)), ((12, 24), (14, 27)), ((14, 27), (13, 30))):
+        s.line(a[0], a[1], b[0], b[1], c("e8e8e8"))
+    can = thick_line(20, 28, 27, 21, 4.4) | ellipse(27, 21, 2.2, 2.2)
+    s.shade(can, ramp("b8c0c8", 5, spread=0.4), dither=0.3)
+    s.fill(ellipse(28.5, 19.5, 1.2, 1.2), c("6a7078"))
+    s.glint(9, 6, big=True)
+    s.glint(10, 9)
+    s.outline(0.4)
+    return s
+
+
+# ---------------------------------------------------------------------------
 # in-between steps (cooked at the Drug Lab on the way to a drug)
 # ---------------------------------------------------------------------------
 @item("kief")
@@ -1828,6 +1963,11 @@ def worker_face(s, kind, x0, y0, k=2):
             s.line(xx, y0 - 6, xx, y0 - 2, c("d0d0c8"))
         for (x, y) in edge(top | rect(x0, y0 - 1, x0 + w - 1, y0 + 1)):
             s.put(x, y, c("8a8a84"))
+    elif kind == "runner":
+        # a snapback worn backwards: crown on top, the visor sticking out at the back
+        s.shade(rect(x0, y0 - 4, x0 + w - 1, y0 + 1), ramp("f0c83a", 4, spread=0.3), dither=0.3)
+        s.fill(rect(x0 + w, y0 - 1, x0 + w + 3, y0 + 1), c("2a2a2a"))
+        s.fill(rect(x0 + 2, y0 - 2, x0 + 4, y0 - 1), c("2a2a2a"))
     elif kind == "farmhand":
         # straw hat: wide brim and crown with a red band
         s.shade(rect(x0 - 3, y0 - 1, x0 + w + 2, y0), ramp("e8c870", 3, spread=0.3), rim=False)
@@ -1840,7 +1980,7 @@ def worker_face(s, kind, x0, y0, k=2):
 
 
 def contract(kind, ribbon):
-    s = Sprite(seed={"farmhand": 701, "dryer": 702, "cook": 708}[kind])
+    s = Sprite(seed={"farmhand": 701, "dryer": 702, "cook": 708, "runner": 709}[kind])
     card = rounded(4, 5, 27, 29, 2)
     s.shade(card, ramp("f0e6c8", 4, spread=0.2), dither=0.3, rim=False)
     s.fill(rect(4, 25, 27, 29), c(ribbon))
@@ -1865,6 +2005,11 @@ def worker_dryer():
 @item("worker_cook")
 def worker_cook():
     return contract("cook", "3ac8e8")
+
+
+@item("worker_runner")
+def worker_runner():
+    return contract("runner", "c85ad8")
 
 
 @icon("ui_workers")
@@ -2168,4 +2313,31 @@ def award_red_eyes():
     for (x, y, a) in ((27, 6, 200), (28, 3, 160), (26, 1, 120)):
         s.fill(ellipse(x, y, 2, 1.6), alpha(c("d8d8d8"), a), 2)
     s.outline(0.42)
+    return s
+
+
+@icon("award_chain")
+def award_chain():
+    """A conveyor belt carrying a bud, a baggie and a coin: the whole work chain."""
+    s = Sprite(seed=714)
+    belt = rounded(2, 20, 29, 26, 3)
+    s.shade(belt, ramp("4a4e56", 4, spread=0.35), rim=False)
+    for x in (5, 11, 17, 23, 27):
+        s.fill(ellipse(x, 23, 1.8, 1.8), c("a8acb4"))
+        s.put(x, 23, c("2a2a2a"))
+    s.line(3, 20, 28, 20, c("7a808a"))
+    # on the belt: a green bud, a white baggie, a gold coin
+    s.shade(ellipse(7, 15, 3.6, 4.2), ramp("5aaa3a", 4, spread=0.4), dither=0.5)
+    s.put(6, 13, c("ef8a32"))
+    s.put(8, 16, c("ef8a32"))
+    bag = rounded(13, 11, 19, 19, 1)
+    s.fill(bag, c("e8eef4"))
+    s.fill(rect(13, 11, 19, 12), c("d8443a"))
+    s.fill(rect(14, 15, 18, 18), c("f4f6fa"))
+    coin(s, 25, 15, 3.8)
+    for (x, y) in ((10, 8), (21, 8)):
+        s.put(x, y, c("f0f0f0"))
+        s.put(x + 1, y + 1, c("f0f0f0"))
+        s.put(x, y + 2, c("f0f0f0"))
+    s.outline(0.4)
     return s

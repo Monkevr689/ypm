@@ -15,14 +15,14 @@ import java.util.List;
 
 /**
  * Shop > Gear &amp; Workers: supplies and blocks on two racks (rows 1-2),
- * workers for hire on the "hiring" board (3,2) and (3,6), back to the
- * seeds (5,0) and your workers (5,4). Layout: tools/gui.py gear().
+ * the four workers for hire on the "hiring" board (3,1) (3,3) (3,5) (3,7),
+ * back to the seeds (5,0) and your workers (5,4). Layout: tools/gui.py gear().
  */
 public final class GearMenu extends TabMenu {
 
     static final int FIRST_GEAR = 9;
     static final int GEAR = 18;
-    static final int[] HIRE = {at(3, 1), at(3, 4), at(3, 7)};
+    static final int[] HIRE = {at(3, 1), at(3, 3), at(3, 5), at(3, 7)};
     static final int SEEDS = at(5, 0);
     static final int MINE = at(5, 4);
 
@@ -55,14 +55,19 @@ public final class GearMenu extends TabMenu {
             List<String> lore = new ArrayList<>();
             lore.add("<gray>" + t.job());
             lore.add("<gray>" + t.tip());
-            lore.add("<gray>Wage: <gold>" + money(ws.wage(t)) + " <gray>a job, from your wallet.");
+            lore.add(t == dev.kushcraft.worker.WorkerType.RUNNER
+                    ? "<gray>Pay: <gold>" + Math.round(ws.runnerCut() * 100) + "% <gray>of what they sell."
+                    : "<gray>Wage: <gold>" + money(ws.wage(t)) + " <gray>a job, from your wallet.");
             lore.add((bal >= e.price() ? "<gold>" : "<red>") + money(e.price()) + " <dark_gray>· then right-click the ground");
             set(HIRE[i], Items.icon(e.type().model(), t.color() + "<bold>Hire a " + t.display(), lore));
         }
         set(SEEDS, Items.icon("ui_back", "<gray>Back to seeds"));
         int mine = ws.of(player.getUniqueId()).size();
-        set(MINE, Items.icon("ui_workers", "<green>Your workers <gray>(" + mine + "/" + ws.maxPerPlayer() + ")",
-                mine == 0 ? "<dark_gray>You haven't hired anyone yet." : "<gray>Click to see what they're doing."));
+        String limit = ws.maxPerPlayer() > 0 ? "/" + ws.maxPerPlayer() : "";
+        set(MINE, Items.icon("ui_workers", "<green>Your workers <gray>(" + mine + limit + ")",
+                mine == 0 ? "<dark_gray>You haven't hired anyone yet." : "<gray>Click to see what they're doing.",
+                "<dark_gray>Hire as many as you like. Workers near",
+                "<dark_gray>each other hand things along by themselves."));
     }
 
     @Override

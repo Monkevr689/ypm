@@ -61,7 +61,35 @@ public final class MyWorkersMenu extends ListMenu {
         var ws = KushCraft.get().workers();
         return Items.icon("ui_workers", "<green>" + (everyone ? "All workers" : "Your workers"),
                 everyone ? "<gray>" + ws.all().size() + " hired on the server"
-                        : "<gray>" + ws.of(player.getUniqueId()).size() + "/" + ws.maxPerPlayer() + " hired");
+                        : "<gray>" + ws.of(player.getUniqueId()).size()
+                        + (ws.maxPerPlayer() > 0 ? "/" + ws.maxPerPlayer() : "") + " hired");
+    }
+
+    @Override
+    protected ItemStack action() {
+        if (everyone) {
+            return null;
+        }
+        return Items.icon("ui_take", "<green><bold>Collect everything",
+                "<gray>Takes what all your workers made",
+                "<gray>(not what they need) into your bag.");
+    }
+
+    @Override
+    protected void clickAction(ClickType click) {
+        if (everyone) {
+            return;
+        }
+        int n = KushCraft.get().workers().collectAll(player);
+        if (n <= 0) {
+            player.sendActionBar(Text.mm("<gray>Nothing to collect" + (player.getInventory().firstEmpty() < 0
+                    ? " - your inventory is full." : " yet.")));
+            failSound();
+            return;
+        }
+        player.playSound(player.getLocation(), "minecraft:entity.item.pickup", org.bukkit.SoundCategory.PLAYERS, 0.8f, 1f);
+        player.sendActionBar(Text.mm("<green>Collected " + n + " items from your workers."));
+        render();
     }
 
     @Override

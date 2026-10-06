@@ -19,22 +19,23 @@ public enum ItemType {
             "<gray>Right-click to smoke."),
     BLUNT("Blunt", "blunt", true, false,
             "<gray>Right-click to smoke."),
-    KIEF("Kief", "kief", true, false,
-            "<gray>Sifted from dried buds. Press it into Hash."),
-    HASH("Hash", "hash", true, false,
-            "<gray>Smoke it in a Bong."),
-    MOON_ROCK("Moon Rock", "moon_rock", true, true,
-            "<gray>Smoke it in a Bong. <red>Very strong."),
-    CANNA_BUTTER("Canna Butter", "canna_butter", true, false,
-            "<gray>Bake it into brownies."),
-    SPACE_BROWNIE("Space Brownie", "space_brownie", true, false,
-            "<gray>Right-click to eat. Kicks in slowly."),
-    GUMMIES("THC Gummies", "gummies", true, true,
-            "<gray>Right-click to eat. Slow but long."),
-    WAX("Wax", "wax", true, true,
-            "<gray>Right-click to dab. <red>Very strong."),
     VAPE_PEN("Vape Pen", "vape_pen", true, true,
             "<gray>Right-click to puff."),
+    // old weed products: not made any more, but old ones still work and sell
+    KIEF("Kief", "kief", true, false,
+            "<dark_gray>Old product - no longer made. Sell it."),
+    HASH("Hash", "hash", true, false,
+            "<gray>Smoke it in a Bong.", "<dark_gray>Old product - no longer made."),
+    MOON_ROCK("Moon Rock", "moon_rock", true, true,
+            "<gray>Smoke it in a Bong.", "<dark_gray>Old product - no longer made."),
+    CANNA_BUTTER("Canna Butter", "canna_butter", true, false,
+            "<dark_gray>Old product - no longer made. Sell it."),
+    SPACE_BROWNIE("Space Brownie", "space_brownie", true, false,
+            "<gray>Right-click to eat.", "<dark_gray>Old product - no longer made."),
+    GUMMIES("THC Gummies", "gummies", true, true,
+            "<gray>Right-click to eat.", "<dark_gray>Old product - no longer made."),
+    WAX("Wax", "wax", true, true,
+            "<gray>Right-click to dab.", "<dark_gray>Old product - no longer made."),
     // --- mushrooms ------------------------------------------------------
     MAGIC_MUSHROOM("Magic Mushroom", "magic_mushroom", false, false,
             "<gray>Right-click to eat."),
@@ -91,6 +92,21 @@ public enum ItemType {
             "<gray>Right-click to use."),
     ANGEL_DUST("Angel Dust", "angel_dust", false, false,
             "<gray>Right-click to use."),
+    // --- 6.0 drugs --------------------------------------------------------
+    SHROOM_CHOCOLATE("Shroom Chocolate", "shroom_chocolate", false, false,
+            "<gray>Right-click to eat. Kicks in slowly."),
+    AYAHUASCA("Ayahuasca", "ayahuasca", false, false,
+            "<gray>Right-click to drink. A long trip."),
+    SPEED("Speed", "speed", false, false,
+            "<gray>Right-click to use."),
+    OXY("Oxy Pills", "oxy", false, false,
+            "<gray>Right-click to use."),
+    XANNY_BARS("Xanny Bars", "xanny_bars", false, false,
+            "<gray>Right-click to use."),
+    MOONSHINE("Moonshine", "moonshine", false, false,
+            "<gray>Right-click to drink."),
+    LAUGHING_GAS("Laughing Gas", "laughing_gas", false, false,
+            "<gray>Right-click to huff the balloon."),
     // --- supplies -------------------------------------------------------
     ROLLING_PAPERS("Rolling Papers", "rolling_papers", false, false,
             "<gray>For rolling joints."),
@@ -112,7 +128,9 @@ public enum ItemType {
     DRYER("Dryer", "worker_dryer", false, false,
             "<gray>Dries your buds at your Drug Lab.", "<gray>Right-click the ground near a lab to hire them."),
     COOK("Cook", "worker_cook", false, false,
-            "<gray>Cooks the drug you pick at your Drug Lab.", "<gray>Right-click the ground near a lab to hire them."),
+            "<gray>Cooks or rolls the drug you pick.", "<gray>Right-click the ground near a lab to hire them."),
+    RUNNER("Runner", "worker_runner", false, false,
+            "<gray>Sells your workers' finished product.", "<gray>Right-click the ground to hire them."),
     // --- blocks (placed like a block, punch to pick up) ------------------
     LAB_STATION("Drug Lab", "machine_lab_station", MachineType.LAB_STATION,
             "<gray>Cook, roll, dry and breed."),
@@ -191,7 +209,7 @@ public enum ItemType {
         if (this == BONG || this == GROWER_GUIDE || this == VAPE_PEN) {
             return 1;
         }
-        return machine != null || this == FARMHAND || this == DRYER || this == COOK ? 16 : 64;
+        return machine != null || this == FARMHAND || this == DRYER || this == COOK || this == RUNNER ? 16 : 64;
     }
 
     /** Old stations replaced by the Drug Lab: still work, but not sold or crafted any more. */
@@ -199,10 +217,18 @@ public enum ItemType {
         return this == STRAIN_MAKER || this == ROLLING_TABLE || this == DRYING_RACK || this == CATALYST;
     }
 
-    /** Made at the Drug Lab on the way to a drug (kief, coca paste...). */
+    /** Made at the Drug Lab on the way to a drug (coca paste, morphine base...). */
     public boolean ingredient() {
         return switch (this) {
-            case KIEF, CANNA_BUTTER, ERGOT, ERGOT_EXTRACT, COCA_PASTE, MORPHINE, COUGH_SYRUP -> true;
+            case ERGOT, ERGOT_EXTRACT, COCA_PASTE, MORPHINE, COUGH_SYRUP -> true;
+            default -> false;
+        };
+    }
+
+    /** Old weed products (6.0 keeps weed to buds, joints, blunts and vape pens): not made any more, still sell. */
+    public boolean legacy() {
+        return switch (this) {
+            case KIEF, HASH, WAX, MOON_ROCK, CANNA_BUTTER, SPACE_BROWNIE, GUMMIES -> true;
             default -> false;
         };
     }
@@ -212,7 +238,7 @@ public enum ItemType {
         return switch (this) {
             case JOINT, BLUNT, SPACE_BROWNIE, GUMMIES, WAX, VAPE_PEN, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL,
                  PIXIE_DUST, COCAINE, HEROIN, CRACK, OPIUM, LEAN, ECSTASY, KETAMINE, DMT, PEYOTE_BUTTON, MESCALINE,
-                 ANGEL_DUST -> true;
+                 ANGEL_DUST, SHROOM_CHOCOLATE, AYAHUASCA, SPEED, OXY, XANNY_BARS, MOONSHINE, LAUGHING_GAS -> true;
             default -> false;
         };
     }

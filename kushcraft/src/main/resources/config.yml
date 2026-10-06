@@ -2,7 +2,7 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 8
+config-version: 9
 
 # Custom textures/models come in a server resource pack. Players get the
 # usual "this server uses a resource pack" prompt when they join.
@@ -154,6 +154,8 @@ awards:
   # Achievements are also real advancements (their own tab, with the usual
   # toast). false = show them as a title on screen instead.
   advancements: true
+  # true = awards also pay cash. Off: money only comes from selling drugs.
+  cash-rewards: false
 
 # =====================================================================
 #  CARTELS  (/kush > Cartel)
@@ -211,30 +213,41 @@ harvest:
 #  Hire people who work for you. They're expensive, but they never stop:
 #   Farmhand - harvests your ripe plants and plants a seed from the harvest
 #              again (and plants / fertilizes from their satchel)
-#   Dryer    - hangs fresh buds on your Drug Lab racks and collects them dry
-#   Cook     - cooks the drug you pick at your Drug Lab, from what's in their
-#              satchel (and takes dried buds from your Dryers)
-#  They only touch the plants and labs of the player who hired them.
+#   Dryer    - dries fresh buds on your Drug Lab racks
+#   Cook     - cooks the drug you pick at your Drug Lab, or rolls joints
+#   Runner   - sells your workers' finished product for you
+#  The work chain: your workers within chain-radius of each other fetch
+#  what they need from each other by themselves - Farmhand > Dryer > Cook >
+#  Runner, or Cook > Cook (coca paste > cocaine) - and from chests or
+#  barrels right next to any of them. A worker with a chest next to them
+#  puts what they make in it. Nobody takes what another worker needs.
+#  They only touch the plants, labs and stands of the player who hired them.
 #  Right-click a worker for their satchel and buttons.
 # =====================================================================
 workers:
   enabled: true
-  # Most workers one player can have (admins: no limit).
-  max-per-player: 4
+  # Most workers one player can have. 0 = no limit.
+  max-per-player: 0
+  # How far apart (blocks) your workers can be and still work together.
+  chain-radius: 32
   # Per level (1, 2, 3): how far from where they stand they work, and the
-  # seconds they rest between jobs.
-  radius: [6, 9, 12]
-  rest-seconds: [6, 4, 2]
+  # seconds they rest between jobs. Farmhands do 3, 4 or 5 plants a round.
+  radius: [8, 12, 16]
+  rest-seconds: [4, 2, 1]
   # Price to train a worker to level 2 and 3.
   upgrade-costs: [10000, 25000]
   # Wage for every job (one harvest, one planting, one trip to the racks,
-  # one batch cooked), paid from the owner's wallet. No money = no work.
+  # one batch cooked or rolled), paid from the owner's wallet. No money =
+  # no work.
   farmhand:
     wage: 5
   dryer:
     wage: 4
   cook:
     wage: 8
+  runner:
+    # No wage: the Runner keeps this much of every sale (0.1 = 10%).
+    cut: 0.1
 
 # Dying costs you this much of the cash in your wallet (0.2 = 20%).
 # The money is gone - nobody gets it, so killing players doesn't pay.
@@ -249,26 +262,49 @@ menu:
 
 # =====================================================================
 #  TRADE  (/kush > Trade)
-#  Swap the money from your product for vanilla resources. Resources are
-#  expensive on purpose: you have to sell a LOT of product for a diamond.
-#  Up to 7 shelves (categories) of up to 27 items each.
-#  price = what a player pays for ONE item, amount = how many one click
-#  buys (shift-click buys 4 times as many). Players sell resources back for
-#  sell-ratio of the price.
+#  Spend the money from your product on vanilla items. Trade only SELLS:
+#  you can't sell anything back here - money only comes from drugs. No
+#  netherite, totems, golden apples, ender pearls or End items.
+#  Up to 18 shelves (row 1 and row 5 of the page) of up to 27 items each.
+#  An item may be on more than one shelf (Lab Ingredients repeats the
+#  things the Drug Lab recipes need). price = what a player pays for ONE
+#  item, amount = how many one click buys (shift-click buys 4 times as many).
 # =====================================================================
 exchange:
   enabled: true
   # All prices below are multiplied by this.
   price-multiplier: 1.0
-  sell-ratio: 0.2
-  # Price change per "amount" bought (+) or sold (-), 0.01 = 1%...
+  # Price change per "amount" bought, 0.01 = 1%...
   price-step: 0.01
-  # ...between these limits of the normal price...
-  min-price: 0.8
+  # ...up to this much of the normal price...
   max-price: 1.25
   # ...and back towards normal this much per minute.
   recovery-per-minute: 0.02
   categories:
+    lab:
+      name: Lab Ingredients
+      icon: brewing_stand
+      items:
+        - {item: glass_bottle, price: 6, amount: 16}
+        - {item: paper, price: 6, amount: 16}
+        - {item: sugar, price: 8, amount: 16}
+        - {item: wheat, price: 4, amount: 16}
+        - {item: cocoa_beans, price: 10, amount: 16}
+        - {item: glow_berries, price: 25, amount: 16}
+        - {item: vine, price: 5, amount: 16}
+        - {item: bone_meal, price: 6, amount: 32}
+        - {item: white_dye, price: 8, amount: 16}
+        - {item: pink_dye, price: 10, amount: 16}
+        - {item: purple_dye, price: 12, amount: 16}
+        - {item: lapis_lazuli, price: 40, amount: 16}
+        - {item: redstone, price: 20, amount: 16}
+        - {item: glowstone_dust, price: 30, amount: 16}
+        - {item: gunpowder, price: 45, amount: 16}
+        - {item: nether_wart, price: 30, amount: 16}
+        - {item: honey_bottle, price: 40, amount: 4}
+        - {item: slime_ball, price: 60, amount: 8}
+        - {item: iron_nugget, price: 13, amount: 16}
+        - {item: glass_pane, price: 5, amount: 16}
     ores:
       name: Ores & Gems
       icon: diamond
@@ -289,8 +325,6 @@ exchange:
         - {item: amethyst_shard, price: 52, amount: 8}
         - {item: emerald, price: 780, amount: 1}
         - {item: diamond, price: 1950, amount: 1}
-        - {item: netherite_scrap, price: 11700, amount: 1}
-        - {item: netherite_ingot, price: 52000, amount: 1}
         - {item: coal_block, price: 290, amount: 4}
         - {item: copper_block, price: 235, amount: 1}
         - {item: iron_block, price: 940, amount: 1}
@@ -304,6 +338,9 @@ exchange:
       icon: wheat
       items:
         - {item: wheat_seeds, price: 2, amount: 16}
+        - {item: beetroot_seeds, price: 2, amount: 16}
+        - {item: melon_seeds, price: 4, amount: 16}
+        - {item: pumpkin_seeds, price: 4, amount: 16}
         - {item: wheat, price: 4, amount: 16}
         - {item: carrot, price: 5, amount: 16}
         - {item: potato, price: 5, amount: 16}
@@ -314,22 +351,19 @@ exchange:
         - {item: sugar, price: 8, amount: 16}
         - {item: cocoa_beans, price: 10, amount: 16}
         - {item: sweet_berries, price: 6, amount: 16}
-        - {item: glow_berries, price: 25, amount: 16}
         - {item: apple, price: 10, amount: 16}
         - {item: egg, price: 6, amount: 16}
-        - {item: honey_bottle, price: 40, amount: 4}
+        - {item: milk_bucket, price: 260, amount: 1}
         - {item: bone_meal, price: 6, amount: 32}
         - {item: bread, price: 20, amount: 16}
         - {item: baked_potato, price: 15, amount: 16}
         - {item: cooked_beef, price: 40, amount: 16}
         - {item: cooked_porkchop, price: 40, amount: 16}
         - {item: cooked_chicken, price: 30, amount: 16}
-        - {item: cooked_cod, price: 25, amount: 16}
+        - {item: cooked_salmon, price: 30, amount: 16}
         - {item: pumpkin_pie, price: 45, amount: 8}
         - {item: cake, price: 150, amount: 1}
         - {item: golden_carrot, price: 120, amount: 8}
-        - {item: golden_apple, price: 2000, amount: 1}
-        - {item: enchanted_golden_apple, price: 60000, amount: 1}
     wood:
       name: Wood & Nature
       icon: oak_sapling
@@ -345,6 +379,7 @@ exchange:
         - {item: pale_oak_log, price: 25, amount: 16}
         - {item: bamboo, price: 8, amount: 16}
         - {item: oak_sapling, price: 15, amount: 4}
+        - {item: spruce_sapling, price: 15, amount: 4}
         - {item: cherry_sapling, price: 25, amount: 4}
         - {item: moss_block, price: 12, amount: 16}
         - {item: dirt, price: 2, amount: 64}
@@ -359,38 +394,161 @@ exchange:
         - {item: red_mushroom, price: 10, amount: 8}
         - {item: brown_mushroom, price: 10, amount: 8}
         - {item: poppy, price: 5, amount: 8}
-        - {item: sunflower, price: 10, amount: 4}
+        - {item: dandelion, price: 5, amount: 8}
     building:
       name: Building Blocks
       icon: bricks
       items:
         - {item: stone, price: 4, amount: 64}
         - {item: cobblestone, price: 2, amount: 64}
+        - {item: mossy_cobblestone, price: 6, amount: 32}
         - {item: deepslate, price: 4, amount: 64}
         - {item: cobbled_deepslate, price: 3, amount: 64}
         - {item: andesite, price: 3, amount: 64}
+        - {item: polished_andesite, price: 5, amount: 32}
         - {item: granite, price: 3, amount: 64}
         - {item: diorite, price: 3, amount: 64}
+        - {item: tuff, price: 4, amount: 64}
+        - {item: calcite, price: 6, amount: 32}
         - {item: sand, price: 3, amount: 64}
         - {item: red_sand, price: 4, amount: 64}
         - {item: gravel, price: 3, amount: 64}
         - {item: glass, price: 10, amount: 16}
         - {item: bricks, price: 15, amount: 16}
         - {item: stone_bricks, price: 8, amount: 16}
+        - {item: deepslate_bricks, price: 10, amount: 16}
+        - {item: mud_bricks, price: 8, amount: 16}
         - {item: sandstone, price: 6, amount: 16}
         - {item: smooth_stone, price: 8, amount: 16}
         - {item: terracotta, price: 10, amount: 16}
-        - {item: white_concrete, price: 12, amount: 16}
-        - {item: white_wool, price: 25, amount: 16}
+        - {item: prismarine, price: 30, amount: 16}
+        - {item: dark_prismarine, price: 45, amount: 16}
         - {item: quartz_block, price: 140, amount: 8}
         - {item: obsidian, price: 120, amount: 8}
+        - {item: packed_mud, price: 5, amount: 16}
+    colors:
+      name: Colours
+      icon: magenta_dye
+      items:
+        - {item: white_dye, price: 8, amount: 16}
+        - {item: black_dye, price: 8, amount: 16}
+        - {item: red_dye, price: 8, amount: 16}
+        - {item: orange_dye, price: 8, amount: 16}
+        - {item: yellow_dye, price: 8, amount: 16}
+        - {item: lime_dye, price: 10, amount: 16}
+        - {item: blue_dye, price: 10, amount: 16}
+        - {item: pink_dye, price: 10, amount: 16}
+        - {item: purple_dye, price: 12, amount: 16}
+        - {item: white_wool, price: 25, amount: 16}
+        - {item: black_wool, price: 28, amount: 16}
+        - {item: red_wool, price: 28, amount: 16}
+        - {item: orange_wool, price: 28, amount: 16}
+        - {item: yellow_wool, price: 28, amount: 16}
+        - {item: lime_wool, price: 28, amount: 16}
+        - {item: light_blue_wool, price: 28, amount: 16}
+        - {item: pink_wool, price: 28, amount: 16}
+        - {item: purple_wool, price: 28, amount: 16}
+        - {item: white_concrete, price: 12, amount: 16}
+        - {item: black_concrete, price: 14, amount: 16}
+        - {item: gray_concrete, price: 14, amount: 16}
+        - {item: red_concrete, price: 14, amount: 16}
+        - {item: yellow_concrete, price: 14, amount: 16}
+        - {item: lime_concrete, price: 14, amount: 16}
+        - {item: cyan_concrete, price: 14, amount: 16}
+        - {item: blue_concrete, price: 14, amount: 16}
+        - {item: purple_concrete, price: 14, amount: 16}
+    decor:
+      name: Decoration
+      icon: lantern
+      items:
+        - {item: torch, price: 3, amount: 16}
+        - {item: soul_torch, price: 5, amount: 16}
+        - {item: lantern, price: 45, amount: 4}
+        - {item: soul_lantern, price: 50, amount: 4}
         - {item: glowstone, price: 100, amount: 4}
         - {item: sea_lantern, price: 150, amount: 4}
-        - {item: lantern, price: 45, amount: 4}
-        - {item: torch, price: 3, amount: 16}
-        - {item: ladder, price: 6, amount: 16}
+        - {item: candle, price: 20, amount: 4}
+        - {item: flower_pot, price: 15, amount: 4}
+        - {item: painting, price: 30, amount: 1}
+        - {item: item_frame, price: 25, amount: 4}
+        - {item: glow_item_frame, price: 60, amount: 4}
+        - {item: armor_stand, price: 80, amount: 1}
+        - {item: white_bed, price: 120, amount: 1}
+        - {item: red_bed, price: 120, amount: 1}
+        - {item: white_carpet, price: 10, amount: 16}
+        - {item: red_carpet, price: 12, amount: 16}
+        - {item: bookshelf, price: 90, amount: 4}
+        - {item: oak_sign, price: 12, amount: 4}
+        - {item: oak_fence, price: 8, amount: 16}
+        - {item: oak_fence_gate, price: 12, amount: 4}
+        - {item: oak_door, price: 15, amount: 4}
+        - {item: oak_trapdoor, price: 12, amount: 4}
+        - {item: iron_bars, price: 20, amount: 16}
+        - {item: iron_chain, price: 30, amount: 8}
+        - {item: glass_pane, price: 5, amount: 16}
+        - {item: campfire, price: 60, amount: 1}
+        - {item: white_banner, price: 60, amount: 1}
+    redstone:
+      name: Redstone & Machines
+      icon: redstone
+      items:
+        - {item: redstone_torch, price: 10, amount: 16}
+        - {item: repeater, price: 40, amount: 4}
+        - {item: comparator, price: 90, amount: 4}
+        - {item: piston, price: 80, amount: 4}
+        - {item: sticky_piston, price: 140, amount: 4}
+        - {item: observer, price: 90, amount: 4}
+        - {item: hopper, price: 600, amount: 1}
+        - {item: dropper, price: 40, amount: 4}
+        - {item: dispenser, price: 60, amount: 4}
+        - {item: lever, price: 8, amount: 8}
+        - {item: stone_button, price: 4, amount: 8}
+        - {item: stone_pressure_plate, price: 8, amount: 8}
+        - {item: redstone_lamp, price: 90, amount: 4}
+        - {item: note_block, price: 40, amount: 4}
+        - {item: daylight_detector, price: 120, amount: 1}
+        - {item: target, price: 60, amount: 4}
+        - {item: tripwire_hook, price: 30, amount: 4}
+        - {item: rail, price: 15, amount: 16}
+        - {item: powered_rail, price: 150, amount: 8}
+        - {item: minecart, price: 500, amount: 1}
         - {item: chest, price: 40, amount: 1}
+        - {item: barrel, price: 45, amount: 1}
+        - {item: furnace, price: 30, amount: 1}
+        - {item: smoker, price: 60, amount: 1}
+        - {item: blast_furnace, price: 600, amount: 1}
+        - {item: composter, price: 30, amount: 1}
         - {item: crafting_table, price: 20, amount: 1}
+    tools:
+      name: Tools
+      icon: iron_pickaxe
+      items:
+        - {item: bucket, price: 240, amount: 1}
+        - {item: water_bucket, price: 250, amount: 1}
+        - {item: lava_bucket, price: 300, amount: 1}
+        - {item: shears, price: 160, amount: 1}
+        - {item: flint_and_steel, price: 90, amount: 1}
+        - {item: compass, price: 400, amount: 1}
+        - {item: clock, price: 600, amount: 1}
+        - {item: spyglass, price: 300, amount: 1}
+        - {item: lead, price: 120, amount: 1}
+        - {item: fishing_rod, price: 60, amount: 1}
+        - {item: iron_pickaxe, price: 300, amount: 1}
+        - {item: iron_axe, price: 300, amount: 1}
+        - {item: iron_shovel, price: 110, amount: 1}
+        - {item: iron_hoe, price: 200, amount: 1}
+        - {item: iron_sword, price: 200, amount: 1}
+        - {item: diamond_pickaxe, price: 4500, amount: 1}
+        - {item: diamond_shovel, price: 2000, amount: 1}
+        - {item: diamond_hoe, price: 3800, amount: 1}
+        - {item: bow, price: 300, amount: 1}
+        - {item: shield, price: 250, amount: 1}
+        - {item: book, price: 25, amount: 4}
+        - {item: bundle, price: 120, amount: 1}
+        - {item: cauldron, price: 700, amount: 1}
+        - {item: brewing_stand, price: 450, amount: 1}
+        - {item: anvil, price: 2500, amount: 1}
+        - {item: enchanting_table, price: 6000, amount: 1}
     mobs:
       name: Mob Drops
       icon: bone
@@ -402,6 +560,7 @@ exchange:
         - {item: gunpowder, price: 45, amount: 16}
         - {item: slime_ball, price: 60, amount: 8}
         - {item: leather, price: 25, amount: 8}
+        - {item: rabbit_hide, price: 10, amount: 8}
         - {item: feather, price: 6, amount: 16}
         - {item: ink_sac, price: 10, amount: 16}
         - {item: glow_ink_sac, price: 40, amount: 8}
@@ -409,9 +568,7 @@ exchange:
         - {item: prismarine_shard, price: 30, amount: 16}
         - {item: prismarine_crystals, price: 40, amount: 16}
         - {item: honeycomb, price: 60, amount: 4}
-        - {item: ender_pearl, price: 250, amount: 4}
         - {item: blaze_rod, price: 300, amount: 4}
-        - {item: breeze_rod, price: 500, amount: 4}
         - {item: phantom_membrane, price: 200, amount: 4}
         - {item: armadillo_scute, price: 200, amount: 4}
         - {item: rabbit_foot, price: 300, amount: 1}
@@ -421,78 +578,45 @@ exchange:
         - {item: name_tag, price: 1000, amount: 1}
         - {item: saddle, price: 1500, amount: 1}
         - {item: nautilus_shell, price: 1500, amount: 1}
-        - {item: totem_of_undying, price: 25000, amount: 1}
-    nether_end:
-      name: Nether & End
-      icon: ender_eye
+    nether:
+      name: Nether
+      icon: nether_wart
       items:
         - {item: netherrack, price: 2, amount: 64}
         - {item: soul_sand, price: 6, amount: 16}
         - {item: soul_soil, price: 6, amount: 16}
         - {item: nether_bricks, price: 10, amount: 16}
+        - {item: red_nether_bricks, price: 14, amount: 16}
         - {item: basalt, price: 4, amount: 32}
+        - {item: smooth_basalt, price: 6, amount: 32}
         - {item: blackstone, price: 4, amount: 32}
+        - {item: polished_blackstone_bricks, price: 8, amount: 16}
         - {item: magma_block, price: 20, amount: 8}
+        - {item: crimson_nylium, price: 12, amount: 16}
+        - {item: warped_nylium, price: 12, amount: 16}
         - {item: crimson_stem, price: 25, amount: 16}
         - {item: warped_stem, price: 25, amount: 16}
+        - {item: crimson_fungus, price: 15, amount: 4}
+        - {item: warped_fungus, price: 15, amount: 4}
+        - {item: nether_wart_block, price: 20, amount: 16}
+        - {item: warped_wart_block, price: 20, amount: 16}
         - {item: shroomlight, price: 100, amount: 4}
+        - {item: weeping_vines, price: 10, amount: 8}
+        - {item: twisting_vines, price: 10, amount: 8}
         - {item: nether_wart, price: 30, amount: 16}
         - {item: glowstone_dust, price: 30, amount: 16}
         - {item: blaze_powder, price: 120, amount: 8}
         - {item: magma_cream, price: 150, amount: 4}
-        - {item: crying_obsidian, price: 250, amount: 4}
-        - {item: end_stone, price: 6, amount: 32}
-        - {item: purpur_block, price: 20, amount: 16}
-        - {item: chorus_fruit, price: 40, amount: 16}
-        - {item: popped_chorus_fruit, price: 60, amount: 8}
-        - {item: end_rod, price: 80, amount: 4}
-        - {item: ender_eye, price: 400, amount: 4}
-        - {item: dragon_breath, price: 2500, amount: 1}
-        - {item: shulker_shell, price: 3000, amount: 1}
-        - {item: wither_skeleton_skull, price: 15000, amount: 1}
-        - {item: dragon_head, price: 50000, amount: 1}
-        - {item: nether_star, price: 100000, amount: 1}
-        - {item: elytra, price: 250000, amount: 1}
-    tools:
-      name: Lab & Tools
-      icon: glass_bottle
-      items:
-        - {item: glass_bottle, price: 6, amount: 16}
-        - {item: paper, price: 6, amount: 16}
-        - {item: book, price: 25, amount: 4}
-        - {item: pink_dye, price: 10, amount: 16}
-        - {item: purple_dye, price: 12, amount: 16}
-        - {item: red_dye, price: 8, amount: 16}
-        - {item: yellow_dye, price: 8, amount: 16}
-        - {item: blue_dye, price: 10, amount: 16}
-        - {item: bucket, price: 240, amount: 1}
-        - {item: water_bucket, price: 250, amount: 1}
-        - {item: lava_bucket, price: 300, amount: 1}
-        - {item: shears, price: 160, amount: 1}
-        - {item: flint_and_steel, price: 90, amount: 1}
-        - {item: compass, price: 400, amount: 1}
-        - {item: clock, price: 600, amount: 1}
-        - {item: spyglass, price: 300, amount: 1}
-        - {item: lead, price: 120, amount: 1}
-        - {item: fishing_rod, price: 60, amount: 1}
-        - {item: bow, price: 300, amount: 1}
-        - {item: shield, price: 250, amount: 1}
-        - {item: iron_pickaxe, price: 300, amount: 1}
-        - {item: iron_sword, price: 200, amount: 1}
-        - {item: diamond_pickaxe, price: 4500, amount: 1}
-        - {item: diamond_sword, price: 3000, amount: 1}
-        - {item: brewing_stand, price: 450, amount: 1}
-        - {item: anvil, price: 2500, amount: 1}
-        - {item: enchanting_table, price: 6000, amount: 1}
+        - {item: quartz_bricks, price: 160, amount: 4}
 
 # =====================================================================
-#  JOBS
-#  Everyone gets paid a little for normal work - no need to join. Blocks
-#  placed by players never pay, crops must be fully grown, spawner mobs
-#  don't count. Shown above the hotbar.
+#  JOBS  (off: money only comes from selling drugs)
+#  true = everyone also gets paid a little for normal work (mining,
+#  farming, woodcutting, hunting). Blocks placed by players never pay,
+#  crops must be fully grown, spawner mobs don't count.
 # =====================================================================
 jobs:
-  enabled: true
+  enabled: false
   # Max money one player can earn from jobs per hour (stops farms printing money).
   hourly-cap: 750
   # All pay below is multiplied by this.
@@ -586,7 +710,7 @@ jobs:
 # =====================================================================
 shop:
   seed-price-multiplier: 1.25
-  # Workers (farmhand, dryer, cook) are listed here too: they show on the hiring board.
+  # Workers (farmhand, dryer, cook, runner) are listed here too: they show on the hiring board.
   buy:
     - {item: mushroom_spores, amount: 1, price: 30}
     - {item: coca_seeds, amount: 1, price: 50}
@@ -604,33 +728,30 @@ shop:
     - {item: farmhand, amount: 1, price: 12000}
     - {item: dryer, amount: 1, price: 9000}
     - {item: cook, amount: 1, price: 15000}
+    - {item: runner, amount: 1, price: 11000}
   sell:
     # weed
     bud_fresh: 5
     bud_dried: 20
     joint: 32
     blunt: 60
-    kief: 32
-    hash: 80
-    wax: 175
-    moon_rock: 190
-    vape_pen: 430
-    canna_butter: 30
-    space_brownie: 55
-    gummies: 48
+    vape_pen: 150
     # psychedelics
     magic_mushroom: 14
     shroom_tea: 42
+    shroom_chocolate: 30
     ergot_extract: 35
     lucid_tab: 34
     peyote_button: 14
     mescaline: 115
     dmt: 160
+    ayahuasca: 120
     # uppers
     coca_paste: 45
     cocaine: 110
     crack: 95
     blue_crystal: 135
+    speed: 50
     ecstasy: 60
     pixie_dust: 80
     angel_dust: 160
@@ -638,15 +759,22 @@ shop:
     opium: 55
     morphine: 75
     heroin: 150
+    oxy: 70
     cough_syrup: 40
     lean: 55
     ketamine: 88
-    # harvest & seeds
+    xanny_bars: 28
+    moonshine: 35
+    laughing_gas: 22
+    # drug plants (seeds don't sell: money only comes from drugs)
     coca_leaves: 7
     poppy_pod: 7
     ergot: 4
-    seed_pack: 8
-    coca_seeds: 10
-    poppy_seeds: 10
-    peyote_seeds: 10
-    mushroom_spores: 6
+    # old weed products: not made any more, old ones still sell
+    kief: 32
+    hash: 80
+    wax: 175
+    moon_rock: 190
+    canna_butter: 30
+    space_brownie: 55
+    gummies: 48

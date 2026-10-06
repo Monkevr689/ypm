@@ -579,6 +579,7 @@ def dye(name, light, mid, dark, outline):
 
 
 dye("pink_dye", "ffd0e8", "f08ac0", "c05a90", "5a1a3a")
+dye("white_dye", "ffffff", "eceef0", "c0c4c8", "4a4e54")
 dye("purple_dye", "d8a8ff", "9a4ad8", "6a2aa0", "2a0a4a")
 dust("blaze_powder", "fff0a0", "f8b830", "d87a10", "5a2a00")
 
@@ -638,6 +639,25 @@ art("sweet_berries", [
     "................",
     "................",
 ], {"K": "3a0a0a", "g": "4a7a2a", "r": "d83a3a", "R": "a02020", "w": "ffb0b0"})
+
+art("vine", [
+    "....K.......K...",
+    "...KgK.....KgK..",
+    "...KgK....KggK..",
+    "..KggK...KgGK...",
+    "..KgGgK..KgK....",
+    "...KgGK.KggK....",
+    "....KgKKgGK.....",
+    "....KggggK......",
+    ".....KgGgK......",
+    "....KggKgK......",
+    "...KgGK.KgK.....",
+    "...KgK..KgGK....",
+    "..KggK...KgK....",
+    "..KgK....KggK...",
+    "...K......KK....",
+    "................",
+], {"K": "1a3a10", "g": "4a8a2a", "G": "2e6a1a"})
 
 art("slime_ball", [
     "................",

@@ -273,7 +273,7 @@ public final class KushCraft extends JavaPlugin {
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 8) {
+        if (version >= 9) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -302,14 +302,23 @@ public final class KushCraft extends JavaPlugin {
                 getConfig().set(key, def.get(key));
             }
         }
-        // 5.0: shop prices (with the Cook), pricier workers and ores, a faster market recovery
+        if (version < 8) {
+            // 5.0: pricier workers and ores, one-perk cartel levels, a faster market recovery
+            getConfig().set("cartel.levels", null);
+            for (String key : List.of("market.recovery-per-minute", "workers.upgrade-costs", "workers.farmhand.wage",
+                    "workers.dryer.wage")) {
+                getConfig().set(key, def.get(key));
+            }
+        }
+        // 6.0: money only from drugs (Trade only sells, no jobs pay, no award cash), the new drugs'
+        // prices, the Runner in the shop, the new Trade shelves (no OP PvP or End items), workers
+        // with no limit that work further and faster
         // (removed keys come back from the defaults when saving, in their usual place)
-        getConfig().set("shop.buy", null);
-        getConfig().set("shop.sell", null);
-        getConfig().set("exchange.categories.ores", null);
-        getConfig().set("cartel.levels", null);
-        for (String key : List.of("market.recovery-per-minute", "workers.upgrade-costs", "workers.farmhand.wage",
-                "workers.dryer.wage")) {
+        for (String key : List.of("shop.buy", "shop.sell", "exchange.categories", "exchange.items", "exchange.sell-ratio",
+                "exchange.min-price")) {
+            getConfig().set(key, null);
+        }
+        for (String key : List.of("jobs.enabled", "workers.max-per-player", "workers.radius", "workers.rest-seconds")) {
             getConfig().set(key, def.get(key));
         }
         // players on most hosts can't reach the built-in pack server: use the hosted copy
@@ -319,10 +328,10 @@ public final class KushCraft extends JavaPlugin {
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 8);
+        getConfig().set("config-version", 9);
         saveConfig();
-        getLogger().info("Updated config.yml to version 8 (5.0: the Cook, new prices, cash lost on death,"
-                + " resource pack from GitHub). Your other settings were kept.");
+        getLogger().info("Updated config.yml to version 9 (6.0: money only from drugs, Trade only sells, new drugs,"
+                + " the Runner, workers without a limit). Your other settings were kept.");
     }
 
     public ResourcePackManager pack() {

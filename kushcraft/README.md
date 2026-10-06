@@ -1,9 +1,9 @@
-# KushCraft 5.0 – grow, cook & deal (Paper 26.3)
+# KushCraft 6.0 – grow, cook & deal (Paper 26.3)
 
-A **server-side only** Paper plugin with 34 unique strains, climates, custom plants that also **grow wild**, 22 drugs made **step by step**, 34 effects, strain breeding with very rare Mythic strains, **workers you hire** (Farmhand, Dryer and Cook), simple cartels, a sales leaderboard, 50 achievements, an admin panel and a living market. It all comes in **one jar**.
+A **server-side only** Paper plugin with 34 unique strains, climates, custom plants that also **grow wild**, 26 drugs made **step by step**, 34 effects, strain breeding with very rare Mythic strains, **as many workers as you like** (Farmhand, Dryer, Cook and Runner) that **run the whole chain by themselves**, simple cartels, a sales leaderboard, 51 achievements, an admin panel and a living market where **money only comes from selling drugs**. It all comes in **one jar**.
 Players don't install any mods. The plugin builds its own resource pack (32px art, 3D plants and blocks, worker skins and hats, animated Mythic buds, menu art and recipe pictures) and every player gets it when they join.
 
-**Download:** [`release/KushCraft-5.0.0.jar`](release/KushCraft-5.0.0.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
+**Download:** [`release/KushCraft-6.0.0.jar`](release/KushCraft-6.0.0.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
 
 | Items | Plants | Blocks |
 |---|---|---|
@@ -23,15 +23,15 @@ Open it with **`/kush`**, **Shift + F**, or the **KushCraft Menu** book. There a
 |---|---|
 | **Shop** | seeds of every strain, **Gear & Workers**, the **Market** (contracts and flooded products) and selling (click product, or **Sell all**) |
 | **Drugs** | every product in one row per kind; click one to see its recipe picture |
-| **Trade** | 7 shelves of resources: ores, farming, wood, building blocks, mob drops, nether & end, lab & tools |
+| **Trade** | spend your money on 11 shelves: lab ingredients, ores, farming & food, wood, building blocks, colours, decoration, redstone, tools, mob drops, the Nether. **Buy only** |
 | **Cartel** | your cartel (bank, level, members), how cartels work, the cartel **shipment** and **Top Dealers** |
-| **Awards** | 50 achievements on two pages, greyed out until you unlock them |
+| **Awards** | 51 achievements on two pages, greyed out until you unlock them |
 
 The **Drug Lab** block opens on **Cook**, with **Roll**, **Dry** and **Mix** tabs and an **Upgrade** button. Recipes you have everything for glow; a red line under a recipe says what's missing **and where to get it**.
 
 ## Getting started
 
-New players get the menu book and a small starter kit (2 OG Kush seeds and fertilizer). The glowing **Next** button always shows the next step, and each step pays a reward:
+New players get the menu book and a small starter kit (2 OG Kush seeds and fertilizer). The glowing **Next** button always shows the next step:
 
 1. **Plant a seed**: buy one in the Shop, or break grass (the biome decides the strain).
 2. **Harvest it**: right-click the plant when it's fully grown. Sneak + right-click harvests all your ripe plants around it.
@@ -49,18 +49,27 @@ By default (`resource-pack.url: auto`) players download the pack of **this exact
 
 ## Workers
 
-Shop > **Gear & Workers** has a hiring board. Buy a worker, then right-click the ground where they should work. They walk to the job, work and walk back. Workers are an investment:
+Shop > **Gear & Workers** has a hiring board. Buy a worker, then right-click the ground where they should work. They walk to the job, work and walk back. **Hire as many as you like** (`workers.max-per-player: 0`). Workers are an investment:
 
-| Worker | Price | Wage | What they do |
+| Worker | Price | Pay | What they do |
 |---|---|---|---|
-| **Farmhand** | $12,000 | $5 a job | harvests your ripe plants around them and replants; plants seeds and uses fertilizer from their satchel |
-| **Dryer** | $9,000 | $4 a job | stands near your Drug Lab: hangs fresh buds on its racks, takes them off dry, fetches fresh buds from your Farmhands |
-| **Cook** | $15,000 | $8 a batch | **you pick the drug** (button in their menu); they cook it at your Drug Lab from the ingredients in their satchel, up to 4 batches at a time, and collect it when it's done. They fetch dried buds from your Dryers |
+| **Farmhand** | $12,000 | $5 a job | harvests your ripe plants around them, 3–5 per round, and replants; plants seeds and uses fertilizer; spare seeds become fertilizer |
+| **Dryer** | $9,000 | $4 a job | stands near your Drug Lab: hangs fresh buds on its racks and takes them off dry |
+| **Cook** | $15,000 | $8 a batch | **you pick what they make** (button in their menu): any Drug Lab recipe, up to 4 batches at a time, or **rolling joints or blunts** (no lab needed). They fill empty bottles at water nearby |
+| **Runner** | $11,000 | 10% of sales | sells the finished product for you, at your Dealer Stand if one is near; the money goes to your wallet and counts for the leaderboard |
 
+**The work chain runs by itself.** Your workers within 32 blocks of each other (`workers.chain-radius`) are a crew: each one fetches what they need from the others.
+
+* Farmhand → Dryer (fresh buds) → Cook (dried buds) → Runner (joints, vape pens…)
+* Cook → Cook works too: one makes coca paste, the next makes cocaine from it.
+* **Chests:** a chest or barrel right next to a worker is their work chest. They put what they make in it and take supplies from it (seeds, fertilizer, solvent, sugar…). Anything sellable in a chest next to a **Runner** gets sold.
+* Nobody takes what another worker needs for their own job, and the Runner only sells what no worker in the crew needs.
+
+More:
 * No money, no work: wages come out of your wallet.
-* **Right-click** a worker for their menu: the satchel (click an item to take it, click your own seeds, buds or ingredients to give them), their job, rename, pause, **train** (levels 2 and 3 cost $10,000 and $25,000: further, faster) and dismiss (you get their contract and satchel back).
-* A full chain runs by itself: Farmhand → Dryer → Cook (e.g. buds → kief → hash).
-* Up to 4 workers each. They only touch the plants and labs of the player who hired them. `/kush workers` lists yours.
+* **Right-click** a worker for their menu: what they do and who they work with, the satchel (click an item to take it, click your own items to give them), rename, pause, **train** (levels 2 and 3 cost $10,000 and $25,000: reach 8 → 12 → 16 blocks, rest less, walk faster) and dismiss (you get their contract and satchel back).
+* `/kush workers` lists all of yours. **Collect everything** takes what they all made into your inventory.
+* They only touch the plants, labs and Dealer Stands of the player who hired them, and the chests right next to their crew.
 
 ## Wild plants
 
@@ -93,7 +102,7 @@ In its own climate a plant grows **50% faster**, gets **+1 ★** and **+1 bud**.
 
 ### Effects
 
-Strains carry up to 4 of 27 strain effects, and the hard drugs have their own. **None of them help in a fight** any more: no strength, no damage resistance, no invisibility. They're about farming, mining, getting around and having a weird time. Changed in 5.0:
+Strains carry up to 4 of 27 strain effects, and the hard drugs have their own. **None of them help in a fight**: no strength, no damage resistance, no invisibility. They're about farming, mining, getting around and having a weird time:
 
 | Effect | Now |
 |---|---|
@@ -107,19 +116,21 @@ Strains carry up to 4 of 27 strain effects, and the hard drugs have their own. *
 
 ## Drugs (Drug Lab > Cook)
 
-Recipes follow the real process **loosely**: most drugs take two or three cooks with an in-between product. They use game items and a made-up **Lab Solvent**, never real chemistry. 27 recipes, 15–60 seconds each. **Shift-click** cooks up to 4 batches.
+Recipes follow the real process **loosely**: many drugs take two or three cooks with an in-between product. They use game items and a made-up **Lab Solvent**, never real chemistry. 27 recipes, 15–60 seconds each. **Shift-click** cooks up to 4 batches.
+
+**Weed is kept simple:** fresh bud → dried bud → joint, blunt (rolled) or **vape pen** (4 dried buds + solvent + 2 iron nuggets + a glass pane). Kief, hash, wax, moon rocks, canna butter, brownies and gummies are no longer made; old ones still work and still sell.
 
 | Chain | Steps |
 |---|---|
-| Hash | dried buds → **kief** → hash (+ paper) → wax → vape pen / moon rock |
-| Edibles | dried buds + milk → **canna butter** → space brownies; kief + sugar + slime ball → gummies |
 | LSD | wheat → ergot → **ergot extract** → LSD tabs on paper |
 | Cocaine | coca leaves → **coca paste** → cocaine → crack (+ water, bone meal) |
 | Heroin | poppy pods → opium → **morphine base** → heroin |
+| Oxy | morphine base + sugar + solvent → **oxy pills** |
 | Lean | opium + honey → **cough syrup** → lean |
-| The rest | shroom tea (+ water), mescaline, DMT, meth, ecstasy, pixie dust, angel dust, ketamine |
+| Ayahuasca | glow berries → DMT → **ayahuasca** (+ vines, water) |
+| The rest | shroom tea, **shroom chocolate**, mescaline, meth, **speed**, ecstasy, pixie dust, angel dust, ketamine, **xanny bars**, **moonshine**, **laughing gas** |
 
-Every step is worth more than what went in, and the in-between products sell too. Milk buckets and bottles come back empty.
+New in 6.0: shroom chocolate, ayahuasca, speed, oxy pills, xanny bars, moonshine and laughing gas. Every step is worth more than what went in, and the in-between products sell too. Water bottles come back empty.
 
 ![recipes](docs/recipes_preview.png)
 
@@ -157,25 +168,26 @@ Titles and cartels show in the tab list.
 
 ## Economy
 
+* **Money only comes from selling drugs:** the Shop, contracts, cartel shipments and your Runners. Seeds, gear and vanilla items don't sell; jobs and awards pay nothing (both can be turned back on: `jobs.enabled`, `awards.cash-rewards`).
 * **Getting started:** seeds about $20–300 by strain, papers 8 for $8, solvent 8 for $18, a Drug Lab $650 (or craft one: crafting table, furnace, 3 iron, 2 bottles).
-* **Product pays well** (about a third more than in 4.0): dried bud $20, kief $32, hash $80, cocaine $110, heroin $150, a vape pen $430. Rarer and stronger strains sell for more (Mythic 2.5×).
+* **Product pays well:** dried bud $20, a joint $32, a vape pen $150, cocaine $110, heroin $150, DMT $160. Rarer and stronger strains sell for more (Mythic 2.5×).
 * **The market fights back:** every item you sell lowers the price of the next one, and prices climb back over time. Sell a mix. Shop > **Market** shows the contracts (big batches for bonus cash) and what's flooded.
-* **Resources are expensive**, ores a bit more since 5.0: a diamond costs $1,950, an iron ingot $105, an emerald $780. Resources sell back for 20%.
+* **Trade only sells** and it's expensive: a diamond costs $1,950, an iron ingot $105. 260+ items on 11 shelves, including a **Lab Ingredients** shelf with everything the recipes need. **No OP PvP gear and nothing from the End**: no netherite, totems, golden apples, ender pearls, elytra, shulkers or End blocks.
 * **Dying costs 20% of the cash in your wallet.** Nobody gets it, so killing other players doesn't pay (`death.cash-lost`).
-* Jobs (mining, farming, hunting, growing) pay a little on the side.
 * Built-in wallet, or **Vault** (EssentialsX, CMI…) if installed. Every number is in `config.yml`.
 
 ## Achievements
 
-There are 50 awards, each with a cash reward: grow in every climate, pick a wild plant, cook every recipe, hire a Cook, give an animal red eyes, deliver a cartel shipment, build an Empire, breed a Mythic strain, sell $1,000,000 and more. They're also real **advancements** with their own *KushCraft* tab (press L).
+There are 51 awards: grow in every climate, pick a wild plant, cook every recipe, hire a Cook, run a full **Assembly Line** (Farmhand, Dryer, Cook and Runner together), give an animal red eyes, deliver a cartel shipment, build an Empire, breed a Mythic strain, sell $1,000,000 and more. They're also real **advancements** with their own *KushCraft* tab (press L).
 
 ## Installing
 
 1. **Paper 26.3** (Java 25). Put the jar in `plugins/` and start the server.
 2. That's it: players get the textures from GitHub when they join (`resource-pack.url: auto`). To host the pack yourself instead, set `url: ''` and open port 8163, or paste a direct link to your own copy.
 
-**Updating from 3.x or 4.x:** replace the jar and restart.
-* `config.yml` upgrades itself to version 8. These are **replaced** with the 5.0 ones: **shop prices** (with the Cook), worker prices and wages, the **Ores** shelf of Trade, the **cartel levels** and the market recovery. The `death`, `animals` and wild-plant settings are added. **`resource-pack.url` is set to `auto`** if it was empty or the old GitHub link, so textures load for everyone. Your other Trade shelves, cartels, strains and settings are kept.
+**Updating from 3.x, 4.x or 5.x:** replace the jar and restart.
+* `config.yml` upgrades itself to version 9. These are **replaced** with the 6.0 ones: **shop prices** (the new drugs, the Runner, no selling seeds), **all Trade shelves**, `jobs.enabled` (off), and the worker limit (none), reach and rest times. From 3.x/4.x also the worker prices, the cartel levels and the market recovery. Missing settings are added. **`resource-pack.url` is set to `auto`** if it was empty or the old GitHub link. Your cartels, strains, workers and other settings are kept.
+* Cooks that made kief, hash, wax, moon rock, butter, brownies or gummies ask you to pick a new drug.
 * `strains.yml` gets any strains you're missing; strains your players bred are kept.
 
 ## Admin panel
@@ -221,5 +233,5 @@ Always build from clean: old files left in `target/` would end up in the jar's p
 
 GitHub Actions builds against the real Paper 26.3 API and boots a real Paper 26.3 server three times:
 1. A fresh install: runs `/kush selftest` and checks that the pack hosted on GitHub is exactly the pack the jar builds.
-2. An upgrade from a 3.0 config and a 2.0 `strains.yml`.
+2. An upgrade from an old config (3.0 style, with 5.0 worker and Trade settings) and a 2.0 `strains.yml`.
 3. The built-in pack server.

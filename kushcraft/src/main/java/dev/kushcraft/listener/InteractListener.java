@@ -237,8 +237,12 @@ public final class InteractListener implements Listener {
                 p.sendActionBar(Text.mm("<gray>Fresh buds need drying first - <green>Drug Lab</green> > Dry."));
                 return true;
             }
-            case COCA_LEAVES, POPPY_POD, KIEF, CANNA_BUTTER, ERGOT, ERGOT_EXTRACT, COCA_PASTE, MORPHINE, COUGH_SYRUP -> {
+            case COCA_LEAVES, POPPY_POD, ERGOT, ERGOT_EXTRACT, COCA_PASTE, MORPHINE, COUGH_SYRUP -> {
                 p.sendActionBar(Text.mm("<gray>Cook it in a <green>Drug Lab</green> > Cook - it's one step of a recipe."));
+                return true;
+            }
+            case KIEF, CANNA_BUTTER -> {
+                p.sendActionBar(Text.mm("<gray>Not made any more - sell it in the <green>Shop</green>."));
                 return true;
             }
             case FERTILIZER -> {
@@ -389,11 +393,24 @@ public final class InteractListener implements Listener {
             Particle.DustOptions dust = null;
             switch (type) {
                 case MAGIC_MUSHROOM, PEYOTE_BUTTON -> food = 1;
-                case SHROOM_TEA, LEAN -> {
+                case SHROOM_CHOCOLATE -> {
+                    food = 3;
+                    p.sendActionBar(Text.mm("<gray>Tasty. <dark_gray>Doesn't feel like anything... yet."));
+                }
+                case SHROOM_TEA, LEAN, AYAHUASCA, MOONSHINE -> {
                     sound = "minecraft:entity.generic.drink";
                     food = 2;
                 }
-                case LUCID_TAB, MESCALINE, ECSTASY -> sound = "minecraft:block.amethyst_block.chime";
+                case LUCID_TAB, MESCALINE, ECSTASY, OXY, XANNY_BARS -> sound = "minecraft:block.amethyst_block.chime";
+                case SPEED -> {
+                    sound = "minecraft:entity.sniffer.sniffing";
+                    dust = new Particle.DustOptions(org.bukkit.Color.fromRGB(0xF4B8D0), 1f);
+                }
+                case LAUGHING_GAS -> {
+                    sound = "minecraft:entity.puffer_fish.blow_out";
+                    p.getWorld().spawnParticle(Particle.CLOUD, p.getEyeLocation(), 6, 0.15, 0.1, 0.15, 0.01);
+                    p.sendActionBar(Text.mm("<yellow>Hahaha... <gray>why is everything so funny?"));
+                }
                 case BLUE_CRYSTAL -> {
                     sound = "minecraft:entity.sniffer.sniffing";
                     dust = new Particle.DustOptions(org.bukkit.Color.fromRGB(0x72D6FF), 1f);
@@ -430,7 +447,7 @@ public final class InteractListener implements Listener {
             }
         }
         item.setAmount(item.getAmount() - 1);
-        if (type == ItemType.SHROOM_TEA || type == ItemType.LEAN) {
+        if (type == ItemType.SHROOM_TEA || type == ItemType.LEAN || type == ItemType.AYAHUASCA || type == ItemType.MOONSHINE) {
             InventoryUtil.give(p, new ItemStack(Material.GLASS_BOTTLE));
         }
         if (food > 0) {

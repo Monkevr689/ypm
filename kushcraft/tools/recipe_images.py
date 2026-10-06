@@ -43,21 +43,16 @@ CRAFTING = [
 # cook: (enum name, result id, amount, seconds, [(ingredient, count)]); "kush:" = KushCraft item.
 # Same order as dev.kushcraft.lab.LabRecipe.
 COOK = [
-    ("KIEF", "kief", 2, 20, [("kush:bud_dried", 3)]),
-    ("HASH", "hash", 2, 30, [("kush:kief", 3), ("paper", 1)]),
-    ("WAX", "wax", 2, 45, [("kush:hash", 2), ("kush:lab_solvent", 1)]),
-    ("MOON_ROCK", "moon_rock", 2, 40, [("kush:bud_dried", 2), ("kush:wax", 1), ("kush:kief", 1)]),
-    ("VAPE_PEN", "vape_pen", 1, 30, [("kush:wax", 1), ("iron_nugget", 2), ("glass_pane", 1)]),
-    ("CANNA_BUTTER", "canna_butter", 2, 40, [("kush:bud_dried", 2), ("milk_bucket", 1)]),
-    ("SPACE_BROWNIE", "space_brownie", 4, 40, [("kush:canna_butter", 1), ("cocoa_beans", 2), ("wheat", 2),
-                                               ("sugar", 1)]),
-    ("GUMMIES", "gummies", 4, 35, [("kush:kief", 1), ("sugar", 2), ("slime_ball", 1), ("sweet_berries", 1)]),
+    ("VAPE_PEN", "vape_pen", 1, 40, [("kush:bud_dried", 4), ("kush:lab_solvent", 1), ("iron_nugget", 2),
+                                     ("glass_pane", 1)]),
     ("SHROOM_TEA", "shroom_tea", 2, 20, [("kush:magic_mushroom", 3), ("potion", 1)]),
+    ("SHROOM_CHOCOLATE", "shroom_chocolate", 3, 35, [("kush:magic_mushroom", 2), ("cocoa_beans", 2), ("sugar", 1)]),
     ("ERGOT", "ergot", 2, 15, [("wheat", 4)]),
     ("ERGOT_EXTRACT", "ergot_extract", 2, 45, [("kush:ergot", 3), ("kush:lab_solvent", 1)]),
     ("LUCID_TAB", "lucid_tab", 6, 30, [("kush:ergot_extract", 1), ("paper", 2)]),
     ("MESCALINE", "mescaline", 3, 40, [("kush:peyote_button", 4), ("kush:lab_solvent", 1)]),
     ("DMT", "dmt", 3, 50, [("glow_berries", 3), ("kush:lab_solvent", 1)]),
+    ("AYAHUASCA", "ayahuasca", 2, 50, [("kush:dmt", 1), ("vine", 2), ("potion", 1)]),
     ("COCA_PASTE", "coca_paste", 2, 40, [("kush:coca_leaves", 6), ("kush:lab_solvent", 1)]),
     ("COCAINE", "cocaine", 3, 50, [("kush:coca_paste", 2), ("kush:lab_solvent", 1)]),
     ("CRACK", "crack", 2, 30, [("kush:cocaine", 1), ("potion", 1), ("bone_meal", 1)]),
@@ -65,12 +60,17 @@ COOK = [
     ("ECSTASY", "ecstasy", 4, 40, [("pink_dye", 2), ("sugar", 2), ("kush:lab_solvent", 1)]),
     ("PIXIE_DUST", "pixie_dust", 4, 40, [("glowstone_dust", 2), ("sugar", 2)]),
     ("ANGEL_DUST", "angel_dust", 3, 50, [("gunpowder", 3), ("kush:lab_solvent", 1)]),
+    ("SPEED", "speed", 4, 45, [("redstone", 2), ("sugar", 2), ("kush:lab_solvent", 1)]),
     ("OPIUM", "opium", 2, 30, [("kush:poppy_pod", 3)]),
     ("MORPHINE", "morphine", 2, 45, [("kush:opium", 2), ("kush:lab_solvent", 1)]),
     ("HEROIN", "heroin", 2, 60, [("kush:morphine", 2), ("kush:lab_solvent", 1)]),
+    ("OXY", "oxy", 3, 45, [("kush:morphine", 1), ("sugar", 1), ("kush:lab_solvent", 1)]),
     ("COUGH_SYRUP", "cough_syrup", 2, 30, [("kush:opium", 1), ("honey_bottle", 1)]),
     ("LEAN", "lean", 2, 30, [("kush:cough_syrup", 1), ("sugar", 1), ("purple_dye", 1)]),
     ("KETAMINE", "ketamine", 4, 45, [("nether_wart", 3), ("kush:lab_solvent", 1)]),
+    ("XANNY_BARS", "xanny_bars", 6, 40, [("white_dye", 2), ("sugar", 1), ("kush:lab_solvent", 1)]),
+    ("MOONSHINE", "moonshine", 3, 50, [("wheat", 4), ("sugar", 2), ("potion", 1)]),
+    ("LAUGHING_GAS", "laughing_gas", 4, 30, [("slime_ball", 1), ("iron_nugget", 2), ("kush:lab_solvent", 1)]),
 ]
 
 # other Drug Lab tabs: (id, station text, result, amount, [(ingredient, count)])
@@ -92,7 +92,9 @@ NAMES = {
     "ketamine": "Ketamine", "mescaline": "Mescaline", "dmt": "DMT", "angel_dust": "Angel Dust",
     "wax": "Wax", "vape_pen": "Vape Pen", "ergot": "Ergot", "kief": "Kief", "canna_butter": "Canna Butter",
     "ergot_extract": "Ergot Extract", "coca_paste": "Coca Paste", "morphine": "Morphine Base",
-    "cough_syrup": "Cough Syrup",
+    "cough_syrup": "Cough Syrup", "shroom_chocolate": "Shroom Chocolate", "ayahuasca": "Ayahuasca",
+    "speed": "Speed", "oxy": "Oxy Pills", "xanny_bars": "Xanny Bars", "moonshine": "Moonshine",
+    "laughing_gas": "Laughing Gas",
 }
 
 MACHINES = {"lab_station": "block/lab_station", "grow_lamp": "block/grow_lamp",

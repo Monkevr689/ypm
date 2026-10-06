@@ -12,13 +12,16 @@ import java.util.Locale;
 public enum WorkerType {
     FARMHAND("Farmhand", "<green>", ItemType.FARMHAND, Material.IRON_HOE,
             "Harvests your ripe plants and plants them again.",
-            "Give them seeds and fertilizer to plant empty farmland."),
+            "Your Dryers and Cooks take the harvest from them."),
     DRYER("Dryer", "<gold>", ItemType.DRYER, Material.SHEARS,
-            "Hangs fresh buds on your Drug Lab racks and collects them dry.",
-            "Takes fresh buds from your Farmhands nearby."),
+            "Dries fresh buds on your Drug Lab racks.",
+            "Fetches fresh buds from your Farmhands by themselves."),
     COOK("Cook", "<aqua>", ItemType.COOK, Material.GLASS_BOTTLE,
-            "Cooks the drug you pick at your Drug Lab, batch after batch.",
-            "Put the ingredients in their satchel. Takes dried buds from your Dryers.");
+            "Cooks the drug you pick at your Drug Lab, or rolls joints.",
+            "Fetches what they need from your other workers."),
+    RUNNER("Runner", "<light_purple>", ItemType.RUNNER, Material.BUNDLE,
+            "Sells your workers' finished product for you.",
+            "Keeps a small cut. The money goes to your wallet.");
 
     private final String display;
     private final String color;
