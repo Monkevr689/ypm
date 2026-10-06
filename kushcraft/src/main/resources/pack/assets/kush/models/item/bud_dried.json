@@ -1,8 +1,0 @@
-{
- "parent": "minecraft:item/generated",
- "textures": {
-  "layer0": "kush:item/bud_dried",
-  "layer1": "kush:item/bud_dried_tint",
-  "layer2": "kush:item/bud_dried_overlay"
- }
-}

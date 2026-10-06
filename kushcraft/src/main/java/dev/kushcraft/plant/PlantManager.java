@@ -8,6 +8,8 @@ import dev.kushcraft.jobs.Jobs;
 import dev.kushcraft.machine.Machine;
 import dev.kushcraft.machine.MachineType;
 import dev.kushcraft.strain.Climate;
+import dev.kushcraft.strain.Exotic;
+import dev.kushcraft.strain.Look;
 import dev.kushcraft.strain.Strain;
 import dev.kushcraft.util.BlockKey;
 import dev.kushcraft.util.Text;
@@ -138,6 +140,7 @@ public final class PlantManager {
     public void start() {
         int tickSeconds = Math.max(1, plugin.getConfig().getInt("growth.tick-seconds", 10));
         Bukkit.getScheduler().runTaskTimer(plugin, () -> growAll(tickSeconds), 20L * tickSeconds, 20L * tickSeconds);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::sparkle, 20L, 10L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (dirty) {
                 save();
@@ -298,23 +301,28 @@ public final class PlantManager {
         String msg;
         if (p.kind() == Plant.Kind.CANNABIS) {
             Strain s = plugin.strains().getOrDefault(p.strainId());
-            int buds = 2 + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + r.nextInt(2) + (p.fertilized() ? 1 : 0);
+            int buds = Math.max(1, 2 + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + r.nextInt(2) + (p.fertilized() ? 1 : 0)
+                    + cond.fit().buds());
             int seeds = 1 + (r.nextDouble() < 0.4 ? 1 : 0);
             drops.add(Items.strainItem(ItemType.BUD_FRESH, s, q, buds));
             drops.add(Items.strainItem(ItemType.SEED_PACK, s, 3, seeds));
-            msg = "<green>Harvested " + buds + "x " + s.colored() + " <gray>" + Text.stars(q);
+            msg = "<green>Harvested " + buds + "x " + s.colored() + " <gray>" + Text.stars(q)
+                    + (cond.fit() == Climate.Fit.IDEAL ? " <green>+1 ideal climate" : "");
         } else if (p.kind() == Plant.Kind.COCA) {
-            int leaves = 3 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
+            int leaves = Math.max(1, cond.fit().buds() + 3 + r.nextInt(2)
+                    + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0));
             drops.add(Items.create(ItemType.COCA_LEAVES, leaves));
             drops.add(Items.create(ItemType.COCA_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
             msg = "<green>Picked " + leaves + " Coca Leaves <gray>" + Text.stars(q);
         } else if (p.kind() == Plant.Kind.POPPY) {
-            int pods = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
+            int pods = Math.max(1, cond.fit().buds() + 2 + r.nextInt(2)
+                    + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0));
             drops.add(Items.create(ItemType.POPPY_POD, pods));
             drops.add(Items.create(ItemType.POPPY_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
             msg = "<green>Picked " + pods + " Poppy Pods <gray>" + Text.stars(q);
         } else if (p.kind() == Plant.Kind.PEYOTE) {
-            int buttons = 2 + r.nextInt(2) + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0);
+            int buttons = Math.max(1, cond.fit().buds() + 2 + r.nextInt(2)
+                    + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0));
             drops.add(Items.create(ItemType.PEYOTE_BUTTON, buttons));
             drops.add(Items.create(ItemType.PEYOTE_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
             msg = "<green>Cut " + buttons + " Peyote Buttons <gray>" + Text.stars(q);
@@ -337,7 +345,7 @@ public final class PlantManager {
         }
         if (who != null) {
             who.giveExp(3);
-            plugin.awards().harvested(who, p.kind());
+            plugin.awards().harvested(who, p.kind(), p.strainId(), cond.fit(), Climate.of(p.key().block()));
         }
         c.getWorld().playSound(c, "minecraft:block.sweet_berry_bush.pick_berries", SoundCategory.BLOCKS, 1f, 0.9f);
         c.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, c.clone().add(0, 0.6, 0), 12, 0.35, 0.4, 0.35, 0);
@@ -377,13 +385,14 @@ public final class PlantManager {
     // ------------------------------------------------------------------
 
     /** Current growing conditions of a plant. */
-    public record Conditions(double multiplier, int quality, String light, String soil, String climate, String problem) {
+    public record Conditions(double multiplier, int quality, String light, String soil, String climate, String problem,
+                             Climate.Fit fit) {
     }
 
     public Conditions conditions(Plant p) {
         Block at = p.key().block();
         if (at == null) {
-            return new Conditions(0, 1, "", "", "", "World not loaded");
+            return new Conditions(0, 1, "", "", "", "World not loaded", Climate.Fit.OK);
         }
         Block soil = at.getRelative(0, -1, 0);
         double mult = 1.0;
@@ -396,6 +405,7 @@ public final class PlantManager {
         boolean planter = soilMachine != null && soilMachine.type() == MachineType.PLANTER_BOX;
         String soilText;
         String climateText = "";
+        Climate.Fit fit = Climate.Fit.OK;
 
         if (p.kind() != Plant.Kind.MUSHROOM) {
             int minLight = plugin.getConfig().getInt("growth.min-light", 9);
@@ -435,22 +445,28 @@ public final class PlantManager {
                 quality--;
                 soilText = "<gray>Plain ground";
             }
-            Climate climate = Climate.of(at);
-            double cm;
-            int cq;
-            if (p.kind() == Plant.Kind.CANNABIS) {
-                Strain s = plugin.strains().getOrDefault(p.strainId());
-                cm = s.type().climateMultiplier(climate);
-                cq = s.type().climateQuality(climate);
-            } else {
-                // coca and peyote love the heat, poppies like it mild; all hate the cold
-                Climate best = p.kind() == Plant.Kind.POPPY ? Climate.MILD : Climate.WARM;
-                cm = climate == best ? 1.4 : climate == Climate.COLD ? 0.55 : 1.0;
-                cq = climate == best ? 1 : climate == Climate.COLD ? -1 : 0;
+            Climate here = Climate.of(at);
+            Climate home = switch (p.kind()) {
+                case CANNABIS -> plugin.strains().getOrDefault(p.strainId()).climate();
+                case COCA -> Climate.TROPICAL;
+                case PEYOTE -> Climate.DESERT;
+                default -> Climate.TEMPERATE;
+            };
+            fit = home.fit(here);
+            // a Grow Lamp works like a greenhouse: no bad climate under it
+            if (fit == Climate.Fit.HARSH && lamp) {
+                fit = Climate.Fit.OK;
             }
-            mult *= cm;
-            quality += cq;
-            climateText = climate.colored() + (cq > 0 ? " <green>✔ ideal" : cq < 0 ? " <red>✘ wrong climate" : "");
+            mult *= fit.growth();
+            quality += fit.quality();
+            climateText = here.colored() + switch (fit) {
+                case IDEAL -> " <green>✔ ideal";
+                case HARSH -> " <red>✘ loves " + home.display();
+                default -> lamp && home.harsh(here) ? " <light_purple>(lamp)" : "";
+            };
+            if (fit == Climate.Fit.HARSH && problem == null) {
+                problem = "Wrong climate: it loves " + home.display() + " (or use a Grow Lamp)";
+            }
         } else {
             if (light <= 7) {
                 mult *= 1.5;
@@ -496,8 +512,9 @@ public final class PlantManager {
             mult *= 1.4;
             quality++;
         }
+        mult *= 1 + plugin.cartels().growBonus(p.owner());
         quality = Math.max(1, Math.min(5, quality));
-        return new Conditions(mult, quality, lightText, soilText, climateText, problem);
+        return new Conditions(mult, quality, lightText, soilText, climateText, problem, fit);
     }
 
     private void growAll(int tickSeconds) {
@@ -555,29 +572,58 @@ public final class PlantManager {
         } else {
             Strain s = plugin.strains().getOrDefault(p.strainId());
             meta.setItemModel(Keys.model("plant_" + s.type().plantModel() + "_" + stage));
-            Items.tint(meta, s.color(), leafTint(s, p));
+            Look l = s.look();
+            // young flowers have white hairs that turn the strain's colour when ripe
+            int pistil = stage >= 4 ? l.pistil() : Look.mix(l.pistil(), 0xFFFFFF, 0.6);
+            Items.tint(meta, l.bud(), leafTint(s, p), pistil);
+            Items.strings(meta, l.shape().id(), stage >= 3 ? l.exotic().id() : Exotic.NONE.id());
         }
         it.setItemMeta(meta);
         return it;
     }
 
-    /**
-     * Leaves get a touch of the strain colour (purple strains grow purplish
-     * leaves) and every plant is a little lighter or darker than the next.
-     */
+    /** The strain's leaf colour, every plant a little lighter or darker than the next. */
     static int leafTint(Strain s, Plant p) {
-        int c = s.color();
-        double mix = 0.3;
-        double light = 0.94 + Math.floorMod(p.key().hashCode() * 7, 13) / 100.0;
-        int r = (int) Math.min(255, (255 * (1 - mix) + ((c >> 16) & 255) * mix) * light);
-        int g = (int) Math.min(255, (255 * (1 - mix) + ((c >> 8) & 255) * mix) * light);
-        int b = (int) Math.min(255, (255 * (1 - mix) + (c & 255) * mix) * light);
-        return (r << 16) | (g << 8) | b;
+        double light = 0.92 + Math.floorMod(p.key().hashCode() * 7, 15) / 100.0;
+        return Look.scale(s.look().leaf(), light);
     }
 
     /** Plants vary in size a little (0.88x - 1.12x), standing on the same spot. */
     static float sizeOf(Plant p) {
         return 0.88f + Math.floorMod(p.key().hashCode() * 31 + 7, 25) / 100f;
+    }
+
+    private long sparkleTick;
+
+    /** Mythic plants sparkle in their colours once they flower. */
+    private void sparkle() {
+        sparkleTick++;
+        for (Plant p : plants.values()) {
+            if (p.kind() != Plant.Kind.CANNABIS || p.stage() < 3 || p.displayId == null) {
+                continue;
+            }
+            Exotic ex = plugin.strains().getOrDefault(p.strainId()).exotic();
+            if (ex == Exotic.NONE || ex.particle() == null) {
+                continue;
+            }
+            Location c = p.key().center();
+            if (c == null) {
+                continue;
+            }
+            Location at = c.add(0, hitboxHeight(p) * 0.55, 0);
+            if (ex == Exotic.RAINBOW) {
+                at.getWorld().spawnParticle(Particle.DUST, at, 3, 0.3, 0.4, 0.3, 0,
+                        new Particle.DustOptions(Exotic.rainbow(sparkleTick * 3), 0.9f));
+            } else {
+                at.getWorld().spawnParticle(ex.particle(), at, ex == Exotic.INFERNO ? 2 : 1, 0.3, 0.4, 0.3, 0.005);
+            }
+        }
+    }
+
+    private void glow(ItemDisplay d, Plant p) {
+        boolean lit = p.kind() == Plant.Kind.CANNABIS && p.stage() >= 3
+                && plugin.strains().getOrDefault(p.strainId()).exotic().glows();
+        d.setBrightness(lit ? new org.bukkit.entity.Display.Brightness(15, 15) : null);
     }
 
     private float hitboxHeight(Plant p) {
@@ -621,6 +667,7 @@ public final class PlantManager {
             e.setViewRange(0.75f);
             e.setDisplayWidth(1.5f);
             e.setDisplayHeight(2.5f);
+            glow(e, p);
             e.getPersistentDataContainer().set(Keys.VISUAL, PersistentDataType.STRING, p.key().serialize());
         });
         Interaction i = w.spawn(p.key().bottomCenter(), Interaction.class, e -> {
@@ -641,6 +688,7 @@ public final class PlantManager {
         Entity i = p.hitboxId == null ? null : Bukkit.getEntity(p.hitboxId);
         if (d instanceof ItemDisplay display && i instanceof Interaction hit) {
             display.setItemStack(visualItem(p));
+            glow(display, p);
             hit.setInteractionHeight(hitboxHeight(p));
             p.shownStage = p.stage();
         } else if (p.key().isLoaded()) {

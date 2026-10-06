@@ -4,9 +4,11 @@ menus get a completely custom look. Slot coordinates follow the vanilla
 chest layout: container slot (row, col) has its frame at x=7+18*col,
 y=17+18*row.
 
-2.0 style: one dark panel, icon tabs along the top (the active one lit up
-and joined to the page), the page name in big letters, and slot frames
-only where something goes.
+3.0 style: one dark panel, icon tabs along the top (the active one lit up
+and joined to the page), the page name in big letters, slot frames only
+where something goes, and a little scene behind each page: wooden seed
+shelves in the Shop, market crates in Trade, a red-and-gold cartel room,
+a drying room with five racks, a trophy cabinet for the Awards.
 
 The layouts here MUST match dev.kushcraft.gui.* in the Java code
 (tools/validate_pack.py checks the tab order, row counts and item counts).
@@ -97,7 +99,7 @@ SLOT_LO = "050806"
 TEXT = "d8e4dc"
 
 ACCENT = {
-    "shop": "f2c23a", "drugs": "7ae05a", "trade": "5ad8e8", "top": "f09a3a", "awards": "c08aff",
+    "shop": "f2c23a", "drugs": "7ae05a", "trade": "5ad8e8", "cartel": "f04a4a", "top": "f09a3a", "awards": "c08aff",
     "cook": "5ae8c8", "roll": "9ae85a", "dry": "f0c850", "mix": "e85ad0", "recipe": "f0b860", "list": "7ad0e8",
 }
 
@@ -282,26 +284,146 @@ def joint_tab(img, active, accent):
     d.line((x, 17 + 18 - 2, x + 17, 17 + 18 - 2), fill=mix(rgba(BASE), rgba(accent), 0.28))
 
 
+# ---------------------------------------------------------------------------
+# textures for the little scenes behind the pages
+# ---------------------------------------------------------------------------
+def wood(img, x0, y0, x1, y1, base="7a5232", seed=1, vertical=False):
+    """Planks with grain, knots and dark seams every 6 px."""
+    rng = random.Random(seed)
+    b = rgba(base)
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            u, v = (y - y0, x - x0) if vertical else (x - x0, y - y0)
+            plank = v // 6
+            grain = math.sin(u * 0.45 + plank * 2.1 + math.sin(u * 0.13 + plank) * 2.0)
+            f = 1.0 + grain * 0.06 + rng.uniform(-0.04, 0.04) + (plank % 2) * 0.05
+            c = shade(b, f)
+            if v % 6 == 5:
+                c = shade(b, 0.62)
+            elif v % 6 == 0:
+                c = shade(b, 1.15)
+            img.putpixel((x, y), c)
+    for _ in range(max(1, (x1 - x0) * (y1 - y0) // 900)):
+        kx, ky = rng.randint(x0 + 2, x1 - 2), rng.randint(y0 + 1, y1 - 1)
+        img.putpixel((kx, ky), shade(b, 0.55))
+        if kx + 1 <= x1:
+            img.putpixel((kx + 1, ky), shade(b, 0.7))
+
+
+def shelf(img, x0, x1, y, base="8a6440"):
+    """A wooden shelf board (3 px) with a shadow under it and two brackets."""
+    d = ImageDraw.Draw(img)
+    b = rgba(base)
+    d.rectangle((x0, y, x1, y + 2), fill=b)
+    d.line((x0, y, x1, y), fill=shade(b, 1.3))
+    d.line((x0, y + 3, x1, y + 3), fill=shade(rgba(INNER), 0.6))
+    for bx in (x0 + 6, x1 - 8):
+        d.rectangle((bx, y + 3, bx + 2, y + 5), fill=shade(b, 0.6))
+
+
+def velvet(img, x0, y0, x1, y1, base="5a1418", seed=3):
+    """Deep red velvet with a soft diamond quilt pattern."""
+    rng = random.Random(seed)
+    b = rgba(base)
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            q = (abs(((x - x0) + (y - y0)) % 12 - 6) + abs(((x - x0) - (y - y0)) % 12 - 6)) / 12.0
+            f = 0.85 + q * 0.3 + rng.uniform(-0.03, 0.03)
+            img.putpixel((x, y), shade(b, f))
+    for y in range(y0 + 6, y1, 12):
+        for x in range(x0 + 6, x1, 12):
+            img.putpixel((x, y), rgba("c8a040"))
+
+
+def gold_frame(img, x0, y0, x1, y1):
+    d = ImageDraw.Draw(img)
+    d.rectangle((x0, y0, x1, y1), outline=rgba("8a6a1a"))
+    d.rectangle((x0 + 1, y0 + 1, x1 - 1, y1 - 1), outline=rgba("e8c050"))
+    d.line((x0 + 1, y0 + 1, x1 - 1, y0 + 1), fill=rgba("fff0a0"))
+    for (cx, cy) in ((x0, y0), (x1, y0), (x0, y1), (x1, y1)):
+        d.rectangle((cx - 1, cy - 1, cx + 1, cy + 1), fill=rgba("f8d870"))
+
+
+def cork(img, x0, y0, x1, y1, seed=4):
+    d = ImageDraw.Draw(img)
+    rng = random.Random(seed)
+    for y in range(y0, y1 + 1):
+        for x in range(x0, x1 + 1):
+            img.putpixel((x, y), shade(rgba("9a7046"), rng.uniform(0.82, 1.12)))
+    d.rectangle((x0 - 2, y0 - 2, x1 + 2, y1 + 2), outline=rgba("5a3e24"))
+    d.rectangle((x0 - 1, y0 - 1, x1 + 1, y1 + 1), outline=rgba("7a5634"))
+
+
+def pin(img, x, y, col="e83a3a"):
+    d = ImageDraw.Draw(img)
+    d.rectangle((x, y, x + 1, y + 1), fill=rgba(col))
+    img.putpixel((x, y), shade(rgba(col), 1.4))
+
+
+def crate(img, x0, y0, x1, y1, seed=5):
+    """A wooden crate face: planks with a darker frame and a cross brace."""
+    wood(img, x0, y0, x1, y1, "8a6a3e", seed)
+    d = ImageDraw.Draw(img)
+    f = rgba("5e4424")
+    d.rectangle((x0, y0, x1, y1), outline=f)
+    d.rectangle((x0 + 1, y0 + 1, x1 - 1, y1 - 1), outline=shade(f, 1.3))
+    for (cx, cy) in ((x0 + 2, y0 + 2), (x1 - 2, y0 + 2), (x0 + 2, y1 - 2), (x1 - 2, y1 - 2)):
+        img.putpixel((cx, cy), rgba("c8c0b0"))
+
+
+def stencil(img, x, y, s, col="2a1a0a"):
+    text(img, x, y, s, rgba(col))
+
+
+def coin_pile(img, cx, cy, n=4, seed=6):
+    d = ImageDraw.Draw(img)
+    rng = random.Random(seed)
+    for k in range(n):
+        x = cx + rng.randint(-5, 5)
+        y = cy - k * 2 + rng.randint(-1, 1)
+        d.ellipse((x - 3, y - 2, x + 3, y + 2), fill=rgba("f2c23a"), outline=rgba("a8801a"))
+        img.putpixel((x - 1, y - 1), rgba("fff0a0"))
+
+
+def cash_stack(img, x, y):
+    d = ImageDraw.Draw(img)
+    for k in range(3):
+        d.rectangle((x, y - k * 2, x + 9, y + 3 - k * 2), fill=rgba("5aa84a"), outline=rgba("2a6a2a"))
+        d.line((x + 4, y - k * 2, x + 4, y + 3 - k * 2), fill=rgba("d8e8c8"))
+
+
+def label_plate(img, cx, y, s, col="2a1a0a", plate="e8dcb8"):
+    """A small paper label with pixel text, centred on cx."""
+    d = ImageDraw.Draw(img)
+    w = text_width(s) + 4
+    d.rectangle((cx - w // 2, y, cx - w // 2 + w, y + 7), fill=rgba(plate), outline=shade(rgba(plate), 0.6))
+    text(img, cx - w // 2 + 3, y + 1, s, rgba(col))
+
+
 LAYOUTS = {}
 
 # ---------------------------------------------------------------------------
 # /kush tab pages (6 rows). MUST match dev.kushcraft.gui.TabMenu.Tab order.
 # ---------------------------------------------------------------------------
-TABS = ["SHOP", "DRUGS", "TRADE", "TOP", "AWARDS"]
-TITLES = {"SHOP": "SHOP", "DRUGS": "DRUGS", "TRADE": "TRADE", "TOP": "TOP", "AWARDS": "AWARDS"}
+TABS = ["SHOP", "DRUGS", "TRADE", "CARTEL", "AWARDS"]
+TITLES = {"SHOP": "SHOP", "DRUGS": "DRUGS", "TRADE": "TRADE", "CARTEL": "CARTEL", "AWARDS": "AWARDS", "TOP": "TOP"}
 
 # items per row of the Drugs page (Catalog: weed, psych, uppers, downers, gear)
 DRUG_ROWS = [9, 6, 6, 4, 9]
 DRUG_COLORS = ["5aa83a", "a05ad8", "3aa8d8", "d8803a", "8a8a96"]
-TRADE_COLORS = ["8a9ab0", "5ab49a", "a8906a", "c8703a"]
-SHOP_SLOTS = 27
-TRADE_SLOTS = 36
-AWARD_SLOTS = 36
+SHOP_SEEDS = 27
+SHOP_GEAR = 9
+TRADE_SHELVES = 7
+TRADE_SLOTS = 27
+AWARD_SLOTS = 45
+DRY_RACKS = 5
 
 
-def tab_page(name, seed):
+def tab_page(name, seed, tab=None):
+    """name: the background (and accent); tab: which tab is lit (default: the same)."""
     rows = 6
-    idx = TABS.index(name.upper())
+    tab = (tab or name).upper()
+    idx = TABS.index(tab)
     accent = ACCENT[name]
     img = panel(rows, seed)
     header(img, TITLES[name.upper()], accent)
@@ -312,52 +434,147 @@ def tab_page(name, seed):
 
 
 def shop():
-    """Buy rows 1-3; orders (4,2) (4,4) (4,6) on a cork board; Sell all (5,4)."""
+    """Seeds on three wooden shelves (rows 1-3), gear on a metal rack (row 4), Sell all (5,4)."""
     img, a = tab_page("shop", 20)
-    for i in range(SHOP_SLOTS):
-        cslot(img, 1 + i // 9, i % 9)
-    # cork board behind the orders
+    x0, y0 = 5, slot_xy(1, 0)[1] - 1
+    x1, y1 = 170, slot_xy(4, 0)[1] - 3
+    wood(img, x0, y0, x1, y1, "4a3220", 20)
+    for r in range(3):
+        y = slot_xy(1 + r, 0)[1]
+        shelf(img, x0, x1, y + 17)
+        for c in range(9):
+            cslot(img, 1 + r, c, tint="c8a050")
+    # metal gear rack
     d = ImageDraw.Draw(img)
-    rng = random.Random(4)
-    y0, y1 = 17 + 18 * 4 - 1, 17 + 18 * 5 - 0
-    for y in range(y0, y1):
-        for x in range(36, 140):
-            v = rng.uniform(0.85, 1.1)
-            img.putpixel((x, y), shade(rgba("8a6440"), v))
-    d.rectangle((35, y0 - 1, 140, y1), outline=rgba("5a3e24"))
-    for c in (2, 4, 6):
-        cslot(img, 4, c, "big", "f2e6c8")
-        x, y = slot_xy(4, c)
-        d.rectangle((x + 8, y - 3, x + 9, y - 2), fill=rgba("e83a3a"))
-    # sell all: a big green button with coins either side
+    gy = slot_xy(4, 0)[1]
+    d.rectangle((x0, gy - 2, x1, gy + 19), fill=rgba("2a3034"))
+    for x in range(x0, x1 + 1, 4):
+        img.putpixel((x, gy - 2), rgba("5a6a74"))
+        img.putpixel((x + 2, gy + 19), rgba("1a2024"))
+    d.line((x0, gy - 2, x1, gy - 2), fill=rgba("7a8a94"))
+    for c in range(9):
+        cslot(img, 4, c, tint="8ab4c8")
+    # sell all: a big green button with coins and cash either side
     cslot(img, 5, 4, "glow", "6ae05a")
-    for (cx, cy) in ((63, 116), (113, 116), (57, 118), (119, 118)):
-        d.ellipse((cx - 3, cy - 3, cx + 3, cy + 3), fill=rgba("f2c23a"), outline=rgba("a8801a"))
+    sx, sy = slot_xy(5, 4)
+    coin_pile(img, sx - 14, sy + 13, 4, 7)
+    coin_pile(img, sx + 32, sy + 13, 3, 8)
+    cash_stack(img, sx - 34, sy + 9)
+    cash_stack(img, sx + 42, sy + 9)
     player_inv(img, 6)
     return "shop", img, 6
 
 
 def drugs():
-    """Rows 1-5: weed, psychedelics, uppers, downers, gear (DRUG_ROWS items each)."""
+    """Rows 1-5: weed, psychedelics, uppers, downers, gear (DRUG_ROWS items each) in a glass cabinet."""
     img, a = tab_page("drugs", 21)
+    d = ImageDraw.Draw(img)
     for r, (n, col) in enumerate(zip(DRUG_ROWS, DRUG_COLORS)):
+        y = slot_xy(1 + r, 0)[1]
+        # coloured glass shelf behind each row
+        area(img, 5, y - 1, 7 + 18 * max(n, 1) + 1, y + 18, col, 0.18)
+        d.line((5, y + 18, 7 + 18 * n + 1, y + 18), fill=shade(rgba(col), 0.9))
         row_marker(img, 1 + r, col)
         for c in range(n):
             cslot(img, 1 + r, c, tint=col)
+        # glass reflections at the end of short rows
+        if n < 9:
+            gx = 7 + 18 * n + 6
+            for k in range(3):
+                d.line((gx + k * 6, y + 13, gx + k * 6 + 4, y + 3), fill=shade(rgba(INNER), 1.8))
     player_inv(img, 6)
     return "drugs", img, 6
 
 
 def trade():
-    """Rows 1-4: 36 offers (ores, lab supplies, blocks, food); Sell all (5,4)."""
+    """Shelf tabs (1,1..7); 27 offers on crates (rows 2-4); Sell all (5,4)."""
     img, a = tab_page("trade", 22)
-    for r in range(4):
-        row_marker(img, 1 + r, TRADE_COLORS[r])
+    d = ImageDraw.Draw(img)
+    # shelf picker: a market sign board
+    y = slot_xy(1, 0)[1]
+    wood(img, 5, y - 1, 170, y + 18, "5a3e24", 22)
+    for c in range(1, 1 + TRADE_SHELVES):
+        cslot(img, 1, c, "big" if c == 1 else "normal", "5ad8e8")
+    # lanterns at both ends of the sign
+    for lx in (10, 160):
+        d.rectangle((lx - 2, y + 4, lx + 2, y + 12), fill=rgba("3a3020"), outline=rgba("1a140a"))
+        d.rectangle((lx - 1, y + 6, lx + 1, y + 10), fill=rgba("f8d870"))
+    # crates behind the goods
+    for r in range(3):
+        for blk in range(3):
+            x0, y0 = slot_xy(2 + r, blk * 3)
+            crate(img, x0 - 1, y0 - 1, x0 + 18 * 3, y0 + 18, 30 + r * 3 + blk)
         for c in range(9):
-            cslot(img, 1 + r, c, tint=TRADE_COLORS[r])
+            cslot(img, 2 + r, c)
     cslot(img, 5, 4, "glow", "6ae05a")
+    sx, sy = slot_xy(5, 4)
+    coin_pile(img, sx - 14, sy + 13, 3, 9)
+    coin_pile(img, sx + 32, sy + 13, 4, 10)
     player_inv(img, 6)
     return "trade", img, 6
+
+
+def cartel():
+    """Cartel room: banner (1,1), bank (1,3), level (1,5), members (1,7);
+    contracts (3,1..3) on a cork board; shipment (3,6) on a crate; Top Dealers (5,4)."""
+    img, a = tab_page("cartel", 25)
+    d = ImageDraw.Draw(img)
+    top, bottom = slot_xy(1, 0)[1] - 1, slot_xy(5, 0)[1] + 18
+    velvet(img, 5, top, 170, bottom, "4a1216", 25)
+    # gold rail under the top row
+    ry = slot_xy(1, 0)[1] + 21
+    d.rectangle((5, ry, 170, ry + 1), fill=rgba("c8a040"))
+    d.line((5, ry, 170, ry), fill=rgba("fff0a0"))
+    # banner pole behind the banner slot
+    bx, by = slot_xy(1, 1)
+    d.rectangle((bx - 4, by - 1, bx - 3, by + 19), fill=rgba("8a6a3a"))
+    img.putpixel((bx - 4, by - 2), rgba("f8d870"))
+    img.putpixel((bx - 3, by - 2), rgba("f8d870"))
+    cslot(img, 1, 1, "big", "e84a4a")
+    # bank: a round vault door frame
+    vx, vy = slot_xy(1, 3)
+    d.ellipse((vx - 5, vy - 3, vx + 22, vy + 20), fill=rgba("3a3e44"), outline=rgba("8a949e"))
+    for k in range(8):
+        ang = k * math.pi / 4
+        px_, py_ = vx + 8.5 + math.cos(ang) * 12, vy + 8.5 + math.sin(ang) * 10.5
+        d.rectangle((px_ - 1, py_ - 1, px_, py_), fill=rgba("c8d0d8"))
+    cslot(img, 1, 3, "big", "f2c23a")
+    # level: a ladder of stars
+    lx, ly = slot_xy(1, 5)
+    ly += 28
+    for k in range(5):
+        sx = lx - 5 + k * 7
+        d.polygon([(sx, ly - 3), (sx + 1, ly - 1), (sx + 3, ly - 1), (sx + 1, ly), (sx + 2, ly + 2),
+                   (sx, ly + 1), (sx - 2, ly + 2), (sx - 1, ly), (sx - 3, ly - 1), (sx - 1, ly - 1)],
+                  fill=rgba("f8d040" if k < 3 else "6a5a3a"))
+    cslot(img, 1, 5, "big", "f2c23a")
+    cslot(img, 1, 7, "big", "e8e0d0")
+    # contracts board
+    cx0, cy0 = slot_xy(3, 1)
+    cork(img, cx0 - 6, cy0 - 9, cx0 + 18 * 3 + 5, cy0 + 21, 26)
+    label_plate(img, cx0 + 27, cy0 - 8, "CONTRACTS")
+    for c in (1, 2, 3):
+        cslot(img, 3, c, "big", "f2e6c8")
+        x, y = slot_xy(3, c)
+        pin(img, x + 8, y - 3)
+    # shipment: a crate on a pallet, the slot set into its front
+    sx, sy = slot_xy(3, 6)
+    crate(img, sx - 14, sy - 9, sx + 31, sy + 21, 27)
+    d.rectangle((sx - 16, sy + 22, sx + 33, sy + 24), fill=rgba("6a4a2a"))
+    for k in range(4):
+        d.rectangle((sx - 15 + k * 15, sy + 25, sx - 12 + k * 15, sy + 26), fill=rgba("4a3018"))
+    stencil(img, sx - 11, sy - 7, "SHIP")
+    cslot(img, 3, 6, "glow", "f2c23a")
+    # Top Dealers: a crown plaque
+    tx, ty = slot_xy(5, 4)
+    gold_frame(img, tx - 30, ty - 2, tx + 47, ty + 19)
+    d.rectangle((tx - 28, ty, tx + 45, ty + 17), fill=rgba("2a0e10"))
+    for (px_, py_) in ((tx - 22, ty + 6), (tx + 37, ty + 6)):
+        d.polygon([(px_, py_ + 6), (px_, py_), (px_ + 2, py_ + 3), (px_ + 4, py_), (px_ + 6, py_ + 3),
+                   (px_ + 8, py_), (px_ + 8, py_ + 6)], fill=rgba("f8d040"))
+    cslot(img, 5, 4, "big", "f2c23a")
+    player_inv(img, 6)
+    return "cartel", img, 6
 
 
 def podium(img, x0, y0, x1, y1, col, num):
@@ -373,9 +590,17 @@ def podium(img, x0, y0, x1, y1, col, num):
 
 
 def top():
-    """Podium: #1 (1,4), #2 (2,2), #3 (2,6); #4-#10 (4,1..7); you (5,4)."""
-    img, a = tab_page("top", 23)
-    # podium blocks under the top three
+    """Cartel > Top Dealers: podium #1 (1,4), #2 (2,2), #3 (2,6); #4-#10 (4,1..7);
+    you (5,4); dealers/cartels switch (5,8). The Cartel tab is lit."""
+    img, a = tab_page("top", 23, tab="cartel")
+    d = ImageDraw.Draw(img)
+    # spotlight rays from the top
+    cx = slot_xy(1, 4)[0] + 9
+    for y in range(slot_xy(1, 0)[1] - 1, 17 + 18 * 4 - 4):
+        spread = (y - 30) * 0.9
+        for x in range(int(cx - spread), int(cx + spread) + 1):
+            if 5 <= x <= 170:
+                img.putpixel((x, y), mix(img.getpixel((x, y)), rgba("f2c23a"), 0.07))
     x, y = slot_xy(1, 4)
     podium(img, x - 6, y + 21, x + 23, 17 + 18 * 4 - 4, "f2c23a", "1")
     x, y = slot_xy(2, 2)
@@ -386,34 +611,32 @@ def top():
     cslot(img, 2, 2, "big", "c8d0dc")
     cslot(img, 2, 6, "big", "d8884a")
     # a shelf for #4-#10
-    d = ImageDraw.Draw(img)
     x0, y0 = slot_xy(4, 1)
     d.rectangle((x0 - 3, y0 + 19, x0 + 18 * 7 + 2, y0 + 20), fill=rgba("6a4a2a"))
     for c in range(1, 8):
         cslot(img, 4, c)
     cslot(img, 5, 4, "big", ACCENT["top"])
+    cslot(img, 5, 8, "big", ACCENT["cartel"])
     player_inv(img, 6)
     return "top", img, 6
 
 
 def awards():
-    """Rows 1-4: 36 awards; summary (5,4)."""
+    """Rows 1-5: 45 awards in a trophy cabinet."""
     img, a = tab_page("awards", 24)
     d = ImageDraw.Draw(img)
+    y0, y1 = slot_xy(1, 0)[1] - 1, slot_xy(5, 0)[1] + 18
+    wood(img, 5, y0, 170, y1, "3a2418", 24)
     for i in range(AWARD_SLOTS):
         r, c = 1 + i // 9, i % 9
-        cslot(img, r, c)
+        cslot(img, r, c, tint="c08aff")
         x, y = slot_xy(r, c)
-        g = rgba("8a7a4a")
-        for (px, py) in ((x, y), (x + 17, y), (x, y + 17), (x + 17, y + 17)):
-            d.point((px, py), fill=g)
-    cslot(img, 5, 4, "big", ACCENT["awards"])
-    # ribbons either side of the summary
-    x, y = slot_xy(5, 4)
-    for side in (-1, 1):
-        x0 = x - 30 if side < 0 else x + 22
-        d.polygon([(x0, y + 5), (x0 + 26, y + 5), (x0 + 26, y + 12), (x0, y + 12),
-                   (x0 + (4 if side < 0 else 22), y + 8)], fill=rgba("8a5ad8"))
+        g = rgba("c8a040")
+        for (px_, py_) in ((x, y), (x + 17, y), (x, y + 17), (x + 17, y + 17)):
+            d.point((px_, py_), fill=g)
+    for r in range(1, 6):
+        y = slot_xy(r, 0)[1]
+        d.line((5, y + 18, 170, y + 18), fill=rgba("6a4a2a"))
     player_inv(img, 6)
     return "awards", img, 6
 
@@ -422,7 +645,7 @@ def awards():
 # Drug Lab pages (5 rows). MUST match dev.kushcraft.gui.LabTabMenu.Tab order.
 # ---------------------------------------------------------------------------
 LAB_TABS = ["COOK", "ROLL", "DRY", "MIX"]
-COOK_RECIPES = 20
+COOK_RECIPES = 21
 
 
 def lab_page(name, seed):
@@ -483,28 +706,35 @@ def roll():
 
 
 def dry():
-    """Fresh (2,1), drying (2,3..5), dried (2,7) on a drying rack."""
+    """Drying room: five racks (2,2..6), each with a gauge under it (3,2..6)."""
     img, a = lab_page("dry", 32)
     d = ImageDraw.Draw(img)
     x0, y0 = slot_xy(1, 0)
     x1, y1 = slot_xy(3, 8)
-    wood, wood_d = rgba("8a6440"), rgba("5a3e24")
-    d.rectangle((x0 + 2, y0 + 2, x0 + 5, y1 + 16), fill=wood, outline=wood_d)
-    d.rectangle((x1 + 12, y0 + 2, x1 + 15, y1 + 16), fill=wood, outline=wood_d)
-    d.line((x0 + 5, y0 + 6, x1 + 12, y0 + 6), fill=rgba("c8c0b0"))
-    # hanging buds along the line
-    for k, x in enumerate(range(x0 + 14, x1 + 6, 16)):
-        d.line((x, y0 + 6, x, y0 + 9), fill=rgba("c8c0b0"))
-        d.ellipse((x - 3, y0 + 9, x + 3, y0 + 17), fill=rgba("6a9a3a" if k % 2 else "8a9a3a"), outline=rgba("2e4a1a"))
-        img.putpixel((x - 1, y0 + 12), rgba("e8822e"))
-    cslot(img, 2, 1, "big", "7ad04a")
-    x, y = slot_xy(2, 2)
-    arrow(img, x + 2, y + 5, a, 14)
-    for c in (3, 4, 5):
-        cslot(img, 2, c)
-    x, y = slot_xy(2, 6)
-    arrow(img, x + 2, y + 5, a, 14)
-    cslot(img, 2, 7, "glow", a)
+    wood(img, 5, y0 - 1, 170, y1 + 18, "3e2a1a", 32, vertical=True)
+    wood_c, wood_d = rgba("8a6440"), rgba("5a3e24")
+    # the rail the racks hang from
+    rail = y0 + 5
+    d.rectangle((14, rail - 1, 161, rail + 1), fill=wood_c, outline=wood_d)
+    for c in range(2, 7):
+        x, y = slot_xy(2, c)
+        # hook + string down to the rack
+        d.line((x + 8, rail + 2, x + 8, y - 3), fill=rgba("c8c0b0"))
+        d.line((x + 9, rail + 2, x + 9, y - 3), fill=rgba("8a8478"))
+        d.rectangle((x + 6, y - 4, x + 11, y - 3), fill=rgba("c8c0b0"))
+        cslot(img, 2, c, "big", "7ad04a")
+        # gauge: a little glass tube
+        gx, gy = slot_xy(3, c)
+        d.rectangle((gx - 1, gy - 1, gx + 18, gy + 18), outline=rgba("8ab4c8"))
+        cslot(img, 3, c)
+    # buds hanging at the sides
+    for k, x in enumerate((20, 30, 146, 156)):
+        d.line((x, rail + 2, x, rail + 9), fill=rgba("c8c0b0"))
+        d.ellipse((x - 3, rail + 9, x + 3, rail + 18), fill=rgba("6a9a3a" if k % 2 else "8a9a3a"), outline=rgba("2e4a1a"))
+        img.putpixel((x - 1, rail + 12), rgba("e8822e"))
+        img.putpixel((x + 1, rail + 15), rgba("f0f0e0"))
+    # a timer sign
+    label_plate(img, 88, slot_xy(4, 0)[1] + 4, "30 SEC")
     player_inv(img, 5)
     return "dry", img, 5
 
@@ -586,7 +816,7 @@ def generate(g):
     global G
     G = g
     out = []
-    for fn in (shop, drugs, trade, top, awards, cook, roll, dry, mix_page, recipe, list_menu):
+    for fn in (shop, drugs, trade, cartel, top, awards, cook, roll, dry, mix_page, recipe, list_menu):
         name, img, rows = fn()
         G.save_png(img, f"gui/{name}")
         LAYOUTS[name] = (img.width, img.height, rows)

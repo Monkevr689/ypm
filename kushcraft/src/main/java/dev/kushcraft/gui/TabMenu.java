@@ -13,9 +13,10 @@ import java.util.UUID;
 import java.util.function.Function;
 
 /**
- * The /kush menu: five tabs along the top (Shop, Drugs, Trade, Top, Awards)
- * and your money in the corner. Rows 1-5 belong to the page. The active tab
- * is drawn into each page's background (tools/gui.py tab_page()).
+ * The /kush menu: five tabs along the top (Shop, Drugs, Trade, Cartel,
+ * Awards) and your money in the corner. Rows 1-5 belong to the page. The
+ * active tab is drawn into each page's background (tools/gui.py tab_page()).
+ * Top Dealers is a page inside the Cartel tab.
  */
 public abstract class TabMenu extends Menu {
 
@@ -23,7 +24,7 @@ public abstract class TabMenu extends Menu {
         SHOP("Shop", "tab_shop", ShopMenu::new),
         DRUGS("Drugs", "tab_drugs", DrugsMenu::new),
         TRADE("Trade", "tab_trade", TradeMenu::new),
-        TOP("Top Dealers", "tab_top", TopMenu::new),
+        CARTEL("Cartel", "tab_cartel", CartelMenu::new),
         AWARDS("Awards", "tab_awards", AwardsMenu::new);
 
         private final String display;
@@ -55,9 +56,19 @@ public abstract class TabMenu extends Menu {
     protected final Tab tab;
 
     protected TabMenu(Player player, Tab tab) {
-        super(player, 6, tab.name().toLowerCase(Locale.ROOT), "KushCraft · " + tab.display(), false);
+        this(player, tab, tab.name().toLowerCase(Locale.ROOT), tab.display());
+    }
+
+    /** A page inside a tab with its own background (gui) and title. */
+    protected TabMenu(Player player, Tab tab, String gui, String title) {
+        super(player, 6, gui, "KushCraft · " + title, false);
         this.tab = tab;
         LAST.put(player.getUniqueId(), tab);
+    }
+
+    /** True for pages inside a tab (clicking the tab goes back to its main page). */
+    protected boolean subPage() {
+        return false;
     }
 
     /** /kush, Shift+F and the menu book: opens the tab you used last. */
@@ -72,8 +83,10 @@ public abstract class TabMenu extends Menu {
         for (Tab t : Tab.values()) {
             set(t.ordinal(), Items.icon(t.icon, (t == tab ? "<green>" : "<gray>") + t.display));
         }
+        dev.kushcraft.cartel.Cartel cartel = plugin.cartels().enabled() ? plugin.cartels().of(player) : null;
         set(WALLET, Items.icon("ui_wallet", "<gold>" + money(plugin.economy().balance(player)),
-                plugin.ranks().label(player)));
+                cartel == null ? java.util.List.of(plugin.ranks().label(player))
+                        : java.util.List.of(plugin.ranks().label(player), cartel.colored())));
         page();
     }
 
@@ -84,7 +97,7 @@ public abstract class TabMenu extends Menu {
     public final void click(int slot, ClickType click) {
         if (slot < Tab.values().length) {
             Tab t = Tab.values()[slot];
-            if (t != tab) {
+            if (t != tab || subPage()) {
                 clickSound();
                 t.open(player);
             }

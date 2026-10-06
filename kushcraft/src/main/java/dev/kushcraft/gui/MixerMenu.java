@@ -6,6 +6,7 @@ import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.machine.Machine;
 import dev.kushcraft.strain.Breeding;
+import dev.kushcraft.strain.Exotic;
 import dev.kushcraft.strain.Strain;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.Text;
@@ -102,7 +103,9 @@ public final class MixerMenu extends LabTabMenu {
                         "<white>" + Math.round(e.getValue() * 100) + "% <dark_gray>chance"));
             }
             set(MUTATION, Items.icon("ui_dna", "<light_purple>Mutation",
-                    "<white>35% <dark_gray>chance of a new effect"));
+                    "<white>35% <dark_gray>new effect · <white>20% <dark_gray>new colour",
+                    Exotic.RAINBOW.wrap(String.format(java.util.Locale.ROOT, "%.1f%% Mythic",
+                            Breeding.mythicChance(sa, sb) * 100))));
         }
         if (s.result != null) {
             set(RESULT, Items.glint(resultIcon(s.result), true));
@@ -119,14 +122,23 @@ public final class MixerMenu extends LabTabMenu {
 
     private ItemStack resultIcon(Breeding.Result r) {
         List<String> lore = new ArrayList<>();
-        lore.add(r.type().colored() + " <dark_gray>•</dark_gray> <gray>THC <white>" + r.potency() + "%"
-                + (r.jackpot() ? " <gold>JACKPOT!" : ""));
-        lore.add("<gray>Rarity: " + r.rarity().colored());
-        lore.add("<gray>Effects:");
+        lore.add(r.type().colored() + " <dark_gray>·</dark_gray> <white>" + r.potency() + "% THC"
+                + " <dark_gray>·</dark_gray> " + r.rarity().colored() + (r.jackpot() ? " <gold>JACKPOT!" : ""));
+        lore.add(r.climate().colored() + " <gray>climate" + (r.flavor().isEmpty() ? ""
+                : " <dark_gray>·</dark_gray> <gray>" + Text.escape(r.flavor())));
         for (EffectType e : r.effects()) {
-            lore.add(" " + e.colored() + (r.mutations().contains(e) ? " <light_purple>✦ mutation!" : ""));
+            lore.add(" " + e.colored() + (r.mutations().contains(e) ? " <light_purple>✦ new!" : ""));
         }
-        return Items.tintedIcon("seed_pack", r.color(), "<white>" + Text.escape(s.name == null ? "New strain" : s.name), lore);
+        if (r.look().exotic() != Exotic.NONE) {
+            lore.add(r.look().exotic().wrap("✦ " + r.look().exotic().display() + " look! ✦"));
+        } else if (r.newLook()) {
+            lore.add("<light_purple>✦ New colours!");
+        }
+        String name = Text.escape(s.name == null ? "New strain" : s.name);
+        ItemStack icon = Items.icon("bud_dried", r.look().exotic() != Exotic.NONE ? r.look().exotic().wrap(name)
+                : "<white>" + name, lore);
+        icon.editMeta(m -> Items.look(m, r.look(), false));
+        return icon;
     }
 
     private static ItemStack withLine(ItemStack it, String line) {
@@ -254,7 +266,7 @@ public final class MixerMenu extends LabTabMenu {
                 rolling = false;
                 s.result = result;
                 s.name = autoName(sa, sb);
-                boolean great = result.jackpot() || result.rarity().ordinal() >= 3;
+                boolean great = result.jackpot() || result.rarity().ordinal() >= 3 || result.newLook();
                 player.playSound(player.getLocation(), great ? "minecraft:ui.toast.challenge_complete"
                         : "minecraft:entity.player.levelup", SoundCategory.MASTER, 0.7f, 1.2f);
                 if (player.getOpenInventory().getTopInventory() == inv) {
@@ -294,8 +306,7 @@ public final class MixerMenu extends LabTabMenu {
             player.sendMessage(Text.msg("<red>That name is taken - press Keep again and pick another."));
             return;
         }
-        Strain st = plugin.strains().create(s.name, r.type(), r.color(), r.potency(), r.effects(),
-                player.getUniqueId(), player.getName());
+        Strain st = plugin.strains().create(s.name, r, player.getUniqueId(), player.getName());
         InventoryUtil.give(player, Items.strainItem(ItemType.SEED_PACK, st, 3, seedsGiven()));
         plugin.awards().bred(player, st.rarity());
         s.result = null;
@@ -303,6 +314,11 @@ public final class MixerMenu extends LabTabMenu {
         player.playSound(player.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.7f, 1.2f);
         Bukkit.broadcast(Text.msg("<white>" + Text.escape(player.getName()) + " <gray>bred a " + st.rarity().colored()
                 + " <gray>strain: " + st.colored() + " <gray>(" + st.type().colored() + "<gray>, " + st.potency() + "% THC)"));
+        if (st.exotic() != Exotic.NONE) {
+            for (Player o : Bukkit.getOnlinePlayers()) {
+                o.playSound(o.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.6f, 1.4f);
+            }
+        }
     }
 
     private String autoName(Strain sa, Strain sb) {

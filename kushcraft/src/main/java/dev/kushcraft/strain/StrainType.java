@@ -2,11 +2,11 @@ package dev.kushcraft.strain;
 
 import java.util.Locale;
 
-/** Sativa / Indica / Hybrid. Decides plant shape and which climate it loves. */
+/** Sativa / Indica / Hybrid. Decides the plant's shape (and the default climate of old strains). */
 public enum StrainType {
-    SATIVA("Sativa", "#D4F05A", Climate.WARM, "type_sativa", "sativa", "Tall plant, loves warm biomes"),
-    INDICA("Indica", "#B07AF0", Climate.COLD, "type_indica", "indica", "Short bushy plant, loves cold biomes"),
-    HYBRID("Hybrid", "#7AE0A0", Climate.MILD, "type_hybrid", "hybrid", "Balanced plant, loves mild biomes");
+    SATIVA("Sativa", "#D4F05A", Climate.TROPICAL, "type_sativa", "sativa", "Tall plant, thin leaves"),
+    INDICA("Indica", "#B07AF0", Climate.COLD, "type_indica", "indica", "Short bushy plant, broad leaves"),
+    HYBRID("Hybrid", "#7AE0A0", Climate.TEMPERATE, "type_hybrid", "hybrid", "Medium plant");
 
     private final String display;
     private final String color;
@@ -32,7 +32,8 @@ public enum StrainType {
         return "<color:" + color + ">" + display + "</color>";
     }
 
-    public Climate climate() {
+    /** Climate for strains that don't name one (made before 3.0). */
+    public Climate defaultClimate() {
         return climate;
     }
 
@@ -46,28 +47,6 @@ public enum StrainType {
 
     public String blurb() {
         return blurb;
-    }
-
-    /** Growth multiplier for this type in a given climate. */
-    public double climateMultiplier(Climate c) {
-        if (c == climate) {
-            return 1.4;
-        }
-        if (this == HYBRID || c == Climate.MILD) {
-            return 1.0;
-        }
-        return 0.6; // sativa in the cold or indica in the heat
-    }
-
-    /** Quality bonus (-1, 0, +1) for this type in a given climate. */
-    public int climateQuality(Climate c) {
-        if (c == climate) {
-            return 1;
-        }
-        if (this == HYBRID || c == Climate.MILD) {
-            return 0;
-        }
-        return -1;
     }
 
     public StrainType next() {

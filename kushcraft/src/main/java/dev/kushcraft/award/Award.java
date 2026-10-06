@@ -19,6 +19,9 @@ public enum Award {
     COCA("Coca Farmer", "Harvest a coca bush.", "coca_leaves", 200, Frame.TASK, FIRST_HARVEST, false),
     POPPY("Poppy Fields", "Harvest opium poppies.", "poppy_pod", 200, Frame.TASK, FIRST_HARVEST, false),
     PEYOTE("Desert Bloom", "Harvest a peyote cactus.", "peyote_button", 200, Frame.TASK, FIRST_HARVEST, false),
+    IDEAL_CLIMATE("Green Climate", "Harvest a plant grown in its ideal climate.", "award_climate", 200, Frame.TASK, FIRST_HARVEST, false),
+    ALL_CLIMATES("World Grower", "Harvest in all 6 climates.", "award_globe", 5000, Frame.GOAL, IDEAL_CLIMATE, false),
+    COLLECTOR("Seed Collector", "Grow 10 different strains.", "award_seeds", 2000, Frame.GOAL, FIRST_HARVEST, false),
     // the lab
     BUILD_LAB("Breaking Bad", "Place a Drug Lab.", "award_lab", 250, Frame.TASK, null, false),
     FIRST_DRY("Dry Season", "Dry your first buds.", "bud_dried", 100, Frame.TASK, BUILD_LAB, false),
@@ -29,6 +32,8 @@ public enum Award {
     COOK_100("Head Chemist", "Cook 100 batches.", "lab_solvent", 5000, Frame.GOAL, FIRST_COOK, false),
     ALL_RECIPES("Mad Chemist", "Cook every Drug Lab recipe.", "award_chemist", 25000, Frame.CHALLENGE, COOK_100, false),
     MAX_LAB("State of the Art", "Upgrade a Drug Lab to the top level.", "award_upgrade", 10000, Frame.GOAL, BUILD_LAB, false),
+    FULL_RACKS("Drying Room", "Fill all 5 drying racks at once.", "award_racks", 300, Frame.TASK, FIRST_DRY, false),
+    ACID("Acid Test", "Cook LSD from ergot.", "ergot", 500, Frame.TASK, FIRST_COOK, false),
     // money
     FIRST_SALE("First Deal", "Sell some product.", "cash", 100, Frame.TASK, null, false),
     SOLD_10K("Hustler", "Sell $10,000 of product.", "award_cash_stack", 500, Frame.TASK, FIRST_SALE, false),
@@ -39,11 +44,15 @@ public enum Award {
     ORDERS_25("Trusted Supplier", "Complete 25 daily orders.", "award_orders", 5000, Frame.GOAL, ORDER, false),
     TRADE("Trader", "Buy something in Trade.", "award_trade", 50, Frame.TASK, FIRST_SALE, false),
     DIAMONDS("Diamond Hands", "Buy a diamond in Trade.", "award_diamond", 1000, Frame.GOAL, TRADE, false),
+    CARTEL("La Familia", "Start or join a cartel.", "award_cartel", 500, Frame.TASK, FIRST_SALE, false),
+    SHIPMENT("Shipped", "Deliver a cartel shipment.", "award_shipment", 2500, Frame.GOAL, CARTEL, false),
+    CARTEL_MAX("Empire", "Get your cartel to the top level.", "award_empire", 25000, Frame.CHALLENGE, CARTEL, false),
     // breeding
     FIRST_BREED("Mad Scientist", "Breed a new strain.", "award_dna", 300, Frame.TASK, null, false),
     RARE_STRAIN("Rare Genetics", "Breed an Epic strain or better.", "award_epic", 2000, Frame.GOAL, FIRST_BREED, false),
     LEGENDARY("Legendary Grower", "Breed a Legendary strain.", "award_legendary", 10000, Frame.CHALLENGE, RARE_STRAIN, false),
     JACKPOT("Jackpot!", "Roll a potency jackpot while breeding.", "award_jackpot", 1000, Frame.GOAL, FIRST_BREED, true),
+    MYTHIC("Mythical", "Breed a Mythic strain.", "award_mythic", 50000, Frame.CHALLENGE, LEGENDARY, true),
     // getting high
     FIRST_HIGH("First Puff", "Get high for the first time.", "award_smoke", 50, Frame.TASK, null, false),
     GREEN_OUT("Lightweight", "Green out.", "effect_green_out", 100, Frame.TASK, FIRST_HIGH, true),

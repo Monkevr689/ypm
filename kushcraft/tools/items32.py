@@ -3,6 +3,7 @@
 Each function returns an art.Sprite. Layer 1 (tinted with the strain colour
 in game) is drawn in greys. Register with @item("name").
 """
+import colorsys
 import math
 
 from art import (Sprite, c, mix, scale, alpha, grey, ramp, grey_ramp, poly, ellipse, rect, rounded,
@@ -1433,5 +1434,245 @@ def ui_sell():
     s.shade(bills, ramp("6ac06a", 4, spread=0.25), rim=False)
     for (x, y) in ((22, 13), (23, 13), (21, 14), (22, 15), (23, 16), (21, 17), (22, 17), (22, 12), (22, 18)):
         s.put(x, y, c("2a6a2a"))
+    s.outline(0.4)
+    return s
+
+
+# ---------------------------------------------------------------------------
+# 3.0: ergot, cartel, drying racks, new awards
+# ---------------------------------------------------------------------------
+@item("ergot")
+def ergot():
+    """A wheat ear with the dark purple ergot fungus growing out of it."""
+    s = Sprite(seed=501)
+    s.fill(thick_line(7, 31, 13, 18, 1.6), c("a89048"))
+    s.line(13, 18, 20, 4, c("8a7434"))
+    for k in range(7):
+        t = k / 6
+        x, y = 13 + t * 7, 19 - t * 14
+        for side in (-1, 1):
+            grain = ellipse(x + side * 2.4, y + 1, 2.6, 2.0)
+            s.shade(grain, ramp("f0cc58", 4, spread=0.4), dither=0.3)
+        s.line(x + 2, y - 1, x + 5, y - 4, c("d8c070"))
+    # ergot horns: dark curved sclerotia sticking out of the ear
+    for (x0, y0, x1, y1) in ((17, 10, 24, 6), (14, 15, 8, 10), (16, 13, 22, 16)):
+        horn = thick_line(x0, y0, x1, y1, 2.2)
+        s.shade(horn, ramp("4a2a5a", 4, spread=0.3), dither=0.3)
+        s.put(int(x1), int(y1), c("9a6ab8"), 2)
+    for (x, y) in ((23, 6), (9, 10), (21, 15)):
+        s.put(x, y, c("d8b0f0"), 2)
+    s.outline(0.4)
+    return s
+
+
+@icon("tab_cartel")
+def tab_cartel():
+    s = Sprite(seed=502)
+    # a fedora over crossed money bags
+    for x0 in (5, 17):
+        bag = ellipse(x0 + 5, 22, 6, 6)
+        s.shade(bag, ramp("c8a060", 5, spread=0.35), dither=0.3)
+        s.fill(rect(x0 + 3, 15, x0 + 7, 16), c("8a6a3a"))
+        s.put(x0 + 5, 22, c("3a8a2a"), 2)
+        s.put(x0 + 5, 21, c("3a8a2a"), 2)
+        s.put(x0 + 5, 23, c("3a8a2a"), 2)
+    brim = ellipse(16, 13, 13, 3)
+    s.shade(brim, ramp("3a3a44", 4, spread=0.35), rim=False)
+    crown_m = poly([(9, 13), (10, 5), (16, 3), (22, 5), (23, 13)])
+    s.shade(crown_m, ramp("4a4a56", 5, spread=0.35), dither=0.3)
+    s.fill(rect(10, 10, 22, 11), c("c83a3a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("cartel_banner")
+def cartel_banner():
+    """A hanging banner (tinted with the cartel colour) on a gold pole."""
+    s = Sprite(seed=503)
+    s.fill(rect(4, 3, 27, 4), c("c8a040"))
+    s.fill(rect(3, 2, 4, 5), c("f8d870"))
+    s.fill(rect(27, 2, 28, 5), c("f8d870"))
+    cloth = poly([(7, 5), (24, 5), (24, 27), (15.5, 22), (7, 27)])
+    s.shade(cloth, grey_ramp(110, 250, 5), 1, dither=0.3)
+    # emblem: a white skull-ish cannabis leaf
+    cannabis_leaf(s, 15.5, 16, 6.5, layer=2, col="f4f4f4", fingers=5)
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_bank")
+def ui_bank():
+    s = Sprite(seed=504)
+    door = ellipse(16, 16, 13, 13)
+    s.shade(door, ramp("8a949e", 5, spread=0.35), dither=0.3)
+    s.fill(ellipse(16, 16, 9, 9), c("5a626c"))
+    s.shade(ellipse(16, 16, 8, 8), ramp("a8b0b8", 4, spread=0.3), dither=0.2)
+    for k in range(6):
+        a = k * math.pi / 3
+        s.fill(thick_line(16, 16, 16 + math.cos(a) * 6.5, 16 + math.sin(a) * 6.5, 1.6), c("4a525c"))
+    s.fill(ellipse(16, 16, 2.2, 2.2), c("f2c23a"))
+    for k in range(8):
+        a = k * math.pi / 4 + 0.3
+        s.put(int(16 + math.cos(a) * 11), int(16 + math.sin(a) * 11), c("dce4ec"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_members")
+def ui_members():
+    s = Sprite(seed=505)
+    # two members behind, the boss in front
+    for (x, y, r, col, hat) in ((8, 12, 3.4, "6a5a8a", False), (24, 12, 3.4, "5a7a6a", False),
+                                (16, 15, 4.4, "c83a3a", True)):
+        body = ellipse(x, y + r + 6, r * 1.9, r * 1.5) - rect(0, int(y + r + 7), 31, 31)
+        body |= rect(int(x - r * 1.9) + 1, int(y + r + 6), int(x + r * 1.9) - 1, min(28, int(y + r * 2 + 7)))
+        s.shade(body, ramp(col, 4), dither=0.3)
+        head = ellipse(x, y, r, r)
+        s.shade(head, ramp("e8b890", 4), dither=0.2)
+        if hat:
+            s.fill(rect(int(x - r - 2), int(y - r + 1), int(x + r + 2), int(y - r + 1)), c("2a2a30"))
+            s.fill(rect(int(x - r + 1), int(y - r - 3), int(x + r - 1), int(y - r)), c("3a3a44"))
+            s.fill(rect(int(x - r + 1), int(y - r - 1), int(x + r - 1), int(y - r - 1)), c("c83a3a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_shipment")
+def ui_shipment():
+    s = Sprite(seed=506)
+    box = rect(4, 9, 27, 27)
+    s.shade(box, ramp("b88a50", 5, spread=0.3), dither=0.3)
+    for y in (14, 20):
+        s.line(4, y, 27, y, c("7a5430"))
+    s.fill(rect(4, 9, 27, 10), c("d8a868"))
+    s.line(5, 26, 26, 11, c("8a6034"))
+    s.fill(rect(11, 15, 20, 19), c("f4f0e2"))
+    cannabis_leaf(s, 15.5, 18, 3.2, layer=0, col="4caa32", fingers=5)
+    s.outline(0.4)
+    return s
+
+
+@icon("ui_rack")
+def ui_rack():
+    s = Sprite(seed=507)
+    s.fill(rect(4, 6, 27, 7), c("8a6a4a"))
+    for x in (9, 16, 23):
+        s.line(x, 8, x, 12, c("c8c0b0"))
+        s.fill(rect(x - 2, 12, x + 2, 13), c("a8a090"))
+    s.fill(rect(15, 2, 16, 5), c("6a6a70"))
+    s.put(15, 1, c("a8a8b0"))
+    s.outline(0.4)
+    return s
+
+
+def gauge(step, steps=8):
+    """A small glass tube filling up with green (drying progress)."""
+    s = Sprite(seed=600 + step)
+    tube = rounded(10, 3, 21, 28, 4)
+    s.fill(tube, c("d8ecf4", 90))
+    level = 26 - int(round(22 * step / steps))
+    if step > 0:
+        liquid = {(x, y) for (x, y) in tube if y >= level and 11 <= x <= 20}
+        s.shade(liquid, ramp("5ae85a" if step == steps else "9ad84a", 4), dither=0.3)
+    s.line(12, 6, 12, 25, alpha(c("ffffff"), 170), 2)
+    s.outline(0.4)
+    return s
+
+
+for _step in range(9):
+    ICONS[f"gauge_{_step}"] = (lambda st: (lambda: gauge(st)))(_step)
+
+
+@icon("award_racks")
+def award_racks():
+    s = tab_dry()
+    for (x, y) in ((5, 3), (27, 4)):
+        s.glint(x, y, c("ffe070"), big=True)
+    return s
+
+
+@icon("award_climate")
+def award_climate():
+    s = Sprite(seed=510)
+    for k in range(8):
+        a = math.radians(k * 45 + 22)
+        s.fill(thick_line(11, 11, 11 + math.cos(a) * 9, 11 + math.sin(a) * 9, 1.6), c("ffd84a"))
+    s.shade(ellipse(11, 11, 5, 5), ramp("f8c83a", 4), dither=0.2)
+    cannabis_leaf(s, 20, 24, 9, layer=0, col="4caa32", fingers=7)
+    s.outline(0.4)
+    return s
+
+
+@icon("award_globe")
+def award_globe():
+    s = Sprite(seed=511)
+    g = ellipse(16, 15, 12, 12)
+    s.shade(g, ramp("3a8ad8", 5, spread=0.35), dither=0.3)
+    for blob in (ellipse(11, 11, 5, 4), ellipse(20, 17, 5, 6), ellipse(13, 21, 3, 2)):
+        s.shade(blob & g, ramp("5ab43a", 4), dither=0.3)
+    s.fill(ellipse(16, 4.5, 6, 1.6) & g, c("f4f8ff"))
+    s.fill(rect(14, 27, 17, 29), c("8a6a3a"))
+    s.fill(rect(10, 29, 21, 30), c("6a4a2a"))
+    s.outline(0.4)
+    return s
+
+
+@icon("award_seeds")
+def award_seeds():
+    s = Sprite(seed=512)
+    for k, (x, col) in enumerate(((4, "e85a5a"), (12, "5aa8e8"), (20, "f0c850"))):
+        bag = rounded(x, 8 + (k % 2) * 3, x + 9, 27, 2)
+        s.shade(bag, ramp("efe2bf", 4, spread=0.3), dither=0.2)
+        s.fill(rect(x + 2, 14 + (k % 2) * 3, x + 7, 21 + (k % 2) * 3), c(col))
+        s.fill(rect(x, 8 + (k % 2) * 3, x + 9, 9 + (k % 2) * 3), c("c9b07c"))
+    s.outline(0.4)
+    return s
+
+
+@icon("award_cartel")
+def award_cartel():
+    s = Sprite(seed=513)
+    cloth = poly([(7, 5), (24, 5), (24, 27), (15.5, 22), (7, 27)])
+    s.shade(cloth, ramp("c83a3a", 5), dither=0.3)
+    s.fill(rect(4, 3, 27, 4), c("c8a040"))
+    cannabis_leaf(s, 15.5, 16, 6.5, layer=0, col="f4f4f4", fingers=5)
+    s.outline(0.4)
+    return s
+
+
+@icon("award_shipment")
+def award_shipment():
+    s = ui_shipment()
+    for (x, y) in ((4, 4), (27, 5)):
+        s.glint(x, y, c("ffe070"), big=True)
+    return s
+
+
+@icon("award_empire")
+def award_empire():
+    s = Sprite(seed=515)
+    # a gold skyscraper skyline with a crown on top
+    for (x0, x1, top, col) in ((4, 10, 16, "a8801a"), (11, 20, 10, "f2c23a"), (21, 27, 14, "c89a2a")):
+        b = rect(x0, top, x1, 28)
+        s.shade(b, ramp(col, 4, spread=0.3), dither=0.3)
+        for y in range(top + 2, 27, 3):
+            for x in range(x0 + 1, x1, 2):
+                s.put(x, y, c("fff0a0"))
+    crown(s, 15.5, 6, 6, 6)
+    s.outline(0.4)
+    return s
+
+
+@icon("award_mythic")
+def award_mythic():
+    s = Sprite(seed=516)
+    for k in range(12):
+        a = math.radians(k * 30)
+        hx = "%02x%02x%02x" % tuple(int(v * 255) for v in colorsys.hsv_to_rgb(k / 12, 0.75, 1.0))
+        s.fill(thick_line(16, 16, 16 + math.cos(a) * 14, 16 + math.sin(a) * 14, 2.2), c(hx))
+    gem = poly([(16, 6), (25, 15), (16, 27), (7, 15)])
+    s.shade(gem, ramp("e86af0", 5, spread=0.4), dither=0.3)
+    s.fill(poly([(16, 6), (19, 15), (16, 27), (13, 15)]), c("f8b4ff"))
+    s.glint(13, 11, big=True)
     s.outline(0.4)
     return s

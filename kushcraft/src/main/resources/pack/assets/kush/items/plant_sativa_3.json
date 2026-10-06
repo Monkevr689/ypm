@@ -1,17 +1,79 @@
 {
  "model": {
-  "type": "minecraft:model",
-  "model": "kush:plant/sativa_3",
-  "tints": [
+  "type": "minecraft:composite",
+  "models": [
    {
-    "type": "minecraft:custom_model_data",
-    "index": 0,
-    "default": 6995514
+    "type": "minecraft:model",
+    "model": "kush:plant/sativa_3",
+    "tints": [
+     {
+      "type": "minecraft:custom_model_data",
+      "index": 0,
+      "default": 6995514
+     },
+     {
+      "type": "minecraft:custom_model_data",
+      "index": 1,
+      "default": 5152308
+     },
+     {
+      "type": "minecraft:custom_model_data",
+      "index": 2,
+      "default": 15238702
+     }
+    ]
    },
    {
-    "type": "minecraft:custom_model_data",
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
     "index": 1,
-    "default": 16777215
+    "cases": [
+     {
+      "when": "rainbow",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/rainbow_sativa_3"
+      }
+     },
+     {
+      "when": "galaxy",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/galaxy_sativa_3"
+      }
+     },
+     {
+      "when": "golden",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/golden_sativa_3"
+      }
+     },
+     {
+      "when": "crystal",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/crystal_sativa_3"
+      }
+     },
+     {
+      "when": "neon",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/neon_sativa_3"
+      }
+     },
+     {
+      "when": "inferno",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/inferno_sativa_3"
+      }
+     }
+    ],
+    "fallback": {
+     "type": "minecraft:empty"
+    }
    }
   ]
  }

@@ -3,6 +3,7 @@ package dev.kushcraft.item;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.Keys;
 import dev.kushcraft.effect.EffectType;
+import dev.kushcraft.strain.Look;
 import dev.kushcraft.strain.Strain;
 import dev.kushcraft.util.Text;
 import org.bukkit.Color;
@@ -111,6 +112,9 @@ public final class Items {
         if (!eff.isEmpty()) {
             lore.add(eff.toString());
         }
+        if (type == ItemType.SEED_PACK || type == ItemType.BUD_FRESH || type == ItemType.BUD_DRIED) {
+            lore.add(climateLine(strain));
+        }
         if (hits > 0) {
             int max = Math.max(1, maxHits(type));
             lore.add("<gray>Hits " + Text.bar(hits / (double) max, max, "green", "dark_gray"));
@@ -131,11 +135,32 @@ public final class Items {
             pdc.set(Keys.HITS, PersistentDataType.INTEGER, hits);
         }
         if (type.tinted()) {
-            tint(meta, strain.color());
+            look(meta, strain.look(), type == ItemType.BUD_DRIED);
         }
         hideExtras(meta);
         item.setItemMeta(meta);
         return item;
+    }
+
+    /** "Cold climate · Mint" */
+    public static String climateLine(Strain s) {
+        return s.climate().colored() + " <gray>climate" + (s.flavor().isEmpty() ? ""
+                : " <dark_gray>·</dark_gray> <gray>" + Text.escape(s.flavor()));
+    }
+
+    /**
+     * Colours (bud, leaf, hairs) and strings (bud shape, Mythic look) read by
+     * the resource pack: tools/gen_assets.py strain item definitions.
+     */
+    public static void look(ItemMeta meta, Look l, boolean dried) {
+        tint(meta, l.bud(), dried ? l.driedLeaf() : l.leaf(), dried ? l.driedPistil() : l.pistil());
+        strings(meta, l.shape().id(), l.exotic().id());
+    }
+
+    public static void strings(ItemMeta meta, String... values) {
+        CustomModelDataComponent cmd = meta.getCustomModelDataComponent();
+        cmd.setStrings(List.of(values));
+        meta.setCustomModelDataComponent(cmd);
     }
 
     /** Sets the colours used by the resource pack's custom_model_data tints (index 0, 1, ...). */

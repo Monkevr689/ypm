@@ -58,9 +58,12 @@ final class SelfTest {
     List<String> run() {
         try {
             items();
+            strains();
+            climates();
             shop();
             ranks();
             breeding();
+            cartels();
             recipes();
             exchange();
             money();
@@ -102,20 +105,31 @@ final class SelfTest {
                 }
             }
             if (t.tinted()) {
-                check(!it.getItemMeta().getCustomModelDataComponent().getColors().isEmpty(), "tint colour " + t);
+                var cmd = it.getItemMeta().getCustomModelDataComponent();
+                check(cmd.getColors().size() == 3, "bud, leaf and hair colours " + t);
+                check(cmd.getStrings().size() == 2 && cmd.getStrings().get(0).equals(s.look().shape().id())
+                        && cmd.getStrings().get(1).equals(s.exotic().id()), "bud shape + look strings " + t);
             }
         }
         check(Items.hits(Items.strainItem(ItemType.JOINT, s, 3, 1)) == Items.JOINT_HITS, "joint hits");
         check(Items.hits(Items.strainItem(ItemType.VAPE_PEN, s, 3, 1)) == Items.VAPE_HITS, "vape pen puffs");
         check(Dose.strain(s, 5, 60, 10).effects().size() == s.effects().size(), "dose effects");
         check(GuiFont.space(-169).length() == 4, "negative space builder");
-        check(LabRecipe.values().length == 20, "lab recipes");
+        check(LabRecipe.values().length == 21, "lab recipes");
         for (LabRecipe r : LabRecipe.values()) {
-            check(r.ingredients().size() <= 3, "simple recipe (max 3 ingredients): " + r);
+            check(r.ingredients().size() <= 2, "easy recipe (1-2 ingredients): " + r);
+            int count = 0;
             for (LabRecipe.Ingredient in : r.ingredients()) {
                 check(in.custom() != ItemType.CATALYST, "no catalyst needed: " + r);
+                count += in.amount();
             }
+            check(count <= 5, "cheap recipe (5 items at most): " + r);
+            check(r.seconds() <= 40, "quick recipe (40s at most): " + r);
         }
+        check(LabRecipe.LUCID_TAB.ingredients().stream().anyMatch(i -> i.custom() == ItemType.ERGOT),
+                "LSD is made from ergot");
+        check(LabRecipe.ERGOT.ingredients().stream().anyMatch(i -> i.vanilla() == Material.WHEAT),
+                "ergot comes from wheat");
         for (ItemType t : ItemType.values()) {
             if (!t.retired() && dev.kushcraft.catalog.Catalog.of(t) == null
                     && t.machine() == null) {
@@ -130,6 +144,22 @@ final class SelfTest {
 
     private void shop() {
         check(!plugin.shop().buyEntries().isEmpty(), "shop has buy entries");
+        var shopStrains = plugin.strains().shopStrains();
+        check(shopStrains.size() >= 20, "20+ strains for sale, got " + shopStrains.size());
+        check(plugin.shop().seeds().size() <= 27 && plugin.shop().gear().size() <= 9, "shop fits its rows");
+        for (Strain s : shopStrains) {
+            check(plugin.shop().seeds().stream().anyMatch(e -> s.id().equals(e.strain())), "seeds for sale: " + s.id());
+        }
+        double cheap = shopStrains.get(0).seedPrice(), dear = shopStrains.get(shopStrains.size() - 1).seedPrice();
+        check(dear >= cheap * 5, "better strains cost more (" + cheap + " .. " + dear + ")");
+        double commonAvg = shopStrains.stream().filter(s -> s.rarity().ordinal() <= 1).mapToDouble(Strain::seedPrice)
+                .average().orElse(0);
+        double epicAvg = shopStrains.stream().filter(s -> s.rarity().ordinal() >= 3).mapToDouble(Strain::seedPrice)
+                .average().orElse(1e9);
+        check(epicAvg > commonAvg, "epic seeds cost more than common ones");
+        for (var e : plugin.shop().gear()) {
+            check(e.price() <= 400, "gear is cheap: " + e.type() + " " + e.price());
+        }
         for (var e : plugin.shop().buyEntries()) {
             check(Items.type(plugin.shop().create(e)) == e.type(), "shop item " + e.type());
         }
@@ -144,7 +174,7 @@ final class SelfTest {
         plugin.market().sold(ItemType.COCAINE, 10);
         check(plugin.shop().sellPrice(Items.create(ItemType.COCAINE)) < before, "selling lowers the price");
         plugin.market().tick();
-        check(!plugin.market().orders().isEmpty(), "daily orders exist");
+        check(!plugin.market().orders().isEmpty(), "contracts exist");
         for (var o : plugin.market().orders()) {
             check(o.reward() >= plugin.shop().basePrice(o.type()) * o.amount(), "order pays a bonus: " + o.type());
         }
@@ -239,6 +269,22 @@ final class SelfTest {
                 check("machine_drying_rack_dry".equals(shownModel(m.displayId())), "rack dry model");
             }
             if (type == MachineType.LAB_STATION) {
+                Strain s = plugin.strains().all().iterator().next();
+                long now = System.currentTimeMillis();
+                check(Machine.RACKS == 5 && m.racksInUse() == 0, "5 empty drying racks");
+                check(plugin.machines().dryingSeconds() <= 30, "buds dry in 30s");
+                for (int r = 0; r < Machine.RACKS; r++) {
+                    m.rack(r, new Machine.Rack(s.id(), 3, 10 + r, now - 1000, r < 2 ? now - 1 : now + 30_000));
+                }
+                check(m.racksInUse() == 5 && m.racksDry() == 2, "racks dry on their own");
+                check(m.rack(4).progress() > 0 && m.rack(4).progress() < 1 && m.rack(4).secondsLeft() <= 30,
+                        "rack progress");
+                plugin.machines().save();
+                var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                        new File(plugin.getDataFolder(), "machines.yml"));
+                var racks = saved.getConfigurationSection("machines." + BlockKey.of(b).serialize() + ".racks");
+                check(racks != null && racks.getKeys(false).size() == 5 && racks.getInt("3.amount") == 13,
+                        "racks are saved");
                 m.startJob(LabRecipe.HASH.name(), 1, Items.create(ItemType.LUCID_TAB, 2));
                 check(m.busy(), "lab busy");
                 double slow = dev.kushcraft.gui.LabMenu.timeFactor(m);
@@ -310,7 +356,7 @@ final class SelfTest {
         }
         ranks.refresh();
         check(ranks.place(a) == 0, "test sellers removed");
-        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() <= 2000),
+        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() <= 500),
                 "the Drug Lab is cheap to start with");
     }
 
@@ -333,9 +379,38 @@ final class SelfTest {
             seen.add(res.effects());
         }
         check(mutated, "mutations happen");
+        int mythic = 0, newLooks = 0;
+        java.util.Set<dev.kushcraft.strain.Climate> climatesSeen = java.util.EnumSet.noneOf(dev.kushcraft.strain.Climate.class);
+        for (int i = 0; i < 20_000; i++) {
+            var res = dev.kushcraft.strain.Breeding.cross(a, b, r);
+            check(res.look() != null && res.look().shape() != null && res.climate() != null, "bred look");
+            if (res.look().exotic() != dev.kushcraft.strain.Exotic.NONE) {
+                mythic++;
+                check(res.rarity() == dev.kushcraft.strain.Rarity.MYTHIC, "exotic look = Mythic");
+            }
+            newLooks += res.newLook() ? 1 : 0;
+            climatesSeen.add(res.climate());
+        }
+        check(mythic > 100 && mythic < 600, "Mythic is very rare (" + mythic + " in 20,000)");
+        check(newLooks > 3000, "new colours mutate in");
+        check(climatesSeen.size() == dev.kushcraft.strain.Climate.values().length, "climates can mutate");
+        Strain aurora = plugin.strains().get("aurora_kush");
+        if (aurora != null) {
+            int kept = 0;
+            for (int i = 0; i < 5000; i++) {
+                if (dev.kushcraft.strain.Breeding.cross(aurora, a, r).look().exotic() != dev.kushcraft.strain.Exotic.NONE) {
+                    kept++;
+                }
+            }
+            check(kept > 800 && kept < 1400, "a Mythic parent passes its look on about 1 in 5 (" + kept + ")");
+        }
         check(seen.size() > 3, "breeding is random (" + seen.size() + " different results)");
         check(dev.kushcraft.strain.Rarity.of(35, 4) == dev.kushcraft.strain.Rarity.LEGENDARY
                 && dev.kushcraft.strain.Rarity.of(5, 1) == dev.kushcraft.strain.Rarity.COMMON, "rarity tiers");
+        check(dev.kushcraft.strain.Rarity.of(5, 1, dev.kushcraft.strain.Exotic.NEON) == dev.kushcraft.strain.Rarity.MYTHIC,
+                "exotic = Mythic");
+        check(dev.kushcraft.strain.Rarity.MYTHIC.priceFactor() > dev.kushcraft.strain.Rarity.LEGENDARY.priceFactor(),
+                "Mythic sells for the most");
         check(dev.kushcraft.effect.EffectType.values().length >= 28, "28 effects");
     }
 
@@ -358,7 +433,11 @@ final class SelfTest {
     private void exchange() {
         var ex = plugin.exchange();
         check(ex.enabled(), "exchange enabled with items");
-        check(ex.offers().size() >= 9 && ex.offers().size() <= 36, "trade fits on one page (" + ex.offers().size() + ")");
+        check(!ex.categories().isEmpty() && ex.categories().size() <= 7, "1-7 trade shelves, got " + ex.categories().size());
+        for (var c : ex.categories()) {
+            check(!c.offers().isEmpty() && c.offers().size() <= 27, "shelf fits 3 rows: " + c.id());
+        }
+        check(ex.offers().size() >= 100, "100+ resources to trade, got " + ex.offers().size());
         for (var o : ex.offers()) {
             check(ex.sellPrice(o.material()) < ex.buyPrice(o), "exchange sells cheaper than it buys: " + o.material());
         }
@@ -392,7 +471,7 @@ final class SelfTest {
     private void awards() {
         var aw = plugin.awards();
         dev.kushcraft.award.Award[] all = dev.kushcraft.award.Award.values();
-        check(all.length >= 30 && all.length <= 36, "30-36 awards (one menu page), got " + all.length);
+        check(all.length >= 40 && all.length <= 45, "40-45 awards (one menu page), got " + all.length);
         for (var a : all) {
             check(a.parent() == null || a.parent().ordinal() < a.ordinal(), "award parent comes first: " + a);
             var adv = Bukkit.getAdvancement(dev.kushcraft.award.Awards.key(a.id()));
@@ -424,8 +503,107 @@ final class SelfTest {
                 check(dev.kushcraft.catalog.Catalog.entries(c).size() <= 9, "one row of drugs: " + c);
             }
         }
-        check(plugin.shop().buyEntries().size() <= 27, "shop fits 3 rows");
+        check(GuiFont.GUIS.contains("top"), "background for Top Dealers");
         check(LabRecipe.values().length <= 27, "cook page fits 3 rows");
+        check(dev.kushcraft.gui.TabMenu.Tab.values().length == 5, "5 main panels");
+    }
+
+    private void strains() {
+        var all = new ArrayList<>(plugin.strains().all());
+        check(all.size() >= 25, "25+ strains, got " + all.size());
+        java.util.Set<String> names = new java.util.HashSet<>(), looks = new java.util.HashSet<>();
+        java.util.Set<dev.kushcraft.strain.Climate> climates = java.util.EnumSet.noneOf(dev.kushcraft.strain.Climate.class);
+        java.util.Set<dev.kushcraft.strain.BudShape> shapes = java.util.EnumSet.noneOf(dev.kushcraft.strain.BudShape.class);
+        int mythic = 0;
+        for (Strain s : all) {
+            if (s.isCustom()) {
+                continue;
+            }
+            check(names.add(s.name().toLowerCase(java.util.Locale.ROOT)), "unique strain name " + s.name());
+            check(looks.add(s.look().bud() + "/" + s.look().leaf() + "/" + s.look().pistil() + "/" + s.look().shape()),
+                    "unique look " + s.name());
+            check(!s.flavor().isEmpty(), "flavour for " + s.name());
+            check(!s.effects().isEmpty() && s.effects().size() <= 4, "1-4 effects " + s.name());
+            climates.add(s.climate());
+            shapes.add(s.look().shape());
+            if (s.exotic() != dev.kushcraft.strain.Exotic.NONE) {
+                mythic++;
+                check(!s.inShop() && s.wildWeight() < 0.1, "Mythic strains are not sold and very rare: " + s.name());
+                check(s.rarity() == dev.kushcraft.strain.Rarity.MYTHIC, "Mythic rarity " + s.name());
+            }
+        }
+        check(climates.size() == dev.kushcraft.strain.Climate.values().length, "a strain for every climate");
+        check(shapes.size() == dev.kushcraft.strain.BudShape.values().length, "every bud shape is used");
+        check(mythic >= 2, "Mythic strains exist");
+        // legacy strains (no look in strains.yml) still get one
+        var legacy = dev.kushcraft.strain.Look.legacy(0xFF0000, dev.kushcraft.strain.StrainType.INDICA, "x");
+        check(legacy.leaf() != 0 && legacy.pistil() == dev.kushcraft.strain.Look.DEFAULT_PISTIL, "legacy look");
+        // the Mythic ones turn up in their biomes, but rarely
+        Strain aurora = plugin.strains().get("aurora_kush");
+        check(aurora != null && aurora.exotic() == dev.kushcraft.strain.Exotic.GALAXY, "Aurora Kush is a galaxy strain");
+        check(Strain.class.getSimpleName().equals("Strain"), "strain class");
+    }
+
+    private void climates() {
+        var C = dev.kushcraft.strain.Climate.class;
+        check(dev.kushcraft.strain.Climate.of("jungle", 0.95, 0.9, 70) == dev.kushcraft.strain.Climate.TROPICAL, "jungle is tropical");
+        check(dev.kushcraft.strain.Climate.of("desert", 2.0, 0, 70) == dev.kushcraft.strain.Climate.DESERT, "desert");
+        check(dev.kushcraft.strain.Climate.of("savanna", 2.0, 0, 70) == dev.kushcraft.strain.Climate.DESERT, "savanna");
+        check(dev.kushcraft.strain.Climate.of("plains", 0.8, 0.4, 70) == dev.kushcraft.strain.Climate.TEMPERATE, "plains");
+        check(dev.kushcraft.strain.Climate.of("swamp", 0.8, 0.9, 63) == dev.kushcraft.strain.Climate.WETLAND, "swamp");
+        check(dev.kushcraft.strain.Climate.of("river", 0.5, 0.5, 62) == dev.kushcraft.strain.Climate.WETLAND, "river");
+        check(dev.kushcraft.strain.Climate.of("snowy_plains", 0.0, 0.5, 70) == dev.kushcraft.strain.Climate.COLD, "snow");
+        check(dev.kushcraft.strain.Climate.of("taiga", 0.25, 0.8, 70) == dev.kushcraft.strain.Climate.COLD, "taiga");
+        check(dev.kushcraft.strain.Climate.of("meadow", 0.5, 0.8, 120) == dev.kushcraft.strain.Climate.MOUNTAIN, "meadow");
+        check(dev.kushcraft.strain.Climate.of("plains", 0.8, 0.4, 130) == dev.kushcraft.strain.Climate.MOUNTAIN, "high up");
+        var tropical = dev.kushcraft.strain.Climate.TROPICAL;
+        check(tropical.fit(tropical) == dev.kushcraft.strain.Climate.Fit.IDEAL, "ideal climate");
+        check(tropical.fit(dev.kushcraft.strain.Climate.COLD) == dev.kushcraft.strain.Climate.Fit.HARSH, "opposite climate");
+        check(tropical.fit(dev.kushcraft.strain.Climate.TEMPERATE) == dev.kushcraft.strain.Climate.Fit.OK, "ok climate");
+        for (var a : C.getEnumConstants()) {
+            for (var b : C.getEnumConstants()) {
+                check(a.harsh(b) == b.harsh(a), "climates are symmetric");
+            }
+            check(a.fit(dev.kushcraft.strain.Climate.TEMPERATE) != dev.kushcraft.strain.Climate.Fit.HARSH,
+                    "everything grows in temperate: " + a);
+        }
+        check(dev.kushcraft.strain.Climate.Fit.IDEAL.growth() > 1 && dev.kushcraft.strain.Climate.Fit.HARSH.growth() < 1,
+                "climate changes growth");
+        check(dev.kushcraft.strain.Climate.parse("WARM", null) == tropical, "2.x climate names");
+    }
+
+    private void cartels() {
+        var cs = plugin.cartels();
+        check(cs.enabled(), "cartels on");
+        check(cs.tiers().size() == 5, "5 cartel levels");
+        UUID boss = UUID.randomUUID(), member = UUID.randomUUID(), other = UUID.randomUUID();
+        check(cs.checkName("x") != null && cs.checkName("Los Selftest") == null, "cartel names are checked");
+        var c = cs.found(boss, "Los Selftest");
+        var d = cs.found(other, "Selftest Crew");
+        check(cs.of(boss) == c && cs.byName("los selftest") == c, "cartel lookup");
+        check(cs.checkName("Los Selftest") != null, "cartel names are unique");
+        cs.addMember(c, member);
+        check(cs.of(member) == c && c.members().size() == 2, "joining a cartel");
+        check(cs.sellBonus(member) == 0, "a new crew has no bonus");
+        cs.sold(member, 10_000);
+        check(Math.abs(c.sales() - 10_000) < 1e-6, "member sales count for the cartel");
+        check(Math.abs(c.bank() - 10_000 * plugin.getConfig().getDouble("cartel.bank-cut", 0.05)) < 1e-6,
+                "the bank gets its cut");
+        cs.contract(member, 1000);
+        check(c.bank() > 500, "contracts add to the bank");
+        cs.level(c, 3);
+        check(cs.sellBonus(member) > 0 && cs.growBonus(member) > 0 && cs.labBonus(member) > 0, "levels give bonuses");
+        check(cs.sellBonus(UUID.randomUUID()) == 0, "no cartel, no bonus");
+        cs.sold(other, 1);
+        check(cs.top().get(cs.top().indexOf(c)) == c && cs.place(c) < cs.place(d), "cartel leaderboard");
+        check(c.shipment() != null && c.shipment().amount() >= 8
+                && c.shipment().reward() > plugin.shop().basePrice(c.shipment().type()) * c.shipment().amount(),
+                "a shipment pays a bonus");
+        cs.removeMember(c, boss);
+        check(c.isLeader(member), "the boss leaving passes the cartel on");
+        cs.disband(c);
+        cs.disband(d);
+        check(cs.of(member) == null && cs.byName("los selftest") == null, "cartels removed");
     }
 
     private void money() {

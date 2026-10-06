@@ -1,16 +1,358 @@
 {
  "model": {
-  "type": "minecraft:model",
-  "model": "kush:item/bud_dried",
-  "tints": [
+  "type": "minecraft:composite",
+  "models": [
    {
-    "type": "minecraft:constant",
-    "value": 16777215
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 0,
+    "cases": [
+     {
+      "when": "foxtail",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/bud/bud_dried_foxtail",
+       "tints": [
+        {
+         "type": "minecraft:constant",
+         "value": 16777215
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 0,
+         "default": 6995514
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 2,
+         "default": 15238702
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 1,
+         "default": 5152308
+        },
+        {
+         "type": "minecraft:constant",
+         "value": 16777215
+        }
+       ]
+      }
+     },
+     {
+      "when": "popcorn",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/bud/bud_dried_popcorn",
+       "tints": [
+        {
+         "type": "minecraft:constant",
+         "value": 16777215
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 0,
+         "default": 6995514
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 2,
+         "default": 15238702
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 1,
+         "default": 5152308
+        },
+        {
+         "type": "minecraft:constant",
+         "value": 16777215
+        }
+       ]
+      }
+     },
+     {
+      "when": "spear",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/bud/bud_dried_spear",
+       "tints": [
+        {
+         "type": "minecraft:constant",
+         "value": 16777215
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 0,
+         "default": 6995514
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 2,
+         "default": 15238702
+        },
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 1,
+         "default": 5152308
+        },
+        {
+         "type": "minecraft:constant",
+         "value": 16777215
+        }
+       ]
+      }
+     }
+    ],
+    "fallback": {
+     "type": "minecraft:model",
+     "model": "kush:item/bud/bud_dried_classic",
+     "tints": [
+      {
+       "type": "minecraft:constant",
+       "value": 16777215
+      },
+      {
+       "type": "minecraft:custom_model_data",
+       "index": 0,
+       "default": 6995514
+      },
+      {
+       "type": "minecraft:custom_model_data",
+       "index": 2,
+       "default": 15238702
+      },
+      {
+       "type": "minecraft:custom_model_data",
+       "index": 1,
+       "default": 5152308
+      },
+      {
+       "type": "minecraft:constant",
+       "value": 16777215
+      }
+     ]
+    }
    },
    {
-    "type": "minecraft:custom_model_data",
-    "index": 0,
-    "default": 6995514
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 1,
+    "cases": [
+     {
+      "when": "rainbow",
+      "model": {
+       "type": "minecraft:select",
+       "property": "minecraft:custom_model_data",
+       "index": 0,
+       "cases": [
+        {
+         "when": "foxtail",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/rainbow_bud_dried_foxtail"
+         }
+        },
+        {
+         "when": "popcorn",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/rainbow_bud_dried_popcorn"
+         }
+        },
+        {
+         "when": "spear",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/rainbow_bud_dried_spear"
+         }
+        }
+       ],
+       "fallback": {
+        "type": "minecraft:model",
+        "model": "kush:item/exotic/rainbow_bud_dried_classic"
+       }
+      }
+     },
+     {
+      "when": "galaxy",
+      "model": {
+       "type": "minecraft:select",
+       "property": "minecraft:custom_model_data",
+       "index": 0,
+       "cases": [
+        {
+         "when": "foxtail",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/galaxy_bud_dried_foxtail"
+         }
+        },
+        {
+         "when": "popcorn",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/galaxy_bud_dried_popcorn"
+         }
+        },
+        {
+         "when": "spear",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/galaxy_bud_dried_spear"
+         }
+        }
+       ],
+       "fallback": {
+        "type": "minecraft:model",
+        "model": "kush:item/exotic/galaxy_bud_dried_classic"
+       }
+      }
+     },
+     {
+      "when": "golden",
+      "model": {
+       "type": "minecraft:select",
+       "property": "minecraft:custom_model_data",
+       "index": 0,
+       "cases": [
+        {
+         "when": "foxtail",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/golden_bud_dried_foxtail"
+         }
+        },
+        {
+         "when": "popcorn",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/golden_bud_dried_popcorn"
+         }
+        },
+        {
+         "when": "spear",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/golden_bud_dried_spear"
+         }
+        }
+       ],
+       "fallback": {
+        "type": "minecraft:model",
+        "model": "kush:item/exotic/golden_bud_dried_classic"
+       }
+      }
+     },
+     {
+      "when": "crystal",
+      "model": {
+       "type": "minecraft:select",
+       "property": "minecraft:custom_model_data",
+       "index": 0,
+       "cases": [
+        {
+         "when": "foxtail",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/crystal_bud_dried_foxtail"
+         }
+        },
+        {
+         "when": "popcorn",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/crystal_bud_dried_popcorn"
+         }
+        },
+        {
+         "when": "spear",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/crystal_bud_dried_spear"
+         }
+        }
+       ],
+       "fallback": {
+        "type": "minecraft:model",
+        "model": "kush:item/exotic/crystal_bud_dried_classic"
+       }
+      }
+     },
+     {
+      "when": "neon",
+      "model": {
+       "type": "minecraft:select",
+       "property": "minecraft:custom_model_data",
+       "index": 0,
+       "cases": [
+        {
+         "when": "foxtail",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/neon_bud_dried_foxtail"
+         }
+        },
+        {
+         "when": "popcorn",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/neon_bud_dried_popcorn"
+         }
+        },
+        {
+         "when": "spear",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/neon_bud_dried_spear"
+         }
+        }
+       ],
+       "fallback": {
+        "type": "minecraft:model",
+        "model": "kush:item/exotic/neon_bud_dried_classic"
+       }
+      }
+     },
+     {
+      "when": "inferno",
+      "model": {
+       "type": "minecraft:select",
+       "property": "minecraft:custom_model_data",
+       "index": 0,
+       "cases": [
+        {
+         "when": "foxtail",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/inferno_bud_dried_foxtail"
+         }
+        },
+        {
+         "when": "popcorn",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/inferno_bud_dried_popcorn"
+         }
+        },
+        {
+         "when": "spear",
+         "model": {
+          "type": "minecraft:model",
+          "model": "kush:item/exotic/inferno_bud_dried_spear"
+         }
+        }
+       ],
+       "fallback": {
+        "type": "minecraft:model",
+        "model": "kush:item/exotic/inferno_bud_dried_classic"
+       }
+      }
+     }
+    ],
+    "fallback": {
+     "type": "minecraft:empty"
+    }
    }
   ]
  }

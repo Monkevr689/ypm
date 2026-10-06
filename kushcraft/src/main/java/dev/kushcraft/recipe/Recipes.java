@@ -61,26 +61,25 @@ public final class Recipes {
         unregister();
         RecipeChoice planks = new RecipeChoice.MaterialChoice(Tag.PLANKS);
 
-        shaped(plugin, ItemType.LAB_STATION, 1, "I=Iron Ingot, B=Glass Bottle, C=Crafting Table",
-                new String[]{"IBI", "ICI"}, 'I', Material.IRON_INGOT, 'B', Material.GLASS_BOTTLE,
-                'C', Material.CRAFTING_TABLE);
-        shaped(plugin, ItemType.GROW_LAMP, 1, "I=Iron Ingot, R=Redstone, L=Lantern",
-                new String[]{"III", "RLR"}, 'I', Material.IRON_INGOT, 'R', Material.REDSTONE, 'L', Material.LANTERN);
-        shaped(plugin, ItemType.PLANTER_BOX, 2, "W=any Planks, D=Dirt, B=Bone Meal",
-                new String[]{"WBW", "WDW", "WWW"}, 'W', planks, 'D', Material.DIRT, 'B', Material.BONE_MEAL);
-        shaped(plugin, ItemType.DEALER, 1, "W=any Planks, G=Gold Ingot, C=Chest",
-                new String[]{"WGW", "WCW"}, 'W', planks, 'G', Material.GOLD_INGOT, 'C', Material.CHEST);
-        shaped(plugin, ItemType.BONG, 1, "G=Glass, B=Glass Bottle",
-                new String[]{" G ", "GBG"}, 'G', Material.GLASS, 'B', Material.GLASS_BOTTLE);
-
-        shapeless(plugin, ItemType.ROLLING_PAPERS, 6, "2 Paper + Sugar Cane",
-                Material.PAPER, Material.PAPER, Material.SUGAR_CANE);
+        // everything is shapeless: put the ingredients anywhere in the grid
+        shapeless(plugin, ItemType.LAB_STATION, 1, "Crafting Table + 2 Iron Ingots + Glass Bottle",
+                Material.CRAFTING_TABLE, Material.IRON_INGOT, Material.IRON_INGOT, Material.GLASS_BOTTLE);
+        shapeless(plugin, ItemType.GROW_LAMP, 1, "Lantern + Iron Ingot + Redstone",
+                Material.LANTERN, Material.IRON_INGOT, Material.REDSTONE);
+        shapeless(plugin, ItemType.PLANTER_BOX, 2, "Dirt + Bone Meal + 2 any Planks",
+                Material.DIRT, Material.BONE_MEAL, planks, planks);
+        shapeless(plugin, ItemType.DEALER, 1, "Chest + Gold Ingot",
+                Material.CHEST, Material.GOLD_INGOT);
+        shapeless(plugin, ItemType.BONG, 1, "Glass Bottle + 2 Glass",
+                Material.GLASS_BOTTLE, Material.GLASS, Material.GLASS);
+        shapeless(plugin, ItemType.ROLLING_PAPERS, 4, "Paper",
+                Material.PAPER);
         shapeless(plugin, ItemType.BLUNT_WRAP, 3, "Paper + Cocoa Beans",
                 Material.PAPER, Material.COCOA_BEANS);
-        shapeless(plugin, ItemType.FERTILIZER, 3, "2 Bone Meal + Rotten Flesh",
-                Material.BONE_MEAL, Material.BONE_MEAL, Material.ROTTEN_FLESH);
-        shapeless(plugin, ItemType.LAB_SOLVENT, 3, "Glass Bottle + Sugar + Redstone",
-                Material.GLASS_BOTTLE, Material.SUGAR, Material.REDSTONE);
+        shapeless(plugin, ItemType.FERTILIZER, 4, "Bone Meal + Rotten Flesh",
+                Material.BONE_MEAL, Material.ROTTEN_FLESH);
+        shapeless(plugin, ItemType.LAB_SOLVENT, 4, "Glass Bottle + Sugar",
+                Material.GLASS_BOTTLE, Material.SUGAR);
         shapeless(plugin, ItemType.GROWER_GUIDE, 1, "Book + Wheat Seeds",
                 Material.BOOK, Material.WHEAT_SEEDS);
     }
@@ -124,13 +123,19 @@ public final class Recipes {
         }
     }
 
-    private static void shapeless(KushCraft plugin, ItemType type, int amount, String legend, Material... in) {
+    /** in: Materials, or a RecipeChoice for "any planks". */
+    private static void shapeless(KushCraft plugin, ItemType type, int amount, String legend, Object... in) {
         NamespacedKey key = new NamespacedKey(plugin, type.id());
         ShapelessRecipe r = new ShapelessRecipe(key, Items.create(type, amount));
         String[] grid = new String[9];
         for (int i = 0; i < in.length; i++) {
-            r.addIngredient(in[i]);
-            grid[i] = in[i].name().toLowerCase(java.util.Locale.ROOT);
+            if (in[i] instanceof Material m) {
+                r.addIngredient(m);
+                grid[i] = m.name().toLowerCase(java.util.Locale.ROOT);
+            } else {
+                r.addIngredient((RecipeChoice) in[i]);
+                grid[i] = "planks";
+            }
         }
         r.setCategory(CraftingBookCategory.MISC);
         r.setGroup("kushcraft");

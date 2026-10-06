@@ -3,8 +3,8 @@ package dev.kushcraft.gui;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
-import dev.kushcraft.shop.Market;
 import dev.kushcraft.shop.Shop;
+import dev.kushcraft.strain.Strain;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.Text;
 import org.bukkit.SoundCategory;
@@ -17,18 +17,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shop: buy seeds and gear (rows 1-3), hand in daily orders (row 4) and
- * sell your product (click it below, or Sell all). Layout: tools/gui.py shop().
+ * Shop: seeds of every strain (cheapest first) and the other seeds in rows
+ * 1-3, gear in row 4, and selling: click product below, or Sell all.
+ * Layout: tools/gui.py shop().
  */
 public final class ShopMenu extends TabMenu {
 
-    static final int FIRST = 9;
-    static final int SLOTS = 27;
-    static final int[] ORDERS = {at(4, 2), at(4, 4), at(4, 6)};
+    static final int FIRST_SEED = 9;
+    static final int SEEDS = 27;
+    static final int FIRST_GEAR = 36;
+    static final int GEAR = 9;
     static final int SELL_ALL = at(5, 4);
 
     private final boolean atDealer;
-    private List<Market.Order> shownOrders = List.of();
     private int ticks;
 
     public ShopMenu(Player player) {
@@ -58,24 +59,14 @@ public final class ShopMenu extends TabMenu {
                     "<gray>This server only trades at a Dealer Stand."));
             return;
         }
-        List<Shop.BuyEntry> entries = shop().buyEntries();
         double bal = plugin.economy().balance(player);
-        for (int i = 0; i < SLOTS && i < entries.size(); i++) {
-            Shop.BuyEntry e = entries.get(i);
-            ItemStack show = shop().create(e);
-            ItemMeta meta = show.getItemMeta();
-            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-            String price = e.price() <= 0 ? "FREE" : money(e.price()) + (e.amount() > 1 ? " for " + e.amount() : "");
-            lore.add(Text.mm((bal >= e.price() ? "<gold>" : "<red>") + price));
-            lore.add(Text.mm("<dark_gray>Click: buy · Shift: buy 5"));
-            meta.lore(lore);
-            show.setItemMeta(meta);
-            set(FIRST + i, show);
+        List<Shop.BuyEntry> seeds = shop().seeds();
+        for (int i = 0; i < SEEDS && i < seeds.size(); i++) {
+            set(FIRST_SEED + i, entryIcon(seeds.get(i), bal));
         }
-        List<Market.Order> orders = plugin.market().orders();
-        shownOrders = List.copyOf(orders.subList(0, Math.min(orders.size(), ORDERS.length)));
-        for (int i = 0; i < shownOrders.size(); i++) {
-            set(ORDERS[i], orderIcon(shownOrders.get(i)));
+        List<Shop.BuyEntry> gear = shop().gear();
+        for (int i = 0; i < GEAR && i < gear.size(); i++) {
+            set(FIRST_GEAR + i, entryIcon(gear.get(i), bal));
         }
         double value = Selling.allValue(player);
         List<String> sell = new ArrayList<>();
@@ -85,23 +76,29 @@ public final class ShopMenu extends TabMenu {
             sell.add("<gold>Hot: " + hot.display() + " +" + Math.round(
                     (plugin.getConfig().getDouble("market.hot-item-bonus", 1.5) - 1) * 100) + "%");
         }
+        double bonus = shop().bonus(player) - 1;
+        if (bonus > 0.001) {
+            sell.add("<green>Your bonus: +" + Math.round(bonus * 100) + "%");
+        }
         set(SELL_ALL, Items.glint(Items.icon("ui_sell", value > 0 ? "<green><bold>Sell all</bold> <gold>" + money(value)
                 : "<gray>Sell all", sell), value > 0));
     }
 
-    private ItemStack orderIcon(Market.Order o) {
-        int have = InventoryUtil.count(player, it -> Items.type(it) == o.type());
-        long mins = Math.max(0, (o.expires() - System.currentTimeMillis()) / 60_000L);
-        ItemStack it = CatalogIcons.sample(o.type());
-        it.setAmount(Math.max(1, Math.min(99, o.amount())));
-        boolean ok = have >= o.amount();
-        it.editMeta(m -> {
-            m.itemName(Text.mm("<yellow>Order: <white>" + o.amount() + "x " + o.type().display()));
-            m.lore(Text.lines(List.of(
-                    "<gold>Pays " + money(o.reward()),
-                    (ok ? "<green>" : "<gray>") + have + "/" + o.amount() + " <dark_gray>· " + mins + " min left")));
-        });
-        return Items.glint(it, ok);
+    private ItemStack entryIcon(Shop.BuyEntry e, double bal) {
+        ItemStack show = shop().create(e);
+        ItemMeta meta = show.getItemMeta();
+        List<String> lore = new ArrayList<>();
+        Strain s = e.strain() == null ? null : KushCraft.get().strains().get(e.strain());
+        if (s != null) {
+            lore.add(s.rarity().colored() + " <dark_gray>·</dark_gray> <white>" + s.potency() + "% THC"
+                    + " <dark_gray>·</dark_gray> " + s.type().colored());
+            lore.add(Items.climateLine(s));
+        }
+        String price = e.price() <= 0 ? "FREE" : money(e.price()) + (e.amount() > 1 ? " for " + e.amount() : "");
+        lore.add((bal >= e.price() ? "<gold>" : "<red>") + price + " <dark_gray>· Shift: buy 5");
+        meta.lore(Text.lines(lore));
+        show.setItemMeta(meta);
+        return show;
     }
 
     @Override
@@ -117,21 +114,10 @@ public final class ShopMenu extends TabMenu {
             }
             return;
         }
-        for (int i = 0; i < shownOrders.size(); i++) {
-            if (ORDERS[i] == slot) {
-                if (KushCraft.get().market().complete(player, shownOrders.get(i))) {
-                    successSound();
-                } else {
-                    failSound();
-                }
-                render();
-                return;
-            }
-        }
-        int idx = slot - FIRST;
-        List<Shop.BuyEntry> entries = shop().buyEntries();
-        if (idx >= 0 && idx < SLOTS && idx < entries.size()) {
-            buy(entries.get(idx), click.isShiftClick() ? 5 : 1);
+        List<Shop.BuyEntry> list = slot < FIRST_GEAR ? shop().seeds() : shop().gear();
+        int idx = slot < FIRST_GEAR ? slot - FIRST_SEED : slot - FIRST_GEAR;
+        if (idx >= 0 && idx < list.size() && idx < (slot < FIRST_GEAR ? SEEDS : GEAR)) {
+            buy(list.get(idx), click.isShiftClick() ? 5 : 1);
         }
     }
 
@@ -170,7 +156,7 @@ public final class ShopMenu extends TabMenu {
 
     @Override
     public void tick() {
-        // order timers and the hot item change while the menu is open
+        // the hot item and prices change while the menu is open
         if (++ticks % 15 == 0) {
             render();
         }

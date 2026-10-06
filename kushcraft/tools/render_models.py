@@ -14,7 +14,10 @@ def load_tex(ref):
     ns, path = ref.split(":", 1) if ":" in ref else ("minecraft", ref)
     if ref not in TEX_CACHE:
         p = os.path.join(G.PACK, "assets", ns, "textures", path + ".png")
-        TEX_CACHE[ref] = Image.open(p).convert("RGBA") if os.path.exists(p) else Image.new("RGBA", (16, 16), (255, 0, 255, 255))
+        img = Image.open(p).convert("RGBA") if os.path.exists(p) else Image.new("RGBA", (16, 16), (255, 0, 255, 255))
+        if os.path.exists(p + ".mcmeta") and img.height > img.width:
+            img = img.crop((0, 0, img.width, img.width))  # first frame of an animation
+        TEX_CACHE[ref] = img
     return TEX_CACHE[ref]
 
 
@@ -65,8 +68,15 @@ def face_point(f, fr, to, u, v):
 
 
 def render(model_path, size=160, tint=0x9a4fd4, yaw=35):
-    m = json.load(open(model_path))
-    textures = m.get("textures", {})
+    """tint: colour of tintindex 0, or {tintindex: colour}. model_path: one
+    model or a list (drawn together, like a composite item model)."""
+    paths = model_path if isinstance(model_path, list) else [model_path]
+    tints = tint if isinstance(tint, dict) else {0: tint}
+    elements = []
+    for mp in paths:
+        m = json.load(open(mp))
+        for e in m.get("elements", []):
+            elements.append((e, m.get("textures", {})))
     d = (-math.sin(math.radians(yaw)), -0.62, -math.cos(math.radians(yaw)))
     n = math.sqrt(sum(c * c for c in d))
     d = tuple(c / n for c in d)
@@ -75,7 +85,7 @@ def render(model_path, size=160, tint=0x9a4fd4, yaw=35):
     up = tuple(-c for c in up)
     scale = size / 34.0
     polys = []
-    for e in m.get("elements", []):
+    for e, textures in elements:
         fr, to = e["from"], e["to"]
         r = e.get("rotation")
         for fname, f in e["faces"].items():
@@ -102,9 +112,10 @@ def render(model_path, size=160, tint=0x9a4fd4, yaw=35):
                     if px[3] < 20:
                         continue
                     col = px
-                    if f.get("tintindex") == 0:
-                        col = (px[0] * ((tint >> 16) & 255) // 255, px[1] * ((tint >> 8) & 255) // 255,
-                               px[2] * (tint & 255) // 255, px[3])
+                    ti = tints.get(f.get("tintindex"))
+                    if ti is not None:
+                        col = (px[0] * ((ti >> 16) & 255) // 255, px[1] * ((ti >> 8) & 255) // 255,
+                               px[2] * (ti & 255) // 255, px[3])
                     col = (int(col[0] * light), int(col[1] * light), int(col[2] * light), col[3])
                     pts = []
                     for (a, b) in ((i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)):
@@ -136,6 +147,11 @@ def generate(g, names, out_name, tint=0x9a4fd4, size=160, bg=(70, 110, 160, 255)
     G = g
     imgs = []
     for n in names:
+        if isinstance(n, tuple):
+            # (model names..., tints)
+            *models, tn = n
+            imgs.append(render([os.path.join(G.ASSETS, "models", x + ".json") for x in models], size, tn))
+            continue
         p = os.path.join(G.ASSETS, "models", n + ".json")
         imgs.append(render(p, size, tint))
     sheet = Image.new("RGBA", (len(imgs) * (size + 8) + 8, size + 16), bg)

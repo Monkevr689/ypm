@@ -107,6 +107,7 @@ def strain_tints(default=DEFAULT_TINT):
 
 
 GENERATED = {}  # name -> list of preview images (for the contact sheet)
+BUD_ITEMS = ("bud_fresh", "bud_dried")  # drawn by tools/buds.py
 
 
 def write_flat_item(name, layers, folder="item"):
@@ -245,11 +246,15 @@ def main():
     os.makedirs(ASSETS, exist_ok=True)
 
     # flat items: 32px art from items32.py, the rest from sprites.py --------
+    import buds
     for name, spr in ITEMS.items():
-        if name not in items32.ITEMS:
+        if name not in items32.ITEMS and name not in BUD_ITEMS:
             write_flat_item(name, render_sprite(name, spr))
     for name, fn in items32.ITEMS.items():
-        write_flat_item(name, list(fn().layers))
+        if name not in BUD_ITEMS:
+            write_flat_item(name, list(fn().layers))
+    # buds: 4 shapes x 3 colours + the animated Mythic looks (tools/buds.py)
+    buds.generate(sys.modules[__name__])
     for name, spr in ICONS.items():
         if name not in items32.ICONS:
             write_flat_item(name, render_sprite(name, spr), folder="icon")
@@ -286,9 +291,19 @@ def main():
     render_models.generate(sys.modules[__name__], [
         "block/lab_station", "block/strain_maker", "block/rolling_table", "block/drying_rack_fresh",
         "block/drying_rack_dry", "block/grow_lamp", "block/planter_box", "block/dealer"], "blocks_preview.png")
+    og = {0: 0x8FD14F, 1: 0x4C9A30, 2: 0xE8862E}
+    purple = {0: 0xA45AE8, 1: 0x5A3A82, 2: 0xF08AD8}
+    blue = {0: 0x6FA8F0, 1: 0x3A8A78, 2: 0xF4F4FF}
+    domina = {0: 0x3E2A52, 1: 0x24332A, 2: 0xE83A3A}
+    tangie = {0: 0xFF962A, 1: 0x56B03A, 2: 0xFFF4D8}
+    widow = {0: 0xF0F4F8, 1: 0x5AA84A, 2: 0xFFFFFF}
+    runtz = {0: 0xFF5AA8, 1: 0x4AB43A, 2: 0xFFE23A}
     render_models.generate(sys.modules[__name__], [
-        "plant/sativa_2", "plant/sativa_4", "plant/indica_3", "plant/indica_4", "plant/hybrid_4",
-        "plant/coca_3", "plant/poppy_2", "plant/poppy_3", "plant/mushroom_3", "plant/peyote_2", "plant/peyote_3"], "plants3d_preview.png", tint=0xb05ae0)
+        ("plant/hybrid_1", og), ("plant/sativa_2", tangie), ("plant/sativa_4", og), ("plant/indica_3", purple),
+        ("plant/indica_4", purple), ("plant/hybrid_4", blue), ("plant/indica_4", domina), ("plant/hybrid_4", widow),
+        ("plant/hybrid_4", "plant/exotic/rainbow_hybrid_4", runtz),
+        "plant/coca_3", "plant/poppy_2", "plant/poppy_3", "plant/mushroom_3", "plant/peyote_2", "plant/peyote_3"],
+        "plants3d_preview.png", tint=0xb05ae0)
     print(f"generated {len(GENERATED)} flat items into {PACK}")
 
 

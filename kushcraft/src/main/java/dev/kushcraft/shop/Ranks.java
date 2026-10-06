@@ -142,6 +142,7 @@ public final class Ranks {
         }
         int placeBefore = place(p);
         plugin.economy().addSales(p, money);
+        plugin.cartels().sold(p.getUniqueId(), money);
         refresh();
         plugin.awards().sales(p, plugin.economy().sales(p));
         Rank now = of(p);
@@ -168,13 +169,19 @@ public final class Ranks {
         }
     }
 
-    /** Puts the title in front of the name in the tab list (ranks.tab-list). */
+    /** Puts the title in front of the name (and the cartel after it) in the tab list (ranks.tab-list). */
     public void showInTab(Player p) {
         if (!plugin.getConfig().getBoolean("ranks.tab-list", true)) {
             return;
         }
         Rank r = of(p);
-        p.playerListName(r == everyone ? null
-                : Text.mm("<" + r.color() + ">[" + r.name() + "]</" + r.color() + "> <white>" + Text.escape(p.getName())));
+        dev.kushcraft.cartel.Cartel c = plugin.cartels().enabled() ? plugin.cartels().of(p) : null;
+        if (r == everyone && c == null) {
+            p.playerListName(null);
+            return;
+        }
+        p.playerListName(Text.mm((r == everyone ? "" : "<" + r.color() + ">[" + r.name() + "]</" + r.color() + "> ")
+                + "<white>" + Text.escape(p.getName()) + "</white>"
+                + (c == null ? "" : " <dark_gray>·</dark_gray> " + c.colored())));
     }
 }

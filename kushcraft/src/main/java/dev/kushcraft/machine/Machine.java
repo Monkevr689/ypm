@@ -8,6 +8,26 @@ import java.util.UUID;
 /** A placed machine. Lab and drying rack keep a little state. */
 public final class Machine {
 
+    /** Drying racks in every Drug Lab. */
+    public static final int RACKS = 5;
+
+    /** Fresh buds of one strain and quality hanging to dry. */
+    public record Rack(String strain, int quality, int amount, long start, long done) {
+
+        public boolean dry() {
+            return System.currentTimeMillis() >= done;
+        }
+
+        public double progress() {
+            long total = Math.max(1, done - start);
+            return Math.max(0, Math.min(1, (System.currentTimeMillis() - start) / (double) total));
+        }
+
+        public int secondsLeft() {
+            return (int) Math.ceil(Math.max(0, done - System.currentTimeMillis()) / 1000.0);
+        }
+    }
+
     private final BlockKey key;
     private final MachineType type;
     private final float yaw;
@@ -21,13 +41,12 @@ public final class Machine {
     ItemStack output;
     boolean notified;
 
-    // drying rack
-    String rackStrain;
-    int rackQuality;
-    int rackAmount;
-    long rackDone;
+    // drying racks (Drug Lab > Dry has RACKS of them, the old Drying Rack block uses the first)
+    final Rack[] racks = new Rack[RACKS];
 
     transient UUID displayId;
+    /** Dry racks the last tick saw (to chime once when buds are done). */
+    transient int dryShown;
     transient String shownModel;
 
     public Machine(BlockKey key, MachineType type, float yaw, UUID owner) {
@@ -115,38 +134,68 @@ public final class Machine {
         this.notified = false;
     }
 
-    // ---- drying rack ----
+    // ---- drying racks ----
+    public Rack rack(int i) {
+        return racks[i];
+    }
+
+    public void rack(int i, Rack r) {
+        racks[i] = r;
+    }
+
+    public void emptyRack(int i) {
+        racks[i] = null;
+    }
+
+    /** Racks with buds on them. */
+    public int racksInUse() {
+        int n = 0;
+        for (Rack r : racks) {
+            if (r != null) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Racks that are done. */
+    public int racksDry() {
+        int n = 0;
+        for (Rack r : racks) {
+            if (r != null && r.dry()) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    // old single-rack API (Drying Rack block): the first rack
     public String rackStrain() {
-        return rackStrain;
+        return racks[0] == null ? null : racks[0].strain();
     }
 
     public int rackQuality() {
-        return rackQuality;
+        return racks[0] == null ? 0 : racks[0].quality();
     }
 
     public int rackAmount() {
-        return rackAmount;
+        return racks[0] == null ? 0 : racks[0].amount();
     }
 
     public long rackDone() {
-        return rackDone;
+        return racks[0] == null ? 0 : racks[0].done();
     }
 
     public boolean rackDry() {
-        return rackAmount > 0 && System.currentTimeMillis() >= rackDone;
+        return racks[0] != null && racks[0].dry();
     }
 
     public void fillRack(String strain, int quality, int amount, long doneAt) {
-        this.rackStrain = strain;
-        this.rackQuality = quality;
-        this.rackAmount = amount;
-        this.rackDone = doneAt;
+        long start = racks[0] != null && racks[0].strain().equals(strain) ? racks[0].start() : System.currentTimeMillis();
+        racks[0] = new Rack(strain, quality, amount, Math.min(start, doneAt), doneAt);
     }
 
     public void emptyRack() {
-        this.rackStrain = null;
-        this.rackAmount = 0;
-        this.rackQuality = 0;
-        this.rackDone = 0;
+        racks[0] = null;
     }
 }

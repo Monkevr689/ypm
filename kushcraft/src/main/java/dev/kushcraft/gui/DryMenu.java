@@ -12,67 +12,79 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.List;
+
 /**
- * Drug Lab > Dry: click fresh buds in your inventory to hang them, collect
- * dried buds when the timer is done. Layout: tools/gui.py dry().
+ * Drug Lab > Dry: five racks. Click fresh buds in your inventory to hang
+ * them (shift-click hangs all of them), they're dry in about 30 seconds.
+ * Clicking a rack collects every dry one. Layout: tools/gui.py dry().
  */
 public final class DryMenu extends LabTabMenu {
 
-    static final int INPUT = at(2, 1);
-    static final int[] PROGRESS = {at(2, 3), at(2, 4), at(2, 5)};
-    static final int OUTPUT = at(2, 7);
+    static final int[] RACKS = {at(2, 2), at(2, 3), at(2, 4), at(2, 5), at(2, 6)};
+    static final int[] GAUGES = {at(3, 2), at(3, 3), at(3, 4), at(3, 5), at(3, 6)};
+    /** Steps of the gauge_N icons under each rack. */
+    static final int GAUGE_STEPS = 8;
     private static final int CAPACITY = 64;
 
     public DryMenu(Player player, Machine machine) {
         super(player, machine, Tab.DRY);
     }
 
+    private static Strain strain(Machine.Rack r) {
+        return KushCraft.get().strains().getOrDefault(r.strain());
+    }
+
     @Override
     protected void page() {
-        int amount = machine.rackAmount();
-        Strain s = amount > 0 ? KushCraft.get().strains().get(machine.rackStrain()) : null;
-        if (amount > 0 && s == null) {
-            s = KushCraft.get().strains().getOrDefault(null);
-        }
-        if (amount > 0 && !machine.rackDry()) {
-            ItemStack in = Items.amount(Items.strainItem(ItemType.BUD_FRESH, s, machine.rackQuality(), 1), amount);
-            in.editMeta(m -> m.lore(Text.lines(java.util.List.of("<yellow>Drying...", "<dark_gray>Click more of the same to add."))));
-            set(INPUT, in);
-        } else {
-            set(INPUT, Items.icon("bud_fresh", "<gray>Click fresh buds below", "<dark_gray>Up to " + CAPACITY + "."));
-        }
-        double progress = 0;
-        int left = 0;
-        if (amount > 0) {
-            long minutes = Math.max(0, KushCraft.get().getConfig().getLong("drying.minutes", 3));
-            long total = Math.max(1, minutes * 60_000L);
-            long remaining = Math.max(0, machine.rackDone() - System.currentTimeMillis());
-            progress = 1 - remaining / (double) total;
-            left = (int) Math.ceil(remaining / 1000.0);
-        }
-        int filled = amount > 0 ? (int) Math.floor(Math.max(0, Math.min(1, progress)) * PROGRESS.length + 1e-6) : 0;
-        for (int i = 0; i < PROGRESS.length; i++) {
-            set(PROGRESS[i], Items.icon(i < filled ? "progress_full" : "progress_empty",
-                    amount == 0 ? "<gray>Empty" : machine.rackDry() ? "<green>Done!" : "<yellow>" + Text.time(left) + " left"));
-        }
-        if (amount > 0 && machine.rackDry()) {
-            ItemStack out = Items.amount(Items.strainItem(ItemType.BUD_DRIED, s, machine.rackQuality(), 1), amount);
-            out.editMeta(m -> m.lore(Text.lines(java.util.List.of("<green><bold>Click to collect!"))));
-            set(OUTPUT, Items.glint(out, true));
+        for (int i = 0; i < Machine.RACKS; i++) {
+            Machine.Rack r = machine.rack(i);
+            if (r == null) {
+                set(RACKS[i], Items.icon("ui_rack", "<gray>Empty rack", "<dark_gray>Click fresh buds below."));
+                set(GAUGES[i], Items.icon("gauge_0", "<dark_gray>Empty"));
+                continue;
+            }
+            boolean dry = r.dry();
+            ItemStack buds = Items.amount(Items.strainItem(dry ? ItemType.BUD_DRIED : ItemType.BUD_FRESH, strain(r),
+                    r.quality(), 1), r.amount());
+            buds.editMeta(m -> m.lore(Text.lines(List.of(dry ? "<green><bold>Dry! Click to collect"
+                    : "<yellow>Drying... " + Text.time(r.secondsLeft())))));
+            set(RACKS[i], Items.glint(buds, dry));
+            int step = dry ? GAUGE_STEPS : (int) Math.floor(r.progress() * GAUGE_STEPS);
+            set(GAUGES[i], Items.icon("gauge_" + step, dry ? "<green>Done!" : "<yellow>" + Text.time(r.secondsLeft())));
         }
     }
 
     @Override
     protected void clickPage(int slot, ClickType click) {
-        if (slot != OUTPUT || machine.rackAmount() <= 0 || !machine.rackDry()) {
+        for (int i = 0; i < Machine.RACKS; i++) {
+            if (slot == RACKS[i] || slot == GAUGES[i]) {
+                collect();
+                return;
+            }
+        }
+    }
+
+    /** Collects every dry rack. */
+    private void collect() {
+        int total = 0;
+        for (int i = 0; i < Machine.RACKS; i++) {
+            Machine.Rack r = machine.rack(i);
+            if (r != null && r.dry()) {
+                InventoryUtil.give(player, Items.strainItem(ItemType.BUD_DRIED, strain(r), r.quality(), r.amount()));
+                total += r.amount();
+                machine.emptyRack(i);
+            }
+        }
+        if (total == 0) {
+            player.sendActionBar(Text.mm(machine.racksInUse() > 0 ? "<yellow>Still drying..."
+                    : "<gray>Click fresh buds in your inventory to hang them."));
+            failSound();
             return;
         }
-        Strain s = KushCraft.get().strains().getOrDefault(machine.rackStrain());
-        InventoryUtil.give(player, Items.strainItem(ItemType.BUD_DRIED, s, machine.rackQuality(), machine.rackAmount()));
-        player.sendActionBar(Text.mm("<green>Collected " + machine.rackAmount() + "x dried " + s.colored()));
-        machine.emptyRack();
         KushCraft.get().machines().markDirty();
         KushCraft.get().awards().dried(player);
+        player.sendActionBar(Text.mm("<green>Collected " + total + " dried buds"));
         player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.8f, 1f);
         render();
     }
@@ -82,41 +94,72 @@ public final class DryMenu extends LabTabMenu {
         if (Items.type(item) != ItemType.BUD_FRESH || Items.strain(item) == null) {
             return;
         }
-        Strain s = Items.strain(item);
-        int q = Items.quality(item);
-        if (machine.rackAmount() > 0 && machine.rackDry()) {
-            player.sendActionBar(Text.mm("<yellow>Collect the dried buds first."));
+        int hung = 0;
+        if (click.isShiftClick()) {
+            ItemStack[] inv = player.getInventory().getStorageContents();
+            for (int i = 0; i < inv.length; i++) {
+                if (Items.type(inv[i]) == ItemType.BUD_FRESH && Items.strain(inv[i]) != null) {
+                    hung += hang(i, inv[i]);
+                }
+            }
+        } else {
+            hung = hang(slot, item);
+        }
+        if (hung == 0) {
+            player.sendActionBar(Text.mm("<red>All " + Machine.RACKS + " racks are busy."));
             failSound();
             return;
         }
-        if (machine.rackAmount() > 0 && (!s.id().equals(machine.rackStrain()) || q != machine.rackQuality())) {
-            player.sendActionBar(Text.mm("<red>Already drying a different strain - wait until it's done."));
-            failSound();
-            return;
-        }
-        int add = Math.min(CAPACITY - machine.rackAmount(), item.getAmount());
-        if (add <= 0) {
-            player.sendActionBar(Text.mm("<red>The shelf is full (" + CAPACITY + " buds)."));
-            failSound();
-            return;
-        }
-        ItemStack inSlot = player.getInventory().getItem(slot);
-        if (inSlot == null || !inSlot.isSimilar(item)) {
-            return;
-        }
-        inSlot.setAmount(inSlot.getAmount() - add);
-        player.getInventory().setItem(slot, inSlot.getAmount() <= 0 ? null : inSlot);
-        long minutes = Math.max(0, KushCraft.get().getConfig().getLong("drying.minutes", 3));
-        // adding more buds restarts the timer for the whole batch
-        machine.fillRack(s.id(), q, machine.rackAmount() + add, System.currentTimeMillis() + minutes * 60_000L);
         KushCraft.get().machines().markDirty();
+        if (machine.racksInUse() == Machine.RACKS) {
+            KushCraft.get().awards().fullRacks(player);
+        }
+        player.sendActionBar(Text.mm("<green>Hung " + hung + " buds <gray>- dry in "
+                + Text.time(KushCraft.get().machines().dryingSeconds())));
         player.playSound(player.getLocation(), "minecraft:block.azalea_leaves.place", SoundCategory.BLOCKS, 1f, 1f);
         render();
     }
 
+    /** Hangs the stack in inventory slot {@code slot} on a free rack (or one with the same buds). */
+    private int hang(int slot, ItemStack item) {
+        ItemStack inSlot = player.getInventory().getItem(slot);
+        if (inSlot == null || !inSlot.isSimilar(item)) {
+            return 0;
+        }
+        Strain s = Items.strain(inSlot);
+        int q = Items.quality(inSlot);
+        long now = System.currentTimeMillis();
+        long done = now + KushCraft.get().machines().dryingSeconds() * 1000L;
+        int target = -1;
+        for (int i = 0; i < Machine.RACKS && target < 0; i++) {
+            Machine.Rack r = machine.rack(i);
+            if (r != null && !r.dry() && r.strain().equals(s.id()) && r.quality() == q && r.amount() < CAPACITY) {
+                target = i; // top up a rack with the same buds (its timer restarts)
+            }
+        }
+        for (int i = 0; i < Machine.RACKS && target < 0; i++) {
+            if (machine.rack(i) == null) {
+                target = i;
+            }
+        }
+        if (target < 0) {
+            return 0;
+        }
+        Machine.Rack r = machine.rack(target);
+        int have = r == null ? 0 : r.amount();
+        int add = Math.min(CAPACITY - have, inSlot.getAmount());
+        inSlot.setAmount(inSlot.getAmount() - add);
+        player.getInventory().setItem(slot, inSlot.getAmount() <= 0 ? null : inSlot);
+        machine.rack(target, new Machine.Rack(s.id(), q, have + add, now, done));
+        if (inSlot.getAmount() > 0) {
+            return add + hang(slot, inSlot);
+        }
+        return add;
+    }
+
     @Override
     public void tick() {
-        if (machine.rackAmount() > 0) {
+        if (machine.racksInUse() > 0) {
             render();
         }
     }

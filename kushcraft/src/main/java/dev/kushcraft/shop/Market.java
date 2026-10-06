@@ -152,6 +152,11 @@ public final class Market {
         dirty |= changed;
     }
 
+    /** Products the market trades (for orders and cartel shipments). */
+    public List<ItemType> products() {
+        return sellablePool();
+    }
+
     private List<ItemType> sellablePool() {
         List<ItemType> out = new ArrayList<>();
         for (ItemType t : POOL) {
@@ -239,7 +244,7 @@ public final class Market {
     /** Hands in an order with items from the player's inventory. */
     public boolean complete(Player p, Order o) {
         if (!orders.contains(o)) {
-            p.sendActionBar(Text.mm("<red>Someone else already filled that order."));
+            p.sendActionBar(Text.mm("<red>Someone else already filled that contract."));
             return false;
         }
         int have = InventoryUtil.count(p, it -> Items.type(it) == o.type());
@@ -250,6 +255,7 @@ public final class Market {
         InventoryUtil.remove(p, it -> Items.type(it) == o.type(), o.amount());
         plugin.economy().deposit(p, o.reward());
         plugin.ranks().sold(p, o.reward());
+        plugin.cartels().contract(p.getUniqueId(), o.reward());
         plugin.awards().order(p);
         orders.remove(o);
         Order next = newOrder();
@@ -257,7 +263,7 @@ public final class Market {
             orders.add(next);
         }
         dirty = true;
-        Bukkit.broadcast(Text.msg("<white>" + Text.escape(p.getName()) + " <gray>completed an order: <white>"
+        Bukkit.broadcast(Text.msg("<white>" + Text.escape(p.getName()) + " <gray>filled a contract: <white>"
                 + o.amount() + "x " + o.type().display() + " <gray>for <gold>" + plugin.economy().format(o.reward())));
         return true;
     }

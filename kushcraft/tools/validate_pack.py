@@ -65,6 +65,83 @@ def check_model(ref, seen):
         check_model(m["parent"], seen)
 
 
+ITEM_MODEL_TYPES = ("minecraft:model", "minecraft:composite", "minecraft:select", "minecraft:empty")
+
+
+def model_refs(node, where):
+    """Every model an item definition can show (composite / select trees)."""
+    t = node.get("type")
+    if t not in ITEM_MODEL_TYPES:
+        errors.append(f"items/{where}: unexpected item model type {t}")
+        return []
+    if t == "minecraft:model":
+        tints = node.get("tints", [])
+        for tint in tints:
+            if tint.get("type") not in ("minecraft:constant", "minecraft:custom_model_data"):
+                errors.append(f"items/{where}: unexpected tint {tint}")
+        return [node["model"]]
+    if t == "minecraft:composite":
+        return [r for m in node["models"] for r in model_refs(m, where)]
+    if t == "minecraft:select":
+        if node.get("property") != "minecraft:custom_model_data":
+            errors.append(f"items/{where}: select on {node.get('property')}")
+        out = []
+        for case in node.get("cases", []):
+            out += model_refs(case["model"], where)
+        if "fallback" in node:
+            out += model_refs(node["fallback"], where)
+        return out
+    return []
+
+
+def check_animations():
+    """Animated textures (Mythic looks) have a valid .mcmeta and whole frames."""
+    tex_root = os.path.join(ASSETS, "kush", "textures")
+    count = 0
+    for root, _, files in os.walk(tex_root):
+        for fn in files:
+            if not fn.endswith(".png.mcmeta"):
+                continue
+            count += 1
+            meta = json.load(open(os.path.join(root, fn)))
+            anim = meta.get("animation")
+            img = Image.open(os.path.join(root, fn[:-7]))
+            fw = anim.get("width", img.width) if anim else 0
+            fh = anim.get("height", img.width) if anim else 0
+            if not anim or img.height % fh or img.width != fw or img.height // fh < 2:
+                errors.append(f"bad animation {fn}")
+    if count == 0:
+        errors.append("no animated Mythic textures")
+
+
+def check_strain_looks():
+    """Bud items pick a shape for every BudShape and an overlay for every Mythic look."""
+    strain_dir = os.path.join(JAVA, "dev", "kushcraft", "strain")
+    shapes = [s.lower() for s in re.findall(r"^    ([A-Z]+)\(", open(os.path.join(strain_dir, "BudShape.java")).read(), re.M)]
+    exotics = [s.lower() for s in re.findall(r"^    ([A-Z]+)\(", open(os.path.join(strain_dir, "Exotic.java")).read(), re.M)]
+    exotics = [e for e in exotics if e != "none"]
+
+    def cases(node):
+        return sorted(c["when"] for c in node.get("cases", []))
+
+    for item in ("bud_fresh", "bud_dried", "seed_pack", "plant_sativa_4", "plant_indica_3", "plant_hybrid_4"):
+        path = os.path.join(ASSETS, "kush", "items", item + ".json")
+        if not os.path.exists(path):
+            errors.append(f"items/{item}.json missing")
+            continue
+        root = json.load(open(path))["model"]
+        if root.get("type") != "minecraft:composite":
+            errors.append(f"items/{item}.json has no Mythic overlay")
+            continue
+        overlay = root["models"][1]
+        if overlay.get("index") != 1 or cases(overlay) != sorted(exotics):
+            errors.append(f"items/{item}.json Mythic looks {cases(overlay)} != Exotic {exotics}")
+        if item.startswith("bud_"):
+            shape = root["models"][0]
+            if shape.get("index") != 0 or sorted(cases(shape) + ["classic"]) != sorted(shapes):
+                errors.append(f"items/{item}.json bud shapes {cases(shape)} != BudShape {shapes}")
+
+
 def check_menus():
     """Every menu background used by Java has a glyph in the same order as
     tools/pack_meta.py, and the image has the right number of rows."""
@@ -146,7 +223,11 @@ def main():
     for fn in os.listdir(items_dir):
         item_defs.add(fn[:-5])
         d = json.load(open(os.path.join(items_dir, fn)))
-        check_model(d["model"]["model"], seen)
+        refs = model_refs(d["model"], fn)
+        if not refs:
+            errors.append(f"items/{fn} draws nothing")
+        for ref in refs:
+            check_model(ref, seen)
 
     font_dir = os.path.join(ASSETS, "kush", "font")
     for fn in sorted(os.listdir(font_dir)):
@@ -168,6 +249,8 @@ def main():
 
     check_menus()
     check_recipe_book()
+    check_animations()
+    check_strain_looks()
     if not os.path.exists(os.path.join(ASSETS, "kush", "textures", "gui", "advancements", "kush.png")):
         errors.append("advancement tab background gui/advancements/kush.png missing")
 
@@ -190,6 +273,8 @@ def main():
         for fn in files:
             src = open(os.path.join(root, fn)).read()
             for m in re.finditer(r'(?:icon|tintedIcon)\("([a-z0-9_]+)"', src):
+                if m.group(1).endswith("_"):
+                    continue  # built from a number, e.g. "gauge_" + step
                 used.add(m.group(1))
             for m in re.finditer(r'"(machine_[a-z_]+)"', src):
                 used.add(m.group(1))
@@ -215,6 +300,10 @@ def main():
     for kind in ("sativa", "indica", "hybrid"):
         for st in range(5):
             used.add(f"plant_{kind}_{st}")
+    dry_src = open(os.path.join(JAVA, "dev", "kushcraft", "gui", "DryMenu.java")).read()
+    steps = int(re.search(r"GAUGE_STEPS = (\d+);", dry_src).group(1))
+    for st in range(steps + 1):
+        used.add(f"gauge_{st}")
     for st in range(4):
         for kind in ("mushroom", "coca", "poppy", "peyote"):
             used.add(f"plant_{kind}_{st}")

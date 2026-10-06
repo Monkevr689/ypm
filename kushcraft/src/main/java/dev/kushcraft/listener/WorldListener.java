@@ -12,6 +12,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -91,6 +92,11 @@ public final class WorldListener implements Listener {
             if (r.nextDouble() < plugin.getConfig().getDouble("wild.grass-seed-chance", 0.04)) {
                 Strain s = plugin.strains().wildFor(b);
                 b.getWorld().dropItemNaturally(drop, Items.strainItem(ItemType.SEED_PACK, s, 3, 1));
+                if (s.exotic() != dev.kushcraft.strain.Exotic.NONE) {
+                    Bukkit.broadcast(dev.kushcraft.util.Text.msg("<white>" + dev.kushcraft.util.Text.escape(
+                            e.getPlayer().getName()) + " <gray>found wild " + s.rarity().colored() + " <gray>seeds: "
+                            + s.colored() + "<gray>!"));
+                }
             }
             String biome = b.getBiome().getKey().getKey().toLowerCase(Locale.ROOT);
             if ((biome.contains("jungle") || biome.contains("savanna"))
@@ -100,6 +106,12 @@ public final class WorldListener implements Listener {
             if (b.getType() == Material.DEAD_BUSH && (biome.contains("desert") || biome.contains("badlands"))
                     && r.nextDouble() < plugin.getConfig().getDouble("wild.peyote-seed-chance", 0.08)) {
                 b.getWorld().dropItemNaturally(drop, Items.create(ItemType.PEYOTE_SEEDS));
+            }
+        } else if (b.getType() == Material.WHEAT && b.getBlockData() instanceof Ageable age
+                && age.getAge() >= age.getMaximumAge()) {
+            // ergot: the fungus LSD is made from
+            if (r.nextDouble() < plugin.getConfig().getDouble("wild.ergot-chance", 0.06)) {
+                b.getWorld().dropItemNaturally(drop, Items.create(ItemType.ERGOT));
             }
         } else if (b.getType() == Material.POPPY) {
             if (r.nextDouble() < plugin.getConfig().getDouble("wild.poppy-seed-chance", 0.15)) {

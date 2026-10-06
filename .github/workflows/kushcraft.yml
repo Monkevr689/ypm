@@ -113,34 +113,62 @@ jobs:
           sleep 1
           sed -i "s#^  url: .*#  url: 'http://127.0.0.1:9000/pack.zip'#" plugins/KushCraft/config.yml
           grep -n "url:" plugins/KushCraft/config.yml
-          # also pretend this is a 1.3 config (version 4: rank list, exchange categories,
-          # no jobs/menu/awards sections) to test the upgrade to 2.0
+          # also pretend this is a 2.0 config (version 5: one Trade list, drying in
+          # minutes, no cartel section) and a 2.0 strains.yml (10 strains, no looks
+          # or climates, plus a bred strain) to test the upgrade to 3.0
           python3 - <<'PY'
           lines = open("plugins/KushCraft/config.yml").read().split("\n")
           out, skip = [], False
           for l in lines:
               if l and not l[0].isspace() and not l.startswith("#"):
-                  skip = l.split(":")[0] in ("menu", "exchange", "jobs", "ranks", "awards")
+                  skip = l.split(":")[0] in ("exchange", "cartel", "drying", "shop")
               if l.startswith("config-version:"):
-                  l = "config-version: 4"
+                  l = "config-version: 5"
               if not skip:
                   out.append(l)
           out += [
-              "ranks:",
-              "  - {name: Street Seller, color: gray, sales: 0, bonus: 0}",
-              "  - {name: Corner Dealer, color: green, sales: 2500, bonus: 0.05}",
+              "drying:",
+              "  minutes: 3",
+              "shop:",
+              "  buy:",
+              "    - {item: seed_pack, strain: og_kush, amount: 1, price: 40}",
+              "    - {item: lab_station, amount: 1, price: 900}",
+              "  sell:",
+              "    bud_dried: 15",
               "exchange:",
               "  enabled: true",
-              "  price-multiplier: 2.5",
-              "  categories:",
-              "    ores:",
-              "      name: Ores",
-              "      icon: diamond",
-              "      items:",
-              "        - {item: diamond, price: 120, amount: 1}",
+              "  price-multiplier: 1.0",
+              "  items:",
+              "    - {item: diamond, price: 1500, amount: 1}",
           ]
           open("plugins/KushCraft/config.yml", "w").write("\n".join(out) + "\n")
+          open("plugins/KushCraft/strains.yml", "w").write("""strains:
+            og_kush:
+              name: OG Kush
+              type: HYBRID
+              color: '#A8E05A'
+              potency: 20
+              effects: [GIGGLES, MUNCHIES, FOCUS]
+              wild-biomes: [forest, plains]
+            purple_kush:
+              name: Purple Kush
+              type: INDICA
+              color: '#A45AE8'
+              potency: 26
+              effects: [COUCH_LOCK, MUNCHIES, EUPHORIA]
+              wild-biomes: [dark_forest]
+            old_breed:
+              name: Old Breed
+              type: SATIVA
+              color: '#3A8AE8'
+              potency: 24
+              effects: [ENERGY, FLOATY]
+              wild-biomes: []
+              creator: 00000000-0000-0000-0000-000000000001
+              creator-name: Tester
+          """)
           PY
+          head -5 plugins/KushCraft/strains.yml
           grep -c "^exchange:" plugins/KushCraft/config.yml || true
           rm -f console && mkfifo console
           java -Xmx2G -jar paper.jar --nogui < console > server2.log 2>&1 &
@@ -163,13 +191,23 @@ jobs:
             echo "::error::built-in web server must not start when resource-pack.url is set"; exit 1
           fi
           echo "External URL test passed"
-          grep -q "Updated config.yml to version 5" server2.log || { echo "::error::config was not upgraded"; exit 1; }
-          grep -q "^exchange:" plugins/KushCraft/config.yml || { echo "::error::exchange section not added"; exit 1; }
-          grep -q "^  items:" plugins/KushCraft/config.yml || { echo "::error::Trade list not replaced"; exit 1; }
-          if grep -q "^  categories:" plugins/KushCraft/config.yml; then echo "::error::old exchange categories kept"; exit 1; fi
-          grep -q "^  titles:" plugins/KushCraft/config.yml || { echo "::error::leaderboard ranks not added"; exit 1; }
-          grep -q "^jobs:" plugins/KushCraft/config.yml || { echo "::error::jobs section not added"; exit 1; }
-          grep -q "^awards:" plugins/KushCraft/config.yml || { echo "::error::awards section not added"; exit 1; }
+          grep -q "Updated config.yml to version 6" server2.log || { echo "::error::config was not upgraded"; exit 1; }
+          grep -q "Updated strains.yml: 23 new strains" server2.log || { echo "::error::strains.yml was not upgraded"; exit 1; }
+          grep -q "^cartel:" plugins/KushCraft/config.yml || { echo "::error::cartel section not added"; exit 1; }
+          grep -q "^  categories:" plugins/KushCraft/config.yml || { echo "::error::Trade shelves not added"; exit 1; }
+          if grep -q "^  items:" plugins/KushCraft/config.yml; then echo "::error::old Trade list kept"; exit 1; fi
+          grep -q "^  seconds: 30" plugins/KushCraft/config.yml || { echo "::error::drying seconds not added"; exit 1; }
+          if grep -q "^  minutes: 3" plugins/KushCraft/config.yml; then echo "::error::old drying minutes kept"; exit 1; fi
+          if grep -q "seed_pack, strain" plugins/KushCraft/config.yml; then echo "::error::old seed prices kept"; exit 1; fi
+          grep -q "^  titles:" plugins/KushCraft/config.yml || { echo "::error::leaderboard ranks lost"; exit 1; }
+          grep -q "^jobs:" plugins/KushCraft/config.yml || { echo "::error::jobs section lost"; exit 1; }
+          grep -q "^awards:" plugins/KushCraft/config.yml || { echo "::error::awards section lost"; exit 1; }
+          grep -q "^version: 3" plugins/KushCraft/strains.yml || { echo "::error::strains.yml version not set"; exit 1; }
+          grep -q "creator-name: Tester" plugins/KushCraft/strains.yml || { echo "::error::bred strain lost"; exit 1; }
+          grep -A12 "^  og_kush:" plugins/KushCraft/strains.yml | grep -q "color: '#A8E05A'" \
+            || { echo "::error::own strain colour was overwritten"; exit 1; }
+          grep -A14 "^  og_kush:" plugins/KushCraft/strains.yml | grep -q "climate:" \
+            || { echo "::error::built-in strain did not get its climate"; exit 1; }
           grep -q "SELFTEST PASS" server2.log || { grep "selftest failure" server2.log; echo "::error::selftest failed on the upgraded config"; exit 1; }
           grep -q "url: .*127.0.0.1:9000/pack.zip" plugins/KushCraft/config.yml \
             || { echo "::error::upgrade lost resource-pack.url"; exit 1; }

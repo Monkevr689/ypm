@@ -1,16 +1,73 @@
 {
  "model": {
-  "type": "minecraft:model",
-  "model": "kush:item/seed_pack",
-  "tints": [
+  "type": "minecraft:composite",
+  "models": [
    {
-    "type": "minecraft:constant",
-    "value": 16777215
+    "type": "minecraft:model",
+    "model": "kush:item/seed_pack",
+    "tints": [
+     {
+      "type": "minecraft:constant",
+      "value": 16777215
+     },
+     {
+      "type": "minecraft:custom_model_data",
+      "index": 0,
+      "default": 6995514
+     }
+    ]
    },
    {
-    "type": "minecraft:custom_model_data",
-    "index": 0,
-    "default": 6995514
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 1,
+    "cases": [
+     {
+      "when": "rainbow",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/rainbow_seed_pack"
+      }
+     },
+     {
+      "when": "galaxy",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/galaxy_seed_pack"
+      }
+     },
+     {
+      "when": "golden",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/golden_seed_pack"
+      }
+     },
+     {
+      "when": "crystal",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/crystal_seed_pack"
+      }
+     },
+     {
+      "when": "neon",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/neon_seed_pack"
+      }
+     },
+     {
+      "when": "inferno",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/inferno_seed_pack"
+      }
+     }
+    ],
+    "fallback": {
+     "type": "minecraft:empty"
+    }
    }
   ]
  }

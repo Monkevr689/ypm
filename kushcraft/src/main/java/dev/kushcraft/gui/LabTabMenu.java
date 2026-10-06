@@ -79,15 +79,16 @@ public abstract class LabTabMenu extends Menu {
         return switch (t) {
             case COOK -> machine.busy() ? List.of(machine.jobDone() ? "<green>Batch ready!"
                     : "<yellow>Cooking: " + Math.round(machine.jobProgress() * 100) + "%") : List.of();
-            case DRY -> machine.rackAmount() > 0 ? List.of(machine.rackDry() ? "<green>Buds are dry!"
-                    : "<yellow>Drying " + machine.rackAmount() + " buds") : List.of();
+            case DRY -> machine.racksDry() > 0 ? List.of("<green>" + machine.racksDry() + " racks dry!")
+                    : machine.racksInUse() > 0 ? List.of("<yellow>Drying: " + machine.racksInUse() + "/" + Machine.RACKS)
+                    : List.of();
             default -> List.of();
         };
     }
 
     /** Something to collect on that tab. */
     private boolean ready(Tab t) {
-        return (t == Tab.COOK && machine.busy() && machine.jobDone()) || (t == Tab.DRY && machine.rackDry());
+        return (t == Tab.COOK && machine.busy() && machine.jobDone()) || (t == Tab.DRY && machine.racksDry() > 0);
     }
 
     private org.bukkit.inventory.ItemStack upgradeIcon() {
@@ -156,10 +157,11 @@ public abstract class LabTabMenu extends Menu {
         return row * 9 + col;
     }
 
-    /** Cook time multiplier: config x 0.85 per upgrade level. */
+    /** Cook time multiplier: config x 0.85 per upgrade level, minus the owner's cartel bonus. */
     public static double timeFactor(Machine m) {
         return Math.max(0.01, KushCraft.get().getConfig().getDouble("lab.time-multiplier", 1.0))
-                * Math.pow(0.85, Math.max(0, m.level() - 1));
+                * Math.pow(0.85, Math.max(0, m.level() - 1))
+                * (1 - KushCraft.get().cartels().labBonus(m.owner()));
     }
 
     /** Chance of one extra item per batch: 8% per upgrade level. */

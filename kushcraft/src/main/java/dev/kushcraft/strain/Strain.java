@@ -6,30 +6,47 @@ import dev.kushcraft.util.Text;
 import java.util.List;
 import java.util.UUID;
 
-/** A cannabis strain: built in, from strains.yml, or bred in the Strain Maker. */
+/** A cannabis strain: built in, from strains.yml, or bred in the Drug Lab. */
 public final class Strain {
 
     private final String id;
     private final String name;
     private final StrainType type;
-    private final int color;
+    private final Look look;
+    private final Climate climate;
     private final int potency;
     private final List<EffectType> effects;
     private final List<String> wildBiomes;
+    private final double wildWeight;
+    private final String flavor;
+    private final double price;
+    private final boolean inShop;
     private final UUID creator;
     private final String creatorName;
 
-    public Strain(String id, String name, StrainType type, int color, int potency, List<EffectType> effects,
-                  List<String> wildBiomes, UUID creator, String creatorName) {
+    public Strain(String id, String name, StrainType type, Look look, Climate climate, int potency,
+                  List<EffectType> effects, List<String> wildBiomes, double wildWeight, String flavor, double price,
+                  boolean inShop, UUID creator, String creatorName) {
         this.id = id;
         this.name = name;
         this.type = type;
-        this.color = color & 0xFFFFFF;
+        this.look = look;
+        this.climate = climate == null ? type.defaultClimate() : climate;
         this.potency = Math.max(5, Math.min(35, potency));
         this.effects = List.copyOf(effects);
         this.wildBiomes = List.copyOf(wildBiomes);
+        this.wildWeight = Math.max(0, wildWeight);
+        this.flavor = flavor == null ? "" : flavor;
+        this.price = price;
+        this.inShop = inShop;
         this.creator = creator;
         this.creatorName = creatorName;
+    }
+
+    /** A copy with another name (id stays the same). */
+    public Strain renamed(String newName) {
+        return new Strain(id, newName, type, look, climate, potency, effects, wildBiomes, wildWeight, flavor, price,
+                inShop, creator, creatorName);
     }
 
     public String id() {
@@ -44,8 +61,22 @@ public final class Strain {
         return type;
     }
 
+    public Look look() {
+        return look;
+    }
+
+    /** Bud colour. */
     public int color() {
-        return color;
+        return look.bud();
+    }
+
+    public Exotic exotic() {
+        return look.exotic();
+    }
+
+    /** The climate it grows best in. */
+    public Climate climate() {
+        return climate;
     }
 
     public int potency() {
@@ -60,6 +91,16 @@ public final class Strain {
         return wildBiomes;
     }
 
+    /** How often it turns up when grass drops seeds in its biomes (1 = normal, 0.02 = very rare). */
+    public double wildWeight() {
+        return wildWeight;
+    }
+
+    /** "Mango", "Diesel"... (empty when unknown). */
+    public String flavor() {
+        return flavor;
+    }
+
     public UUID creator() {
         return creator;
     }
@@ -72,13 +113,29 @@ public final class Strain {
         return creator != null;
     }
 
-    /** Coloured, escaped strain name in MiniMessage. */
+    /** Sold as seeds in the Shop (built-in strains unless strains.yml says shop: false). */
+    public boolean inShop() {
+        return inShop && !isCustom();
+    }
+
+    /** Shop price of one seed: strains.yml price, or by rarity and potency. */
+    public double seedPrice() {
+        if (price > 0) {
+            return price;
+        }
+        return Math.max(5, Math.round(rarity().seedPrice() * (0.6 + potency / 50.0) / 5.0) * 5.0);
+    }
+
+    /** Coloured, escaped strain name in MiniMessage (Mythic strains in their own colours). */
     public String colored() {
-        return "<color:" + Text.hex(brighten(color)) + ">" + Text.escape(name) + "</color>";
+        if (look.exotic() != Exotic.NONE) {
+            return look.exotic().wrap(Text.escape(name));
+        }
+        return "<color:" + Text.hex(brighten(look.bud())) + ">" + Text.escape(name) + "</color>";
     }
 
     public Rarity rarity() {
-        return Rarity.of(potency, effects.size());
+        return Rarity.of(potency, effects.size(), look.exotic());
     }
 
     /** Potency factor used for effect length and prices (0.25 .. 1.75). */

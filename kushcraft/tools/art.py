@@ -155,9 +155,9 @@ def inside(m, size=SIZE):
 # sprite
 # ---------------------------------------------------------------------------
 class Sprite:
-    def __init__(self, size=SIZE, seed=0):
+    def __init__(self, size=SIZE, seed=0, layers=3):
         self.size = size
-        self.layers = [Image.new("RGBA", (size, size), (0, 0, 0, 0)) for _ in range(3)]
+        self.layers = [Image.new("RGBA", (size, size), (0, 0, 0, 0)) for _ in range(layers)]
         self.rng = random.Random(seed)
 
     def img(self, layer=0):
@@ -173,7 +173,7 @@ class Sprite:
 
     def get(self, x, y):
         """(colour, layer) of the top-most pixel, or (None, None)."""
-        for i in (2, 1, 0):
+        for i in reversed(range(len(self.layers))):
             p = self.layers[i].getpixel((x, y))
             if p[3] > 0:
                 return p, i
@@ -271,10 +271,12 @@ class Sprite:
                 self.put(x + a, y + b, soft, layer)
 
     def flatten(self, tint=None):
-        """Composite (layer 1 multiplied by tint) for previews."""
+        """Composite for previews. tint: colour of layer 1, or {layer: colour}."""
+        tints = tint if isinstance(tint, dict) else ({1: tint} if tint is not None else {})
         base = Image.new("RGBA", (self.size, self.size), (0, 0, 0, 0))
         for i, l in enumerate(self.layers):
-            if i == 1 and tint is not None:
+            if i in tints:
+                tint = tints[i]
                 r, g, b = (tint >> 16) & 255, (tint >> 8) & 255, tint & 255
                 l = l.copy()
                 p = l.load()

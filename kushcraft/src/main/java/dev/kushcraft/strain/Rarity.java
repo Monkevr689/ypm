@@ -1,21 +1,28 @@
 package dev.kushcraft.strain;
 
-/** How special a strain is: from its potency and number of effects. Rarer strains sell for more. */
+/**
+ * How special a strain is: from its potency and number of effects, and
+ * Mythic for the rare animated looks. Rarer strains sell for more and their
+ * seeds cost more.
+ */
 public enum Rarity {
-    COMMON("Common", "gray", 1.0),
-    UNCOMMON("Uncommon", "green", 1.05),
-    RARE("Rare", "aqua", 1.15),
-    EPIC("Epic", "light_purple", 1.3),
-    LEGENDARY("Legendary", "gold", 1.5);
+    COMMON("Common", "<gray>", 1.0, 15),
+    UNCOMMON("Uncommon", "<green>", 1.1, 30),
+    RARE("Rare", "<aqua>", 1.25, 55),
+    EPIC("Epic", "<light_purple>", 1.45, 100),
+    LEGENDARY("Legendary", "<gold>", 1.7, 180),
+    MYTHIC("Mythic", "<gradient:#FF6AE8:#8A6AFF:#6AE8FF>", 2.5, 600);
 
     private final String display;
-    private final String color;
+    private final String open;
     private final double priceFactor;
+    private final double seedPrice;
 
-    Rarity(String display, String color, double priceFactor) {
+    Rarity(String display, String open, double priceFactor, double seedPrice) {
         this.display = display;
-        this.color = color;
+        this.open = open;
         this.priceFactor = priceFactor;
+        this.seedPrice = seedPrice;
     }
 
     public String display() {
@@ -23,11 +30,17 @@ public enum Rarity {
     }
 
     public String colored() {
-        return "<" + color + ">" + display + "</" + color + ">";
+        String tag = open.substring(1, open.indexOf(open.contains(":") ? ':' : '>'));
+        return open + display + "</" + tag + ">";
     }
 
     public double priceFactor() {
         return priceFactor;
+    }
+
+    /** Shop price of a seed of this rarity at 20% THC (strains.yml can set its own). */
+    public double seedPrice() {
+        return seedPrice;
     }
 
     /** potency 5-35, 1-4 effects. */
@@ -46,5 +59,9 @@ public enum Rarity {
             return UNCOMMON;
         }
         return COMMON;
+    }
+
+    public static Rarity of(int potency, int effects, Exotic exotic) {
+        return exotic != null && exotic != Exotic.NONE ? MYTHIC : of(potency, effects);
     }
 }

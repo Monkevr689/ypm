@@ -1,0 +1,10 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/bud/bud_dried_popcorn",
+  "layer1": "kush:item/bud/bud_dried_popcorn_bud",
+  "layer2": "kush:item/bud/bud_dried_popcorn_hair",
+  "layer3": "kush:item/bud/bud_dried_popcorn_leaf",
+  "layer4": "kush:item/bud/bud_dried_popcorn_frost"
+ }
+}

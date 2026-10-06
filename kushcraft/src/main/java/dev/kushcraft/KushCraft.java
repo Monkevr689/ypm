@@ -1,6 +1,7 @@
 package dev.kushcraft;
 
 import dev.kushcraft.award.Awards;
+import dev.kushcraft.cartel.Cartels;
 import dev.kushcraft.command.KushCommand;
 import dev.kushcraft.effect.EffectManager;
 import dev.kushcraft.gui.ChatInput;
@@ -50,6 +51,7 @@ public final class KushCraft extends JavaPlugin {
     private Exchange exchange;
     private Jobs jobs;
     private Awards awards;
+    private Cartels cartels;
     private ResourcePackManager pack;
 
     public static KushCraft get() {
@@ -77,6 +79,8 @@ public final class KushCraft extends JavaPlugin {
         market.load();
         exchange = new Exchange(this);
         exchange.load();
+        cartels = new Cartels(this);
+        cartels.load();
         jobs = new Jobs(this);
         jobs.load();
         machines = new MachineManager(this);
@@ -114,6 +118,7 @@ public final class KushCraft extends JavaPlugin {
         awards.registerAdvancements();
         market.start();
         exchange.start();
+        cartels.start();
         effects.start();
         machines.start();
         plants.start();
@@ -158,6 +163,9 @@ public final class KushCraft extends JavaPlugin {
         if (exchange != null) {
             exchange.save();
         }
+        if (cartels != null) {
+            cartels.save();
+        }
         Recipes.unregister();
     }
 
@@ -168,6 +176,8 @@ public final class KushCraft extends JavaPlugin {
         shop.load();
         ranks.load();
         exchange.load();
+        cartels.save();
+        cartels.load();
         jobs.load();
         economy.hook();
         Recipes.register(this);
@@ -218,15 +228,20 @@ public final class KushCraft extends JavaPlugin {
         return awards;
     }
 
+    public Cartels cartels() {
+        return cartels;
+    }
+
     /**
-     * Older configs get the 2.0 economy: new shop prices (cheap to start,
-     * product is worth more), the leaderboard ranks and the one-page Trade
-     * list with its much higher prices. Options added since are filled in;
-     * everything else you set yourself is kept, including resource-pack.url.
+     * Older configs are brought up to date. 2.0 (version 5) brought new shop
+     * prices, the leaderboard ranks and the Trade list; 3.0 (version 6)
+     * cheaper gear and recipes, strain seed prices from strains.yml, Trade
+     * shelves, 30 second drying and cartels. Options added since are filled
+     * in; everything else you set yourself is kept, including resource-pack.url.
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 5) {
+        if (version >= 6) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -235,22 +250,28 @@ public final class KushCraft extends JavaPlugin {
         }
         YamlConfiguration def = YamlConfiguration.loadConfiguration(
                 new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+        if (version < 5) {
+            for (String key : List.of("ranks", "strain-maker.anywhere")) {
+                getConfig().set(key, null);
+            }
+            for (String key : List.of("economy.starting-balance", "market.demand-drop", "market.recovery-per-minute",
+                    "market.order-bonus", "exchange.price-multiplier", "exchange.sell-ratio")) {
+                getConfig().set(key, def.get(key));
+            }
+        }
         // removed here, filled in again from the defaults below
-        for (String key : List.of("shop.buy", "shop.sell", "ranks", "exchange.categories", "exchange.items",
-                "strain-maker.anywhere")) {
+        for (String key : List.of("shop.buy", "shop.sell", "exchange.categories", "exchange.items", "drying.minutes")) {
             getConfig().set(key, null);
         }
-        for (String key : List.of("strain-maker.cost", "economy.starting-balance", "market.demand-drop",
-                "market.recovery-per-minute", "market.order-bonus", "lab.upgrade-costs", "exchange.price-multiplier",
-                "exchange.sell-ratio")) {
+        for (String key : List.of("strain-maker.cost", "lab.upgrade-costs")) {
             getConfig().set(key, def.get(key));
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 5);
+        getConfig().set("config-version", 6);
         saveConfig();
-        getLogger().info("Updated config.yml to version 5 (2.0 prices, leaderboard ranks, Trade list, awards)."
-                + " Your resource pack settings were kept.");
+        getLogger().info("Updated config.yml to version 6 (3.0: cheaper shop and recipes, Trade shelves, cartels,"
+                + " 30s drying). Your resource pack settings were kept.");
     }
 
     public ResourcePackManager pack() {

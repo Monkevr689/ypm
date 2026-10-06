@@ -52,7 +52,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/top.png",
+   "file": "kush:gui/cartel.png",
    "ascent": 13,
    "height": 222,
    "chars": [
@@ -61,7 +61,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/awards.png",
+   "file": "kush:gui/top.png",
    "ascent": 13,
    "height": 222,
    "chars": [
@@ -70,16 +70,16 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/cook.png",
+   "file": "kush:gui/awards.png",
    "ascent": 13,
-   "height": 204,
+   "height": 222,
    "chars": [
     "\ue005"
    ]
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/roll.png",
+   "file": "kush:gui/cook.png",
    "ascent": 13,
    "height": 204,
    "chars": [
@@ -88,7 +88,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/dry.png",
+   "file": "kush:gui/roll.png",
    "ascent": 13,
    "height": 204,
    "chars": [
@@ -97,7 +97,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/mix.png",
+   "file": "kush:gui/dry.png",
    "ascent": 13,
    "height": 204,
    "chars": [
@@ -106,7 +106,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/recipe.png",
+   "file": "kush:gui/mix.png",
    "ascent": 13,
    "height": 204,
    "chars": [
@@ -115,11 +115,20 @@
   },
   {
    "type": "bitmap",
+   "file": "kush:gui/recipe.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue00a"
+   ]
+  },
+  {
+   "type": "bitmap",
    "file": "kush:gui/list.png",
    "ascent": 13,
    "height": 222,
    "chars": [
-    "\ue00a"
+    "\ue00b"
    ]
   }
  ]

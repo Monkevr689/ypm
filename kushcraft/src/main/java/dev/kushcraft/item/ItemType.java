@@ -38,6 +38,8 @@ public enum ItemType {
             "<gray>Plant on dirt, moss or mycelium."),
     SHROOM_TEA("Shroom Tea", "shroom_tea", false, false,
             "<gray>Right-click to drink."),
+    ERGOT("Ergot", "ergot", false, false,
+            "<gray>Fungus from wheat. Cook it into LSD."),
     // --- hard drugs -----------------------------------------------------
     LUCID_TAB("LSD Tab", "lucid_tab", false, false,
             "<gray>Right-click to use."),
@@ -85,7 +87,7 @@ public enum ItemType {
     BONG("Bong", "bong", false, false,
             "<gray>Right-click: smoke bud, hash or moon rock."),
     LAB_SOLVENT("Lab Solvent", "lab_solvent", false, false,
-            "<gray>Used in most Drug Lab recipes."),
+            "<gray>Used in some Drug Lab recipes."),
     CATALYST("Catalyst", "catalyst", false, false,
             "<dark_gray>Not needed any more."),
     FERTILIZER("Fertilizer", "fertilizer", false, false,

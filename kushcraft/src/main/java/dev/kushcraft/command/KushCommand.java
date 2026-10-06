@@ -3,6 +3,7 @@ package dev.kushcraft.command;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.effect.EffectType;
 import dev.kushcraft.gui.AwardsMenu;
+import dev.kushcraft.gui.CartelMenu;
 import dev.kushcraft.gui.DrugsMenu;
 import dev.kushcraft.gui.GiveMenu;
 import dev.kushcraft.gui.ShopMenu;
@@ -67,6 +68,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "top", "ranks", "leaderboard" -> open(sender, TopMenu::new);
+            case "cartel", "gang", "c" -> cartel(sender, args);
             case "awards", "achievements" -> open(sender, AwardsMenu::new);
             case "items" -> {
                 if (!admin) {
@@ -136,8 +138,9 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     for (EffectType e : s.effects()) {
                         eff.append(eff.isEmpty() ? "" : ", ").append(e.display());
                     }
-                    sender.sendMessage(Text.mm(" " + s.colored() + " <dark_gray>" + s.type().display() + " "
-                            + s.potency() + "% <gray>" + eff + (s.isCustom() ? " <dark_gray>by " + Text.escape(s.creatorName()) : "")));
+                    sender.sendMessage(Text.mm(" " + s.colored() + " <dark_gray>" + s.rarity().display() + " "
+                            + s.type().display() + " " + s.potency() + "% " + s.climate().display() + " <gray>" + eff
+                            + (s.isCustom() ? " <dark_gray>by " + Text.escape(s.creatorName()) : "")));
                 }
             }
             case "give" -> {
@@ -167,7 +170,8 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Text.msg("<green>KushCraft <gray>- type <white>/kush</white> (or press <white>Shift+F</white>)"
                         + " to open the menu!"));
                 sender.sendMessage(Text.mm(" <white>/kush <gray>- the menu (everything is in there)"));
-                sender.sendMessage(Text.mm(" <white>/kush shop|drugs|trade|top|awards <gray>- open a tab directly"));
+                sender.sendMessage(Text.mm(" <white>/kush shop|drugs|trade|cartel|top|awards <gray>- open a tab directly"));
+                sender.sendMessage(Text.mm(" <white>/kush cartel invite|join|leave <gray>- cartels"));
                 sender.sendMessage(Text.mm(" <white>/kush pay <player> <amount> <gray>- send money"));
                 sender.sendMessage(Text.mm(" <white>/kush guide <gray>- the handbook"));
                 sender.sendMessage(Text.mm(" <white>/kush pack <gray>- re-download the texture pack"));
@@ -182,6 +186,43 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             }
         }
         return true;
+    }
+
+    /** /kush cartel [invite <player> | join <cartel> | leave] */
+    private void cartel(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player p)) {
+            sender.sendMessage(Text.msg("<red>Only players can be in a cartel."));
+            return;
+        }
+        if (!plugin.cartels().enabled()) {
+            p.sendMessage(Text.msg("<red>Cartels are turned off on this server."));
+            return;
+        }
+        String action = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "";
+        String error;
+        switch (action) {
+            case "invite" -> {
+                Player t = args.length >= 3 ? Bukkit.getPlayerExact(args[2]) : null;
+                error = t == null ? "/kush cartel invite <player> (online)" : plugin.cartels().invite(p, t);
+                if (error == null) {
+                    p.sendMessage(Text.msg("<green>Invited " + Text.escape(t.getName()) + "."));
+                }
+            }
+            case "join" -> {
+                dev.kushcraft.cartel.Cartel c = args.length >= 3
+                        ? plugin.cartels().byName(String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)))
+                        : null;
+                error = c == null ? "No cartel with that name." : plugin.cartels().join(p, c);
+            }
+            case "leave" -> error = plugin.cartels().leave(p);
+            default -> {
+                new CartelMenu(p).open();
+                return;
+            }
+        }
+        if (error != null) {
+            p.sendMessage(Text.msg("<red>" + error));
+        }
     }
 
     private static void open(CommandSender sender, java.util.function.Function<Player, dev.kushcraft.gui.Menu> menu) {
@@ -296,7 +337,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
-            out.addAll(List.of("menu", "shop", "drugs", "trade", "top", "awards", "pay", "guide", "pack",
+            out.addAll(List.of("menu", "shop", "drugs", "trade", "cartel", "top", "awards", "pay", "guide", "pack",
                     "balance", "strains", "help"));
             if (admin) {
                 out.addAll(List.of("give", "items", "money", "sales", "reload"));
@@ -315,6 +356,12 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             } else if (args.length == 6) {
                 out.addAll(List.of("1", "2", "3", "4", "5"));
             }
+        } else if (args[0].equalsIgnoreCase("cartel") && args.length == 2) {
+            out.addAll(List.of("invite", "join", "leave"));
+        } else if (args[0].equalsIgnoreCase("cartel") && args.length == 3 && args[1].equalsIgnoreCase("invite")) {
+            Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
+        } else if (args[0].equalsIgnoreCase("cartel") && args.length == 3 && args[1].equalsIgnoreCase("join")) {
+            plugin.cartels().all().forEach(c -> out.add(c.id()));
         } else if (args[0].equalsIgnoreCase("pay") && args.length == 2) {
             Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (admin && (args[0].equalsIgnoreCase("money") || args[0].equalsIgnoreCase("sales") || args[0].equalsIgnoreCase("balance")) && args.length == 2) {

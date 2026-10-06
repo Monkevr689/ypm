@@ -1,9 +1,11 @@
 """Procedural cannabis + magic mushroom plant textures and their 3D models.
 
-Cannabis plants are vanilla-style crossed planes.  Each stage can carry two
-extra plane layers: buds (tintindex 0, coloured per strain in-game) and
-pistils (untinted).  Sativa grows two blocks tall, indica stays short and
-bushy, hybrid sits in between.
+Cannabis plants are vanilla-style crossed planes drawn in greys so every
+strain can colour them: leaves (tintindex 1, the strain's leaf colour),
+buds (tintindex 0, bud colour), pistils (tintindex 2, hair colour) and an
+untinted frost layer. Flowering plants of Mythic strains get an animated
+overlay on their buds (tools/buds.py). Sativa grows two blocks tall,
+indica stays short and bushy, hybrid sits in between.
 """
 import math
 import random
@@ -12,12 +14,13 @@ from PIL import Image
 
 G = None  # gen_assets module (set in generate)
 
+# greys: the game multiplies them with the strain's leaf colour
 PALETTES = {
-    "sativa": dict(leaf="6cc23a", leaf_hi="a8e862", leaf_dk="3a8a22", stem="7a9a40", stem_dk="4e6e28"),
-    "indica": dict(leaf="3a8a30", leaf_hi="62b24a", leaf_dk="1f5a1c", stem="5c7a30", stem_dk="3e5420"),
-    "hybrid": dict(leaf="52a834", leaf_hi="8cd256", leaf_dk="2c7020", stem="688a36", stem_dk="465e24"),
+    "sativa": dict(leaf="d4d4d4", leaf_hi="f6f6f6", leaf_dk="8a8a8a", stem="b4b4b4", stem_dk="7a7a7a"),
+    "indica": dict(leaf="b0b0b0", leaf_hi="d8d8d8", leaf_dk="6a6a6a", stem="9a9a9a", stem_dk="646464"),
+    "hybrid": dict(leaf="c4c4c4", leaf_hi="e8e8e8", leaf_dk="7c7c7c", stem="a8a8a8", stem_dk="707070"),
 }
-YELLOW = (214, 190, 70, 255)
+YELLOW = (255, 255, 236, 255)  # old fan leaves fade lighter
 W = 32  # texture width: 32 px per block (twice the vanilla detail)
 
 
@@ -100,40 +103,52 @@ def stem(img, x, y0, y1, pal, thick_until=None):
             px(img, x - 1, y, s)
 
 
-def bud(img, x, y, w, h, pist, pist_color, rng):
-    """A cola (greys, tinted in game) made of little round calyxes, with
-    pistils and frost on the pistil layer."""
-    tones = [(96, 96, 96, 255), (168, 168, 168, 255), (220, 220, 220, 255), (250, 250, 250, 255)]
-    rows = max(2, int(h / 2.6))
+def bud(img, x, y, w, h, pist, frost, young, rng):
+    """A cola made of little round calyxes (greys, tinted with the bud
+    colour in game), with hairs on the pistil layer (tinted with the hair
+    colour) and white frost on the frost layer."""
+    tones = [(92, 92, 92, 255), (170, 170, 170, 255), (222, 222, 222, 255), (252, 252, 252, 255)]
+    rows = max(2, int(h / 2.4))
     cells = []
     for i in range(rows):
         t = i / max(1, rows - 1)
-        ww = w * (0.45 + 0.55 * math.sin(math.pi * min(1.0, 0.15 + t * 0.9)))
-        n = max(1, int(round(ww / 2.6)))
+        ww = w * (0.4 + 0.6 * math.sin(math.pi * min(1.0, 0.12 + t * 0.92)))
+        n = max(1, int(round(ww / 2.4)))
         for j in range(n):
-            ox = (j - (n - 1) / 2) * (ww / n) + rng.uniform(-0.4, 0.4)
-            cells.append((x + ox, y + 1.2 + t * (h - 2.4), 1.7 + rng.uniform(0, 0.5)))
+            ox = (j - (n - 1) / 2) * (ww / n) + (0.6 if i % 2 else -0.3) + rng.uniform(-0.4, 0.4)
+            cells.append((x + ox, y + 1.2 + t * (h - 2.4), 1.6 + rng.uniform(0, 0.5)))
     body = set()
     for (cx, cy, r) in sorted(cells, key=lambda c: c[1]):
         for yy in range(int(cy - r - 1), int(cy + r + 2)):
             for xx in range(int(cx - r - 1), int(cx + r + 2)):
-                dx, dy = (xx + 0.5 - cx) / r, (yy + 0.5 - cy) / r
+                dx, dy = (xx + 0.5 - cx) / r, (yy + 0.5 - cy) / (r * 0.9)
                 if dx * dx + dy * dy <= 1.0 and 0 <= xx < img.width and 0 <= yy < img.height:
                     lightness = -(dx * 0.62 + dy * 0.78)
-                    tone = tones[2] if lightness > 0.3 else tones[1] if lightness > -0.35 else tones[0]
+                    e = math.hypot(dx, dy)
+                    tone = tones[2] if (lightness > 0.3 and e > 0.3) else tones[0] if (lightness < -0.3 and e > 0.55) else tones[1]
                     img.putpixel((xx, yy), tone)
                     body.add((xx, yy))
-        px(img, cx - r * 0.4, cy - r * 0.45, tones[3])
+        hx, hy = int(cx - r * 0.4), int(cy - r * 0.45)
+        px(img, hx, hy, tones[3])
+        if frost is not None and rng.random() < 0.35:
+            px(frost, hx, hy, (255, 255, 248, 235))
+    # a dark outline on the outside keeps the buds readable from afar
+    for (bx, by) in list(body):
+        for (ax, ay) in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            q = (bx + ax, by + ay)
+            if q not in body and 0 <= q[0] < img.width and 0 <= q[1] < img.height and img.getpixel(q)[3] == 0:
+                img.putpixel(q, (60, 60, 60, 255))
     if pist is not None:
-        pts = sorted(body)
-        for (bx, by) in pts:
-            v = rng.random()
-            if v < 0.13:
-                px(pist, bx, by, pist_color)
-                if rng.random() < 0.5:
-                    px(pist, bx + rng.choice((-1, 1)), by - 1, pist_color)
-            elif v < 0.19:
-                px(pist, bx, by, (250, 255, 244, 255))
+        light, dark = ((250, 250, 250, 255), (205, 205, 205, 255))
+        edge_px = [p for p in sorted(body) if any((p[0] + a, p[1] + b) not in body for a, b in ((1, 0), (-1, 0), (0, -1)))]
+        n = max(3, int(len(body) * (0.14 if young else 0.1)))
+        for _ in range(n):
+            (bx, by) = rng.choice(edge_px)
+            side = -1 if bx < x else 1
+            px(pist, bx, by, light)
+            px(pist, bx + side, by - 1, light if young else dark)
+            if rng.random() < 0.5:
+                px(pist, bx + side * 2, by - 1, dark)
 
 
 # Hand-tuned layouts in texture pixels (32 per block): nodes are (y, leaf size,
@@ -161,7 +176,7 @@ SPECS = {
 
 
 def plant_texture(kind, stage):
-    """Returns (leaves, buds, pistils, height) for the given type/stage."""
+    """Returns (leaves, buds, pistils, frost, height) for the given type/stage."""
     rng = random.Random(f"{kind}-{stage}")
     pal = PALETTES[kind]
     rgba = G.rgba
@@ -172,19 +187,20 @@ def plant_texture(kind, stage):
         p = PALETTES["hybrid"]
         stem(leaves, cx, 31, 23, p)
         for (x, y) in ((cx - 2, 24), (cx - 4, 23), (cx - 5, 22), (cx + 2, 24), (cx + 4, 23), (cx + 5, 22)):
-            px(leaves, x, y, rgba("8ad84a"))
-            px(leaves, x, y + 1, rgba("5aa83a"))
+            px(leaves, x, y, rgba("f0f0f0"))
+            px(leaves, x, y + 1, rgba("b4b4b4"))
         leaf(leaves, cx + 0.5, 22, 90, 4.5, p)
-        return leaves, None, None, 32
+        return leaves, None, None, None, 32
 
     spec = SPECS[kind][stage]
     H = spec["H"]
     leaves = Image.new("RGBA", (W, H))
     buds = Image.new("RGBA", (W, H))
     pist = Image.new("RGBA", (W, H))
+    frost = Image.new("RGBA", (W, H))
     bottom = H - 1
     stem(leaves, cx, bottom, spec["top"], pal, thick_until=bottom - 10 if stage >= 2 else None)
-    pistil_c = rgba("f4f4f4" if stage == 3 else "ec8a32")
+    young = stage == 3
     nodes = spec["nodes"]
     for i, (ny, size, ang) in enumerate(nodes):
         fade = 0.45 if (stage == 4 and i == 0) else 0.0
@@ -199,8 +215,8 @@ def plant_texture(kind, stage):
             # side colas at the branch tips
             for side in (-1, 1):
                 bx = cx + 0.5 + side * size * 0.55
-                bud(buds, bx, ny - h - 1, w * 0.7, h * 0.8, pist, pistil_c, rng)
-            bud(buds, cx + 0.5, ny - h, w, h, pist, pistil_c, rng)
+                bud(buds, bx, ny - h - 1, w * 0.7, h * 0.8, pist, frost, young, rng)
+            bud(buds, cx + 0.5, ny - h, w, h, pist, frost, young, rng)
     leaf(leaves, cx + 0.5, spec["top"] + 2, 90, spec["apex"], pal, broad, 0, rng)
     if stage >= 3:
         top = spec["top"]
@@ -208,8 +224,8 @@ def plant_texture(kind, stage):
             w, h = (8, 6) if broad else (6, 8)
         else:
             w, h = (10, 10) if broad else (8, 16 if kind == "sativa" else 12)
-        bud(buds, cx + 0.5, top, w, h, pist, pistil_c, rng)
-    return leaves, buds, pist, H
+        bud(buds, cx + 0.5, top, w, h, pist, frost, young, rng)
+    return leaves, buds, pist, frost, H
 
 
 # ---------------------------------------------------------------------------
@@ -241,15 +257,23 @@ def plant_model(name, tall, has_buds):
         tex["leaves_top"] = f"{G.NS}:block/plant/{name}_top"
         el += cross(16, 32, "#leaves_top", tint=1, planes=3)
     if has_buds:
-        tex["buds"] = f"{G.NS}:block/plant/{name}_buds"
-        tex["pistils"] = f"{G.NS}:block/plant/{name}_pistils"
-        el += cross(0, 16, "#buds", 0.12, tint=0, planes=3)
-        el += cross(0, 16, "#pistils", 0.24, planes=3)
-        if tall:
-            tex["buds_top"] = f"{G.NS}:block/plant/{name}_buds_top"
-            tex["pistils_top"] = f"{G.NS}:block/plant/{name}_pistils_top"
-            el += cross(16, 32, "#buds_top", 0.12, tint=0, planes=3)
-            el += cross(16, 32, "#pistils_top", 0.24, planes=3)
+        for part, depth, tint in (("buds", 0.12, 0), ("pistils", 0.24, 2), ("frost", 0.3, None)):
+            tex[part] = f"{G.NS}:block/plant/{name}_{part}"
+            el += cross(0, 16, "#" + part, depth, tint=tint, planes=3)
+            if tall:
+                tex[part + "_top"] = f"{G.NS}:block/plant/{name}_{part}_top"
+                el += cross(16, 32, "#" + part + "_top", depth, tint=tint, planes=3)
+    return {"ambientocclusion": False, "textures": tex, "elements": el}
+
+
+def exotic_model(name, ex, tall):
+    """Animated Mythic look over the buds (between the buds and the hairs)."""
+    base = f"{G.NS}:block/plant/exotic/{ex}_{name}"
+    tex = {"particle": base, "glow": base}
+    el = cross(0, 16, "#glow", 0.18, planes=3)
+    if tall:
+        tex["glow_top"] = base + "_top"
+        el += cross(16, 32, "#glow_top", 0.18, planes=3)
     return {"ambientocclusion": False, "textures": tex, "elements": el}
 
 
@@ -266,31 +290,70 @@ def split_save(img, rel):
 PREVIEW = []
 
 
+LEAF_DEFAULT = 0x4E9E34
+PISTIL_DEFAULT = 0xE8862E
+
+
 def cannabis():
+    import buds as budart
     for kind in ("sativa", "indica", "hybrid"):
         for stage in range(5):
             name = f"{kind}_{stage}"
-            leaves, buds, pist, H = plant_texture(kind, stage)
+            leaves, buds, pist, frost, H = plant_texture(kind, stage)
             split_save(leaves, f"block/plant/{name}")
             has_buds = buds is not None and buds.getbbox() is not None
+            tall = H == 2 * W
             if has_buds:
                 split_save(buds, f"block/plant/{name}_buds")
                 split_save(pist, f"block/plant/{name}_pistils")
-            G.save_json(plant_model(name, H == 2 * W, has_buds), f"models/plant/{name}.json")
-            # tint 0 = bud colour, tint 1 = leaf colour (both from the strain)
-            G.save_json(G.item_definition(f"{G.NS}:plant/{name}", [
+                split_save(frost, f"block/plant/{name}_frost")
+            G.save_json(plant_model(name, tall, has_buds), f"models/plant/{name}.json")
+            # tint 0 = bud colour, 1 = leaf colour, 2 = hair colour (all from the strain)
+            base = {"type": "minecraft:model", "model": f"{G.NS}:plant/{name}", "tints": [
                 {"type": "minecraft:custom_model_data", "index": 0, "default": G.DEFAULT_TINT},
-                {"type": "minecraft:custom_model_data", "index": 1, "default": G.WHITE}]),
-                f"items/plant_{name}.json")
-            # preview: composite with a tint
-            for tint in ((0x6abe3a, 0xa04fd8) if has_buds else (None,)):
+                {"type": "minecraft:custom_model_data", "index": 1, "default": LEAF_DEFAULT},
+                {"type": "minecraft:custom_model_data", "index": 2, "default": PISTIL_DEFAULT}]}
+            if has_buds:
+                mask = budart.mask_of(buds)
+                refs = {}
+                for ex in budart.EXOTICS:
+                    frames = budart.overlay_frames(ex, mask, W, H, name)
+                    if tall:
+                        # one animated texture per block: bottom half and top half
+                        budart.save_animated([f.crop((0, W, W, 2 * W)) for f in frames], f"block/plant/exotic/{ex}_{name}")
+                        budart.save_animated([f.crop((0, 0, W, W)) for f in frames], f"block/plant/exotic/{ex}_{name}_top")
+                    else:
+                        budart.save_animated(frames, f"block/plant/exotic/{ex}_{name}")
+                    G.save_json(exotic_model(name, ex, tall), f"models/plant/exotic/{ex}_{name}.json")
+                    refs[ex] = f"{G.NS}:plant/exotic/{ex}_{name}"
+                definition = {"type": "minecraft:composite", "models": [base, budart.exotic_select(lambda ex: refs[ex])]}
+            else:
+                definition = base
+            G.save_json({"model": definition}, f"items/plant_{name}.json")
+            # preview: composite with a few strain looks
+            for (bud_c, leaf_c, pist_c) in (((0x8FD14F, 0x4C9A30, 0xE8862E), (0xA45AE8, 0x5A3A82, 0xF08AD8))
+                                            if has_buds else ((None, 0x4C9A30, None),)):
                 canvas = Image.new("RGBA", (W, 2 * W))
-                canvas.alpha_composite(leaves, (0, 2 * W - H))
+                canvas.alpha_composite(tinted(leaves, leaf_c), (0, 2 * W - H))
                 if has_buds:
-                    t = G.composite([Image.new("RGBA", (W, H)), buds], tint)
-                    canvas.alpha_composite(t, (0, 2 * W - H))
-                    canvas.alpha_composite(pist, (0, 2 * W - H))
+                    canvas.alpha_composite(tinted(buds, bud_c), (0, 2 * W - H))
+                    canvas.alpha_composite(tinted(pist, pist_c), (0, 2 * W - H))
+                    canvas.alpha_composite(frost, (0, 2 * W - H))
                 PREVIEW.append(canvas)
+
+
+def tinted(img, rgb):
+    if rgb is None:
+        return img
+    out = img.copy()
+    p = out.load()
+    r, g, b = (rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255
+    for y in range(out.height):
+        for x in range(out.width):
+            pr, pg, pb, pa = p[x, y]
+            if pa:
+                p[x, y] = (pr * r // 255, pg * g // 255, pb * b // 255, pa)
+    return out
 
 
 # ---------------------------------------------------------------------------

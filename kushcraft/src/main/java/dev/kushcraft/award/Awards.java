@@ -5,6 +5,7 @@ import dev.kushcraft.KushCraft;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.lab.LabRecipe;
 import dev.kushcraft.plant.Plant;
+import dev.kushcraft.strain.Climate;
 import dev.kushcraft.strain.Rarity;
 import dev.kushcraft.util.Text;
 import io.papermc.paper.event.server.ServerResourcesReloadedEvent;
@@ -54,6 +55,8 @@ public final class Awards implements Listener {
         final Map<String, Integer> stats = new HashMap<>();
         final Set<String> cooked = new HashSet<>();
         final Set<String> tried = new HashSet<>();
+        final Set<String> climates = new HashSet<>();
+        final Set<String> grown = new HashSet<>();
     }
 
     private final KushCraft plugin;
@@ -104,6 +107,8 @@ public final class Awards implements Listener {
             }
             d.cooked.addAll(sec.getStringList(k + ".cooked"));
             d.tried.addAll(sec.getStringList(k + ".tried"));
+            d.climates.addAll(sec.getStringList(k + ".climates"));
+            d.grown.addAll(sec.getStringList(k + ".grown"));
             data.put(id, d);
         }
     }
@@ -119,6 +124,8 @@ public final class Awards implements Listener {
             d.stats.forEach((s, v) -> y.set(k + ".stats." + s, v));
             y.set(k + ".cooked", new ArrayList<>(d.cooked));
             y.set(k + ".tried", new ArrayList<>(d.tried));
+            y.set(k + ".climates", new ArrayList<>(d.climates));
+            y.set(k + ".grown", new ArrayList<>(d.grown));
         }
         try {
             y.save(file);
@@ -164,6 +171,11 @@ public final class Awards implements Listener {
         return d == null ? 0 : d.cooked.size();
     }
 
+    private int set(OfflinePlayer p, java.util.function.Function<Data, Set<String>> which) {
+        Data d = data.get(p.getUniqueId());
+        return d == null ? 0 : which.apply(d).size();
+    }
+
     public int triedKinds(OfflinePlayer p) {
         Data d = data.get(p.getUniqueId());
         return d == null ? 0 : d.tried.size();
@@ -190,6 +202,8 @@ public final class Awards implements Listener {
             case ORDERS_25 -> Math.min(25, stat(p, "orders")) + "/25";
             case TRY_10 -> Math.min(10, triedKinds(p)) + "/10";
             case TRY_ALL -> triedKinds(p) + "/" + drugs().size();
+            case ALL_CLIMATES -> Math.min(6, set(p, d -> d.climates)) + "/6";
+            case COLLECTOR -> Math.min(10, set(p, d -> d.grown)) + "/10";
             case SOLD_10K, SOLD_100K, SOLD_1M -> plugin.economy().format(plugin.economy().sales(p));
             default -> null;
         };
@@ -231,8 +245,9 @@ public final class Awards implements Listener {
         grant(p, Award.FIRST_SEED);
     }
 
-    public void harvested(Player p, Plant.Kind kind) {
+    public void harvested(Player p, Plant.Kind kind, String strain, Climate.Fit fit, Climate where) {
         int n = add(p, "harvest", 1);
+        Data d = of(p.getUniqueId());
         grant(p, Award.FIRST_HARVEST);
         switch (kind) {
             case MUSHROOM -> grant(p, Award.SHROOMS);
@@ -247,6 +262,21 @@ public final class Awards implements Listener {
         }
         if (n >= 1000) {
             grant(p, Award.HARVEST_1000);
+        }
+        if (fit == Climate.Fit.IDEAL) {
+            grant(p, Award.IDEAL_CLIMATE);
+        }
+        if (where != null && kind != Plant.Kind.MUSHROOM && d.climates.add(where.name())) {
+            dirty = true;
+        }
+        if (d.climates.size() >= Climate.values().length) {
+            grant(p, Award.ALL_CLIMATES);
+        }
+        if (strain != null && kind == Plant.Kind.CANNABIS && d.grown.add(strain)) {
+            dirty = true;
+        }
+        if (d.grown.size() >= 10) {
+            grant(p, Award.COLLECTOR);
         }
     }
 
@@ -264,6 +294,10 @@ public final class Awards implements Listener {
         grant(p, Award.FIRST_DRY);
     }
 
+    public void fullRacks(Player p) {
+        grant(p, Award.FULL_RACKS);
+    }
+
     public void rolled(Player p, ItemType type) {
         grant(p, type == ItemType.BLUNT ? Award.BLUNT : Award.FIRST_ROLL);
     }
@@ -275,6 +309,9 @@ public final class Awards implements Listener {
         grant(p, Award.FIRST_COOK);
         if (r == LabRecipe.BLUE_CRYSTAL) {
             grant(p, Award.BLUE_SKY);
+        }
+        if (r == LabRecipe.LUCID_TAB) {
+            grant(p, Award.ACID);
         }
         if (n >= 100) {
             grant(p, Award.COOK_100);
@@ -322,8 +359,11 @@ public final class Awards implements Listener {
         if (rarity.ordinal() >= Rarity.EPIC.ordinal()) {
             grant(p, Award.RARE_STRAIN);
         }
-        if (rarity == Rarity.LEGENDARY) {
+        if (rarity.ordinal() >= Rarity.LEGENDARY.ordinal()) {
             grant(p, Award.LEGENDARY);
+        }
+        if (rarity == Rarity.MYTHIC) {
+            grant(p, Award.MYTHIC);
         }
     }
 

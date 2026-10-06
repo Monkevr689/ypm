@@ -7,7 +7,7 @@ author: KushCraft
 softdepend: [Vault]
 commands:
   kush:
-    description: Opens the KushCraft menu (shop, drugs, trade, top dealers, awards)
+    description: Opens the KushCraft menu (shop, drugs, trade, cartel, awards)
     usage: /kush help
     aliases: [k, kc, kushcraft]
 permissions:

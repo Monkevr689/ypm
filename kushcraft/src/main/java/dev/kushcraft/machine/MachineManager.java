@@ -97,8 +97,25 @@ public final class MachineManager {
                 }
             }
             if (s.getInt("rack-amount") > 0) {
-                m.fillRack(s.getString("rack-strain"), s.getInt("rack-quality", 3), s.getInt("rack-amount"),
-                        s.getLong("rack-done"));
+                // saved by 2.x: one rack
+                m.racks[0] = new Machine.Rack(s.getString("rack-strain"), s.getInt("rack-quality", 3),
+                        s.getInt("rack-amount"), s.getLong("rack-done") - 60_000L, s.getLong("rack-done"));
+            }
+            ConfigurationSection rs = s.getConfigurationSection("racks");
+            if (rs != null) {
+                for (String rk : rs.getKeys(false)) {
+                    ConfigurationSection r = rs.getConfigurationSection(rk);
+                    int i;
+                    try {
+                        i = Integer.parseInt(rk);
+                    } catch (NumberFormatException e) {
+                        continue;
+                    }
+                    if (r != null && i >= 0 && i < Machine.RACKS && r.getInt("amount") > 0 && r.isString("strain")) {
+                        m.racks[i] = new Machine.Rack(r.getString("strain"), r.getInt("quality", 3), r.getInt("amount"),
+                                r.getLong("start"), r.getLong("done"));
+                    }
+                }
             }
             add(m);
         }
@@ -124,11 +141,16 @@ public final class MachineManager {
                 s.set("job-end", m.jobEnd);
                 s.set("output", encode(m.output));
             }
-            if (m.rackAmount > 0) {
-                s.set("rack-strain", m.rackStrain);
-                s.set("rack-quality", m.rackQuality);
-                s.set("rack-amount", m.rackAmount);
-                s.set("rack-done", m.rackDone);
+            for (int i = 0; i < Machine.RACKS; i++) {
+                Machine.Rack r = m.racks[i];
+                if (r != null) {
+                    String k = "racks." + i + ".";
+                    s.set(k + "strain", r.strain());
+                    s.set(k + "quality", r.quality());
+                    s.set(k + "amount", r.amount());
+                    s.set(k + "start", r.start());
+                    s.set(k + "done", r.done());
+                }
             }
         }
         try {
@@ -284,10 +306,12 @@ public final class MachineManager {
         } else if (m.output != null && player != null) {
             player.sendMessage(Text.msg("<red>The unfinished lab batch was ruined."));
         }
-        if (m.rackAmount > 0) {
-            Strain s = plugin.strains().getOrDefault(m.rackStrain);
-            ItemType t = m.rackDry() ? ItemType.BUD_DRIED : ItemType.BUD_FRESH;
-            w.dropItemNaturally(c, Items.strainItem(t, s, m.rackQuality, m.rackAmount));
+        for (Machine.Rack r : m.racks) {
+            if (r != null) {
+                Strain s = plugin.strains().getOrDefault(r.strain());
+                w.dropItemNaturally(c, Items.strainItem(r.dry() ? ItemType.BUD_DRIED : ItemType.BUD_FRESH, s,
+                        r.quality(), r.amount()));
+            }
         }
         w.playSound(c, "minecraft:block.wood.break", SoundCategory.BLOCKS, 1f, 0.9f);
         w.spawnParticle(Particle.BLOCK, c, 30, 0.3, 0.3, 0.3, 0, m.type().particle().createBlockData());
@@ -307,10 +331,10 @@ public final class MachineManager {
     public void useRack(Player player, Machine m) {
         ItemStack hand = player.getInventory().getItemInMainHand();
         ItemType t = Items.type(hand);
-        if (m.rackAmount > 0 && m.rackDry()) {
-            Strain s = plugin.strains().getOrDefault(m.rackStrain);
-            InventoryUtil.give(player, Items.strainItem(ItemType.BUD_DRIED, s, m.rackQuality, m.rackAmount));
-            player.sendActionBar(Text.mm("<green>Collected " + m.rackAmount + "x dried " + s.colored()));
+        if (m.rackAmount() > 0 && m.rackDry()) {
+            Strain s = plugin.strains().getOrDefault(m.rackStrain());
+            InventoryUtil.give(player, Items.strainItem(ItemType.BUD_DRIED, s, m.rackQuality(), m.rackAmount()));
+            player.sendActionBar(Text.mm("<green>Collected " + m.rackAmount() + "x dried " + s.colored()));
             m.emptyRack();
             markDirty();
             refresh(m);
@@ -323,33 +347,37 @@ public final class MachineManager {
             if (s == null) {
                 return;
             }
-            if (m.rackAmount > 0 && (!s.id().equals(m.rackStrain) || q != m.rackQuality)) {
+            if (m.rackAmount() > 0 && (!s.id().equals(m.rackStrain()) || q != m.rackQuality())) {
                 player.sendActionBar(Text.mm("<red>This rack is drying a different strain. Wait until it's done."));
                 return;
             }
-            int space = 64 - m.rackAmount;
-            int add = Math.min(space, hand.getAmount());
+            int add = Math.min(64 - m.rackAmount(), hand.getAmount());
             if (add <= 0) {
                 player.sendActionBar(Text.mm("<red>The rack is full (64 buds)."));
                 return;
             }
             hand.setAmount(hand.getAmount() - add);
-            long minutes = Math.max(0, plugin.getConfig().getLong("drying.minutes", 3));
-            m.fillRack(s.id(), q, m.rackAmount + add, System.currentTimeMillis() + minutes * 60_000L);
+            int seconds = dryingSeconds();
+            m.fillRack(s.id(), q, m.rackAmount() + add, System.currentTimeMillis() + seconds * 1000L);
             markDirty();
             refresh(m);
-            player.sendActionBar(Text.mm("<green>Hung " + add + " buds to dry. <gray>Ready in " + minutes + " min."));
+            player.sendActionBar(Text.mm("<green>Hung " + add + " buds to dry. <gray>Ready in " + Text.time(seconds) + "."));
             player.playSound(player.getLocation(), "minecraft:block.azalea_leaves.place", SoundCategory.BLOCKS, 1f, 1f);
             return;
         }
-        if (m.rackAmount > 0) {
-            long left = Math.max(0, (m.rackDone - System.currentTimeMillis()) / 1000);
-            Strain s = plugin.strains().getOrDefault(m.rackStrain);
-            player.sendActionBar(Text.mm("<yellow>Drying " + m.rackAmount + "x " + s.colored()
+        if (m.rackAmount() > 0) {
+            long left = Math.max(0, (m.rackDone() - System.currentTimeMillis()) / 1000);
+            Strain s = plugin.strains().getOrDefault(m.rackStrain());
+            player.sendActionBar(Text.mm("<yellow>Drying " + m.rackAmount() + "x " + s.colored()
                     + " <gray>- ready in " + Text.time((int) left)));
         } else {
             player.sendActionBar(Text.mm("<gray>Right-click with <green>Fresh Buds</green> to hang them up."));
         }
+    }
+
+    /** How long buds take to dry (config drying.seconds). */
+    public int dryingSeconds() {
+        return Math.max(1, plugin.getConfig().getInt("drying.seconds", 30));
     }
 
     // ------------------------------------------------------------------
@@ -364,6 +392,15 @@ public final class MachineManager {
             Location c = m.key().center();
             switch (m.type()) {
                 case LAB_STATION -> {
+                    int dry = m.racksDry();
+                    if (dry > m.dryShown) {
+                        c.getWorld().playSound(c, "minecraft:block.azalea_leaves.break", SoundCategory.BLOCKS, 0.8f, 1.3f);
+                        Player owner = m.owner() == null ? null : Bukkit.getPlayer(m.owner());
+                        if (owner != null && owner.getWorld().equals(c.getWorld()) && owner.getLocation().distanceSquared(c) < 64 * 64) {
+                            owner.sendActionBar(Text.mm("<green>Your buds are dry! <gray>(Drug Lab > Dry)"));
+                        }
+                    }
+                    m.dryShown = dry;
                     if (m.job == null) {
                         break;
                     }
@@ -388,7 +425,7 @@ public final class MachineManager {
                     }
                 }
                 case DRYING_RACK -> {
-                    if (m.rackAmount > 0 && !modelFor(m).equals(m.shownModel)) {
+                    if (m.rackAmount() > 0 && !modelFor(m).equals(m.shownModel)) {
                         refresh(m);
                         c.getWorld().playSound(c, "minecraft:block.grass.step", SoundCategory.BLOCKS, 0.6f, 0.8f);
                     }
@@ -410,7 +447,7 @@ public final class MachineManager {
     // ------------------------------------------------------------------
 
     private String modelFor(Machine m) {
-        if (m.type() == MachineType.DRYING_RACK && m.rackAmount > 0) {
+        if (m.type() == MachineType.DRYING_RACK && m.rackAmount() > 0) {
             return m.rackDry() ? "machine_drying_rack_dry" : "machine_drying_rack_fresh";
         }
         return m.type().model();
@@ -420,8 +457,8 @@ public final class MachineManager {
         ItemStack it = new ItemStack(Material.PAPER);
         ItemMeta meta = it.getItemMeta();
         meta.setItemModel(Keys.model(modelFor(m)));
-        if (m.type() == MachineType.DRYING_RACK && m.rackAmount > 0) {
-            Items.tint(meta, plugin.strains().getOrDefault(m.rackStrain).color());
+        if (m.type() == MachineType.DRYING_RACK && m.rackAmount() > 0) {
+            Items.tint(meta, plugin.strains().getOrDefault(m.rackStrain()).color());
         }
         it.setItemMeta(meta);
         return it;

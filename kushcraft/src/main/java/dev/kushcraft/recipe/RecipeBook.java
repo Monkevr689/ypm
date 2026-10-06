@@ -107,9 +107,9 @@ public final class RecipeBook {
         out.add(new Entry("roll_blunt", Kind.ROLL, ItemType.BLUNT, 1,
                 spread(List.of(sample(ItemType.BUD_DRIED, 2), sample(ItemType.BLUNT_WRAP, 1))),
                 List.of("5 strong hits."), null));
-        int dry = KushCraft.get().getConfig().getInt("drying.minutes", 3);
+        int dry = Math.max(1, KushCraft.get().getConfig().getInt("drying.seconds", 30));
         out.add(new Entry("dry_bud", Kind.DRY, ItemType.BUD_DRIED, 1, spread(List.of(sample(ItemType.BUD_FRESH, 1))),
-                List.of("Takes " + dry + " min."), null));
+                List.of("Takes " + dry + "s. 5 racks per lab."), null));
         double cost = KushCraft.get().getConfig().getDouble("strain-maker.cost", 150);
         int seeds = KushCraft.get().getConfig().getInt("strain-maker.seeds-given", 3);
         out.add(new Entry("mix_strain", Kind.MIX, ItemType.SEED_PACK, seeds,

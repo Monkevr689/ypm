@@ -58,7 +58,7 @@ public final class Guide {
         sections.add(new Section("Drug Lab", lab()));
         int recipesAt = sections.size();
         sections.add(new Section("Recipes (pictures)", null));
-        sections.add(new Section("Money & titles", money()));
+        sections.add(new Section("Money & cartels", money()));
         sections.add(new Section("Breeding strains", strain()));
         sections.add(new Section("Effects", effects()));
         sections.add(new Section("Strains", strains()));
@@ -135,7 +135,7 @@ public final class Guide {
     private static List<String> quickStart() {
         return List.of("<dark_green><bold>Quick start</bold>\n\n<black>1. Break <dark_green>grass</dark_green>: seeds\n"
                 + "2. Plant on farmland\n3. Harvest when grown\n4. Craft a <dark_green>Drug Lab</dark_green>\n"
-                + "5. Dry, roll & cook\n6. Sell at the <gold>Shop</gold>\n7. Sell the most: be #1\n\n"
+                + "5. Dry, roll & cook\n6. Sell at the <gold>Shop</gold>\n7. Start a <dark_red>cartel</dark_red>\n\n"
                 + run("/kush drugs", "> Drugs & recipes"));
     }
 
@@ -150,23 +150,23 @@ public final class Guide {
         return List.of(
                 "<dark_green><bold>Getting seeds</bold>\n\n<black>Break <dark_green>grass</dark_green> or ferns for"
                         + " seeds - the <dark_aqua>biome</dark_aqua> picks the strain.\n\nJungle grass: <dark_green>coca"
-                        + "</dark_green>.\nRed poppies: <red>poppy</red>.\nDesert dead bushes: <gold>peyote</gold>.\n"
-                        + "Small mushrooms: <gold>spores</gold>.\nOr buy seeds at the Shop.",
+                        + "</dark_green>.\nRed poppies: <red>poppy</red>.\nDead bushes: <gold>peyote</gold>.\n"
+                        + "Ripe wheat: <dark_purple>ergot</dark_purple>.\nOr buy any strain in the Shop.",
                 "<dark_green><bold>Growing</bold>\n\n<black>Right-click the <dark_aqua>top</dark_aqua> of farmland,"
                         + " grass, dirt or a <dark_green>Planter</dark_green>.\n\nNeeds <gold>light 9+</gold> or a"
                         + " <dark_purple>Grow Lamp</dark_purple>. Mushrooms like the dark.\nWater, Planters and"
                         + " Fertilizer help.\nClick a plant to check it.",
-                "<dark_green><bold>Biomes</bold>\n\n<gold>Sativa</gold><black>, <dark_green>coca</dark_green>:"
-                        + " warm biomes.\n<dark_purple>Indica</dark_purple><black>: cold biomes.\n<dark_green>Hybrid"
-                        + "</dark_green><black>, <red>poppy</red>: mild biomes.\n<gold>Peyote</gold><black>: deserts, on sand."
-                        + "\n\nRight climate = faster growth and more <gold>★</gold> quality.");
+                "<dark_green><bold>Climates</bold>\n<black>Each strain loves one:\n"
+                        + "<dark_gray>Tropical: jungles\nDesert: sand, savanna\nTemperate: plains\n"
+                        + "Wetland: swamps, rivers\nCold: snow, taiga\nMountain: hills, y 100+\n"
+                        + "<black>Right one: faster, +1 <gold>★</gold>, +1 bud. Opposite: slow (Grow Lamps help).");
     }
 
     private static List<String> lab() {
-        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: 20 drugs\n<bold>Roll</bold>:"
-                + " joints & blunts\n<bold>Dry</bold>: fresh -> dried\n<bold>Mix</bold>: breed strains\n"
-                + "<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Every recipe needs 1-3 things."
-                + " Glowing = you have them all.");
+        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: 21 drugs\n<bold>Roll</bold>:"
+                + " joints & blunts\n<bold>Dry</bold>: 5 racks, 30s\n<bold>Mix</bold>: breed strains\n"
+                + "<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Recipes need 1-2 cheap things."
+                + " Glowing = you have them.\n<black>LSD: wheat > ergot > LSD.");
     }
 
     private static List<String> recipes(List<RecipeBook.Entry> recipes, int firstRecipe, boolean pictures) {
@@ -228,25 +228,30 @@ public final class Guide {
 
     private static List<String> money() {
         return List.of(
-                "<dark_green><bold>Shop</bold>\n\n<black>Click your product to sell it, or <gold>Sell all</gold>."
-                        + " Selling lots of one thing drops its price - sell a mix!\n\n<gold>Orders</gold> pay extra"
-                        + " for big batches.\n" + run("/kush shop", "> Shop"),
+                "<dark_green><bold>Shop</bold>\n\n<black>Seeds of every strain: rarer ones cost more. Gear is"
+                        + " cheap.\n\nClick your product to sell it, or <gold>Sell all</gold>. Selling lots of"
+                        + " one thing drops its price.\n" + run("/kush shop", "> Shop"),
+                "<dark_green><bold>Trade</bold>\n\n<black>7 shelves: ores, farming, wood, blocks, mob drops,"
+                        + " nether & end, tools. They cost a lot of product!\n\n<bold>Jobs</bold>: mining,"
+                        + " farming and hunting pay a little.\n" + run("/kush trade", "> Trade"),
+                "<dark_green><bold>Cartels</bold>\n\n<black>Team up! A shared <gold>bank</gold> (+5% of every"
+                        + " sale), 5 levels with bonuses, big <gold>shipments</gold> to fill together.\n\n"
+                        + "<gold>Contracts</gold> pay extra for big batches.\n" + run("/kush cartel", "> Cartel"),
                 "<dark_green><bold>Top Dealers</bold>\n\n<black>The players who sold the most get the titles:"
                         + "\n<dark_red>#1 Cartel Boss\n<red>#2 Kingpin\n<gold>#3 The Plug\n<dark_gray>top 5, 10, 25..."
                         + "\n\n<black>Titles pay extra on every sale.\n" + run("/kush top", "> Top"),
-                "<dark_green><bold>Trade</bold>\n\n<black>Spend your money on ores, diamonds, blocks and lab"
-                        + " supplies. They cost a lot of product!\n\n<bold>Jobs</bold>: mining, farming and"
-                        + " hunting pay a little too.\n" + run("/kush trade", "> Trade"),
-                "<dark_green><bold>Awards</bold>\n\n<black>36 achievements with cash rewards. They pop up like"
+                "<dark_green><bold>Awards</bold>\n\n<black>45 achievements with cash rewards. They pop up like"
                         + " advancements (press <dark_gray>L</dark_gray>).\n\nSend money:"
                         + "\n<dark_gray>/kush pay \\<name> \\<amount>\n" + run("/kush awards", "> Awards"));
     }
 
     private static List<String> strain() {
         return List.of("<dark_green><bold>Breeding</bold>\n\n<black>Drug Lab > <dark_green>Mix</dark_green>."
-                + " Click two seeds and press MIX.\n\nThe child is <bold>random</bold>: parent effects,"
-                + " maybe a <dark_purple>mutation</dark_purple>, random potency and rarity.\n\nKeep and name it, or"
-                + " try again.");
+                        + " Click two seeds and press MIX.\n\nThe child is <bold>random</bold>: effects, potency,"
+                        + " climate, colours and bud shape from the parents - or a <dark_purple>mutation</dark_purple>.",
+                "<dark_green><bold>Mythic</bold>\n\n<black>Very rarely a child is <dark_purple><bold>Mythic"
+                        + "</bold></dark_purple>: rainbow, galaxy, golden, crystal, neon or inferno buds that"
+                        + " sparkle and sell for <gold>2.5x</gold>.\n\nA Mythic parent passes it on 1 in 5.");
     }
 
     private static List<String> effects() {
@@ -272,7 +277,8 @@ public final class Guide {
             for (int j = i; j < Math.min(strains.size(), i + 3); j++) {
                 Strain s = strains.get(j);
                 b.append("\n<black><bold>").append(Text.escape(s.name())).append("</bold>\n<dark_gray>")
-                        .append(s.type().display()).append(", ").append(s.potency()).append("% THC\n");
+                        .append(s.rarity().display()).append(", ").append(s.potency()).append("%, ")
+                        .append(s.climate().display()).append("\n");
             }
             out.add(b.toString());
         }

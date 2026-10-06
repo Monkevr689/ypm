@@ -16,7 +16,8 @@ import java.util.List;
 public final class AwardsMenu extends TabMenu {
 
     static final int FIRST = 9;
-    static final int SUMMARY = at(5, 4);
+    /** Rows 1-5: up to 45 awards. */
+    static final int SLOTS = 45;
 
     public AwardsMenu(Player player) {
         super(player, Tab.AWARDS);
@@ -27,7 +28,7 @@ public final class AwardsMenu extends TabMenu {
         Awards awards = KushCraft.get().awards();
         Award[] all = Award.values();
         double earned = 0;
-        for (int i = 0; i < all.length && i < 36; i++) {
+        for (int i = 0; i < all.length && i < SLOTS; i++) {
             Award a = all[i];
             boolean done = awards.has(player, a);
             if (done) {
@@ -46,8 +47,9 @@ public final class AwardsMenu extends TabMenu {
                     : "<gray>" + (a.secret() ? "???" : a.title());
             set(FIRST + i, Items.icon(done ? a.icon() : a.icon() + "_locked", name, lore));
         }
+        // the summary sits on this page's own tab
         int count = awards.count(player);
-        set(SUMMARY, Items.icon("tab_awards", "<gold>" + count + "/" + all.length + " awards",
+        set(Tab.AWARDS.ordinal(), Items.icon("tab_awards", "<green>Awards <gold>" + count + "/" + all.length,
                 "<gold>" + money(earned) + " <dark_gray>earned",
                 "<dark_gray>Also in the advancements screen (L)."));
     }

@@ -22,6 +22,8 @@ public final class Shop {
 
     private final KushCraft plugin;
     private final List<BuyEntry> buy = new ArrayList<>();
+    private final List<BuyEntry> seeds = new ArrayList<>();
+    private final List<BuyEntry> gear = new ArrayList<>();
     private final Map<ItemType, Double> sell = new EnumMap<>(ItemType.class);
 
     public Shop(KushCraft plugin) {
@@ -30,15 +32,22 @@ public final class Shop {
 
     public void load() {
         buy.clear();
+        seeds.clear();
+        gear.clear();
         sell.clear();
+        // cannabis seeds: every built-in strain at its own price (strains.yml)
+        double mult = Math.max(0, plugin.getConfig().getDouble("shop.seed-price-multiplier", 1.0));
+        for (Strain s : plugin.strains().shopStrains()) {
+            seeds.add(new BuyEntry(ItemType.SEED_PACK, s.id(), 1, Math.round(s.seedPrice() * mult * 100) / 100.0));
+        }
         for (Map<?, ?> m : plugin.getConfig().getMapList("shop.buy")) {
             ItemType t = ItemType.parse(String.valueOf(m.get("item")));
             if (t == null) {
                 plugin.getLogger().warning("shop.buy: unknown item " + m.get("item"));
                 continue;
             }
-            if (t.retired()) {
-                continue; // old stations are replaced by the Drug Lab
+            if (t.retired() || t == ItemType.SEED_PACK) {
+                continue; // old stations are replaced by the Drug Lab; strain seeds come from strains.yml
             }
             Object strain = m.get("strain");
             if (t.strainBound() && (strain == null || plugin.strains().get(String.valueOf(strain)) == null)) {
@@ -47,8 +56,11 @@ public final class Shop {
             }
             int amount = m.get("amount") instanceof Number n ? n.intValue() : 1;
             double price = m.get("price") instanceof Number n ? n.doubleValue() : 0;
-            buy.add(new BuyEntry(t, strain == null ? null : String.valueOf(strain), Math.max(1, amount), Math.max(0, price)));
+            BuyEntry e = new BuyEntry(t, strain == null ? null : String.valueOf(strain), Math.max(1, amount), Math.max(0, price));
+            (isSeed(t) ? seeds : gear).add(e);
         }
+        buy.addAll(seeds);
+        buy.addAll(gear);
         ConfigurationSection s = plugin.getConfig().getConfigurationSection("shop.sell");
         if (s != null) {
             for (String k : s.getKeys(false)) {
@@ -62,6 +74,21 @@ public final class Shop {
 
     public List<BuyEntry> buyEntries() {
         return Collections.unmodifiableList(buy);
+    }
+
+    /** Strain seeds (cheapest first), then spores and the other seeds. */
+    public List<BuyEntry> seeds() {
+        return Collections.unmodifiableList(seeds);
+    }
+
+    /** Everything else: papers, solvent, blocks... */
+    public List<BuyEntry> gear() {
+        return Collections.unmodifiableList(gear);
+    }
+
+    static boolean isSeed(ItemType t) {
+        return t == ItemType.SEED_PACK || t == ItemType.MUSHROOM_SPORES || t == ItemType.COCA_SEEDS
+                || t == ItemType.POPPY_SEEDS || t == ItemType.PEYOTE_SEEDS;
     }
 
     public ItemStack create(BuyEntry e) {
@@ -105,9 +132,14 @@ public final class Shop {
         return Math.max(0.01, Math.round(price * 100) / 100.0);
     }
 
-    /** What this player gets for ONE item right now, including their rank bonus. */
+    /** What this player gets for ONE item right now, including their title and cartel bonus. */
     public double sellPrice(ItemStack item, org.bukkit.entity.Player p) {
         double base = sellPrice(item);
-        return base <= 0 ? 0 : Math.round(base * plugin.ranks().multiplier(p) * 100) / 100.0;
+        return base <= 0 ? 0 : Math.round(base * bonus(p) * 100) / 100.0;
+    }
+
+    /** Sale multiplier of a player: dealer title + cartel level (1.2 = +20%). */
+    public double bonus(org.bukkit.entity.Player p) {
+        return plugin.ranks().multiplier(p) + plugin.cartels().sellBonus(p.getUniqueId());
     }
 }

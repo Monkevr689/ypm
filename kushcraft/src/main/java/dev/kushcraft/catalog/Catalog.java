@@ -66,7 +66,7 @@ public final class Catalog {
         // psychedelics
         drug(ItemType.MAGIC_MUSHROOM, Category.PSYCH, "Grow magic mushrooms.");
         drug(ItemType.SHROOM_TEA, Category.PSYCH, "Cook at a Drug Lab.");
-        drug(ItemType.LUCID_TAB, Category.PSYCH, "Cook at a Drug Lab.");
+        drug(ItemType.LUCID_TAB, Category.PSYCH, "Cook ergot + paper at a Drug Lab.");
         drug(ItemType.PEYOTE_BUTTON, Category.PSYCH, "Grow a peyote cactus.");
         drug(ItemType.MESCALINE, Category.PSYCH, "Cook at a Drug Lab.");
         drug(ItemType.DMT, Category.PSYCH, "Cook at a Drug Lab.");
@@ -101,6 +101,7 @@ public final class Catalog {
         add(ItemType.BUD_FRESH, Category.GROW, null, "Harvest a grown cannabis plant.");
         add(ItemType.COCA_LEAVES, Category.GROW, null, "Harvest a grown coca bush.");
         add(ItemType.POPPY_POD, Category.GROW, null, "Harvest grown poppies.");
+        add(ItemType.ERGOT, Category.GROW, null, "Cook wheat at a Drug Lab, or find it harvesting wheat.");
         add(ItemType.GROWER_GUIDE, Category.GROW, null, "Type /kush.");
     }
 
