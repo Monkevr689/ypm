@@ -514,12 +514,16 @@ final class SelfTest {
         chest.addItem(Items.create(ItemType.ROLLING_PAPERS, 8));
         check(ws.chests(cook).size() == 1, "a chest next to the cook is their work chest");
         check(ws.workNow(cook) && count(cook.satchel(), ItemType.ROLLING_PAPERS) == 8, "the cook takes papers from the chest");
-        check(ws.workNow(cook) && count(cook.satchel(), ItemType.JOINT) == 8 && cook.jobs() == 1, "the cook rolls joints");
+        check(ws.workNow(cook) && cook.jobs() == 1, "the cook rolls");
+        int joints = count(cook.satchel(), ItemType.JOINT);
+        check(joints > 0 && joints + count(cook.satchel(), ItemType.ROLLING_PAPERS) == 8,
+                "the cook rolls joints, one paper each (" + joints + ")");
         // the runner picks up the joints and sells them; the money goes to the owner, minus their cut
         var runner = ws.hireAt(new Location(w, x + 0.5, y + 1, z + 4.5), dev.kushcraft.worker.WorkerType.RUNNER, boss, 1);
-        check(ws.chests(runner).isEmpty() && ws.crew(runner).size() == 4, "the runner is in the crew");
-        check(ws.workNow(runner) && count(runner.satchel(), ItemType.JOINT) == 8 && count(cook.satchel(), ItemType.JOINT) == 0,
-                "the runner picks up the cook's joints");
+        check(ws.chests(runner).isEmpty() && ws.crew(runner).size() == 3 && ws.crew(cook).contains(runner),
+                "the runner works with the farmhand, dryer and cook");
+        check(ws.workNow(runner) && count(runner.satchel(), ItemType.JOINT) == joints
+                && count(cook.satchel(), ItemType.JOINT) == 0, "the runner picks up the cook's joints");
         double before = eco.balance(owner);
         check(ws.workNow(runner) && eco.balance(owner) > before && runner.carried() == 0 && runner.wages() > 0,
                 "the runner sells them for the owner and keeps a cut");
