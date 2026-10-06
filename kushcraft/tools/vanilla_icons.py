@@ -127,6 +127,27 @@ cube("ice", texture(ice, 6), texture(ice, 7))
 cube("redstone_lamp", texture(lamp, 8), texture(lamp, 8))
 cube("chest", texture(chest_top, 9), texture(chest_side, 10), texture(chest_top, 11))
 
+
+def crafting_top(x, y, rng):
+    if x in (0, 15) or y in (0, 15):
+        return rgba("5a3a1a")
+    if x in (5, 10) or y in (5, 10):
+        return rgba("3a2410")
+    return shade(rgba("b08a50"), rng.uniform(0.92, 1.06))
+
+
+def crafting_side(x, y, rng):
+    if y < 3:
+        return shade(rgba("8a5a2a"), 0.9)
+    if 3 <= x <= 6 and 5 <= y <= 9:
+        return rgba("c8c8c8")
+    if 9 <= x <= 12 and 6 <= y <= 11:
+        return rgba("8a6a3a")
+    return planks(x, y, rng)
+
+
+cube("crafting_table", texture(crafting_top, 12), texture(crafting_side, 13))
+
 # ---------------------------------------------------------------------------
 # items
 # ---------------------------------------------------------------------------
@@ -574,6 +595,27 @@ art("slime_ball", [
     "................",
     "................",
 ], {"K": "1a4a1a", "g": "7ad860", "G": "4aa83a", "w": "d0ffc0"})
+
+
+art("gold_ingot", INGOT, {"K": "5a3a0a", "h": "fff4a0", "m": "f2c83a", "d": "c8901a"})
+art("lantern", [
+    "................",
+    "......KKKK......",
+    ".....K....K.....",
+    "......KKKK......",
+    ".....KmmmmK.....",
+    "....KmhhhhmK....",
+    "....KmyYYymK....",
+    "....KmYwwYmK....",
+    "....KmYwwYmK....",
+    "....KmyYYymK....",
+    "....KmhhhhmK....",
+    ".....KmmmmK.....",
+    "......KKKK......",
+    "................",
+    "................",
+    "................",
+], {"K": "1a1a22", "m": "4a4a5a", "h": "6a6a7a", "y": "f8a83a", "Y": "ffd060", "w": "fff8d0"})
 
 
 def get(material):

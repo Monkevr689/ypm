@@ -9,6 +9,7 @@ import json
 import math
 import os
 import random
+import re
 import shutil
 import sys
 
@@ -16,6 +17,7 @@ from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sprites import ITEMS, ICONS  # noqa: E402
+import items32  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(HERE)
@@ -202,18 +204,63 @@ def contact_sheet(entries, path, scale=6, cols=10, bg=(44, 52, 40, 255)):
     sheet.save(path)
 
 
+def award_icons():
+    """Item models used as award pictures (dev.kushcraft.award.Award)."""
+    src = open(os.path.join(PROJECT, "src", "main", "java", "dev", "kushcraft", "award", "Award.java"),
+               encoding="utf-8").read()
+    return sorted(set(re.findall(r'\("[^"]+", "[^"]+", "([a-z0-9_]+)", \d+', src)))
+
+
+def write_locked(name):
+    """A dark grey copy of an award picture for awards you don't have yet."""
+    layers, tinted = GENERATED[name]
+    img = composite(layers, DEFAULT_TINT if tinted else None)
+    px = img.load()
+    for y in range(img.height):
+        for x in range(img.width):
+            r, g, b, a = px[x, y]
+            if a:
+                v = int((r * 0.3 + g * 0.59 + b * 0.11) * 0.42 + 26)
+                px[x, y] = (v, v, min(255, v + 8), a)
+    write_flat_item(name + "_locked", [img], folder="icon")
+
+
+def advancement_background():
+    """16x16 tile behind the KushCraft advancement tab: dark grow-tent soil."""
+    rng = random.Random(42)
+    img = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            base = (34, 44, 30) if (x // 8 + y // 8) % 2 == 0 else (30, 40, 27)
+            f = rng.uniform(0.85, 1.12)
+            img.putpixel((x, y), tuple(int(v * f) for v in base) + (255,))
+    for (x, y) in ((3, 4), (11, 2), (7, 11), (13, 13), (1, 14)):
+        img.putpixel((x, y), (58, 92, 44, 255))
+    save_png(img, "gui/advancements/kush")
+
+
 def main():
     if os.path.isdir(PACK):
         shutil.rmtree(PACK)
     os.makedirs(ASSETS, exist_ok=True)
 
-    # flat items --------------------------------------------------------
+    # flat items: 32px art from items32.py, the rest from sprites.py --------
     for name, spr in ITEMS.items():
-        write_flat_item(name, render_sprite(name, spr))
-    write_flat_item("lucid_tab", proc_lucid_tab())
+        if name not in items32.ITEMS:
+            write_flat_item(name, render_sprite(name, spr))
+    for name, fn in items32.ITEMS.items():
+        write_flat_item(name, list(fn().layers))
     for name, spr in ICONS.items():
-        write_flat_item(name, render_sprite(name, spr), folder="icon")
+        if name not in items32.ICONS:
+            write_flat_item(name, render_sprite(name, spr), folder="icon")
+    for name, fn in items32.ICONS.items():
+        write_flat_item(name, list(fn().layers), folder="icon")
     write_flat_item("effect_trippy", proc_trippy_icon() + [Image.new("RGBA", (16, 16))] * 2, folder="icon")
+    for name in award_icons():
+        if name not in GENERATED:
+            raise SystemExit(f"award picture {name} has no texture")
+        write_locked(name)
+    advancement_background()
 
     import plants
     import machines

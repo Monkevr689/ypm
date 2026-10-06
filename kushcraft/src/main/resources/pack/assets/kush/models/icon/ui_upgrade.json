@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/icon/ui_upgrade",
+  "layer1": "kush:item/icon/ui_upgrade_tint",
+  "layer2": "kush:item/icon/ui_upgrade_overlay"
+ }
+}

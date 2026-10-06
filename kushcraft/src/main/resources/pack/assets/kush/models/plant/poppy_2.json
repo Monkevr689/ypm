@@ -50,14 +50,14 @@
   },
   {
    "from": [
-    8.0,
+    0.8,
     0,
-    0.8
+    8.0
    ],
    "to": [
-    8.0,
+    15.2,
     16,
-    15.2
+    8.0
    ],
    "rotation": {
     "origin": [
@@ -66,12 +66,12 @@
      8
     ],
     "axis": "y",
-    "angle": 45,
+    "angle": -45,
     "rescale": true
    },
    "shade": false,
    "faces": {
-    "east": {
+    "north": {
      "uv": [
       0,
       0,
@@ -80,7 +80,7 @@
      ],
      "texture": "#leaves"
     },
-    "west": {
+    "south": {
      "uv": [
       0,
       0,

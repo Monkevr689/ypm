@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/heroin"
+  "layer0": "kush:item/heroin",
+  "layer1": "kush:item/heroin_tint",
+  "layer2": "kush:item/heroin_overlay"
  }
 }

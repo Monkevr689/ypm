@@ -9,160 +9,90 @@ import dev.kushcraft.strain.Strain;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.StrainStock;
 import dev.kushcraft.util.Text;
+import org.bukkit.SoundCategory;
+import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
-/** Lab Station: pick a recipe, wait, collect. Layout matches tools/gui.py lab(). */
-public final class LabMenu extends Menu {
+/**
+ * Drug Lab > Cook: every recipe (green glow = you have everything), a
+ * progress bar and the finished batch. Ingredients come straight from your
+ * inventory. Layout matches tools/gui.py cook().
+ */
+public final class LabMenu extends LabTabMenu {
 
-    private static final int STATUS = 8;
-    private static final int BACK = 36;
-    private static final int OUTPUT = 40;
-    private static final int INFO = 44;
-    private static final int[] RECIPES = {9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
-    private static final int[] PROGRESS = {28, 29, 30, 31, 32, 33, 34};
+    static final int FIRST = 9;
+    static final int SLOTS = 27;
+    static final int[] PROGRESS = {at(4, 0), at(4, 1), at(4, 2), at(4, 3), at(4, 4), at(4, 5), at(4, 6)};
+    static final int OUTPUT = at(4, 8);
 
-    private final Machine machine;
     private String pickStrain;
     private int pickQuality;
 
-    public LabMenu(org.bukkit.entity.Player player, Machine machine) {
-        super(player, 5, "lab", "Drug Lab - Cook");
-        this.machine = machine;
+    public LabMenu(Player player, Machine machine) {
+        super(player, machine, Tab.COOK);
     }
 
     @Override
-    public void render() {
-        inv.clear();
-        backButton(BACK);
+    protected void page() {
         LabRecipe[] recipes = LabRecipe.values();
-        for (int i = 0; i < RECIPES.length && i < recipes.length; i++) {
-            set(RECIPES[i], recipeIcon(recipes[i]));
+        for (int i = 0; i < SLOTS && i < recipes.length; i++) {
+            set(FIRST + i, recipeIcon(recipes[i]));
         }
-        LabRecipe job = machine.busy() ? LabRecipe.parse(machine.job()) : null;
         double progress = machine.jobProgress();
         int filled = machine.busy() ? (int) Math.floor(progress * PROGRESS.length + 1e-6) : 0;
+        String label = !machine.busy() ? "<gray>Click a recipe to cook"
+                : machine.jobDone() ? "<green>Done!"
+                : "<yellow>" + Text.time((int) Math.ceil((machine.jobEnd() - System.currentTimeMillis()) / 1000.0)) + " left";
         for (int i = 0; i < PROGRESS.length; i++) {
-            boolean on = i < filled;
-            set(PROGRESS[i], Items.icon(on ? "progress_full" : "progress_empty",
-                    machine.busy() ? "<green>" + (int) Math.round(progress * 100) + "%" : "<gray>Idle"));
+            set(PROGRESS[i], Items.icon(i < filled ? "progress_full" : "progress_empty", label));
         }
-        // status
-        if (job == null) {
-            set(STATUS, Items.icon("lab_solvent", "<aqua>Lab is idle", "<gray>Click a recipe to start cooking."));
-        } else if (machine.jobDone()) {
-            set(STATUS, Items.glint(Items.icon("lab_solvent", "<green>Batch ready!", "<gray>Collect it below."), true));
-        } else {
-            int left = (int) Math.ceil((machine.jobEnd() - System.currentTimeMillis()) / 1000.0);
-            set(STATUS, Items.icon("lab_solvent", "<yellow>Cooking " + job.output().display(),
-                    "<gray>" + Text.bar(progress, 10, "green", "dark_gray") + " <white>" + Text.time(left)));
-        }
-        // output
         if (machine.busy() && machine.output() != null) {
             ItemStack out = machine.output().clone();
             ItemMeta meta = out.getItemMeta();
             List<net.kyori.adventure.text.Component> lore = meta.lore() == null ? new ArrayList<>() : new ArrayList<>(meta.lore());
-            lore.add(Text.mm(""));
-            lore.add(Text.mm(machine.jobDone() ? "<green><bold>Click to collect!" : "<gray>Not ready yet..."));
+            lore.add(0, Text.mm(machine.jobDone() ? "<green><bold>Click to collect!" : "<gray>Cooking..."));
             meta.lore(lore);
             out.setItemMeta(meta);
-            set(OUTPUT, machine.jobDone() ? Items.glint(out, true) : out);
+            set(OUTPUT, Items.glint(out, machine.jobDone()));
         }
-        // help
-        List<String> help = new ArrayList<>(List.of(
-                "<gray>1. Have the ingredients in your inventory",
-                "<gray>2. Click a recipe to start the batch",
-                "<gray>3. Come back when it's done and collect",
-                "",
-                "<gray>Recipes with <green>Dried Bud</green> or <green>Hash</green> use the",
-                "<gray>one you clicked in your inventory (or the first).",
-                "",
-                "<gray>Lab level <white>" + machine.level() + "</white>: <green>" + Math.round((1 - Math.pow(0.85,
-                        machine.level() - 1)) * 100) + "%</green> faster, <green>" + Math.round(bonusChance(machine) * 100)
-                        + "%</green> bonus chance",
-                "<gray>Locked recipes unlock with your dealer rank."));
-        if (pickStrain != null) {
-            Strain s = KushCraft.get().strains().get(pickStrain);
-            if (s != null) {
-                help.add("<gray>Selected: " + s.colored() + " " + Text.stars(pickQuality));
-            }
-        }
-        help.add("");
-        help.add("<dark_gray>Lab Solvent & Catalyst: crafting table or Market");
-        set(INFO, Items.icon("ui_info", "<aqua>How the lab works", help));
     }
 
     private ItemStack recipeIcon(LabRecipe r) {
-        ItemStack icon;
         StrainStock.Group g = null;
         for (LabRecipe.Ingredient ing : r.ingredients()) {
             if (ing.strainSource()) {
                 g = StrainStock.pick(player, ing.custom(), ing.amount(), pickStrain, pickQuality);
             }
         }
+        ItemStack icon;
         if (r.output().strainBound()) {
-            Strain s = g != null ? g.strain() : KushCraft.get().strains().all().iterator().next();
+            Strain s = g != null ? g.strain() : KushCraft.get().strains().getOrDefault(null);
             icon = Items.strainItem(r.output(), s, g != null ? g.quality() : 3, r.amount());
         } else {
             icon = Items.create(r.output(), r.amount());
         }
-        ItemMeta meta = icon.getItemMeta();
-        meta.itemName(Text.mm("<white>" + r.output().display() + " <gray>x" + r.amount()));
         List<String> lore = new ArrayList<>();
-        int secs = (int) Math.round(r.seconds() * timeFactor(machine));
-        lore.add("<gray>Time: <white>" + Text.time(secs));
-        lore.add("<gray>Needs:");
         boolean all = true;
         for (LabRecipe.Ingredient ing : r.ingredients()) {
-            int have;
-            String extra = "";
-            if (ing.strainSource()) {
-                have = g == null ? maxGroup(ing.custom()) : g.count();
-                if (g != null) {
-                    extra = " <dark_gray>(" + Text.plain(Text.mm(g.strain().colored())) + ")";
-                }
-            } else {
-                have = InventoryUtil.count(player, ing::matches);
-            }
+            int have = ing.strainSource() ? (g == null ? maxGroup(ing.custom()) : g.count())
+                    : InventoryUtil.count(player, ing::matches);
             boolean ok = have >= ing.amount();
             all &= ok;
-            lore.add((ok ? " <green>✔ " : " <red>✘ ") + "<white>" + ing.amount() + "x " + ing.name()
-                    + extra + " <dark_gray>(" + have + ")");
+            lore.add((ok ? "<green>✔ " : "<red>✘ ") + "<white>" + ing.amount() + " " + ing.name());
         }
-        lore.add("");
-        KushCraft plugin = KushCraft.get();
-        if (!plugin.ranks().canCook(player, r)) {
-            var need = plugin.ranks().level(r.rank());
-            lore.add("<red>✘ Locked - needs rank " + need.colored());
-            lore.add("<dark_gray>Sell " + plugin.economy().format(need.sales()) + " of product to unlock.");
-        } else if (machine.busy()) {
-            lore.add("<red>The lab is busy.");
-        } else {
-            lore.add(all ? "<green><bold>Click to cook!" : "<red>Missing ingredients.");
-        }
+        lore.add("<dark_gray>⌚ " + Text.time((int) Math.round(r.seconds() * timeFactor(machine))));
+        boolean ready = all && !machine.busy();
+        ItemMeta meta = icon.getItemMeta();
+        meta.itemName(Text.mm((ready ? "<green>" : "<white>") + r.output().display() + " <gray>x" + r.amount()));
         meta.lore(Text.lines(lore));
         icon.setItemMeta(meta);
-        if (!KushCraft.get().ranks().canCook(player, r)) {
-            ItemStack locked = Items.icon("ui_lock", "<red>" + r.output().display() + " <gray>(locked)", List.of());
-            locked.editMeta(m -> m.lore(meta.lore()));
-            return locked;
-        }
-        return icon;
-    }
-
-    /** Cook time multiplier: config x 0.85 per upgrade level. */
-    public static double timeFactor(Machine m) {
-        return Math.max(0.01, KushCraft.get().getConfig().getDouble("lab.time-multiplier", 1.0))
-                * Math.pow(0.85, Math.max(0, m.level() - 1));
-    }
-
-    /** Chance of one extra item per batch: 8% per upgrade level. */
-    public static double bonusChance(Machine m) {
-        return 0.08 * Math.max(0, m.level() - 1);
+        return Items.glint(icon, ready);
     }
 
     private int maxGroup(ItemType type) {
@@ -174,16 +104,14 @@ public final class LabMenu extends Menu {
     }
 
     @Override
-    public void click(int slot, ClickType click) {
+    protected void clickPage(int slot, ClickType click) {
         if (slot == OUTPUT) {
             collect();
             return;
         }
-        for (int i = 0; i < RECIPES.length; i++) {
-            if (RECIPES[i] == slot && i < LabRecipe.values().length) {
-                start(LabRecipe.values()[i]);
-                return;
-            }
+        int i = slot - FIRST;
+        if (i >= 0 && i < SLOTS && i < LabRecipe.values().length) {
+            start(LabRecipe.values()[i]);
         }
     }
 
@@ -195,23 +123,22 @@ public final class LabMenu extends Menu {
         InventoryUtil.give(player, machine.output().clone());
         machine.clearJob();
         KushCraft.get().machines().markDirty();
-        player.playSound(player.getLocation(), "minecraft:entity.item.pickup", org.bukkit.SoundCategory.PLAYERS, 0.8f, 1f);
+        player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.8f, 1f);
         render();
     }
 
     private void start(LabRecipe r) {
-        if (!KushCraft.get().ranks().canCook(player, r)) {
-            var need = KushCraft.get().ranks().level(r.rank());
-            player.sendActionBar(Text.mm("<red>" + r.output().display() + " needs rank " + need.colored()
-                    + "<red>. Sell more product to rank up!"));
-            failSound();
-            return;
-        }
         if (machine.busy()) {
-            player.sendActionBar(Text.mm(machine.jobDone() ? "<yellow>Collect the finished batch first."
-                    : "<red>The lab is already cooking something."));
-            failSound();
-            return;
+            if (machine.jobDone()) {
+                collect(); // one click: collect the old batch, then start the new one
+                if (machine.busy()) {
+                    return;
+                }
+            } else {
+                player.sendActionBar(Text.mm("<red>The lab is still cooking."));
+                failSound();
+                return;
+            }
         }
         StrainStock.Group g = null;
         for (LabRecipe.Ingredient ing : r.ingredients()) {
@@ -236,28 +163,30 @@ public final class LabMenu extends Menu {
         ItemStack result = r.output().strainBound() && g != null
                 ? Items.strainItem(r.output(), g.strain(), g.quality(), r.amount())
                 : Items.create(r.output(), r.amount());
-        if (java.util.concurrent.ThreadLocalRandom.current().nextDouble() < bonusChance(machine)
+        if (ThreadLocalRandom.current().nextDouble() < bonusChance(machine)
                 && result.getAmount() < result.getMaxStackSize()) {
             result.setAmount(result.getAmount() + 1);
-            player.sendMessage(Text.msg("<green>Lab bonus: <white>+1 " + r.output().display()));
+            player.sendActionBar(Text.mm("<green>Lab bonus: +1 " + r.output().display()));
         }
         machine.startJob(r.name(), (long) (r.seconds() * 1000L * timeFactor(machine)), result);
         KushCraft.get().machines().markDirty();
+        KushCraft.get().awards().cooked(player, r);
         successSound();
-        player.playSound(player.getLocation(), "minecraft:block.brewing_stand.brew", org.bukkit.SoundCategory.BLOCKS, 1f, 1f);
+        player.playSound(player.getLocation(), "minecraft:block.brewing_stand.brew", SoundCategory.BLOCKS, 1f, 1f);
         render();
     }
 
     private void missing(LabRecipe.Ingredient ing) {
-        player.sendActionBar(Text.mm("<red>You need " + ing.amount() + "x " + ing.name()
-                + (ing.strainSource() ? " (of one strain)" : "") + "."));
+        player.sendActionBar(Text.mm("<red>You need " + ing.amount() + " " + ing.name()
+                + (ing.strainSource() ? " (one strain)" : "")));
         failSound();
     }
 
+    /** Clicking a strain item below picks which strain the weed recipes use. */
     @Override
     public void clickOwn(int slot, ItemStack item, ClickType click) {
         ItemType t = Items.type(item);
-        if ((t == ItemType.BUD_DRIED || t == ItemType.HASH) && Items.strain(item) != null) {
+        if (t != null && t.strainBound() && Items.strain(item) != null) {
             pickStrain = Items.strain(item).id();
             pickQuality = Items.quality(item);
             clickSound();
@@ -267,6 +196,8 @@ public final class LabMenu extends Menu {
 
     @Override
     public void tick() {
-        render();
+        if (machine.busy()) {
+            render();
+        }
     }
 }

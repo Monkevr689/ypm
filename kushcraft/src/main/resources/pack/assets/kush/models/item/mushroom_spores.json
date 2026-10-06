@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/mushroom_spores"
+  "layer0": "kush:item/mushroom_spores",
+  "layer1": "kush:item/mushroom_spores_tint",
+  "layer2": "kush:item/mushroom_spores_overlay"
  }
 }

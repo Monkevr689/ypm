@@ -2,13 +2,12 @@ package dev.kushcraft.command;
 
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.effect.EffectType;
-import dev.kushcraft.gui.BankMenu;
-import dev.kushcraft.gui.BreedMenu;
+import dev.kushcraft.gui.AwardsMenu;
 import dev.kushcraft.gui.DrugsMenu;
-import dev.kushcraft.gui.HomeMenu;
-import dev.kushcraft.gui.JobsMenu;
-import dev.kushcraft.gui.PayMenu;
+import dev.kushcraft.gui.GiveMenu;
 import dev.kushcraft.gui.ShopMenu;
+import dev.kushcraft.gui.TabMenu;
+import dev.kushcraft.gui.TopMenu;
 import dev.kushcraft.gui.TradeMenu;
 import dev.kushcraft.guide.Guide;
 import dev.kushcraft.item.ItemType;
@@ -51,7 +50,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             case "menu" -> {
                 Player p = (Player) sender;
                 giveMenuBook(p);
-                HomeMenu.open(p);
+                TabMenu.openMain(p);
             }
             case "guide", "book", "handbook" -> {
                 if (sender instanceof Player p) {
@@ -67,10 +66,15 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     open(sender, TradeMenu::new);
                 }
             }
-            case "jobs", "job" -> open(sender, JobsMenu::new);
-            case "orders", "home" -> open(sender, HomeMenu::new);
-            case "top", "bank" -> open(sender, BankMenu::new);
-            case "breed", "mix" -> open(sender, BreedMenu::new);
+            case "top", "ranks", "leaderboard" -> open(sender, TopMenu::new);
+            case "awards", "achievements" -> open(sender, AwardsMenu::new);
+            case "items" -> {
+                if (!admin) {
+                    noPerm(sender);
+                    return true;
+                }
+                open(sender, GiveMenu::new);
+            }
             case "sales" -> {
                 if (!admin) {
                     noPerm(sender);
@@ -83,7 +87,9 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 try {
                     Player t = Bukkit.getPlayerExact(args[1]);
                     plugin.economy().setSales(t, Double.parseDouble(args[2]));
-                    sender.sendMessage(Text.msg("<green>" + t.getName() + " is now " + plugin.ranks().of(t).colored()));
+                    plugin.ranks().refresh();
+                    Bukkit.getOnlinePlayers().forEach(o -> plugin.ranks().showInTab(o));
+                    sender.sendMessage(Text.msg("<green>" + t.getName() + " is now " + plugin.ranks().label(t)));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(Text.msg("<red>Not a number."));
                 }
@@ -92,13 +98,9 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 if (!(sender instanceof Player p)) {
                     sender.sendMessage(Text.msg("<red>Only players can send money."));
                 } else if (args.length < 3) {
-                    if (args.length == 1) {
-                        new PayMenu(p).open();
-                    } else {
-                        p.sendMessage(Text.msg("<red>/kush pay <player> <amount>"));
-                    }
+                    p.sendMessage(Text.msg("<red>/kush pay <player> <amount>"));
                 } else {
-                    PayMenu.send(p, Bukkit.getPlayerExact(args[1]), args[2]);
+                    pay(p, Bukkit.getPlayerExact(args[1]), args[2]);
                 }
             }
             case "pack" -> {
@@ -128,10 +130,6 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "strains" -> {
-                if (sender instanceof Player p && args.length == 1) {
-                    new BreedMenu(p).open();
-                    return true;
-                }
                 sender.sendMessage(Text.msg("<gray>Strains (" + plugin.strains().all().size() + "):"));
                 for (Strain s : plugin.strains().all()) {
                     StringBuilder eff = new StringBuilder();
@@ -169,13 +167,14 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Text.msg("<green>KushCraft <gray>- type <white>/kush</white> (or press <white>Shift+F</white>)"
                         + " to open the menu!"));
                 sender.sendMessage(Text.mm(" <white>/kush <gray>- the menu (everything is in there)"));
-                sender.sendMessage(Text.mm(" <white>/kush shop|drugs|breed|jobs|trade|bank <gray>- open a page directly"));
+                sender.sendMessage(Text.mm(" <white>/kush shop|drugs|trade|top|awards <gray>- open a tab directly"));
                 sender.sendMessage(Text.mm(" <white>/kush pay <player> <amount> <gray>- send money"));
                 sender.sendMessage(Text.mm(" <white>/kush guide <gray>- the handbook"));
                 sender.sendMessage(Text.mm(" <white>/kush pack <gray>- re-download the texture pack"));
                 sender.sendMessage(Text.mm(" <white>/kush balance <gray>- your money"));
                 if (admin) {
                     sender.sendMessage(Text.mm(" <red>/kush give <player> <item> [amount] [strain] [quality]"));
+                    sender.sendMessage(Text.mm(" <red>/kush items <gray>- click any item to get it"));
                     sender.sendMessage(Text.mm(" <red>/kush money <player> <amount> <gray>- set balance"));
                     sender.sendMessage(Text.mm(" <red>/kush sales <player> <amount> <gray>- set lifetime sales (rank)"));
                     sender.sendMessage(Text.mm(" <red>/kush reload"));
@@ -257,6 +256,37 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         return out.toArray(new org.bukkit.inventory.ItemStack[0]);
     }
 
+    /** /kush pay */
+    static boolean pay(Player from, Player to, String amountText) {
+        KushCraft plugin = KushCraft.get();
+        double amount;
+        try {
+            amount = Math.round(Double.parseDouble(amountText.replace("$", "").replace(",", "").trim()) * 100) / 100.0;
+        } catch (NumberFormatException e) {
+            from.sendMessage(Text.msg("<red>That's not a number."));
+            return false;
+        }
+        if (amount <= 0 || Double.isNaN(amount) || Double.isInfinite(amount)) {
+            from.sendMessage(Text.msg("<red>The amount must be more than 0."));
+            return false;
+        }
+        if (to == null || !to.isOnline() || to.equals(from)) {
+            from.sendMessage(Text.msg("<red>That player isn't online."));
+            return false;
+        }
+        if (!plugin.economy().withdraw(from, amount)) {
+            from.sendMessage(Text.msg("<red>You only have " + plugin.economy().format(plugin.economy().balance(from)) + "."));
+            return false;
+        }
+        plugin.economy().deposit(to, amount);
+        from.sendMessage(Text.msg("<green>Sent <gold>" + plugin.economy().format(amount) + "</gold> to <white>"
+                + Text.escape(to.getName())));
+        to.sendMessage(Text.msg("<green>You got <gold>" + plugin.economy().format(amount) + "</gold> from <white>"
+                + Text.escape(from.getName())));
+        to.playSound(to.getLocation(), "minecraft:entity.experience_orb.pickup", 0.7f, 1.4f);
+        return true;
+    }
+
     private static void noPerm(CommandSender s) {
         s.sendMessage(Text.msg("<red>You don't have permission."));
     }
@@ -266,10 +296,10 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
-            out.addAll(List.of("menu", "shop", "drugs", "breed", "jobs", "trade", "bank", "pay", "guide", "pack",
-                    "balance", "help"));
+            out.addAll(List.of("menu", "shop", "drugs", "trade", "top", "awards", "pay", "guide", "pack",
+                    "balance", "strains", "help"));
             if (admin) {
-                out.addAll(List.of("give", "money", "sales", "reload"));
+                out.addAll(List.of("give", "items", "money", "sales", "reload"));
             }
         } else if (admin && args[0].equalsIgnoreCase("give")) {
             if (args.length == 2) {

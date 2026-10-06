@@ -76,32 +76,51 @@ def check_menus():
     if java_guis != pack_meta.GUIS:
         errors.append(f"GuiFont.GUIS {java_guis} != pack_meta.GUIS {pack_meta.GUIS}")
     gui_dir = os.path.join(JAVA, "dev", "kushcraft", "gui")
+    import gui
+
+    def rows_of(name):
+        path = os.path.join(ASSETS, "kush", "textures", "gui", name + ".png")
+        if name not in pack_meta.GUIS or not os.path.exists(path):
+            errors.append(f"menu '{name}' has no background")
+            return None
+        return (Image.open(path).height - 114) // 18
+
+    # /kush tab pages: TabMenu.Tab, 6 rows, same order as the tab bar drawn by gui.py
+    tab_src = open(os.path.join(gui_dir, "TabMenu.java"), encoding="utf-8").read()
+    tabs = re.findall(r'^        ([A-Z]+)\("', tab_src, re.M)
+    if tabs != gui.TABS:
+        errors.append(f"TabMenu tabs {tabs} != gui.TABS {gui.TABS}")
+    for t in tabs:
+        if rows_of(t.lower()) not in (None, 6):
+            errors.append(f"tab page '{t.lower()}' background is not 6 rows")
+    # Drug Lab pages: LabTabMenu.Tab, LabTabMenu.ROWS rows
+    lab_src = open(os.path.join(gui_dir, "LabTabMenu.java"), encoding="utf-8").read()
+    lab_tabs = re.findall(r'^        ([A-Z]+)\("', lab_src, re.M)
+    lab_rows = int(re.search(r"static final int ROWS = (\d+);", lab_src).group(1))
+    if lab_tabs != gui.LAB_TABS:
+        errors.append(f"LabTabMenu tabs {lab_tabs} != gui.LAB_TABS {gui.LAB_TABS}")
+    for t in lab_tabs:
+        if rows_of(t.lower()) not in (None, lab_rows):
+            errors.append(f"lab page '{t.lower()}' background is not {lab_rows} rows")
+    # other menus: super(player, rows, "name", ...)
     for fn in sorted(os.listdir(gui_dir)):
         src = open(os.path.join(gui_dir, fn), encoding="utf-8").read()
         for rows, name in re.findall(r'super\(player, (\d+), "([a-z_]+)"', src):
-            if name not in pack_meta.GUIS:
-                errors.append(f"{fn}: menu background '{name}' is not in GuiFont.GUIS")
-                continue
-            path = os.path.join(ASSETS, "kush", "textures", "gui", name + ".png")
-            if not os.path.exists(path):
-                errors.append(f"{fn}: background image gui/{name}.png missing")
-                continue
-            h = Image.open(path).height
-            if h != 114 + int(rows) * 18:
-                errors.append(f"{fn}: {rows}-row menu but gui/{name}.png is drawn for {(h - 114) // 18} rows")
-    # tab pages: TabMenu.Tab names, 6 rows each, same order as the tab bar in gui.py
-    tab_src = open(os.path.join(gui_dir, "TabMenu.java"), encoding="utf-8").read()
-    tabs = re.findall(r'^        ([A-Z]+)\("', tab_src, re.M)
-    import gui
-    if [t for t in tabs] != gui.TABS[:len(tabs)]:
-        errors.append(f"TabMenu tabs {tabs} != gui.TABS {gui.TABS}")
-    for t in tabs:
-        name = t.lower()
-        path = os.path.join(ASSETS, "kush", "textures", "gui", name + ".png")
-        if name not in pack_meta.GUIS or not os.path.exists(path):
-            errors.append(f"tab page '{name}' has no background")
-        elif Image.open(path).height != 114 + 6 * 18:
-            errors.append(f"tab page '{name}' background is not 6 rows")
+            r = rows_of(name)
+            if r is not None and r != int(rows):
+                errors.append(f"{fn}: {rows}-row menu but gui/{name}.png is drawn for {r} rows")
+    # slot frames drawn for the right number of things
+    cat_src = open(os.path.join(JAVA, "dev", "kushcraft", "catalog", "Catalog.java"), encoding="utf-8").read()
+    counts = [len(re.findall(r"Category\." + c + r"[,)]", cat_src)) for c in ("WEED", "PSYCH", "UPPERS", "DOWNERS", "GEAR")]
+    if counts != gui.DRUG_ROWS:
+        errors.append(f"Catalog rows {counts} != gui.DRUG_ROWS {gui.DRUG_ROWS}")
+    recipe_src = open(os.path.join(JAVA, "dev", "kushcraft", "lab", "LabRecipe.java"), encoding="utf-8").read()
+    enums = re.findall(r"^    ([A-Z_]+)\(ItemType\.", recipe_src, re.M)
+    if len(enums) != gui.COOK_RECIPES:
+        errors.append(f"{len(enums)} lab recipes but gui.COOK_RECIPES = {gui.COOK_RECIPES}")
+    import recipe_images
+    if [c[0] for c in recipe_images.COOK] != enums:
+        errors.append(f"recipe_images.COOK order {[c[0] for c in recipe_images.COOK]} != LabRecipe {enums}")
 
 
 def check_recipe_book():
@@ -149,6 +168,8 @@ def main():
 
     check_menus()
     check_recipe_book()
+    if not os.path.exists(os.path.join(ASSETS, "kush", "textures", "gui", "advancements", "kush.png")):
+        errors.append("advancement tab background gui/advancements/kush.png missing")
 
     meta = json.load(open(os.path.join(PACK, "pack.mcmeta")))
     pk = meta.get("pack")
@@ -183,6 +204,14 @@ def main():
     types = open(os.path.join(JAVA, "dev", "kushcraft", "strain", "StrainType.java")).read()
     for m in re.finditer(r'"(type_[a-z]+)"', types):
         used.add(m.group(1))
+    for src_name in ("gui/TabMenu.java", "gui/LabTabMenu.java"):
+        src = open(os.path.join(JAVA, "dev", "kushcraft", src_name)).read()
+        for m in re.finditer(r'^        [A-Z]+\("[^"]+", "([a-z0-9_]+)"', src, re.M):
+            used.add(m.group(1))
+    awards = open(os.path.join(JAVA, "dev", "kushcraft", "award", "Award.java")).read()
+    for m in re.finditer(r'\("[^"]+", "[^"]+", "([a-z0-9_]+)", \d+', awards):
+        used.add(m.group(1))
+        used.add(m.group(1) + "_locked")
     for kind in ("sativa", "indica", "hybrid"):
         for st in range(5):
             used.add(f"plant_{kind}_{st}")

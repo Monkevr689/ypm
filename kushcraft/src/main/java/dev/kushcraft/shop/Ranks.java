@@ -1,26 +1,31 @@
 package dev.kushcraft.shop;
 
 import dev.kushcraft.KushCraft;
-import dev.kushcraft.lab.LabRecipe;
+import dev.kushcraft.award.Award;
 import dev.kushcraft.util.Text;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.SoundCategory;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * Dealer ranks: the more product you sell, the higher your rank. Ranks
- * unlock Drug Lab recipes and pay a bonus on every sale. Defined in
- * config.yml (ranks:), level 1 is everyone's starting rank.
+ * Dealer ranks go to whoever sells the most: the #1 seller on the server is
+ * the Cartel Boss, #2 the Kingpin and so on (config.yml ranks.titles).
+ * Everyone else is a Street Seller. Titles pay a bonus on every sale, show
+ * in the tab list and change hands the moment someone sells more.
  */
 public final class Ranks {
 
-    public record Rank(int level, String name, String color, double sales, double bonus) {
+    /** top = the lowest leaderboard place that still gets this title (0 = everyone else). */
+    public record Rank(int top, String name, String color, double bonus) {
 
         public String colored() {
             return "<" + color + ">" + name + "</" + color + ">";
@@ -28,90 +33,148 @@ public final class Ranks {
     }
 
     private final KushCraft plugin;
-    private final List<Rank> ranks = new ArrayList<>();
+    private final List<Rank> titles = new ArrayList<>();
+    private Rank everyone = new Rank(0, "Street Seller", "gray", 0);
+    private List<Economy.Rich> board = List.of();
+    private final Map<UUID, Integer> places = new HashMap<>();
 
     public Ranks(KushCraft plugin) {
         this.plugin = plugin;
     }
 
     public void load() {
-        ranks.clear();
-        int level = 1;
-        double last = -1;
-        for (Map<?, ?> m : plugin.getConfig().getMapList("ranks")) {
-            double sales = m.get("sales") instanceof Number n ? n.doubleValue() : 0;
-            if (level == 1) {
-                sales = 0;
+        titles.clear();
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("ranks");
+        int last = 0;
+        if (sec != null) {
+            for (Map<?, ?> m : sec.getMapList("titles")) {
+                int top = m.get("top") instanceof Number n ? n.intValue() : 0;
+                if (top <= last) {
+                    plugin.getLogger().warning("ranks.titles: '" + m.get("name") + "' must have a bigger top than the one before it - skipped.");
+                    continue;
+                }
+                last = top;
+                titles.add(new Rank(top, String.valueOf(m.get("name")), color(m.get("color")), bonus(m.get("bonus"))));
             }
-            if (sales <= last) {
-                plugin.getLogger().warning("ranks: '" + m.get("name") + "' needs more sales than the rank before it - skipped.");
-                continue;
+            ConfigurationSection e = sec.getConfigurationSection("everyone");
+            if (e != null) {
+                everyone = new Rank(0, e.getString("name", "Street Seller"), e.getString("color", "gray"),
+                        Math.max(0, e.getDouble("bonus", 0)));
             }
-            last = sales;
-            double bonus = m.get("bonus") instanceof Number n ? n.doubleValue() : 0;
-            String color = m.get("color") == null ? "white" : String.valueOf(m.get("color"));
-            ranks.add(new Rank(level++, String.valueOf(m.get("name")), color, sales, Math.max(0, bonus)));
         }
-        if (ranks.isEmpty()) {
-            ranks.add(new Rank(1, "Dealer", "white", 0, 0));
+        refresh();
+    }
+
+    private static String color(Object o) {
+        return o == null ? "white" : String.valueOf(o);
+    }
+
+    private static double bonus(Object o) {
+        return o instanceof Number n ? Math.max(0, n.doubleValue()) : 0;
+    }
+
+    /** Re-sorts the leaderboard (after every sale). */
+    public void refresh() {
+        board = plugin.economy().topSales();
+        places.clear();
+        for (int i = 0; i < board.size(); i++) {
+            places.put(board.get(i).id(), i + 1);
         }
     }
 
-    public List<Rank> all() {
-        return ranks;
+    public List<Rank> titles() {
+        return titles;
     }
 
-    public Rank of(double sales) {
-        Rank r = ranks.get(0);
-        for (Rank x : ranks) {
-            if (sales >= x.sales()) {
-                r = x;
+    public Rank everyone() {
+        return everyone;
+    }
+
+    /** Best sellers first. */
+    public List<Economy.Rich> leaderboard() {
+        return board;
+    }
+
+    /** Leaderboard place (1 = sold the most), 0 = hasn't sold anything yet. */
+    public int place(OfflinePlayer p) {
+        return place(p.getUniqueId());
+    }
+
+    public int place(UUID id) {
+        return places.getOrDefault(id, 0);
+    }
+
+    /** The title for a leaderboard place. */
+    public Rank forPlace(int place) {
+        if (place > 0) {
+            for (Rank r : titles) {
+                if (place <= r.top()) {
+                    return r;
+                }
             }
         }
-        return r;
+        return everyone;
     }
 
     public Rank of(OfflinePlayer p) {
-        return of(plugin.economy().sales(p));
+        return forPlace(place(p));
     }
 
-    /** The rank after this one, or null at the top. */
-    public Rank next(Rank r) {
-        return r.level() < ranks.size() ? ranks.get(r.level()) : null;
-    }
-
-    /** Rank with this level (clamped to the ranks that exist). */
-    public Rank level(int level) {
-        return ranks.get(Math.max(1, Math.min(ranks.size(), level)) - 1);
-    }
-
-    public boolean canCook(Player p, LabRecipe r) {
-        return p.hasPermission("kushcraft.admin") || of(p).level() >= Math.min(r.rank(), ranks.size());
-    }
-
-    /** Sale price multiplier for this player's rank (1.10 = +10%). */
+    /** Sale price multiplier for this player's title (1.10 = +10%). */
     public double multiplier(Player p) {
         return 1 + of(p).bonus();
     }
 
-    /** Records product sold at the Market (or an order) and announces a rank-up. */
+    /** "#3 The Plug" */
+    public String label(OfflinePlayer p) {
+        int place = place(p);
+        return (place > 0 ? "<white>#" + place + " " : "") + of(p).colored();
+    }
+
+    /** Records product sold (Shop sales and orders) and moves titles around. */
     public void sold(Player p, double money) {
         if (money <= 0) {
             return;
         }
-        Rank before = of(p);
-        plugin.economy().addSales(p, money);
-        Rank after = of(p);
-        if (after.level() > before.level()) {
-            p.showTitle(Title.title(Text.mm("<gold><bold>RANK UP!"), Text.mm("<white>You are now a " + after.colored())));
-            p.playSound(p.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.8f, 1f);
-            Bukkit.broadcast(Text.msg("<white>" + Text.escape(p.getName()) + " <gray>is now a " + after.colored()
-                    + "<gray>!" + (after.bonus() > 0 ? " <dark_gray>(+" + Math.round(after.bonus() * 100) + "% on sales)" : "")));
-            for (LabRecipe r : LabRecipe.values()) {
-                if (Math.min(r.rank(), ranks.size()) == after.level()) {
-                    p.sendMessage(Text.msg("<green>Unlocked: <white>" + r.output().display() + " <gray>(Drug Lab > Cook)"));
-                }
-            }
+        Map<UUID, Rank> before = new HashMap<>();
+        for (Player o : Bukkit.getOnlinePlayers()) {
+            before.put(o.getUniqueId(), of(o));
         }
+        int placeBefore = place(p);
+        plugin.economy().addSales(p, money);
+        refresh();
+        plugin.awards().sales(p, plugin.economy().sales(p));
+        Rank now = of(p);
+        Rank was = before.getOrDefault(p.getUniqueId(), everyone);
+        int place = place(p);
+        if (place == 1) {
+            plugin.awards().grant(p, Award.TOP_1);
+        }
+        if (now != was && now != everyone && (was == everyone || now.top() < was.top())) {
+            p.showTitle(Title.title(Text.mm("<gold><bold>#" + place + "</bold>"), Text.mm("<white>You are now " + now.colored())));
+            p.playSound(p.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.8f, 1f);
+            Bukkit.broadcast(Text.msg("<white>" + Text.escape(p.getName()) + " <gray>is now " + now.colored()
+                    + " <gray>(#" + place + " seller)"));
+        } else if (placeBefore != place && place > 0) {
+            p.sendActionBar(Text.mm("<gray>You're now <white>#" + place + "</white> on the leaderboard."));
+        }
+        for (Player o : Bukkit.getOnlinePlayers()) {
+            Rank b = before.get(o.getUniqueId());
+            if (o != p && b != null && b != everyone && of(o) != b) {
+                o.sendMessage(Text.msg("<gray>" + Text.escape(p.getName()) + " sold more than you - you're now "
+                        + of(o).colored() + " <gray>(#" + place(o) + ")."));
+            }
+            showInTab(o);
+        }
+    }
+
+    /** Puts the title in front of the name in the tab list (ranks.tab-list). */
+    public void showInTab(Player p) {
+        if (!plugin.getConfig().getBoolean("ranks.tab-list", true)) {
+            return;
+        }
+        Rank r = of(p);
+        p.playerListName(r == everyone ? null
+                : Text.mm("<" + r.color() + ">[" + r.name() + "]</" + r.color() + "> <white>" + Text.escape(p.getName())));
     }
 }

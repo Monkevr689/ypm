@@ -3,6 +3,7 @@ package dev.kushcraft.gui;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
+import dev.kushcraft.machine.Machine;
 import dev.kushcraft.strain.Strain;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.StrainStock;
@@ -14,21 +15,19 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 
-/** Rolling Table: pick a bud, roll joints or blunts. Layout matches tools/gui.py roller(). */
-public final class RollerMenu extends Menu {
+/** Drug Lab > Roll: pick a bud, roll joints or blunts. Layout matches tools/gui.py roll(). */
+public final class RollerMenu extends LabTabMenu {
 
-    private static final int BUD = 10;
-    private static final int JOINT = 12;
-    private static final int BLUNT = 14;
-    private static final int ALL = 16;
-    private static final int BACK = 18;
-    private static final int INFO = 26;
+    static final int BUD = at(2, 1);
+    static final int JOINT = at(2, 3);
+    static final int BLUNT = at(2, 5);
+    static final int ALL = at(2, 7);
 
     private String pickStrain;
     private int pickQuality;
 
-    public RollerMenu(Player player) {
-        super(player, 3, "roller", "Drug Lab - Roll");
+    public RollerMenu(Player player, Machine machine) {
+        super(player, machine, Tab.ROLL);
     }
 
     private StrainStock.Group selected(int needed) {
@@ -36,61 +35,45 @@ public final class RollerMenu extends Menu {
     }
 
     @Override
-    public void render() {
-        inv.clear();
-        backButton(BACK);
+    protected void page() {
         StrainStock.Group g = selected(1);
         if (g != null && (pickStrain == null || !g.is(pickStrain, pickQuality))) {
             pickStrain = g.strain().id();
             pickQuality = g.quality();
         }
         if (g == null) {
-            set(BUD, Items.icon("bud_dried", "<gray>No dried buds",
-                    "<gray>Dry fresh buds in the Drug Lab (Dry),",
-                    "<gray>then click one in your inventory."));
+            set(BUD, Items.icon("bud_dried", "<gray>No dried buds", "<dark_gray>Dry fresh buds first (Dry tab)."));
         } else {
             ItemStack show = Items.amount(Items.strainItem(ItemType.BUD_DRIED, g.strain(), g.quality(), 1), g.count());
-            set(BUD, Items.glint(show, true));
+            show.editMeta(m -> m.lore(Text.lines(List.of("<dark_gray>Click a bud below to switch."))));
+            set(BUD, show);
         }
         int papers = InventoryUtil.count(player, it -> Items.type(it) == ItemType.ROLLING_PAPERS);
         int wraps = InventoryUtil.count(player, it -> Items.type(it) == ItemType.BLUNT_WRAP);
         int buds = g == null ? 0 : g.count();
-        Strain s = g == null ? KushCraft.get().strains().all().iterator().next() : g.strain();
+        Strain s = g == null ? KushCraft.get().strains().getOrDefault(null) : g.strain();
         int q = g == null ? 3 : g.quality();
-
-        ItemStack joint = Items.strainItem(ItemType.JOINT, s, q, 1);
-        joint.editMeta(m -> m.lore(Text.lines(List.of(
-                "<gray>Needs <white>1 Dried Bud</white> + <white>1 Rolling Papers",
-                "<gray>You have: <white>" + buds + "</white> buds, <white>" + papers + "</white> papers",
-                "<gray>" + Items.JOINT_HITS + " hits per joint",
-                "",
-                "<green>Click: roll 1   <yellow>Shift-click: roll 8"))));
-        set(JOINT, joint);
-
-        ItemStack blunt = Items.strainItem(ItemType.BLUNT, s, q, 1);
-        blunt.editMeta(m -> m.lore(Text.lines(List.of(
-                "<gray>Needs <white>2 Dried Bud</white> + <white>1 Blunt Wrap",
-                "<gray>You have: <white>" + buds + "</white> buds, <white>" + wraps + "</white> wraps",
-                "<gray>" + Items.BLUNT_HITS + " stronger hits per blunt",
-                "",
-                "<green>Click: roll 1   <yellow>Shift-click: roll 8"))));
-        set(BLUNT, blunt);
-
+        set(JOINT, rollIcon(ItemType.JOINT, s, q, buds >= 1 && papers >= 1,
+                "1 Dried Bud + 1 Rolling Papers", papers + " papers"));
+        set(BLUNT, rollIcon(ItemType.BLUNT, s, q, buds >= 2 && wraps >= 1,
+                "2 Dried Bud + 1 Blunt Wrap", wraps + " wraps"));
         int canAll = Math.min(buds, papers);
-        set(ALL, Items.icon("rolling_papers", "<green>Roll all <white>(" + canAll + " joints)",
-                "<gray>Rolls every bud of the selected strain",
-                "<gray>you have papers for."));
-        set(INFO, Items.icon("ui_info", "<aqua>Rolling",
-                "<gray>Click a <green>Dried Bud</green> in your inventory",
-                "<gray>to pick which strain to roll.",
-                "",
-                "<gray>Rolling Papers: 3 paper + sugar cane",
-                "<gray>Blunt Wrap: paper + cocoa + dried kelp",
-                "<gray>(crafting table) or buy them at the Market."));
+        set(ALL, Items.glint(Items.icon("rolling_papers", canAll > 0 ? "<green>Roll all <white>(" + canAll + ")"
+                : "<gray>Roll all", "<dark_gray>Every bud you have papers for."), canAll > 0));
+    }
+
+    private ItemStack rollIcon(ItemType type, Strain s, int q, boolean ok, String needs, String have) {
+        ItemStack it = Items.strainItem(type, s, q, 1);
+        it.editMeta(m -> {
+            m.itemName(Text.mm((ok ? "<green>" : "<white>") + "Roll a " + type.display()));
+            m.lore(Text.lines(List.of((ok ? "<green>✔ " : "<red>✘ ") + "<white>" + needs,
+                    "<dark_gray>You have " + have + " · Shift: roll 8")));
+        });
+        return Items.glint(it, ok);
     }
 
     @Override
-    public void click(int slot, ClickType click) {
+    protected void clickPage(int slot, ClickType click) {
         int times = click.isShiftClick() ? 8 : 1;
         if (slot == JOINT) {
             roll(ItemType.JOINT, 1, ItemType.ROLLING_PAPERS, times);
@@ -118,6 +101,7 @@ public final class RollerMenu extends Menu {
         StrainStock.take(player, ItemType.BUD_DRIED, g, n * budsEach);
         InventoryUtil.remove(player, it -> Items.type(it) == wrap, n);
         InventoryUtil.give(player, Items.strainItem(product, g.strain(), g.quality(), n));
+        KushCraft.get().awards().rolled(player, product);
         player.playSound(player.getLocation(), "minecraft:item.book.page_turn", SoundCategory.PLAYERS, 1f, 1.3f);
         player.sendActionBar(Text.mm("<green>Rolled " + n + "x " + g.strain().colored() + " <white>" + product.display()));
         render();

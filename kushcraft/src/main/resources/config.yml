@@ -2,7 +2,7 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 4
+config-version: 5
 
 # Custom textures/models are delivered with a server resource pack that
 # KushCraft builds and hosts by itself. Players get the usual
@@ -66,7 +66,7 @@ lab:
   time-multiplier: 1.0
   # Price of each Drug Lab upgrade (level 2, 3, 4, 5). Every level cooks
   # 15% faster and adds 8% chance of a bonus item.
-  upgrade-costs: [5000, 15000, 40000, 100000]
+  upgrade-costs: [2500, 7500, 20000, 50000]
 
 effects:
   # Show a boss bar with your high level and active effects.
@@ -79,10 +79,8 @@ effects:
   lucky-double-chance: 0.2
 
 strain-maker:
-  # Players can breed strains from /kush > Breed (otherwise only at a Drug Lab).
-  anywhere: true
-  # Money every mix costs (the result is random: keep it or try again).
-  cost: 1500
+  # Money every mix costs (Drug Lab > Mix; the result is random: keep it or try again).
+  cost: 250
   # Maximum strains one player can create.
   max-per-player: 25
   # Seed packs you receive for a new strain.
@@ -92,7 +90,7 @@ economy:
   # Use Vault (EssentialsX, CMI, ...) when it is installed. Otherwise KushCraft
   # keeps its own simple wallet per player.
   use-vault: true
-  starting-balance: 300
+  starting-balance: 250
   symbol: '$'
 
 market:
@@ -110,21 +108,30 @@ market:
   # Daily orders: hand in a batch for bonus cash.
   orders: 3
   order-minutes: 60
-  order-bonus: 1.6
+  order-bonus: 1.5
 
 # =====================================================================
-#  DEALER RANKS - earned by selling product (Shop sales and orders).
-#  Ranks unlock Drug Lab recipes (level 1-5, see /kush > Drugs) and pay a
-#  bonus on every sale. sales = lifetime money from selling.
+#  DEALER RANKS - the players who sold the most product (lifetime Shop
+#  sales + orders) get these titles. top: 5 = every place up to #5 that a
+#  title above didn't take. bonus = extra money on every sale (0.10 = +10%).
+#  Titles change hands the moment someone sells more.
 # =====================================================================
 ranks:
-  - {name: Street Seller, color: gray, sales: 0, bonus: 0}
-  - {name: Corner Dealer, color: green, sales: 2500, bonus: 0.05}
-  - {name: Hustler, color: aqua, sales: 15000, bonus: 0.10}
-  - {name: Supplier, color: light_purple, sales: 60000, bonus: 0.15}
-  - {name: The Plug, color: gold, sales: 200000, bonus: 0.20}
-  - {name: Kingpin, color: red, sales: 600000, bonus: 0.25}
-  - {name: Cartel Boss, color: dark_red, sales: 2000000, bonus: 0.30}
+  titles:
+    - {top: 1, name: Cartel Boss, color: dark_red, bonus: 0.15}
+    - {top: 2, name: Kingpin, color: red, bonus: 0.12}
+    - {top: 3, name: The Plug, color: gold, bonus: 0.10}
+    - {top: 5, name: Supplier, color: light_purple, bonus: 0.07}
+    - {top: 10, name: Hustler, color: aqua, bonus: 0.05}
+    - {top: 25, name: Dealer, color: green, bonus: 0.02}
+  everyone: {name: Street Seller, color: gray, bonus: 0}
+  # Show the title in front of the player's name in the tab list.
+  tab-list: true
+
+awards:
+  # Achievements are also real advancements (their own tab, with the usual
+  # toast). false = show them as a title on screen instead.
+  advancements: true
 
 # Give new players the KushCraft Menu book on their first join.
 give-guide-on-first-join: true
@@ -136,18 +143,18 @@ menu:
   give-book-on-command: true
 
 # =====================================================================
-#  EXCHANGE  (/kush > Exchange)
-#  Trade money for vanilla resources and sell them back. price = what a
-#  player pays for ONE item; amount = how many one click buys. Players sell
-#  for sell-ratio of the price, so nothing can be bought and sold back for a
-#  profit. Prices move a little with trading and drift back each minute.
-#  Add, remove or re-price anything; categories become tabs (max 7).
+#  TRADE  (/kush > Trade)
+#  Swap the money from your product for vanilla resources. Resources are
+#  expensive on purpose: you have to sell a LOT of product for a diamond.
+#  price = what a player pays for ONE item, amount = how many one click
+#  buys (shift-click buys 4 times as many). Players sell resources back for
+#  sell-ratio of the price. Max 36 items (one page).
 # =====================================================================
 exchange:
   enabled: true
-  # All prices below are multiplied by this (2.5 = a diamond costs 300).
-  price-multiplier: 2.5
-  sell-ratio: 0.3
+  # All prices below are multiplied by this.
+  price-multiplier: 1.0
+  sell-ratio: 0.2
   # Price change per "amount" bought (+) or sold (-), 0.01 = 1%...
   price-step: 0.01
   # ...between these limits of the normal price...
@@ -155,164 +162,53 @@ exchange:
   max-price: 1.25
   # ...and back towards normal this much per minute.
   recovery-per-minute: 0.02
-  categories:
-    ores:
-      name: Ores & Gems
-      icon: diamond
-      items:
-        - {item: coal, price: 3, amount: 16}
-        - {item: charcoal, price: 3, amount: 16}
-        - {item: raw_copper, price: 3, amount: 16}
-        - {item: copper_ingot, price: 4, amount: 16}
-        - {item: raw_iron, price: 8, amount: 16}
-        - {item: iron_ingot, price: 10, amount: 16}
-        - {item: raw_gold, price: 14, amount: 8}
-        - {item: gold_ingot, price: 16, amount: 8}
-        - {item: redstone, price: 2, amount: 32}
-        - {item: lapis_lazuli, price: 4, amount: 16}
-        - {item: quartz, price: 4, amount: 16}
-        - {item: amethyst_shard, price: 5, amount: 16}
-        - {item: glowstone_dust, price: 3, amount: 16}
-        - {item: flint, price: 1.5, amount: 16}
-        - {item: obsidian, price: 10, amount: 8}
-        - {item: emerald, price: 40, amount: 4}
-        - {item: diamond, price: 120, amount: 1}
-        - {item: netherite_scrap, price: 450, amount: 1}
-        - {item: netherite_ingot, price: 2000, amount: 1}
-    blocks:
-      name: Building Blocks
-      icon: bricks
-      items:
-        - {item: cobblestone, price: 0.25, amount: 64}
-        - {item: stone, price: 0.5, amount: 64}
-        - {item: cobbled_deepslate, price: 0.3, amount: 64}
-        - {item: andesite, price: 0.4, amount: 64}
-        - {item: diorite, price: 0.4, amount: 64}
-        - {item: granite, price: 0.4, amount: 64}
-        - {item: tuff, price: 0.4, amount: 64}
-        - {item: dirt, price: 0.15, amount: 64}
-        - {item: grass_block, price: 1, amount: 16}
-        - {item: sand, price: 0.5, amount: 64}
-        - {item: red_sand, price: 0.6, amount: 64}
-        - {item: gravel, price: 0.5, amount: 64}
-        - {item: clay_ball, price: 1, amount: 16}
-        - {item: glass, price: 1.5, amount: 32}
-        - {item: bricks, price: 4, amount: 16}
-        - {item: stone_bricks, price: 1, amount: 64}
-        - {item: sandstone, price: 2, amount: 32}
-        - {item: terracotta, price: 2, amount: 32}
-        - {item: white_wool, price: 3, amount: 16}
-        - {item: calcite, price: 0.8, amount: 32}
-        - {item: snow_block, price: 1, amount: 16}
-        - {item: ice, price: 2, amount: 16}
-        - {item: packed_ice, price: 18, amount: 4}
-    wood:
-      name: Wood
-      icon: oak_log
-      items:
-        - {item: oak_log, price: 2.5, amount: 16}
-        - {item: spruce_log, price: 2.5, amount: 16}
-        - {item: birch_log, price: 2.5, amount: 16}
-        - {item: jungle_log, price: 2.5, amount: 16}
-        - {item: acacia_log, price: 2.5, amount: 16}
-        - {item: dark_oak_log, price: 2.5, amount: 16}
-        - {item: mangrove_log, price: 2.5, amount: 16}
-        - {item: cherry_log, price: 3, amount: 16}
-        - {item: pale_oak_log, price: 3, amount: 16}
-        - {item: crimson_stem, price: 3, amount: 16}
-        - {item: warped_stem, price: 3, amount: 16}
-        - {item: bamboo_block, price: 2, amount: 16}
-        - {item: stick, price: 0.2, amount: 32}
-        - {item: oak_sapling, price: 1, amount: 8}
-    farming:
-      name: Farming & Food
-      icon: wheat
-      items:
-        - {item: wheat, price: 1, amount: 16}
-        - {item: wheat_seeds, price: 0.2, amount: 16}
-        - {item: carrot, price: 1, amount: 16}
-        - {item: potato, price: 1, amount: 16}
-        - {item: beetroot, price: 1, amount: 16}
-        - {item: sugar_cane, price: 1, amount: 16}
-        - {item: sugar, price: 1.2, amount: 16}
-        - {item: cocoa_beans, price: 2, amount: 16}
-        - {item: pumpkin, price: 2, amount: 8}
-        - {item: melon_slice, price: 0.4, amount: 16}
-        - {item: apple, price: 3, amount: 8}
-        - {item: sweet_berries, price: 0.5, amount: 16}
-        - {item: egg, price: 1, amount: 16}
-        - {item: honey_bottle, price: 6, amount: 4}
-        - {item: nether_wart, price: 3, amount: 16}
-        - {item: bamboo, price: 0.3, amount: 32}
-        - {item: cactus, price: 1, amount: 16}
-        - {item: kelp, price: 0.4, amount: 32}
-        - {item: bread, price: 4, amount: 16}
-        - {item: baked_potato, price: 2, amount: 16}
-        - {item: cooked_beef, price: 6, amount: 16}
-        - {item: cooked_porkchop, price: 6, amount: 16}
-        - {item: cooked_chicken, price: 4, amount: 16}
-        - {item: golden_carrot, price: 14, amount: 8}
-        - {item: golden_apple, price: 160, amount: 1}
-    mob_drops:
-      name: Mob Drops
-      icon: bone
-      items:
-        - {item: rotten_flesh, price: 0.2, amount: 32}
-        - {item: bone, price: 1.5, amount: 16}
-        - {item: bone_meal, price: 0.6, amount: 32}
-        - {item: string, price: 1.5, amount: 16}
-        - {item: spider_eye, price: 2, amount: 16}
-        - {item: gunpowder, price: 4, amount: 16}
-        - {item: leather, price: 4, amount: 16}
-        - {item: feather, price: 1, amount: 16}
-        - {item: ink_sac, price: 2, amount: 16}
-        - {item: glow_ink_sac, price: 4, amount: 16}
-        - {item: slime_ball, price: 5, amount: 16}
-        - {item: honeycomb, price: 4, amount: 16}
-        - {item: prismarine_shard, price: 3, amount: 16}
-        - {item: rabbit_hide, price: 2, amount: 16}
-        - {item: magma_cream, price: 6, amount: 8}
-        - {item: phantom_membrane, price: 10, amount: 4}
-        - {item: ender_pearl, price: 15, amount: 4}
-        - {item: blaze_rod, price: 15, amount: 4}
-        - {item: ghast_tear, price: 25, amount: 1}
-        - {item: nautilus_shell, price: 40, amount: 1}
-        - {item: shulker_shell, price: 80, amount: 1}
-    nether_end:
-      name: Nether & End
-      icon: ender_eye
-      items:
-        - {item: netherrack, price: 0.1, amount: 64}
-        - {item: soul_sand, price: 1, amount: 32}
-        - {item: soul_soil, price: 1, amount: 32}
-        - {item: blackstone, price: 0.5, amount: 64}
-        - {item: basalt, price: 0.5, amount: 64}
-        - {item: glowstone, price: 12, amount: 8}
-        - {item: magma_block, price: 20, amount: 8}
-        - {item: crying_obsidian, price: 15, amount: 8}
-        - {item: blaze_powder, price: 8, amount: 8}
-        - {item: end_stone, price: 2, amount: 32}
-        - {item: chorus_fruit, price: 2, amount: 16}
-        - {item: ender_eye, price: 25, amount: 4}
-    utility:
-      name: Useful & Rare
-      icon: experience_bottle
-      items:
-        - {item: paper, price: 0.7, amount: 16}
-        - {item: book, price: 5, amount: 4}
-        - {item: glass_bottle, price: 0.6, amount: 16}
-        - {item: torch, price: 0.4, amount: 32}
-        - {item: arrow, price: 1, amount: 32}
-        - {item: experience_bottle, price: 20, amount: 4}
-        - {item: name_tag, price: 60, amount: 1}
-        - {item: saddle, price: 60, amount: 1}
-        - {item: heart_of_the_sea, price: 300, amount: 1}
-        - {item: totem_of_undying, price: 400, amount: 1}
+  items:
+    # ores & gems
+    - {item: coal, price: 25, amount: 16}
+    - {item: copper_ingot, price: 20, amount: 16}
+    - {item: iron_ingot, price: 80, amount: 8}
+    - {item: gold_ingot, price: 150, amount: 8}
+    - {item: redstone, price: 15, amount: 16}
+    - {item: lapis_lazuli, price: 30, amount: 16}
+    - {item: emerald, price: 600, amount: 1}
+    - {item: diamond, price: 1500, amount: 1}
+    - {item: netherite_ingot, price: 40000, amount: 1}
+    # lab supplies
+    - {item: sugar, price: 8, amount: 16}
+    - {item: glass_bottle, price: 6, amount: 16}
+    - {item: paper, price: 6, amount: 16}
+    - {item: pink_dye, price: 10, amount: 16}
+    - {item: purple_dye, price: 12, amount: 16}
+    - {item: nether_wart, price: 30, amount: 16}
+    - {item: glow_berries, price: 25, amount: 16}
+    - {item: glowstone_dust, price: 30, amount: 16}
+    - {item: blaze_powder, price: 120, amount: 8}
+    # blocks
+    - {item: oak_log, price: 20, amount: 16}
+    - {item: spruce_log, price: 20, amount: 16}
+    - {item: stone, price: 4, amount: 64}
+    - {item: cobblestone, price: 2, amount: 64}
+    - {item: glass, price: 10, amount: 16}
+    - {item: sand, price: 3, amount: 64}
+    - {item: white_wool, price: 25, amount: 16}
+    - {item: quartz, price: 35, amount: 16}
+    - {item: obsidian, price: 120, amount: 8}
+    # food & mob drops
+    - {item: bread, price: 20, amount: 16}
+    - {item: cooked_beef, price: 40, amount: 16}
+    - {item: golden_carrot, price: 120, amount: 8}
+    - {item: bone_meal, price: 6, amount: 32}
+    - {item: gunpowder, price: 45, amount: 16}
+    - {item: slime_ball, price: 60, amount: 8}
+    - {item: ender_pearl, price: 250, amount: 4}
+    - {item: experience_bottle, price: 200, amount: 8}
+    - {item: golden_apple, price: 2000, amount: 1}
 
 # =====================================================================
-#  JOBS  (/kush > Jobs)
-#  Everyone gets paid for normal work - no need to join. Blocks placed by
-#  players never pay, crops must be fully grown, spawner mobs don't count.
+#  JOBS
+#  Everyone gets paid a little for normal work - no need to join. Blocks
+#  placed by players never pay, crops must be fully grown, spawner mobs
+#  don't count. Shown above the hotbar.
 # =====================================================================
 jobs:
   enabled: true
@@ -407,63 +303,63 @@ jobs:
 # =====================================================================
 shop:
   buy:
-    - {item: seed_pack, strain: og_kush, amount: 1, price: 300}
-    - {item: seed_pack, strain: blue_dream, amount: 1, price: 350}
-    - {item: seed_pack, strain: jungle_haze, amount: 1, price: 400}
-    - {item: seed_pack, strain: savanna_gold, amount: 1, price: 400}
-    - {item: seed_pack, strain: northern_lights, amount: 1, price: 450}
-    - {item: seed_pack, strain: purple_kush, amount: 1, price: 550}
-    - {item: seed_pack, strain: sour_diesel, amount: 1, price: 700}
-    - {item: seed_pack, strain: white_widow, amount: 1, price: 900}
-    - {item: mushroom_spores, amount: 1, price: 350}
-    - {item: coca_seeds, amount: 1, price: 800}
-    - {item: poppy_seeds, amount: 1, price: 900}
-    - {item: peyote_seeds, amount: 1, price: 850}
-    - {item: rolling_papers, amount: 8, price: 60}
-    - {item: blunt_wrap, amount: 4, price: 80}
-    - {item: fertilizer, amount: 4, price: 150}
-    - {item: lab_solvent, amount: 2, price: 400}
-    - {item: catalyst, amount: 2, price: 600}
-    - {item: bong, amount: 1, price: 1000}
-    - {item: grower_guide, amount: 1, price: 0}
-    - {item: planter_box, amount: 1, price: 500}
-    - {item: grow_lamp, amount: 1, price: 3000}
-    - {item: dealer, amount: 1, price: 5000}
-    - {item: lab_station, amount: 1, price: 10000}
+    - {item: seed_pack, strain: og_kush, amount: 1, price: 40}
+    - {item: seed_pack, strain: blue_dream, amount: 1, price: 50}
+    - {item: seed_pack, strain: jungle_haze, amount: 1, price: 55}
+    - {item: seed_pack, strain: savanna_gold, amount: 1, price: 55}
+    - {item: seed_pack, strain: northern_lights, amount: 1, price: 60}
+    - {item: seed_pack, strain: purple_kush, amount: 1, price: 70}
+    - {item: seed_pack, strain: sour_diesel, amount: 1, price: 90}
+    - {item: seed_pack, strain: white_widow, amount: 1, price: 110}
+    - {item: mushroom_spores, amount: 1, price: 45}
+    - {item: coca_seeds, amount: 1, price: 80}
+    - {item: poppy_seeds, amount: 1, price: 90}
+    - {item: peyote_seeds, amount: 1, price: 85}
+    - {item: rolling_papers, amount: 8, price: 10}
+    - {item: blunt_wrap, amount: 4, price: 16}
+    - {item: fertilizer, amount: 4, price: 20}
+    - {item: lab_solvent, amount: 4, price: 40}
+    - {item: bong, amount: 1, price: 120}
+    - {item: planter_box, amount: 1, price: 60}
+    - {item: grow_lamp, amount: 1, price: 250}
+    - {item: dealer, amount: 1, price: 400}
+    - {item: lab_station, amount: 1, price: 900}
   sell:
     # weed
-    bud_fresh: 2
-    bud_dried: 8
-    joint: 12
-    blunt: 24
-    hash: 30
-    moon_rock: 75
-    space_brownie: 20
-    gummies: 18
+    bud_fresh: 4
+    bud_dried: 15
+    joint: 24
+    blunt: 45
+    hash: 60
+    moon_rock: 140
+    space_brownie: 40
+    gummies: 35
+    wax: 130
+    vape_pen: 320
     # psychedelics
-    magic_mushroom: 6
-    shroom_tea: 16
-    lucid_tab: 16
-    peyote_button: 6
-    mescaline: 45
-    dmt: 70
+    magic_mushroom: 10
+    shroom_tea: 30
+    lucid_tab: 30
+    peyote_button: 10
+    mescaline: 85
+    dmt: 120
     # uppers
-    cocaine: 42
-    crack: 38
-    blue_crystal: 55
-    ecstasy: 30
-    pixie_dust: 40
-    angel_dust: 60
+    cocaine: 80
+    crack: 70
+    blue_crystal: 100
+    ecstasy: 55
+    pixie_dust: 70
+    angel_dust: 120
     # downers
-    opium: 22
-    heroin: 65
-    lean: 20
-    ketamine: 35
+    opium: 40
+    heroin: 110
+    lean: 35
+    ketamine: 65
     # harvest & seeds
-    coca_leaves: 3
-    poppy_pod: 3
-    seed_pack: 5
-    coca_seeds: 6
-    poppy_seeds: 6
-    peyote_seeds: 6
-    mushroom_spores: 4
+    coca_leaves: 5
+    poppy_pod: 5
+    seed_pack: 8
+    coca_seeds: 10
+    poppy_seeds: 10
+    peyote_seeds: 10
+    mushroom_spores: 6

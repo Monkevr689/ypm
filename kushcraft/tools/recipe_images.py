@@ -27,43 +27,41 @@ W, H = 112, 58
 # ---------------------------------------------------------------------------
 # crafting: (result id, amount, shape rows or None for shapeless, key/ingredients)
 CRAFTING = [
-    ("lab_station", 1, ["PBP", "ICI", "I I"],
-     {"P": "glass_bottle", "B": "brewing_stand", "I": "iron_ingot", "C": "cauldron"}),
-    ("grow_lamp", 1, ["III", "GLG", " I "], {"I": "iron_ingot", "G": "glowstone_dust", "L": "redstone_lamp"}),
+    ("lab_station", 1, ["IBI", "ICI"], {"I": "iron_ingot", "B": "glass_bottle", "C": "crafting_table"}),
+    ("grow_lamp", 1, ["III", "RLR"], {"I": "iron_ingot", "R": "redstone", "L": "lantern"}),
     ("planter_box", 2, ["WBW", "WDW", "WWW"], {"W": "planks", "D": "dirt", "B": "bone_meal"}),
-    ("dealer", 1, ["EEE", "WCW", "WWW"], {"E": "emerald", "W": "planks", "C": "chest"}),
-    ("bong", 1, [" G ", " GI", "GBG"], {"G": "glass", "B": "glass_bottle", "I": "iron_nugget"}),
-    ("rolling_papers", 6, None, ["paper", "paper", "paper", "sugar_cane"]),
-    ("blunt_wrap", 3, None, ["paper", "cocoa_beans", "dried_kelp"]),
+    ("dealer", 1, ["WGW", "WCW"], {"W": "planks", "G": "gold_ingot", "C": "chest"}),
+    ("bong", 1, [" G ", "GBG"], {"G": "glass", "B": "glass_bottle"}),
+    ("rolling_papers", 6, None, ["paper", "paper", "sugar_cane"]),
+    ("blunt_wrap", 3, None, ["paper", "cocoa_beans"]),
     ("fertilizer", 3, None, ["bone_meal", "bone_meal", "rotten_flesh"]),
-    ("lab_solvent", 2, None, ["glass_bottle", "sugar", "redstone", "gunpowder"]),
-    ("catalyst", 2, None, ["amethyst_shard", "glowstone_dust", "redstone"]),
+    ("lab_solvent", 3, None, ["glass_bottle", "sugar", "redstone"]),
     ("grower_guide", 1, None, ["book", "wheat_seeds"]),
 ]
 
-# cook: (enum name, result id, amount, seconds, [(ingredient, count)]); "kush:" = KushCraft item
+# cook: (enum name, result id, amount, seconds, [(ingredient, count)]); "kush:" = KushCraft item.
+# Same order as dev.kushcraft.lab.LabRecipe.
 COOK = [
-    ("HASH", "hash", 2, 30, [("kush:bud_dried", 4), ("ice", 1)]),
-    ("SPACE_BROWNIE", "space_brownie", 3, 40,
-     [("kush:bud_dried", 2), ("cocoa_beans", 1), ("wheat", 2), ("sugar", 1)]),
-    ("GUMMIES", "gummies", 4, 40, [("kush:hash", 1), ("sugar", 2), ("slime_ball", 1)]),
+    ("HASH", "hash", 2, 30, [("kush:bud_dried", 4)]),
+    ("MOON_ROCK", "moon_rock", 1, 40, [("kush:bud_dried", 1), ("kush:hash", 1)]),
+    ("WAX", "wax", 2, 45, [("kush:hash", 2), ("kush:lab_solvent", 1)]),
+    ("VAPE_PEN", "vape_pen", 1, 30, [("kush:wax", 1), ("iron_nugget", 1), ("glass_bottle", 1)]),
+    ("SPACE_BROWNIE", "space_brownie", 3, 30, [("kush:bud_dried", 1), ("cocoa_beans", 1), ("wheat", 1)]),
+    ("GUMMIES", "gummies", 4, 30, [("kush:hash", 1), ("sugar", 2)]),
     ("SHROOM_TEA", "shroom_tea", 1, 20, [("kush:magic_mushroom", 2), ("glass_bottle", 1)]),
-    ("OPIUM", "opium", 2, 40, [("kush:poppy_pod", 3), ("glass_bottle", 1)]),
-    ("LEAN", "lean", 2, 30, [("glass_bottle", 1), ("sugar", 2), ("purple_dye", 1), ("sweet_berries", 2)]),
-    ("MOON_ROCK", "moon_rock", 1, 45, [("kush:bud_dried", 1), ("kush:hash", 1), ("honey_bottle", 1)]),
-    ("LUCID_TAB", "lucid_tab", 6, 60, [("kush:lab_solvent", 1), ("kush:magic_mushroom", 2), ("paper", 1)]),
-    ("ECSTASY", "ecstasy", 4, 60, [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("pink_dye", 2), ("sugar", 1)]),
-    ("PIXIE_DUST", "pixie_dust", 4, 60, [("kush:lab_solvent", 1), ("glowstone_dust", 4), ("sugar", 2)]),
-    ("COCAINE", "cocaine", 4, 60, [("kush:coca_leaves", 8), ("kush:lab_solvent", 1), ("sugar", 1)]),
-    ("CRACK", "crack", 3, 40, [("kush:cocaine", 2), ("bone_meal", 1)]),
-    ("KETAMINE", "ketamine", 4, 60, [("kush:lab_solvent", 1), ("nether_wart", 2), ("sugar", 2)]),
-    ("MESCALINE", "mescaline", 3, 60, [("kush:peyote_button", 4), ("kush:lab_solvent", 1)]),
-    ("BLUE_CRYSTAL", "blue_crystal", 4, 90,
-     [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("lapis_lazuli", 4), ("sugar", 2)]),
-    ("HEROIN", "heroin", 3, 75, [("kush:poppy_pod", 6), ("kush:lab_solvent", 1), ("kush:catalyst", 1)]),
-    ("DMT", "dmt", 3, 75, [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("glow_berries", 3)]),
-    ("ANGEL_DUST", "angel_dust", 3, 90,
-     [("kush:lab_solvent", 1), ("kush:catalyst", 1), ("gunpowder", 2), ("blaze_powder", 1)]),
+    ("LUCID_TAB", "lucid_tab", 6, 45, [("kush:magic_mushroom", 2), ("paper", 1), ("kush:lab_solvent", 1)]),
+    ("MESCALINE", "mescaline", 3, 45, [("kush:peyote_button", 4), ("kush:lab_solvent", 1)]),
+    ("DMT", "dmt", 3, 60, [("glow_berries", 3), ("kush:lab_solvent", 1)]),
+    ("COCAINE", "cocaine", 4, 45, [("kush:coca_leaves", 6), ("kush:lab_solvent", 1)]),
+    ("CRACK", "crack", 3, 30, [("kush:cocaine", 2), ("bone_meal", 1)]),
+    ("BLUE_CRYSTAL", "blue_crystal", 4, 60, [("lapis_lazuli", 4), ("kush:lab_solvent", 1)]),
+    ("ECSTASY", "ecstasy", 4, 45, [("pink_dye", 2), ("sugar", 1), ("kush:lab_solvent", 1)]),
+    ("PIXIE_DUST", "pixie_dust", 4, 45, [("glowstone_dust", 2), ("sugar", 1), ("kush:lab_solvent", 1)]),
+    ("ANGEL_DUST", "angel_dust", 3, 60, [("gunpowder", 2), ("blaze_powder", 1), ("kush:lab_solvent", 1)]),
+    ("OPIUM", "opium", 2, 30, [("kush:poppy_pod", 3)]),
+    ("HEROIN", "heroin", 3, 60, [("kush:poppy_pod", 4), ("kush:lab_solvent", 1)]),
+    ("LEAN", "lean", 2, 30, [("glass_bottle", 1), ("sugar", 2), ("purple_dye", 1)]),
+    ("KETAMINE", "ketamine", 4, 45, [("nether_wart", 2), ("kush:lab_solvent", 1)]),
 ]
 
 # other Drug Lab tabs: (id, station text, result, amount, [(ingredient, count)])
@@ -71,7 +69,7 @@ OTHER = [
     ("roll_joint", ["DRUG LAB", "ROLL"], "joint", 1, [("kush:bud_dried", 1), ("kush:rolling_papers", 1)]),
     ("roll_blunt", ["DRUG LAB", "ROLL"], "blunt", 1, [("kush:bud_dried", 2), ("kush:blunt_wrap", 1)]),
     ("dry_bud", ["DRUG LAB", "DRY 3 MIN"], "bud_dried", 1, [("kush:bud_fresh", 1)]),
-    ("mix_strain", ["MIX: RANDOM", "STRAIN + $"], "seed_pack", 3, [("kush:seed_pack", 1), ("kush:seed_pack", 1)]),
+    ("mix_strain", ["DRUG LAB", "MIX: RANDOM"], "seed_pack", 3, [("kush:seed_pack", 1), ("kush:seed_pack", 1)]),
 ]
 
 NAMES = {
@@ -83,6 +81,7 @@ NAMES = {
     "joint": "Joint", "blunt": "Blunt", "bud_dried": "Dried Bud", "seed_pack": "Your own strain",
     "gummies": "THC Gummies", "opium": "Opium", "lean": "Lean", "ecstasy": "Ecstasy", "crack": "Crack Rock",
     "ketamine": "Ketamine", "mescaline": "Mescaline", "dmt": "DMT", "angel_dust": "Angel Dust",
+    "wax": "Wax", "vape_pen": "Vape Pen",
 }
 
 MACHINES = {"lab_station": "block/lab_station", "grow_lamp": "block/grow_lamp",
@@ -132,6 +131,8 @@ def icon(name):
     elif kid in G.GENERATED and (name.startswith("kush:") or vanilla_icons.get(kid) is None):
         layers, tinted = G.GENERATED[kid]
         img = G.composite(layers, 0x6abe3a if tinted else None)
+        if img.width != 16:
+            img = shrink16(img)
     elif kid == "planks":
         img = vanilla_icons.get("oak_planks")
     else:
@@ -140,6 +141,18 @@ def icon(name):
         raise SystemExit(f"recipe_images: no icon for {name}")
     _ICON_CACHE[name] = img
     return img
+
+
+def shrink16(img):
+    """32px art -> 16px: average colours, keep a crisp silhouette."""
+    small = img.resize((16, 16), Image.BOX)
+    px = small.load()
+    for y in range(16):
+        for x in range(16):
+            r, g, b, a = px[x, y]
+            # Pillow resizes RGBA with premultiplied alpha, so the colours are fine as they are
+            px[x, y] = (0, 0, 0, 0) if a < 90 else (r, g, b, 255 if a > 160 else a)
+    return small
 
 
 GRAY = (198, 198, 198, 255)

@@ -243,14 +243,18 @@ public final class Economy {
         dirty = true;
     }
 
-    /** Players who sold the most product. */
-    public List<Rich> topSales(int limit) {
+    /** Every player who ever sold product, best seller first (balance = lifetime sales). */
+    public List<Rich> topSales() {
         List<Rich> out = new ArrayList<>();
-        for (Map.Entry<UUID, String> e : names.entrySet()) {
-            out.add(new Rich(e.getKey(), e.getValue(), sales.getOrDefault(e.getKey(), 0.0)));
+        for (Map.Entry<UUID, Double> e : sales.entrySet()) {
+            if (e.getValue() > 0) {
+                out.add(new Rich(e.getKey(), names.getOrDefault(e.getKey(), "?"), e.getValue()));
+            }
         }
-        out.sort((a, b) -> Double.compare(b.balance(), a.balance()));
-        return out.size() > limit ? out.subList(0, limit) : out;
+        // ties: the name decides, so the order never flickers
+        out.sort((a, b) -> a.balance() != b.balance() ? Double.compare(b.balance(), a.balance())
+                : a.name().compareToIgnoreCase(b.name()));
+        return out;
     }
 
     /** Richest players (everyone that ever joined since KushCraft was installed). */

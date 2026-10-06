@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/shroom_tea"
+  "layer0": "kush:item/shroom_tea",
+  "layer1": "kush:item/shroom_tea_tint",
+  "layer2": "kush:item/shroom_tea_overlay"
  }
 }

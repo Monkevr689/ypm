@@ -97,10 +97,9 @@ public final class Shop {
             if (t != ItemType.SEED_PACK) {
                 price *= Dose.qualityFactor(Items.quality(item)) / Dose.qualityFactor(3);
             }
-            if (t == ItemType.JOINT) {
-                price *= Items.hits(item) / (double) Items.JOINT_HITS;
-            } else if (t == ItemType.BLUNT) {
-                price *= Items.hits(item) / (double) Items.BLUNT_HITS;
+            int max = Items.maxHits(t);
+            if (max > 0) {
+                price *= Items.hits(item) / (double) max;
             }
         }
         return Math.max(0.01, Math.round(price * 100) / 100.0);

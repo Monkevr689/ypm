@@ -3,7 +3,7 @@ package dev.kushcraft.listener;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.Keys;
 import dev.kushcraft.effect.EffectType;
-import dev.kushcraft.gui.HomeMenu;
+import dev.kushcraft.gui.TabMenu;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.recipe.Recipes;
@@ -46,6 +46,7 @@ public final class PlayerListener implements Listener {
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
         plugin.economy().join(p);
+        plugin.ranks().showInTab(p);
         p.discoverRecipes(Recipes.keys());
         plugin.effects().join(p);
         if (plugin.getConfig().getBoolean("give-guide-on-first-join", true)
@@ -69,7 +70,7 @@ public final class PlayerListener implements Listener {
             return;
         }
         e.setCancelled(true);
-        HomeMenu.open(p);
+        TabMenu.openMain(p);
     }
 
     @EventHandler

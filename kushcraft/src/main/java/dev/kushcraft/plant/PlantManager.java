@@ -230,6 +230,7 @@ public final class PlantManager {
             return false;
         }
         Plant p = plantAt(key, kind, strain, player.getUniqueId());
+        plugin.awards().planted(player);
         Location c = key.bottomCenter();
         c.getWorld().playSound(c, "minecraft:item.crop.plant", SoundCategory.BLOCKS, 1f, 1f);
         c.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, c.clone().add(0, 0.2, 0), 6, 0.25, 0.1, 0.25, 0);
@@ -336,6 +337,7 @@ public final class PlantManager {
         }
         if (who != null) {
             who.giveExp(3);
+            plugin.awards().harvested(who, p.kind());
         }
         c.getWorld().playSound(c, "minecraft:block.sweet_berry_bush.pick_berries", SoundCategory.BLOCKS, 1f, 0.9f);
         c.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, c.clone().add(0, 0.6, 0), 12, 0.35, 0.4, 0.35, 0);
@@ -553,10 +555,29 @@ public final class PlantManager {
         } else {
             Strain s = plugin.strains().getOrDefault(p.strainId());
             meta.setItemModel(Keys.model("plant_" + s.type().plantModel() + "_" + stage));
-            Items.tint(meta, s.color());
+            Items.tint(meta, s.color(), leafTint(s, p));
         }
         it.setItemMeta(meta);
         return it;
+    }
+
+    /**
+     * Leaves get a touch of the strain colour (purple strains grow purplish
+     * leaves) and every plant is a little lighter or darker than the next.
+     */
+    static int leafTint(Strain s, Plant p) {
+        int c = s.color();
+        double mix = 0.3;
+        double light = 0.94 + Math.floorMod(p.key().hashCode() * 7, 13) / 100.0;
+        int r = (int) Math.min(255, (255 * (1 - mix) + ((c >> 16) & 255) * mix) * light);
+        int g = (int) Math.min(255, (255 * (1 - mix) + ((c >> 8) & 255) * mix) * light);
+        int b = (int) Math.min(255, (255 * (1 - mix) + (c & 255) * mix) * light);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    /** Plants vary in size a little (0.88x - 1.12x), standing on the same spot. */
+    static float sizeOf(Plant p) {
+        return 0.88f + Math.floorMod(p.key().hashCode() * 31 + 7, 25) / 100f;
     }
 
     private float hitboxHeight(Plant p) {
@@ -593,6 +614,9 @@ public final class PlantManager {
         ItemDisplay d = w.spawn(center, ItemDisplay.class, e -> {
             e.setItemStack(visualItem(p));
             e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+            float k = sizeOf(p);
+            e.setTransformation(new org.bukkit.util.Transformation(new org.joml.Vector3f(0, 0.5f * (k - 1), 0),
+                    new org.joml.AxisAngle4f(), new org.joml.Vector3f(k, k, k), new org.joml.AxisAngle4f()));
             e.setPersistent(false);
             e.setViewRange(0.75f);
             e.setDisplayWidth(1.5f);

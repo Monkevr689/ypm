@@ -25,74 +25,11 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/lab.png",
+   "file": "kush:gui/shop.png",
    "ascent": 13,
-   "height": 204,
+   "height": 222,
    "chars": [
     "\ue000"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/mixer.png",
-   "ascent": 13,
-   "height": 204,
-   "chars": [
-    "\ue001"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/roller.png",
-   "ascent": 13,
-   "height": 168,
-   "chars": [
-    "\ue002"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/list.png",
-   "ascent": 13,
-   "height": 222,
-   "chars": [
-    "\ue003"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/hub.png",
-   "ascent": 13,
-   "height": 168,
-   "chars": [
-    "\ue004"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/dry.png",
-   "ascent": 13,
-   "height": 168,
-   "chars": [
-    "\ue005"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/recipe.png",
-   "ascent": 13,
-   "height": 204,
-   "chars": [
-    "\ue006"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/home.png",
-   "ascent": 13,
-   "height": 222,
-   "chars": [
-    "\ue007"
    ]
   },
   {
@@ -101,34 +38,7 @@
    "ascent": 13,
    "height": 222,
    "chars": [
-    "\ue008"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/shop.png",
-   "ascent": 13,
-   "height": 222,
-   "chars": [
-    "\ue009"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/breed.png",
-   "ascent": 13,
-   "height": 222,
-   "chars": [
-    "\ue00a"
-   ]
-  },
-  {
-   "type": "bitmap",
-   "file": "kush:gui/jobs.png",
-   "ascent": 13,
-   "height": 222,
-   "chars": [
-    "\ue00b"
+    "\ue001"
    ]
   },
   {
@@ -137,16 +47,79 @@
    "ascent": 13,
    "height": 222,
    "chars": [
-    "\ue00c"
+    "\ue002"
    ]
   },
   {
    "type": "bitmap",
-   "file": "kush:gui/bank.png",
+   "file": "kush:gui/top.png",
    "ascent": 13,
    "height": 222,
    "chars": [
-    "\ue00d"
+    "\ue003"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/awards.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue004"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/cook.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue005"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/roll.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue006"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/dry.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue007"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/mix.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue008"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/recipe.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue009"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/list.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue00a"
    ]
   }
  ]

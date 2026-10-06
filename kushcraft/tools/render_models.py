@@ -89,8 +89,8 @@ def render(model_path, size=160, tint=0x9a4fd4, yaw=35):
             u0, v0, u1, v1 = uv
             tw, th = tex.size
             sx = tw / 16.0
-            steps_u = max(1, int(abs(u1 - u0)))
-            steps_v = max(1, int(abs(v1 - v0)))
+            steps_u = max(1, int(abs(u1 - u0) * sx))
+            steps_v = max(1, int(abs(v1 - v0) * sx))
             light = {"up": 1.0, "down": 0.5, "north": 0.8, "south": 0.8, "east": 0.6, "west": 0.6}[fname]
             if e.get("shade") is False:
                 light = 1.0
@@ -102,7 +102,7 @@ def render(model_path, size=160, tint=0x9a4fd4, yaw=35):
                     if px[3] < 20:
                         continue
                     col = px
-                    if "tintindex" in f:
+                    if f.get("tintindex") == 0:
                         col = (px[0] * ((tint >> 16) & 255) // 255, px[1] * ((tint >> 8) & 255) // 255,
                                px[2] * (tint & 255) // 255, px[3])
                     col = (int(col[0] * light), int(col[1] * light), int(col[2] * light), col[3])

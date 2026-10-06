@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/blunt_wrap"
+  "layer0": "kush:item/blunt_wrap",
+  "layer1": "kush:item/blunt_wrap_tint",
+  "layer2": "kush:item/blunt_wrap_overlay"
  }
 }

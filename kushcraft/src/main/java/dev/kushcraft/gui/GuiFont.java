@@ -23,9 +23,8 @@ public final class GuiFont {
      * character U+E000+n. Same list as GUIS in tools/pack_meta.py
      * (tools/validate_pack.py checks that they match).
      */
-    static final List<String> GUIS = List.of(
-            "lab", "mixer", "roller", "list", "hub", "dry", "recipe",
-            "home", "drugs", "shop", "breed", "jobs", "trade", "bank");
+    public static final List<String> GUIS = List.of(
+            "shop", "drugs", "trade", "top", "awards", "cook", "roll", "dry", "mix", "recipe", "list");
     private static final int GUI_WIDTH = 176;
     private static final int TITLE_X = 8;
 

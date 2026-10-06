@@ -2,7 +2,6 @@ package dev.kushcraft.shop;
 
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.item.Items;
-import dev.kushcraft.util.Text;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -19,26 +18,22 @@ import java.util.Map;
 import java.util.logging.Level;
 
 /**
- * The resource exchange: trade money for vanilla resources (ores, food,
- * wood, blocks, mob drops...) and sell them back.
+ * Trade: swap the money from your product for vanilla resources (ores,
+ * blocks, lab supplies, food, mob drops) and sell spare ones back.
  *
- * Fair prices: every item has a base price (rare = expensive) from
- * config.yml. You buy at the base price and sell for sell-ratio of it, so
- * nothing can be bought and sold back for a profit. Prices move a little:
- * buying raises an item's price, selling lowers it, and it drifts back to
- * normal over time.
+ * Resources are expensive on purpose - a diamond costs a lot of weed. You
+ * buy at the config price and sell for sell-ratio of it, so nothing can be
+ * bought and sold back for a profit. Buying raises an item's price a
+ * little, selling lowers it, and it drifts back to normal over time.
  */
 public final class Exchange {
 
-    public record Offer(Material material, double price, int amount, String category) {
-    }
-
-    public record Category(String id, String name, Material icon, List<Offer> offers) {
+    public record Offer(Material material, double price, int amount) {
     }
 
     private final KushCraft plugin;
     private final File file;
-    private final List<Category> categories = new ArrayList<>();
+    private final List<Offer> offers = new ArrayList<>();
     private final Map<Material, Offer> byMaterial = new EnumMap<>(Material.class);
     private final Map<Material, Double> demand = new EnumMap<>(Material.class);
     private boolean dirty;
@@ -49,34 +44,31 @@ public final class Exchange {
     }
 
     public void load() {
-        categories.clear();
+        offers.clear();
         byMaterial.clear();
-        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("exchange.categories");
-        if (sec != null) {
-            for (String id : sec.getKeys(false)) {
-                List<Offer> offers = new ArrayList<>();
-                for (Map<?, ?> m : sec.getMapList(id + ".items")) {
-                    Material mat = Material.matchMaterial(String.valueOf(m.get("item")));
-                    if (mat == null || !mat.isItem() || mat.isAir()) {
-                        plugin.getLogger().warning("exchange: unknown item " + m.get("item"));
-                        continue;
-                    }
-                    double price = (m.get("price") instanceof Number n ? n.doubleValue() : 0)
-                            * Math.max(0, plugin.getConfig().getDouble("exchange.price-multiplier", 1.0));
-                    int amount = m.get("amount") instanceof Number n ? n.intValue() : 1;
-                    if (price <= 0 || byMaterial.containsKey(mat)) {
-                        continue;
-                    }
-                    Offer o = new Offer(mat, price, Math.max(1, Math.min(64, amount)), id);
-                    offers.add(o);
-                    byMaterial.put(mat, o);
-                }
-                if (!offers.isEmpty()) {
-                    Material icon = Material.matchMaterial(sec.getString(id + ".icon", ""));
-                    categories.add(new Category(id, sec.getString(id + ".name", Text.titleCase(id)),
-                            icon != null ? icon : offers.get(0).material(), Collections.unmodifiableList(offers)));
-                }
+        List<Map<?, ?>> list = new ArrayList<>(plugin.getConfig().getMapList("exchange.items"));
+        // configs from before 2.0 grouped the items in categories
+        ConfigurationSection cats = plugin.getConfig().getConfigurationSection("exchange.categories");
+        if (list.isEmpty() && cats != null) {
+            for (String id : cats.getKeys(false)) {
+                list.addAll(cats.getMapList(id + ".items"));
             }
+        }
+        double mult = Math.max(0, plugin.getConfig().getDouble("exchange.price-multiplier", 1.0));
+        for (Map<?, ?> m : list) {
+            Material mat = Material.matchMaterial(String.valueOf(m.get("item")));
+            if (mat == null || !mat.isItem() || mat.isAir()) {
+                plugin.getLogger().warning("exchange: unknown item " + m.get("item"));
+                continue;
+            }
+            double price = (m.get("price") instanceof Number n ? n.doubleValue() : 0) * mult;
+            int amount = m.get("amount") instanceof Number n ? n.intValue() : 1;
+            if (price <= 0 || byMaterial.containsKey(mat)) {
+                continue;
+            }
+            Offer o = new Offer(mat, price, Math.max(1, Math.min(64, amount)));
+            offers.add(o);
+            byMaterial.put(mat, o);
         }
         demand.clear();
         if (file.exists()) {
@@ -122,11 +114,12 @@ public final class Exchange {
     }
 
     public boolean enabled() {
-        return plugin.getConfig().getBoolean("exchange.enabled", true) && !categories.isEmpty();
+        return plugin.getConfig().getBoolean("exchange.enabled", true) && !offers.isEmpty();
     }
 
-    public List<Category> categories() {
-        return categories;
+    /** Everything for sale, in config order. */
+    public List<Offer> offers() {
+        return Collections.unmodifiableList(offers);
     }
 
     public Offer offer(Material m) {
@@ -148,7 +141,7 @@ public final class Exchange {
         if (o == null) {
             return 0;
         }
-        return round(o.price() * multiplier(m) * plugin.getConfig().getDouble("exchange.sell-ratio", 0.5));
+        return round(o.price() * multiplier(m) * plugin.getConfig().getDouble("exchange.sell-ratio", 0.2));
     }
 
     /** Only plain items can be sold: no names, enchantments, damage or KushCraft items. */

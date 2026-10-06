@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/crack"
+  "layer0": "kush:item/crack",
+  "layer1": "kush:item/crack_tint",
+  "layer2": "kush:item/crack_overlay"
  }
 }

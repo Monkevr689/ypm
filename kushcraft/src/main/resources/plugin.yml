@@ -1,5 +1,5 @@
 name: KushCraft
-version: '${project.version}'
+version: ${project.version}
 main: dev.kushcraft.KushCraft
 api-version: '1.21.4'
 description: Grow custom strains, run a lab, roll joints and sell it all - with custom textures, no client mods.
@@ -7,7 +7,7 @@ author: KushCraft
 softdepend: [Vault]
 commands:
   kush:
-    description: Opens the KushCraft menu (market, exchange, jobs, recipes, strains...)
+    description: Opens the KushCraft menu (shop, drugs, trade, top dealers, awards)
     usage: /kush help
     aliases: [k, kc, kushcraft]
 permissions:
@@ -15,7 +15,7 @@ permissions:
     description: Use KushCraft items, machines and menus
     default: true
   kushcraft.strainmaker:
-    description: Create new strains in the Strain Maker
+    description: Breed new strains (Drug Lab > Mix)
     default: true
   kushcraft.admin:
     description: Admin commands (give, money, reload, shop anywhere)

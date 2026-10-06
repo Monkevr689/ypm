@@ -4,6 +4,7 @@ import dev.kushcraft.KushCraft;
 import dev.kushcraft.effect.EffectType;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
+import dev.kushcraft.machine.Machine;
 import dev.kushcraft.strain.Breeding;
 import dev.kushcraft.strain.Strain;
 import dev.kushcraft.util.InventoryUtil;
@@ -24,23 +25,22 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Strain mixer: click two seeds in your inventory, press MIX and see what
+ * Drug Lab > Mix: click two seeds in your inventory, press MIX and see what
  * you get - random effects from the parents, maybe a mutation, a random
  * potency and rarity. Keep it (and name it) or throw it away and try again.
- * Layout matches tools/gui.py mixer().
+ * Layout matches tools/gui.py mix().
  */
-public final class MixerMenu extends Menu {
+public final class MixerMenu extends LabTabMenu {
 
-    private static final int SEED_A = 10;
-    private static final int SEED_B = 12;
-    private static final int RESULT = 16;
-    private static final int FIRST_CHANCE = 27;
-    private static final int MUTATION = 35;
-    private static final int BACK = 36;
-    private static final int DISCARD = 39;
-    private static final int MIX = 40;
-    private static final int KEEP = 41;
-    private static final int INFO = 44;
+    // row * 9 + column (constants, for the switch below)
+    static final int SEED_A = 10;
+    static final int SEED_B = 12;
+    static final int RESULT = 16;
+    static final int FIRST_CHANCE = 27;
+    static final int MUTATION = 35;
+    static final int DISCARD = 39;
+    static final int MIX = 40;
+    static final int KEEP = 41;
 
     private static final String[] SUFFIX = {"Dream", "Haze", "Kush", "Diesel", "Glue", "Cookies", "Cake", "Breath",
             "Fire", "Frost", "Punch", "Runtz", "Gelato", "Zkittlez", "Widow", "Express"};
@@ -59,37 +59,18 @@ public final class MixerMenu extends Menu {
     private final Session s;
     private boolean rolling;
 
-    private MixerMenu(Player player) {
-        super(player, 5, "mixer", "Mix Strains");
+    private MixerMenu(Player player, Machine machine) {
+        super(player, machine, Tab.MIX);
         this.s = SESSIONS.computeIfAbsent(player.getUniqueId(), k -> new Session());
     }
 
-    /** Opens the mixer from a Drug Lab (always allowed with permission). */
-    public static void openFor(Player player, Menu parent) {
-        openFor(player, parent, true);
-    }
-
-    /** atLab false (the Breed tab) also needs strain-maker.anywhere. */
-    public static void openFor(Player player, Menu parent, boolean atLab) {
+    /** Opens the mixer of a Drug Lab (needs kushcraft.strainmaker). */
+    public static void openFor(Player player, Machine machine) {
         if (!player.hasPermission("kushcraft.strainmaker")) {
             player.sendActionBar(Text.mm("<red>You are not allowed to breed strains."));
             return;
         }
-        if (!atLab && !allowedAnywhere() && !player.hasPermission("kushcraft.admin")) {
-            player.sendActionBar(Text.mm("<yellow>Use a <green>Drug Lab</green> > Mix to breed strains."));
-            return;
-        }
-        MixerMenu m = new MixerMenu(player);
-        if (parent != null) {
-            m.parent(parent);
-            m.clickSound();
-        }
-        m.open();
-    }
-
-    /** From the Drug Lab: always allowed (if you have permission). */
-    public static boolean allowedAnywhere() {
-        return KushCraft.get().getConfig().getBoolean("strain-maker.anywhere", true);
+        new MixerMenu(player, machine).open();
     }
 
     private Strain strain(String id) {
@@ -100,15 +81,17 @@ public final class MixerMenu extends Menu {
         return KushCraft.get().getConfig().getDouble("strain-maker.cost", 1500);
     }
 
+    private static ItemStack seedIcon(Strain st) {
+        return Items.strainItem(ItemType.SEED_PACK, st, 3, 1);
+    }
+
     @Override
-    public void render() {
-        inv.clear();
-        backButton(BACK);
+    protected void page() {
         Strain sa = strain(s.a), sb = strain(s.b);
-        set(SEED_A, sa != null ? withLine(BreedMenu.icon(sa, false), "<red>Click to remove")
-                : Items.icon("seed_pack", "<gray>Seed A", "<yellow>Click a seed in your inventory."));
-        set(SEED_B, sb != null ? withLine(BreedMenu.icon(sb, false), "<red>Click to remove")
-                : Items.icon("seed_pack", "<gray>Seed B", "<yellow>Click a seed in your inventory."));
+        set(SEED_A, sa != null ? withLine(seedIcon(sa), "<dark_gray>Click to remove")
+                : Items.icon("seed_pack", "<gray>Seed A", "<dark_gray>Click a seed below."));
+        set(SEED_B, sb != null ? withLine(seedIcon(sb), "<dark_gray>Click to remove")
+                : Items.icon("seed_pack", "<gray>Seed B", "<dark_gray>Click a seed below."));
         if (sa != null && sb != null) {
             int i = 0;
             for (Map.Entry<EffectType, Double> e : Breeding.odds(sa, sb).entrySet()) {
@@ -116,36 +99,22 @@ public final class MixerMenu extends Menu {
                     break;
                 }
                 set(FIRST_CHANCE + i++, Items.icon(e.getKey().icon(), e.getKey().colored(),
-                        "<gray>" + e.getKey().description(),
-                        "<gray>Chance to be passed on: <white>" + Math.round(e.getValue() * 100) + "%"));
+                        "<white>" + Math.round(e.getValue() * 100) + "% <dark_gray>chance"));
             }
             set(MUTATION, Items.icon("ui_dna", "<light_purple>Mutation",
-                    "<gray>35% chance of a brand new",
-                    "<gray>random effect (sometimes two).",
-                    "",
-                    "<gray>Potency: around <white>" + (sa.potency() + sb.potency()) / 2 + "%</white>, rarely much higher."));
+                    "<white>35% <dark_gray>chance of a new effect"));
         }
         if (s.result != null) {
             set(RESULT, Items.glint(resultIcon(s.result), true));
-            set(KEEP, Items.icon("ui_confirm", "<green><bold>Keep it!",
-                    "<gray>Name your new strain and get " + seedsGiven() + " seeds."));
-            set(DISCARD, Items.icon("ui_cancel", "<red>Throw it away", "<gray>Try again with another mix."));
+            set(KEEP, Items.icon("ui_confirm", "<green><bold>Keep it", "<dark_gray>Name it, get " + seedsGiven() + " seeds."));
+            set(DISCARD, Items.icon("ui_cancel", "<red>Throw away"));
         } else if (!rolling) {
-            set(RESULT, Items.icon("ui_info", "<gray>???", "<gray>Mix two seeds to see what you get."));
+            set(RESULT, Items.icon("ui_info", "<gray>???"));
             boolean ready = sa != null && sb != null;
-            set(MIX, Items.glint(Items.icon("ui_dna", ready ? "<green><bold>MIX!" : "<gray>MIX",
-                    ready ? "<gray>Costs <gold>" + KushCraft.get().economy().format(cost()) + "</gold> + one seed of each."
-                            : "<red>Pick two seeds first."), ready));
+            set(MIX, Items.glint(Items.icon("ui_dna", ready ? "<green><bold>MIX " + "<gold>"
+                    + KushCraft.get().economy().format(cost()) : "<gray>MIX",
+                    ready ? "<dark_gray>Uses one seed of each." : "<dark_gray>Pick two seeds first."), ready));
         }
-        set(INFO, Items.icon("ui_info", "<aqua>How breeding works",
-                "<gray>1. Click two seeds in your inventory",
-                "<gray>2. Press <green>MIX</green> - the result is random:",
-                "<gray>   effects from both parents, a chance",
-                "<gray>   of a <light_purple>mutation</light_purple>, random potency",
-                "<gray>3. Keep it and name it, or try again",
-                "",
-                "<gray>Rarer strains (high potency, more",
-                "<gray>effects) sell for more."));
     }
 
     private ItemStack resultIcon(Breeding.Result r) {
@@ -175,7 +144,7 @@ public final class MixerMenu extends Menu {
     }
 
     @Override
-    public void click(int slot, ClickType click) {
+    protected void clickPage(int slot, ClickType click) {
         if (rolling) {
             return;
         }
@@ -254,6 +223,9 @@ public final class MixerMenu extends Menu {
         removeSeed(s.a);
         removeSeed(s.b);
         Breeding.Result result = Breeding.cross(sa, sb, RANDOM);
+        if (result.jackpot()) {
+            plugin.awards().jackpot(player);
+        }
         rolling = true;
         render();
         List<EffectType> all = List.of(EffectType.values());
@@ -325,6 +297,7 @@ public final class MixerMenu extends Menu {
         Strain st = plugin.strains().create(s.name, r.type(), r.color(), r.potency(), r.effects(),
                 player.getUniqueId(), player.getName());
         InventoryUtil.give(player, Items.strainItem(ItemType.SEED_PACK, st, 3, seedsGiven()));
+        plugin.awards().bred(player, st.rarity());
         s.result = null;
         s.name = null;
         player.playSound(player.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.7f, 1.2f);

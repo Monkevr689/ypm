@@ -61,29 +61,26 @@ public final class Recipes {
         unregister();
         RecipeChoice planks = new RecipeChoice.MaterialChoice(Tag.PLANKS);
 
-        shaped(plugin, ItemType.LAB_STATION, 1, "P=Glass Bottle, B=Brewing Stand, I=Iron Ingot, C=Cauldron",
-                new String[]{"PBP", "ICI", "I I"},
-                'P', Material.GLASS_BOTTLE, 'B', Material.BREWING_STAND, 'I', Material.IRON_INGOT, 'C', Material.CAULDRON);
-        shaped(plugin, ItemType.GROW_LAMP, 1, "I=Iron Ingot, G=Glowstone Dust, L=Redstone Lamp",
-                new String[]{"III", "GLG", " I "}, 'I', Material.IRON_INGOT, 'G', Material.GLOWSTONE_DUST,
-                'L', Material.REDSTONE_LAMP);
+        shaped(plugin, ItemType.LAB_STATION, 1, "I=Iron Ingot, B=Glass Bottle, C=Crafting Table",
+                new String[]{"IBI", "ICI"}, 'I', Material.IRON_INGOT, 'B', Material.GLASS_BOTTLE,
+                'C', Material.CRAFTING_TABLE);
+        shaped(plugin, ItemType.GROW_LAMP, 1, "I=Iron Ingot, R=Redstone, L=Lantern",
+                new String[]{"III", "RLR"}, 'I', Material.IRON_INGOT, 'R', Material.REDSTONE, 'L', Material.LANTERN);
         shaped(plugin, ItemType.PLANTER_BOX, 2, "W=any Planks, D=Dirt, B=Bone Meal",
                 new String[]{"WBW", "WDW", "WWW"}, 'W', planks, 'D', Material.DIRT, 'B', Material.BONE_MEAL);
-        shaped(plugin, ItemType.DEALER, 1, "E=Emerald, W=any Planks, C=Chest",
-                new String[]{"EEE", "WCW", "WWW"}, 'E', Material.EMERALD, 'W', planks, 'C', Material.CHEST);
-        shaped(plugin, ItemType.BONG, 1, "G=Glass, B=Glass Bottle, I=Iron Nugget",
-                new String[]{" G ", " GI", "GBG"}, 'G', Material.GLASS, 'B', Material.GLASS_BOTTLE, 'I', Material.IRON_NUGGET);
+        shaped(plugin, ItemType.DEALER, 1, "W=any Planks, G=Gold Ingot, C=Chest",
+                new String[]{"WGW", "WCW"}, 'W', planks, 'G', Material.GOLD_INGOT, 'C', Material.CHEST);
+        shaped(plugin, ItemType.BONG, 1, "G=Glass, B=Glass Bottle",
+                new String[]{" G ", "GBG"}, 'G', Material.GLASS, 'B', Material.GLASS_BOTTLE);
 
-        shapeless(plugin, ItemType.ROLLING_PAPERS, 6, "3 Paper + 1 Sugar Cane",
-                Material.PAPER, Material.PAPER, Material.PAPER, Material.SUGAR_CANE);
-        shapeless(plugin, ItemType.BLUNT_WRAP, 3, "Paper + Cocoa Beans + Dried Kelp",
-                Material.PAPER, Material.COCOA_BEANS, Material.DRIED_KELP);
+        shapeless(plugin, ItemType.ROLLING_PAPERS, 6, "2 Paper + Sugar Cane",
+                Material.PAPER, Material.PAPER, Material.SUGAR_CANE);
+        shapeless(plugin, ItemType.BLUNT_WRAP, 3, "Paper + Cocoa Beans",
+                Material.PAPER, Material.COCOA_BEANS);
         shapeless(plugin, ItemType.FERTILIZER, 3, "2 Bone Meal + Rotten Flesh",
                 Material.BONE_MEAL, Material.BONE_MEAL, Material.ROTTEN_FLESH);
-        shapeless(plugin, ItemType.LAB_SOLVENT, 2, "Glass Bottle + Sugar + Redstone + Gunpowder",
-                Material.GLASS_BOTTLE, Material.SUGAR, Material.REDSTONE, Material.GUNPOWDER);
-        shapeless(plugin, ItemType.CATALYST, 2, "Amethyst Shard + Glowstone Dust + Redstone",
-                Material.AMETHYST_SHARD, Material.GLOWSTONE_DUST, Material.REDSTONE);
+        shapeless(plugin, ItemType.LAB_SOLVENT, 3, "Glass Bottle + Sugar + Redstone",
+                Material.GLASS_BOTTLE, Material.SUGAR, Material.REDSTONE);
         shapeless(plugin, ItemType.GROWER_GUIDE, 1, "Book + Wheat Seeds",
                 Material.BOOK, Material.WHEAT_SEEDS);
     }

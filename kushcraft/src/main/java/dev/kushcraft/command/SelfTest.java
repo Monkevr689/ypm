@@ -64,6 +64,8 @@ final class SelfTest {
             recipes();
             exchange();
             money();
+            awards();
+            menus();
             World w = Bukkit.getWorlds().get(0);
             Location spawn = w.getSpawnLocation();
             int bx = spawn.getBlockX() + 4, bz = spawn.getBlockZ() + 4;
@@ -104,9 +106,16 @@ final class SelfTest {
             }
         }
         check(Items.hits(Items.strainItem(ItemType.JOINT, s, 3, 1)) == Items.JOINT_HITS, "joint hits");
+        check(Items.hits(Items.strainItem(ItemType.VAPE_PEN, s, 3, 1)) == Items.VAPE_HITS, "vape pen puffs");
         check(Dose.strain(s, 5, 60, 10).effects().size() == s.effects().size(), "dose effects");
         check(GuiFont.space(-169).length() == 4, "negative space builder");
-        check(LabRecipe.values().length == 18, "lab recipes");
+        check(LabRecipe.values().length == 20, "lab recipes");
+        for (LabRecipe r : LabRecipe.values()) {
+            check(r.ingredients().size() <= 3, "simple recipe (max 3 ingredients): " + r);
+            for (LabRecipe.Ingredient in : r.ingredients()) {
+                check(in.custom() != ItemType.CATALYST, "no catalyst needed: " + r);
+            }
+        }
         for (ItemType t : ItemType.values()) {
             if (!t.retired() && dev.kushcraft.catalog.Catalog.of(t) == null
                     && t.machine() == null) {
@@ -278,21 +287,31 @@ final class SelfTest {
 
     private void ranks() {
         var ranks = plugin.ranks();
-        check(ranks.all().size() == 7, "7 dealer ranks, got " + ranks.all().size());
-        check(ranks.of(0).level() == 1, "everyone starts at rank 1");
-        check(ranks.of(1e12).level() == ranks.all().size(), "top rank reachable");
-        for (int i = 1; i < ranks.all().size(); i++) {
-            check(ranks.all().get(i).sales() > ranks.all().get(i - 1).sales(), "rank thresholds increase");
-        }
-        for (LabRecipe r : LabRecipe.values()) {
-            check(r.rank() >= 1 && r.rank() <= ranks.all().size(), "recipe rank in range: " + r);
-        }
-        check(LabRecipe.HASH.rank() == 1 && LabRecipe.COCAINE.rank() > 1, "hard drugs need a higher rank");
+        check(ranks.titles().size() == 6, "6 dealer titles, got " + ranks.titles().size());
+        check(ranks.forPlace(1).name().equals("Cartel Boss"), "#1 seller is the Cartel Boss");
+        check(ranks.forPlace(2) != ranks.forPlace(1) && ranks.forPlace(4) == ranks.forPlace(5), "titles by place");
+        check(ranks.forPlace(0) == ranks.everyone() && ranks.forPlace(100_000) == ranks.everyone(),
+                "no sales = Street Seller");
+        // three sellers: whoever sold the most is on top
         var a = Bukkit.getOfflinePlayer(UUID.randomUUID());
-        plugin.economy().addSales(a, ranks.all().get(1).sales());
-        check(ranks.of(a).level() == 2, "selling raises the rank");
-        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() >= 5000),
-                "the Drug Lab is expensive to buy");
+        var b = Bukkit.getOfflinePlayer(UUID.randomUUID());
+        var c = Bukkit.getOfflinePlayer(UUID.randomUUID());
+        plugin.economy().addSales(a, 9e12);
+        plugin.economy().addSales(b, 8e12);
+        plugin.economy().addSales(c, 7e12);
+        ranks.refresh();
+        check(ranks.place(a) == 1 && ranks.place(b) == 2 && ranks.place(c) == 3, "leaderboard order");
+        check(ranks.of(a) == ranks.forPlace(1) && ranks.of(a).bonus() > ranks.of(c).bonus(), "top seller has the best title");
+        plugin.economy().addSales(c, 3e12);
+        ranks.refresh();
+        check(ranks.place(c) == 1 && ranks.place(a) == 2, "outselling takes the title");
+        for (var x : List.of(a, b, c)) {
+            plugin.economy().setSales(x, 0);
+        }
+        ranks.refresh();
+        check(ranks.place(a) == 0, "test sellers removed");
+        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() <= 2000),
+                "the Drug Lab is cheap to start with");
     }
 
     private void breeding() {
@@ -339,11 +358,13 @@ final class SelfTest {
     private void exchange() {
         var ex = plugin.exchange();
         check(ex.enabled(), "exchange enabled with items");
-        check(ex.categories().size() >= 1 && ex.categories().size() <= 7, "exchange has 1-7 tabs");
-        for (var c : ex.categories()) {
-            for (var o : c.offers()) {
-                check(ex.sellPrice(o.material()) < ex.buyPrice(o), "exchange sells cheaper than it buys: " + o.material());
-            }
+        check(ex.offers().size() >= 9 && ex.offers().size() <= 36, "trade fits on one page (" + ex.offers().size() + ")");
+        for (var o : ex.offers()) {
+            check(ex.sellPrice(o.material()) < ex.buyPrice(o), "exchange sells cheaper than it buys: " + o.material());
+        }
+        if (ex.offer(Material.DIAMOND) != null) {
+            check(ex.buyPrice(ex.offer(Material.DIAMOND)) >= 10 * plugin.shop().basePrice(ItemType.COCAINE),
+                    "resources cost a lot of product (a diamond >= 10 cocaine)");
         }
         var diamond = ex.offer(Material.DIAMOND);
         check(diamond != null, "exchange trades diamonds");
@@ -366,6 +387,45 @@ final class SelfTest {
         named.editMeta(m -> m.customName(net.kyori.adventure.text.Component.text("x")));
         check(!ex.sellable(named), "renamed items can't be sold");
         check(!ex.sellable(Items.create(ItemType.COCAINE)), "KushCraft items don't sell at the exchange");
+    }
+
+    private void awards() {
+        var aw = plugin.awards();
+        dev.kushcraft.award.Award[] all = dev.kushcraft.award.Award.values();
+        check(all.length >= 30 && all.length <= 36, "30-36 awards (one menu page), got " + all.length);
+        for (var a : all) {
+            check(a.parent() == null || a.parent().ordinal() < a.ordinal(), "award parent comes first: " + a);
+            var adv = Bukkit.getAdvancement(dev.kushcraft.award.Awards.key(a.id()));
+            check(adv != null, "advancement loaded: kush:" + a.id());
+            if (adv != null && adv.getDisplay() != null) {
+                check(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+                        .serialize(adv.getDisplay().title()).equals(a.title()), "advancement title " + a);
+            }
+        }
+        check(aw.advancementsLoaded() == all.length, "KushCraft advancement tab loaded ("
+                + aw.advancementsLoaded() + "/" + all.length + ")");
+        check(Bukkit.getAdvancement(dev.kushcraft.award.Awards.key("root")) != null, "advancement tab root");
+        var p = Bukkit.getOfflinePlayer(UUID.randomUUID());
+        check(!aw.has(p, dev.kushcraft.award.Award.FIRST_SEED) && aw.count(p) == 0, "new players have no awards");
+        check("0/100".equals(aw.progress(p, dev.kushcraft.award.Award.HARVEST_100)), "award progress");
+        check(dev.kushcraft.award.Awards.drugs().size() >= 20, "drugs to try");
+    }
+
+    /** Every page fits its layout (tools/gui.py draws the matching backgrounds). */
+    private void menus() {
+        for (var t : dev.kushcraft.gui.TabMenu.Tab.values()) {
+            check(GuiFont.GUIS.contains(t.name().toLowerCase(java.util.Locale.ROOT)), "background for tab " + t);
+        }
+        for (var t : dev.kushcraft.gui.LabTabMenu.Tab.values()) {
+            check(GuiFont.GUIS.contains(t.name().toLowerCase(java.util.Locale.ROOT)), "background for lab tab " + t);
+        }
+        for (var c : dev.kushcraft.catalog.Catalog.Category.values()) {
+            if (c != dev.kushcraft.catalog.Catalog.Category.GROW) {
+                check(dev.kushcraft.catalog.Catalog.entries(c).size() <= 9, "one row of drugs: " + c);
+            }
+        }
+        check(plugin.shop().buyEntries().size() <= 27, "shop fits 3 rows");
+        check(LabRecipe.values().length <= 27, "cook page fits 3 rows");
     }
 
     private void money() {

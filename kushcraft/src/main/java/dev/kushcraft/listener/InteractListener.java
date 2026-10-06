@@ -132,9 +132,9 @@ public final class InteractListener implements Listener {
 
     private void openMachine(Player p, Machine m) {
         switch (m.type()) {
-            case LAB_STATION -> new dev.kushcraft.gui.LabHubMenu(p, m).open();
-            case STRAIN_MAKER -> dev.kushcraft.gui.MixerMenu.openFor(p, null);
-            case ROLLING_TABLE -> new RollerMenu(p).open();
+            case LAB_STATION -> new dev.kushcraft.gui.LabMenu(p, m).open();
+            case STRAIN_MAKER -> dev.kushcraft.gui.MixerMenu.openFor(p, m);
+            case ROLLING_TABLE -> new RollerMenu(p, m).open();
             case DEALER -> new dev.kushcraft.gui.ShopMenu(p, true).open();
             case DRYING_RACK -> plugin.machines().useRack(p, m);
             case GROW_LAMP -> p.sendActionBar(Text.mm("<light_purple>Grow Lamp <gray>- lights up and speeds up plants within "
@@ -186,12 +186,18 @@ public final class InteractListener implements Listener {
     private boolean use(Player p, ItemStack item, ItemType type) {
         switch (type) {
             case GROWER_GUIDE -> {
-                dev.kushcraft.gui.HomeMenu.open(p);
+                dev.kushcraft.gui.TabMenu.openMain(p);
                 return true;
             }
-            case JOINT, BLUNT -> {
+            case JOINT, BLUNT, VAPE_PEN -> {
                 if (!onCooldown(p, 900)) {
                     smoke(p, item, type);
+                }
+                return true;
+            }
+            case WAX -> {
+                if (!onCooldown(p, 1500)) {
+                    dab(p, item);
                 }
                 return true;
             }
@@ -245,14 +251,23 @@ public final class InteractListener implements Listener {
             return;
         }
         int q = Items.quality(item);
-        int max = type == ItemType.BLUNT ? Items.BLUNT_HITS : Items.JOINT_HITS;
+        int max = Items.maxHits(type);
         int hits = Items.hits(item);
         if (hits <= 0) {
             hits = max;
         }
-        Dose d = type == ItemType.JOINT ? Dose.strain(s, q, 40, 8) : Dose.strain(s, q, 55, 11);
+        Dose d = switch (type) {
+            case JOINT -> Dose.strain(s, q, 40, 8);
+            case VAPE_PEN -> Dose.strain(s, q, 35, 7);
+            default -> Dose.strain(s, q, 55, 11);
+        };
         plugin.effects().apply(p, d);
-        smokeFx(p, 1.0);
+        plugin.awards().used(p, type);
+        if (type == ItemType.VAPE_PEN) {
+            vapeFx(p);
+        } else {
+            smokeFx(p, 1.0);
+        }
         int left = hits - 1;
         if (item.getAmount() <= 1) {
             p.getInventory().setItemInMainHand(left > 0 ? Items.strainItem(type, s, q, 1, left) : null);
@@ -295,8 +310,31 @@ public final class InteractListener implements Listener {
         load.setAmount(load.getAmount() - 1);
         p.getWorld().playSound(p.getLocation(), "minecraft:block.bubble_column.upwards_inside", SoundCategory.PLAYERS, 1f, 1.2f);
         plugin.effects().apply(p, d);
+        plugin.awards().used(p, t);
         smokeFx(p, t == ItemType.MOON_ROCK ? 2.2 : 1.7);
         p.sendActionBar(Text.mm("<gray>You rip the bong: " + s.colored() + " <dark_gray>" + t.display()));
+    }
+
+    /** Wax: one very strong dab. */
+    private void dab(Player p, ItemStack item) {
+        Strain s = Items.strain(item);
+        if (s == null) {
+            return;
+        }
+        Dose d = Dose.strain(s, Items.quality(item), 200, 34);
+        item.setAmount(item.getAmount() - 1);
+        p.getWorld().playSound(p.getLocation(), "minecraft:block.lava.pop", SoundCategory.PLAYERS, 1f, 1.4f);
+        plugin.effects().apply(p, d);
+        plugin.awards().used(p, ItemType.WAX);
+        smokeFx(p, 2.0);
+        p.sendActionBar(Text.mm("<gray>You take a dab of " + s.colored() + " <gray>wax."));
+    }
+
+    private void vapeFx(Player p) {
+        Location eye = p.getEyeLocation();
+        Location mouth = eye.clone().add(eye.getDirection().multiply(0.45)).add(0, -0.15, 0);
+        p.getWorld().spawnParticle(Particle.CLOUD, mouth, 8, 0.1, 0.06, 0.1, 0.01);
+        p.getWorld().playSound(p.getLocation(), "minecraft:block.fire.extinguish", SoundCategory.PLAYERS, 0.15f, 2f);
     }
 
     private void smokeFx(Player p, double amount) {
@@ -386,5 +424,6 @@ public final class InteractListener implements Listener {
         }
         p.getWorld().playSound(p.getLocation(), sound, SoundCategory.PLAYERS, 0.9f, 1f);
         plugin.effects().apply(p, d);
+        plugin.awards().used(p, type);
     }
 }

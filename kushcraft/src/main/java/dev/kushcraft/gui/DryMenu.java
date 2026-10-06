@@ -13,29 +13,22 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Drug Lab drying shelf: click fresh buds in your inventory to hang them,
- * collect dried buds when the timer is done. Layout: tools/gui.py dry().
+ * Drug Lab > Dry: click fresh buds in your inventory to hang them, collect
+ * dried buds when the timer is done. Layout: tools/gui.py dry().
  */
-public final class DryMenu extends Menu {
+public final class DryMenu extends LabTabMenu {
 
-    private static final int INPUT = 10;
-    private static final int[] PROGRESS = {12, 13, 14};
-    private static final int OUTPUT = 16;
-    private static final int BACK = 18;
-    private static final int INFO = 26;
+    static final int INPUT = at(2, 1);
+    static final int[] PROGRESS = {at(2, 3), at(2, 4), at(2, 5)};
+    static final int OUTPUT = at(2, 7);
     private static final int CAPACITY = 64;
 
-    private final Machine machine;
-
     public DryMenu(Player player, Machine machine) {
-        super(player, 3, "dry", "Drug Lab - Dry");
-        this.machine = machine;
+        super(player, machine, Tab.DRY);
     }
 
     @Override
-    public void render() {
-        inv.clear();
-        backButton(BACK);
+    protected void page() {
         int amount = machine.rackAmount();
         Strain s = amount > 0 ? KushCraft.get().strains().get(machine.rackStrain()) : null;
         if (amount > 0 && s == null) {
@@ -43,12 +36,10 @@ public final class DryMenu extends Menu {
         }
         if (amount > 0 && !machine.rackDry()) {
             ItemStack in = Items.amount(Items.strainItem(ItemType.BUD_FRESH, s, machine.rackQuality(), 1), amount);
-            in.editMeta(m -> m.lore(Text.lines(java.util.List.of("<yellow>Drying...", "<gray>Click more of the same",
-                    "<gray>fresh buds to add them."))));
+            in.editMeta(m -> m.lore(Text.lines(java.util.List.of("<yellow>Drying...", "<dark_gray>Click more of the same to add."))));
             set(INPUT, in);
         } else {
-            set(INPUT, Items.icon("bud_fresh", "<gray>Click <green>Fresh Buds</green> in your inventory",
-                    "<gray>to hang them up (max " + CAPACITY + ")."));
+            set(INPUT, Items.icon("bud_fresh", "<gray>Click fresh buds below", "<dark_gray>Up to " + CAPACITY + "."));
         }
         double progress = 0;
         int left = 0;
@@ -69,17 +60,10 @@ public final class DryMenu extends Menu {
             out.editMeta(m -> m.lore(Text.lines(java.util.List.of("<green><bold>Click to collect!"))));
             set(OUTPUT, Items.glint(out, true));
         }
-        long minutes = KushCraft.get().getConfig().getLong("drying.minutes", 3);
-        set(INFO, Items.icon("ui_info", "<aqua>Drying",
-                "<gray>Fresh buds need " + minutes + " min to dry.",
-                "<gray>Dried buds can be rolled, smoked,",
-                "<gray>cooked and sell for much more.",
-                "",
-                "<gray>One strain at a time."));
     }
 
     @Override
-    public void click(int slot, ClickType click) {
+    protected void clickPage(int slot, ClickType click) {
         if (slot != OUTPUT || machine.rackAmount() <= 0 || !machine.rackDry()) {
             return;
         }
@@ -88,6 +72,7 @@ public final class DryMenu extends Menu {
         player.sendActionBar(Text.mm("<green>Collected " + machine.rackAmount() + "x dried " + s.colored()));
         machine.emptyRack();
         KushCraft.get().machines().markDirty();
+        KushCraft.get().awards().dried(player);
         player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.8f, 1f);
         render();
     }

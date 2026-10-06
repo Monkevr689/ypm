@@ -37,6 +37,9 @@ public final class MachineListener implements Listener {
             return;
         }
         plugin.machines().place(e.getPlayer(), e.getBlockPlaced(), t.machine(), Items.level(e.getItemInHand()));
+        if (t == ItemType.LAB_STATION) {
+            plugin.awards().labPlaced(e.getPlayer());
+        }
     }
 
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)

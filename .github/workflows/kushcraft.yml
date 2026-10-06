@@ -88,6 +88,11 @@ jobs:
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
+          # how this Minecraft version writes advancements (for the KushCraft tab)
+          VJAR=$(find versions -name "*.jar" | head -1)
+          echo "vanilla jar: $VJAR"
+          unzip -p "$VJAR" data/minecraft/advancement/adventure/root.json 2>/dev/null | head -c 1200 || true
+          echo
 
       - name: Run server again with an external resource-pack.url
         working-directory: server
@@ -108,18 +113,33 @@ jobs:
           sleep 1
           sed -i "s#^  url: .*#  url: 'http://127.0.0.1:9000/pack.zip'#" plugins/KushCraft/config.yml
           grep -n "url:" plugins/KushCraft/config.yml
-          # also pretend this is a 1.1 config (version 2, no menu/exchange/jobs) to test the upgrade
+          # also pretend this is a 1.3 config (version 4: rank list, exchange categories,
+          # no jobs/menu/awards sections) to test the upgrade to 2.0
           python3 - <<'PY'
           lines = open("plugins/KushCraft/config.yml").read().split("\n")
           out, skip = [], False
           for l in lines:
               if l and not l[0].isspace() and not l.startswith("#"):
-                  skip = l.split(":")[0] in ("menu", "exchange", "jobs")
+                  skip = l.split(":")[0] in ("menu", "exchange", "jobs", "ranks", "awards")
               if l.startswith("config-version:"):
-                  l = "config-version: 2"
+                  l = "config-version: 4"
               if not skip:
                   out.append(l)
-          open("plugins/KushCraft/config.yml", "w").write("\n".join(out))
+          out += [
+              "ranks:",
+              "  - {name: Street Seller, color: gray, sales: 0, bonus: 0}",
+              "  - {name: Corner Dealer, color: green, sales: 2500, bonus: 0.05}",
+              "exchange:",
+              "  enabled: true",
+              "  price-multiplier: 2.5",
+              "  categories:",
+              "    ores:",
+              "      name: Ores",
+              "      icon: diamond",
+              "      items:",
+              "        - {item: diamond, price: 120, amount: 1}",
+          ]
+          open("plugins/KushCraft/config.yml", "w").write("\n".join(out) + "\n")
           PY
           grep -c "^exchange:" plugins/KushCraft/config.yml || true
           rm -f console && mkfifo console
@@ -129,6 +149,8 @@ jobs:
           for i in $(seq 1 240); do grep -q "Done (" server2.log && break; sleep 2; done
           grep -q "Done (" server2.log || { tail -100 server2.log; echo "::error::server did not start"; exit 1; }
           for i in $(seq 1 30); do grep -q "Resource pack: downloaded" server2.log && break; sleep 1; done
+          echo "kush selftest" >&3
+          sleep 8
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
@@ -141,9 +163,14 @@ jobs:
             echo "::error::built-in web server must not start when resource-pack.url is set"; exit 1
           fi
           echo "External URL test passed"
-          grep -q "Updated config.yml to version 4" server2.log || { echo "::error::config was not upgraded"; exit 1; }
+          grep -q "Updated config.yml to version 5" server2.log || { echo "::error::config was not upgraded"; exit 1; }
           grep -q "^exchange:" plugins/KushCraft/config.yml || { echo "::error::exchange section not added"; exit 1; }
+          grep -q "^  items:" plugins/KushCraft/config.yml || { echo "::error::Trade list not replaced"; exit 1; }
+          if grep -q "^  categories:" plugins/KushCraft/config.yml; then echo "::error::old exchange categories kept"; exit 1; fi
+          grep -q "^  titles:" plugins/KushCraft/config.yml || { echo "::error::leaderboard ranks not added"; exit 1; }
           grep -q "^jobs:" plugins/KushCraft/config.yml || { echo "::error::jobs section not added"; exit 1; }
+          grep -q "^awards:" plugins/KushCraft/config.yml || { echo "::error::awards section not added"; exit 1; }
+          grep -q "SELFTEST PASS" server2.log || { grep "selftest failure" server2.log; echo "::error::selftest failed on the upgraded config"; exit 1; }
           grep -q "url: .*127.0.0.1:9000/pack.zip" plugins/KushCraft/config.yml \
             || { echo "::error::upgrade lost resource-pack.url"; exit 1; }
           if grep -nE "Exception|Error" server2.log | grep -iE "kushcraft"; then

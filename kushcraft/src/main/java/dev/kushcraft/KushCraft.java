@@ -1,5 +1,6 @@
 package dev.kushcraft;
 
+import dev.kushcraft.award.Awards;
 import dev.kushcraft.command.KushCommand;
 import dev.kushcraft.effect.EffectManager;
 import dev.kushcraft.gui.ChatInput;
@@ -22,7 +23,6 @@ import dev.kushcraft.shop.Shop;
 import dev.kushcraft.strain.StrainRegistry;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
@@ -49,6 +49,7 @@ public final class KushCraft extends JavaPlugin {
     private Ranks ranks;
     private Exchange exchange;
     private Jobs jobs;
+    private Awards awards;
     private ResourcePackManager pack;
 
     public static KushCraft get() {
@@ -66,6 +67,8 @@ public final class KushCraft extends JavaPlugin {
         strains.load();
         economy = new Economy(this);
         economy.load();
+        awards = new Awards(this);
+        awards.load();
         shop = new Shop(this);
         shop.load();
         ranks = new Ranks(this);
@@ -96,6 +99,7 @@ public final class KushCraft extends JavaPlugin {
         pm.registerEvents(new PlayerListener(this), this);
         pm.registerEvents(jobs, this);
         pm.registerEvents(jobs.placed(), this);
+        pm.registerEvents(awards, this);
 
         PluginCommand cmd = getCommand("kush");
         if (cmd != null) {
@@ -106,6 +110,8 @@ public final class KushCraft extends JavaPlugin {
 
         pack.start();
         economy.start();
+        awards.start();
+        awards.registerAdvancements();
         market.start();
         exchange.start();
         effects.start();
@@ -117,6 +123,7 @@ public final class KushCraft extends JavaPlugin {
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             economy.join(p);
+            ranks.showInTab(p);
             p.discoverRecipes(Recipes.keys());
             pack.send(p);
         }
@@ -141,6 +148,9 @@ public final class KushCraft extends JavaPlugin {
         }
         if (economy != null) {
             economy.save();
+        }
+        if (awards != null) {
+            awards.save();
         }
         if (market != null) {
             market.save();
@@ -204,15 +214,19 @@ public final class KushCraft extends JavaPlugin {
         return jobs;
     }
 
+    public Awards awards() {
+        return awards;
+    }
+
     /**
-     * Older configs: v1 gets the new shop lists (the old stations were removed
-     * and new drugs added); every version gets the options added since
-     * (exchange, jobs, menu...). Everything you set yourself is kept,
-     * including resource-pack.url.
+     * Older configs get the 2.0 economy: new shop prices (cheap to start,
+     * product is worth more), the leaderboard ranks and the one-page Trade
+     * list with its much higher prices. Options added since are filled in;
+     * everything else you set yourself is kept, including resource-pack.url.
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 4) {
+        if (version >= 5) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -221,25 +235,21 @@ public final class KushCraft extends JavaPlugin {
         }
         YamlConfiguration def = YamlConfiguration.loadConfiguration(
                 new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
-        // 1.3 rebalanced the economy (everything costs more, product is worth
-        // a bit less, ranks): take over the new shop lists and prices
-        getConfig().set("shop.buy", def.getMapList("shop.buy"));
-        getConfig().set("shop.sell", null);
-        ConfigurationSection sell = def.getConfigurationSection("shop.sell");
-        if (sell != null) {
-            for (String k : sell.getKeys(false)) {
-                getConfig().set("shop.sell." + k, sell.get(k));
-            }
+        // removed here, filled in again from the defaults below
+        for (String key : List.of("shop.buy", "shop.sell", "ranks", "exchange.categories", "exchange.items",
+                "strain-maker.anywhere")) {
+            getConfig().set(key, null);
         }
         for (String key : List.of("strain-maker.cost", "economy.starting-balance", "market.demand-drop",
-                "market.recovery-per-minute", "market.order-bonus", "exchange.sell-ratio", "jobs.hourly-cap")) {
+                "market.recovery-per-minute", "market.order-bonus", "lab.upgrade-costs", "exchange.price-multiplier",
+                "exchange.sell-ratio")) {
             getConfig().set(key, def.get(key));
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 4);
+        getConfig().set("config-version", 5);
         saveConfig();
-        getLogger().info("Updated config.yml to version 4 (new prices, dealer ranks, lab upgrades, new drugs)."
+        getLogger().info("Updated config.yml to version 5 (2.0 prices, leaderboard ranks, Trade list, awards)."
                 + " Your resource pack settings were kept.");
     }
 

@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/lab_solvent"
+  "layer0": "kush:item/lab_solvent",
+  "layer1": "kush:item/lab_solvent_tint",
+  "layer2": "kush:item/lab_solvent_overlay"
  }
 }

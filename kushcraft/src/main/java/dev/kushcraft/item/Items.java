@@ -23,6 +23,7 @@ public final class Items {
 
     public static final int JOINT_HITS = 3;
     public static final int BLUNT_HITS = 5;
+    public static final int VAPE_HITS = 10;
 
     private Items() {
     }
@@ -42,9 +43,7 @@ public final class Items {
         meta.itemName(Text.mm("<white>" + type.display()));
         List<String> lore = new ArrayList<>(type.lore());
         if (type.machine() != null) {
-            lore.add("");
-            lore.add("<dark_gray>Place it like a block.");
-            lore.add("<dark_gray>Punch it to pick it back up.");
+            lore.add("<dark_gray>Place it. Punch it to pick it up.");
         }
         meta.lore(Text.lines(lore));
         meta.setMaxStackSize(type.maxStack());
@@ -79,8 +78,17 @@ public final class Items {
 
     /** An item tied to a strain (seeds, buds, joints, ...). quality = 1..5 stars. */
     public static ItemStack strainItem(ItemType type, Strain strain, int quality, int amount) {
-        return strainItem(type, strain, quality, amount, type == ItemType.JOINT ? JOINT_HITS
-                : type == ItemType.BLUNT ? BLUNT_HITS : 0);
+        return strainItem(type, strain, quality, amount, maxHits(type));
+    }
+
+    /** Joints, blunts and vape pens are used up a hit at a time. */
+    public static int maxHits(ItemType type) {
+        return switch (type) {
+            case JOINT -> JOINT_HITS;
+            case BLUNT -> BLUNT_HITS;
+            case VAPE_PEN -> VAPE_HITS;
+            default -> 0;
+        };
     }
 
     public static ItemStack strainItem(ItemType type, Strain strain, int quality, int amount, int hits) {
@@ -90,11 +98,9 @@ public final class Items {
         meta.setItemModel(Keys.model(type.model()));
         meta.itemName(Text.mm(strain.colored() + " <white>" + type.display()));
         List<String> lore = new ArrayList<>();
-        lore.add(strain.type().colored() + " <dark_gray>•</dark_gray> <gray>THC <white>" + strain.potency() + "%"
-                + " <dark_gray>•</dark_gray> " + strain.rarity().colored());
-        if (type != ItemType.SEED_PACK) {
-            lore.add("<gray>Quality " + Text.stars(quality));
-        }
+        lore.add(strain.type().colored() + " <dark_gray>·</dark_gray> <white>" + strain.potency() + "% THC"
+                + " <dark_gray>·</dark_gray> " + strain.rarity().colored()
+                + (type != ItemType.SEED_PACK ? " <dark_gray>·</dark_gray> " + Text.stars(quality) : ""));
         StringBuilder eff = new StringBuilder();
         for (EffectType e : strain.effects()) {
             if (!eff.isEmpty()) {
@@ -103,16 +109,15 @@ public final class Items {
             eff.append(e.colored());
         }
         if (!eff.isEmpty()) {
-            lore.add("<gray>Effects: " + eff);
+            lore.add(eff.toString());
         }
         if (hits > 0) {
-            int max = type == ItemType.BLUNT ? BLUNT_HITS : JOINT_HITS;
-            lore.add("<gray>Hits left: " + Text.bar(hits / (double) max, max, "green", "dark_gray"));
+            int max = Math.max(1, maxHits(type));
+            lore.add("<gray>Hits " + Text.bar(hits / (double) max, max, "green", "dark_gray"));
         }
         if (strain.isCustom() && strain.creatorName() != null) {
             lore.add("<dark_gray>Bred by " + Text.escape(strain.creatorName()));
         }
-        lore.add("");
         lore.addAll(type.lore());
         meta.lore(Text.lines(lore));
         meta.setMaxStackSize(type.maxStack());
@@ -133,10 +138,14 @@ public final class Items {
         return item;
     }
 
-    /** Sets the colour used by the resource pack's custom_model_data tint. */
-    public static void tint(ItemMeta meta, int rgb) {
+    /** Sets the colours used by the resource pack's custom_model_data tints (index 0, 1, ...). */
+    public static void tint(ItemMeta meta, int... rgb) {
         CustomModelDataComponent cmd = meta.getCustomModelDataComponent();
-        cmd.setColors(List.of(Color.fromRGB(rgb & 0xFFFFFF)));
+        List<Color> colors = new ArrayList<>();
+        for (int c : rgb) {
+            colors.add(Color.fromRGB(c & 0xFFFFFF));
+        }
+        cmd.setColors(colors);
         meta.setCustomModelDataComponent(cmd);
     }
 

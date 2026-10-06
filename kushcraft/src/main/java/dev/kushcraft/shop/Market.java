@@ -32,7 +32,8 @@ public final class Market {
     }
 
     private static final List<ItemType> POOL = List.of(ItemType.BUD_DRIED, ItemType.JOINT, ItemType.BLUNT,
-            ItemType.HASH, ItemType.MOON_ROCK, ItemType.SPACE_BROWNIE, ItemType.GUMMIES, ItemType.MAGIC_MUSHROOM,
+            ItemType.HASH, ItemType.MOON_ROCK, ItemType.SPACE_BROWNIE, ItemType.GUMMIES, ItemType.WAX,
+            ItemType.VAPE_PEN, ItemType.MAGIC_MUSHROOM,
             ItemType.SHROOM_TEA, ItemType.LUCID_TAB, ItemType.PEYOTE_BUTTON, ItemType.MESCALINE, ItemType.DMT,
             ItemType.COCAINE, ItemType.CRACK, ItemType.BLUE_CRYSTAL, ItemType.ECSTASY, ItemType.PIXIE_DUST,
             ItemType.ANGEL_DUST, ItemType.OPIUM, ItemType.HEROIN, ItemType.LEAN, ItemType.KETAMINE,
@@ -249,6 +250,7 @@ public final class Market {
         InventoryUtil.remove(p, it -> Items.type(it) == o.type(), o.amount());
         plugin.economy().deposit(p, o.reward());
         plugin.ranks().sold(p, o.reward());
+        plugin.awards().order(p);
         orders.remove(o);
         Order next = newOrder();
         if (next != null) {

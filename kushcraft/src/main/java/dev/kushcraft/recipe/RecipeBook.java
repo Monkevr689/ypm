@@ -79,7 +79,7 @@ public final class RecipeBook {
                 grid[i] = vanilla(r.grid()[i], 1);
             }
             out.add(new Entry("craft_" + r.result().id(), Kind.CRAFTING, r.result(), r.amount(), grid,
-                    List.of(r.shape() == null ? "Any shape - just put them in." : "Same pattern as shown."),
+                    List.of(r.shape() == null ? "Any shape." : "Same pattern."),
                     r.signature()));
         }
         for (LabRecipe r : LabRecipe.values()) {
@@ -94,28 +94,27 @@ public final class RecipeBook {
                 first = false;
             }
             List<String> notes = new ArrayList<>();
-            notes.add("Takes " + r.seconds() + "s. Ingredients come from your inventory.");
+            notes.add("Takes " + r.seconds() + "s.");
             if (r.strainBased()) {
-                notes.add("The strain of the buds decides the effects.");
+                notes.add("Effects come from the strain.");
             }
             out.add(new Entry("cook_" + r.name().toLowerCase(Locale.ROOT), Kind.COOK, r.output(), r.amount(),
                     spread(ings), notes, sig.toString()));
         }
         out.add(new Entry("roll_joint", Kind.ROLL, ItemType.JOINT, 1,
                 spread(List.of(sample(ItemType.BUD_DRIED, 1), sample(ItemType.ROLLING_PAPERS, 1))),
-                List.of("3 hits. \"Roll all\" rolls every bud at once."), null));
+                List.of("3 hits."), null));
         out.add(new Entry("roll_blunt", Kind.ROLL, ItemType.BLUNT, 1,
                 spread(List.of(sample(ItemType.BUD_DRIED, 2), sample(ItemType.BLUNT_WRAP, 1))),
                 List.of("5 strong hits."), null));
         int dry = KushCraft.get().getConfig().getInt("drying.minutes", 3);
         out.add(new Entry("dry_bud", Kind.DRY, ItemType.BUD_DRIED, 1, spread(List.of(sample(ItemType.BUD_FRESH, 1))),
-                List.of("Takes " + dry + " min. Up to 64 buds at once."), null));
+                List.of("Takes " + dry + " min."), null));
         double cost = KushCraft.get().getConfig().getDouble("strain-maker.cost", 150);
         int seeds = KushCraft.get().getConfig().getInt("strain-maker.seeds-given", 3);
         out.add(new Entry("mix_strain", Kind.MIX, ItemType.SEED_PACK, seeds,
                 spread(List.of(sample(ItemType.SEED_PACK, 1), sample(ItemType.SEED_PACK, 1))),
-                List.of("Two seeds + " + KushCraft.get().economy().format(cost) + ". The result is random.",
-                        "Keep and name it, or try again."), null));
+                List.of(KushCraft.get().economy().format(cost) + ". The result is random."), null));
         return out;
     }
 

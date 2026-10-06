@@ -74,10 +74,17 @@ public final class EffectManager {
             onStart(p, e.getKey());
         }
         s.high += dose.high();
+        if (!dose.effects().isEmpty()) {
+            plugin.awards().high(p, s.effects.size());
+        }
+        if (dose.effects().containsKey(EffectType.BAD_TRIP)) {
+            plugin.awards().badTrip(p);
+        }
         double limit = plugin.getConfig().getDouble("effects.green-out-at", 100);
         if (s.high >= limit && limit > 0) {
             s.high = limit * 0.7;
             s.effects.merge(EffectType.GREEN_OUT, 25, (a, b) -> Math.min(60, a + b));
+            plugin.awards().greenOut(p);
             p.sendMessage(Text.msg("<green><bold>You greened out!</bold></green> <gray>Way too much... take it easy."));
             p.playSound(p.getLocation(), "minecraft:entity.player.hurt_sweet_berry_bush", SoundCategory.PLAYERS, 1f, 0.6f);
         }

@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/poppy_pod"
+  "layer0": "kush:item/poppy_pod",
+  "layer1": "kush:item/poppy_pod_tint",
+  "layer2": "kush:item/poppy_pod_overlay"
  }
 }

@@ -1,6 +1,8 @@
 {
  "parent": "minecraft:item/generated",
  "textures": {
-  "layer0": "kush:item/icon/ui_wallet"
+  "layer0": "kush:item/icon/ui_wallet",
+  "layer1": "kush:item/icon/ui_wallet_tint",
+  "layer2": "kush:item/icon/ui_wallet_overlay"
  }
 }

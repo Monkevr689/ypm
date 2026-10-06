@@ -14,8 +14,7 @@ for i, n in enumerate((1, 2, 4, 8, 16, 32, 64, 128, 256)):
 
 # Menu backgrounds in glyph order: the n-th one is drawn by U+E000+n.
 # Must be the same list as GUIS in dev.kushcraft.gui.GuiFont (validate_pack.py checks).
-GUIS = ["lab", "mixer", "roller", "list", "hub", "dry", "recipe",
-        "home", "drugs", "shop", "breed", "jobs", "trade", "bank"]
+GUIS = ["shop", "drugs", "trade", "top", "awards", "cook", "roll", "dry", "mix", "recipe", "list"]
 GUI_GLYPHS = {name: chr(0xE000 + i) for i, name in enumerate(GUIS)}
 
 
@@ -43,13 +42,14 @@ def generate(g):
     with open(os.path.join(G.PACK, "pack.mcmeta"), "w") as f:
         json.dump(meta, f, indent=1)
 
-    # pack icon: the fresh bud scaled up on a dark circle
+    # pack icon: the fresh bud on a dark circle
     icon = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     for y in range(64):
         for x in range(64):
             if (x - 31.5) ** 2 + (y - 31.5) ** 2 < 31 ** 2:
                 icon.putpixel((x, y), (24, 40, 20, 255))
     layers, _ = G.GENERATED["bud_fresh"]
-    bud = G.composite(layers, 0x8ad04a).resize((48, 48), Image.NEAREST)
-    icon.alpha_composite(bud, (8, 8))
+    bud = G.composite(layers, 0x8ad04a)
+    bud = bud.resize((bud.width * 48 // bud.width, 48), Image.NEAREST) if bud.width == 16 else bud.resize((64, 64), Image.NEAREST)
+    icon.alpha_composite(bud, ((64 - bud.width) // 2, (64 - bud.height) // 2))
     icon.save(os.path.join(G.PACK, "pack.png"))

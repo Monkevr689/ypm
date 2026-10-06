@@ -1,6 +1,18 @@
 {
  "model": {
   "type": "minecraft:model",
-  "model": "kush:plant/hybrid_2"
+  "model": "kush:plant/hybrid_2",
+  "tints": [
+   {
+    "type": "minecraft:custom_model_data",
+    "index": 0,
+    "default": 6995514
+   },
+   {
+    "type": "minecraft:custom_model_data",
+    "index": 1,
+    "default": 16777215
+   }
+  ]
  }
 }

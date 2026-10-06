@@ -58,7 +58,7 @@ public final class Guide {
         sections.add(new Section("Drug Lab", lab()));
         int recipesAt = sections.size();
         sections.add(new Section("Recipes (pictures)", null));
-        sections.add(new Section("Money & ranks", money()));
+        sections.add(new Section("Money & titles", money()));
         sections.add(new Section("Breeding strains", strain()));
         sections.add(new Section("Effects", effects()));
         sections.add(new Section("Strains", strains()));
@@ -135,7 +135,7 @@ public final class Guide {
     private static List<String> quickStart() {
         return List.of("<dark_green><bold>Quick start</bold>\n\n<black>1. Break <dark_green>grass</dark_green>: seeds\n"
                 + "2. Plant on farmland\n3. Harvest when grown\n4. Craft a <dark_green>Drug Lab</dark_green>\n"
-                + "5. Dry, roll & cook\n6. Sell at the <gold>Shop</gold>\n7. Rank up, unlock more\n\n"
+                + "5. Dry, roll & cook\n6. Sell at the <gold>Shop</gold>\n7. Sell the most: be #1\n\n"
                 + run("/kush drugs", "> Drugs & recipes"));
     }
 
@@ -163,10 +163,10 @@ public final class Guide {
     }
 
     private static List<String> lab() {
-        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: 18 drugs\n<bold>Roll</bold>:"
+        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: 20 drugs\n<bold>Roll</bold>:"
                 + " joints & blunts\n<bold>Dry</bold>: fresh -> dried\n<bold>Mix</bold>: breed strains\n"
-                + "<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Your dealer rank unlocks more recipes."
-                + " Ingredients come from your inventory.");
+                + "<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Every recipe needs 1-3 things."
+                + " Glowing = you have them all.");
     }
 
     private static List<String> recipes(List<RecipeBook.Entry> recipes, int firstRecipe, boolean pictures) {
@@ -228,21 +228,22 @@ public final class Guide {
 
     private static List<String> money() {
         return List.of(
-                "<dark_green><bold>Shop</bold>\n\n<black>Sell your product at the <gold>Shop</gold>. Selling lots of"
-                        + " one thing drops its price - sell a mix!\n\n<gold>HOT</gold> item: +50%.\n"
-                        + "<gold>Daily Orders</gold> (Home tab) pay extra for big batches.\n" + run("/kush shop", "> Shop"),
-                "<dark_green><bold>Dealer ranks</bold>\n<black>Sell product to rank up:"
-                        + "\n<dark_gray>Street Seller\nCorner Dealer\nHustler\nSupplier\nThe Plug\nKingpin\nCartel Boss"
-                        + "\n\n<black>Ranks unlock recipes and pay up to +30%.",
-                "<dark_green><bold>Trade & jobs</bold>\n\n<black><bold>Trade</bold>: buy and sell ores, food,"
-                        + " wood and blocks.\n\n<bold>Jobs</bold>: paid for mining, farming, chopping, hunting and"
-                        + " growing. Placed blocks don't pay.\n\n" + run("/kush jobs", "> Jobs"),
-                "<dark_green><bold>Bank</bold>\n\n<black>Your balance, the ranks and the top dealers.\n\nSend money:"
-                        + "\n<dark_gray>/kush pay \\<name> \\<amount>\n\n" + run("/kush bank", "> Bank"));
+                "<dark_green><bold>Shop</bold>\n\n<black>Click your product to sell it, or <gold>Sell all</gold>."
+                        + " Selling lots of one thing drops its price - sell a mix!\n\n<gold>Orders</gold> pay extra"
+                        + " for big batches.\n" + run("/kush shop", "> Shop"),
+                "<dark_green><bold>Top Dealers</bold>\n\n<black>The players who sold the most get the titles:"
+                        + "\n<dark_red>#1 Cartel Boss\n<red>#2 Kingpin\n<gold>#3 The Plug\n<dark_gray>top 5, 10, 25..."
+                        + "\n\n<black>Titles pay extra on every sale.\n" + run("/kush top", "> Top"),
+                "<dark_green><bold>Trade</bold>\n\n<black>Spend your money on ores, diamonds, blocks and lab"
+                        + " supplies. They cost a lot of product!\n\n<bold>Jobs</bold>: mining, farming and"
+                        + " hunting pay a little too.\n" + run("/kush trade", "> Trade"),
+                "<dark_green><bold>Awards</bold>\n\n<black>36 achievements with cash rewards. They pop up like"
+                        + " advancements (press <dark_gray>L</dark_gray>).\n\nSend money:"
+                        + "\n<dark_gray>/kush pay \\<name> \\<amount>\n" + run("/kush awards", "> Awards"));
     }
 
     private static List<String> strain() {
-        return List.of("<dark_green><bold>Breeding</bold>\n\n<black>Breed tab > <dark_green>Mix</dark_green>."
+        return List.of("<dark_green><bold>Breeding</bold>\n\n<black>Drug Lab > <dark_green>Mix</dark_green>."
                 + " Click two seeds and press MIX.\n\nThe child is <bold>random</bold>: parent effects,"
                 + " maybe a <dark_purple>mutation</dark_purple>, random potency and rarity.\n\nKeep and name it, or"
                 + " try again.");

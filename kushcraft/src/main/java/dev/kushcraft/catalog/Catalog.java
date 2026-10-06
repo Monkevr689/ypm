@@ -19,8 +19,8 @@ public final class Catalog {
         PSYCH("Psychedelics", "lucid_tab"),
         UPPERS("Uppers", "cocaine"),
         DOWNERS("Downers", "heroin"),
-        GROW("Seeds & Harvest", "seed_pack"),
-        GEAR("Supplies & Blocks", "machine_lab_station");
+        GEAR("Gear", "bong"),
+        GROW("Seeds & Harvest", "seed_pack");
 
         private final String display;
         private final String icon;
@@ -53,57 +53,55 @@ public final class Catalog {
     }
 
     static {
-        // weed
-        add(ItemType.BUD_DRIED, Category.WEED, "Strain effects (in a Bong)", "Drug Lab > Dry: fresh buds.");
-        add(ItemType.JOINT, Category.WEED, "Strain effects, 3 hits", "Drug Lab > Roll: 1 dried bud + papers.");
-        add(ItemType.BLUNT, Category.WEED, "Strain effects, 5 strong hits", "Drug Lab > Roll: 2 dried buds + wrap.");
-        add(ItemType.HASH, Category.WEED, "Strong strain effects (Bong)", "Drug Lab > Cook: 4 dried buds + ice.");
-        add(ItemType.MOON_ROCK, Category.WEED, "Very strong strain effects (Bong)",
-                "Drug Lab > Cook: bud + hash + honey bottle.");
-        add(ItemType.SPACE_BROWNIE, Category.WEED, "Long strain effects + Munchies",
-                "Drug Lab > Cook: 2 buds + cocoa + 2 wheat + sugar.");
-        add(ItemType.GUMMIES, Category.WEED, "Very long strain effects", "Drug Lab > Cook: hash + 2 sugar + slime ball.");
+        // weed (one row in the Drugs tab, max 9 per category)
+        add(ItemType.BUD_DRIED, Category.WEED, "Strain effects", "Dry fresh buds at a Drug Lab.");
+        add(ItemType.JOINT, Category.WEED, "Strain effects, 3 hits", "Roll at a Drug Lab.");
+        add(ItemType.BLUNT, Category.WEED, "Strain effects, 5 strong hits", "Roll at a Drug Lab.");
+        add(ItemType.HASH, Category.WEED, "Strong strain effects", "Cook at a Drug Lab.");
+        add(ItemType.MOON_ROCK, Category.WEED, "Very strong strain effects", "Cook at a Drug Lab.");
+        add(ItemType.SPACE_BROWNIE, Category.WEED, "Long strain effects + Munchies", "Cook at a Drug Lab.");
+        add(ItemType.GUMMIES, Category.WEED, "Very long strain effects", "Cook at a Drug Lab.");
+        add(ItemType.WAX, Category.WEED, "Huge strain effects", "Cook at a Drug Lab.");
+        add(ItemType.VAPE_PEN, Category.WEED, "Strain effects, 10 puffs", "Cook at a Drug Lab.");
         // psychedelics
-        drug(ItemType.MAGIC_MUSHROOM, Category.PSYCH, "Harvest grown magic mushrooms.");
-        drug(ItemType.SHROOM_TEA, Category.PSYCH, "Drug Lab > Cook: 2 magic mushrooms + bottle.");
-        drug(ItemType.LUCID_TAB, Category.PSYCH, "Drug Lab > Cook: solvent + 2 mushrooms + paper.");
-        drug(ItemType.PEYOTE_BUTTON, Category.PSYCH, "Harvest a flowering peyote cactus.");
-        drug(ItemType.MESCALINE, Category.PSYCH, "Drug Lab > Cook: 4 peyote buttons + solvent.");
-        drug(ItemType.DMT, Category.PSYCH, "Drug Lab > Cook: solvent + catalyst + 3 glow berries.");
+        drug(ItemType.MAGIC_MUSHROOM, Category.PSYCH, "Grow magic mushrooms.");
+        drug(ItemType.SHROOM_TEA, Category.PSYCH, "Cook at a Drug Lab.");
+        drug(ItemType.LUCID_TAB, Category.PSYCH, "Cook at a Drug Lab.");
+        drug(ItemType.PEYOTE_BUTTON, Category.PSYCH, "Grow a peyote cactus.");
+        drug(ItemType.MESCALINE, Category.PSYCH, "Cook at a Drug Lab.");
+        drug(ItemType.DMT, Category.PSYCH, "Cook at a Drug Lab.");
         // uppers
-        drug(ItemType.COCAINE, Category.UPPERS, "Drug Lab > Cook: 8 coca leaves + solvent + sugar.");
-        drug(ItemType.CRACK, Category.UPPERS, "Drug Lab > Cook: 2 cocaine + bone meal.");
-        drug(ItemType.BLUE_CRYSTAL, Category.UPPERS, "Drug Lab > Cook: solvent + catalyst + 4 lapis + 2 sugar.");
-        drug(ItemType.ECSTASY, Category.UPPERS, "Drug Lab > Cook: solvent + catalyst + 2 pink dye + sugar.");
-        drug(ItemType.PIXIE_DUST, Category.UPPERS, "Drug Lab > Cook: solvent + 4 glowstone dust + 2 sugar.");
-        drug(ItemType.ANGEL_DUST, Category.UPPERS, "Drug Lab > Cook: solvent + catalyst + 2 gunpowder + blaze powder.");
+        drug(ItemType.COCAINE, Category.UPPERS, "Cook at a Drug Lab.");
+        drug(ItemType.CRACK, Category.UPPERS, "Cook at a Drug Lab.");
+        drug(ItemType.BLUE_CRYSTAL, Category.UPPERS, "Cook at a Drug Lab.");
+        drug(ItemType.ECSTASY, Category.UPPERS, "Cook at a Drug Lab.");
+        drug(ItemType.PIXIE_DUST, Category.UPPERS, "Cook at a Drug Lab.");
+        drug(ItemType.ANGEL_DUST, Category.UPPERS, "Cook at a Drug Lab.");
         // downers
-        drug(ItemType.OPIUM, Category.DOWNERS, "Drug Lab > Cook: 3 poppy pods + glass bottle.");
-        drug(ItemType.HEROIN, Category.DOWNERS, "Drug Lab > Cook: 6 poppy pods + solvent + catalyst.");
-        drug(ItemType.LEAN, Category.DOWNERS, "Drug Lab > Cook: bottle + 2 sugar + purple dye + 2 sweet berries.");
-        drug(ItemType.KETAMINE, Category.DOWNERS, "Drug Lab > Cook: solvent + 2 nether wart + 2 sugar.");
-        // seeds & harvest
-        add(ItemType.SEED_PACK, Category.GROW, null,
-                "Break grass/ferns (biome decides the strain),", "buy at the Shop or breed your own.");
-        add(ItemType.COCA_SEEDS, Category.GROW, null, "Break grass in jungles/savannas or buy them.");
-        add(ItemType.POPPY_SEEDS, Category.GROW, null, "Break red poppy flowers or buy them.");
-        add(ItemType.PEYOTE_SEEDS, Category.GROW, null, "Break dead bushes in deserts or buy them.");
-        add(ItemType.MUSHROOM_SPORES, Category.GROW, null, "Break small mushrooms or buy them.");
-        add(ItemType.BUD_FRESH, Category.GROW, null, "Harvest a fully grown cannabis plant.");
-        add(ItemType.COCA_LEAVES, Category.GROW, null, "Harvest a fully grown coca bush.");
-        add(ItemType.POPPY_POD, Category.GROW, null, "Harvest fully grown opium poppies.");
+        drug(ItemType.OPIUM, Category.DOWNERS, "Cook at a Drug Lab.");
+        drug(ItemType.HEROIN, Category.DOWNERS, "Cook at a Drug Lab.");
+        drug(ItemType.LEAN, Category.DOWNERS, "Cook at a Drug Lab.");
+        drug(ItemType.KETAMINE, Category.DOWNERS, "Cook at a Drug Lab.");
         // supplies & blocks
-        add(ItemType.ROLLING_PAPERS, Category.GEAR, null, "Craft: 3 paper + sugar cane (gives 6).");
-        add(ItemType.BLUNT_WRAP, Category.GEAR, null, "Craft: paper + cocoa beans + dried kelp.");
-        add(ItemType.BONG, Category.GEAR, null, "Craft: glass, glass bottle, iron nugget.");
-        add(ItemType.LAB_SOLVENT, Category.GEAR, null, "Craft: bottle + sugar + redstone + gunpowder.");
-        add(ItemType.CATALYST, Category.GEAR, null, "Craft: amethyst + glowstone dust + redstone.");
-        add(ItemType.FERTILIZER, Category.GEAR, null, "Craft: 2 bone meal + rotten flesh.");
-        add(ItemType.GROWER_GUIDE, Category.GEAR, null, "Craft: book + wheat seeds. Opens the menu.");
-        add(ItemType.LAB_STATION, Category.GEAR, null, "Crafting table (see the recipe).");
-        add(ItemType.PLANTER_BOX, Category.GEAR, null, "Crafting table (see the recipe).");
-        add(ItemType.GROW_LAMP, Category.GEAR, null, "Crafting table (see the recipe).");
-        add(ItemType.DEALER, Category.GEAR, null, "Crafting table (see the recipe).");
+        add(ItemType.LAB_STATION, Category.GEAR, null, "Crafting table.");
+        add(ItemType.GROW_LAMP, Category.GEAR, null, "Crafting table.");
+        add(ItemType.PLANTER_BOX, Category.GEAR, null, "Crafting table.");
+        add(ItemType.DEALER, Category.GEAR, null, "Crafting table.");
+        add(ItemType.BONG, Category.GEAR, null, "Crafting table.");
+        add(ItemType.ROLLING_PAPERS, Category.GEAR, null, "Crafting table.");
+        add(ItemType.BLUNT_WRAP, Category.GEAR, null, "Crafting table.");
+        add(ItemType.LAB_SOLVENT, Category.GEAR, null, "Crafting table.");
+        add(ItemType.FERTILIZER, Category.GEAR, null, "Crafting table.");
+        // seeds & harvest (Shop / admin list)
+        add(ItemType.SEED_PACK, Category.GROW, null, "Break grass (the biome picks the strain).");
+        add(ItemType.MUSHROOM_SPORES, Category.GROW, null, "Break small mushrooms.");
+        add(ItemType.COCA_SEEDS, Category.GROW, null, "Break grass in jungles and savannas.");
+        add(ItemType.POPPY_SEEDS, Category.GROW, null, "Break red poppies.");
+        add(ItemType.PEYOTE_SEEDS, Category.GROW, null, "Break dead bushes in deserts.");
+        add(ItemType.BUD_FRESH, Category.GROW, null, "Harvest a grown cannabis plant.");
+        add(ItemType.COCA_LEAVES, Category.GROW, null, "Harvest a grown coca bush.");
+        add(ItemType.POPPY_POD, Category.GROW, null, "Harvest grown poppies.");
+        add(ItemType.GROWER_GUIDE, Category.GROW, null, "Type /kush.");
     }
 
     private Catalog() {

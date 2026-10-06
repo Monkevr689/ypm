@@ -24,9 +24,7 @@ public final class RecipeViewMenu extends Menu {
     private static final int STATION = 8;
     private static final int BACK = 36;
     private static final int PREV = 39;
-    private static final int PAGE = 40;
     private static final int NEXT = 41;
-    private static final int INFO = 44;
 
     private final List<RecipeBook.Entry> list;
     private int index;
@@ -48,27 +46,26 @@ public final class RecipeViewMenu extends Menu {
             }
         }
         ItemStack result = RecipeBook.sample(e.result(), e.amount());
-        result.editMeta(m -> m.itemName(Text.mm("<green>" + e.title() + (e.amount() > 1 ? " <gray>x" + e.amount() : ""))));
+        result.editMeta(m -> {
+            m.itemName(Text.mm("<green>" + e.title() + (e.amount() > 1 ? " <gray>x" + e.amount() : "")));
+            List<String> notes = new ArrayList<>();
+            for (String n : e.notes()) {
+                notes.add("<gray>" + n);
+            }
+            m.lore(Text.lines(notes));
+        });
         set(RESULT, result);
         ItemStack station = e.kind() == RecipeBook.Kind.CRAFTING ? new ItemStack(Material.CRAFTING_TABLE)
                 : Items.create(ItemType.LAB_STATION);
         station.editMeta(m -> {
             m.itemName(Text.mm("<yellow>" + e.kind().station()));
-            m.lore(Text.lines(List.of(e.kind() == RecipeBook.Kind.CRAFTING
-                    ? "<gray>Use any crafting table." : "<gray>Place a <green>Drug Lab</green> and right-click it.")));
+            m.lore(List.of());
         });
         set(STATION, station);
-        List<String> info = new ArrayList<>();
-        info.add("<gray>Made at: <white>" + e.kind().station());
-        for (String n : e.notes()) {
-            info.add("<gray>" + n);
-        }
-        set(INFO, Items.icon("ui_info", "<aqua>" + e.title(), info));
         if (list.size() > 1) {
-            set(PREV, Items.icon("ui_back", "<gray>Previous recipe"));
-            set(NEXT, Items.icon("ui_arrow", "<gray>Next recipe"));
+            set(PREV, Items.icon("ui_back", "<gray>Previous"));
+            set(NEXT, Items.icon("ui_arrow", "<gray>Next " + (index + 1) + "/" + list.size()));
         }
-        set(PAGE, Items.amount(Items.icon("ui_recipes", "<gray>Recipe " + (index + 1) + "/" + list.size()), index + 1));
     }
 
     @Override
