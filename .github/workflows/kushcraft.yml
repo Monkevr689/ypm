@@ -192,8 +192,12 @@ jobs:
           grep -q "^new-players:" plugins/KushCraft/config.yml || { echo "::error::starter kit not added"; exit 1; }
           grep -q "^harvest:" plugins/KushCraft/config.yml || { echo "::error::harvest section not added"; exit 1; }
           grep -q "item: farmhand" plugins/KushCraft/config.yml || { echo "::error::workers not in the shop"; exit 1; }
-          grep -q "item: lab_station, amount: 1, price: 650" plugins/KushCraft/config.yml || { echo "::error::new shop prices not written"; exit 1; }
-          if grep -q "price: 400}" plugins/KushCraft/config.yml; then echo "::error::old shop prices kept"; exit 1; fi
+          # Bukkit writes the shop list in block style (item / amount / price on separate lines)
+          grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 650" \
+            || { grep -A3 "item: lab_station" plugins/KushCraft/config.yml; echo "::error::new shop prices not written"; exit 1; }
+          if grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 400"; then
+            echo "::error::old shop prices kept"; exit 1
+          fi
           grep -q "^  demand-drop: 0.006" plugins/KushCraft/config.yml || { echo "::error::market not updated"; exit 1; }
           grep -q "^cartel:" plugins/KushCraft/config.yml || { echo "::error::cartel section lost"; exit 1; }
           grep -q "^  categories:" plugins/KushCraft/config.yml || { echo "::error::Trade shelves lost"; exit 1; }
