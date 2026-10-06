@@ -22,7 +22,7 @@ public final class GearMenu extends TabMenu {
 
     static final int FIRST_GEAR = 9;
     static final int GEAR = 18;
-    static final int[] HIRE = {at(3, 2), at(3, 6)};
+    static final int[] HIRE = {at(3, 1), at(3, 4), at(3, 7)};
     static final int SEEDS = at(5, 0);
     static final int MINE = at(5, 4);
 

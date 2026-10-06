@@ -83,30 +83,22 @@ public final class ShopMenu extends TabMenu {
                 : "<gray>Sell all", sell), value > 0));
     }
 
-    /** Hot item and what sells best right now. */
+    /** Hot item, contracts and what is flooded: click for the Market page. */
     private ItemStack marketIcon() {
         KushCraft plugin = KushCraft.get();
         List<String> lore = new ArrayList<>();
         ItemType hot = plugin.market().hot();
         if (hot != null) {
-            lore.add("<gold>Hot: " + hot.display() + " " + plugin.market().trend(hot) + " <dark_gray>("
-                    + plugin.market().hotMinutesLeft() + " min)");
+            lore.add("<gold>Hot: " + hot.display() + " " + plugin.market().trend(hot));
         }
         double boom = plugin.market().boost();
         if (boom > 1.001) {
-            lore.add("<light_purple>Market boom: everything +" + Math.round((boom - 1) * 100) + "% <dark_gray>("
+            lore.add("<light_purple>Market boom: +" + Math.round((boom - 1) * 100) + "% <dark_gray>("
                     + plugin.market().boostMinutesLeft() + " min)");
         }
-        List<ItemType> flooded = plugin.market().flooded();
-        if (!flooded.isEmpty()) {
-            lore.add("<red>Flooded:");
-            for (int i = 0; i < flooded.size() && i < 4; i++) {
-                lore.add("<red> " + flooded.get(i).display() + " " + plugin.market().trend(flooded.get(i)));
-            }
-        }
-        lore.add("<dark_gray>Selling lots of one thing drops its");
-        lore.add("<dark_gray>price; it climbs back over time.");
-        return Items.icon("ui_market", "<yellow>Market news", lore);
+        lore.add("<gray>" + plugin.market().orders().size() + " contracts open");
+        lore.add("<dark_gray>Click: contracts & flooded products");
+        return Items.icon("ui_market", "<yellow>Market", lore);
     }
 
     static ItemStack entryIcon(Shop.BuyEntry e, double bal) {
@@ -144,6 +136,10 @@ public final class ShopMenu extends TabMenu {
         if (slot == GEAR) {
             clickSound();
             new GearMenu(player).open();
+            return;
+        }
+        if (slot == MARKET) {
+            openChild(new MarketMenu(player));
             return;
         }
         int idx = slot - FIRST_SEED;

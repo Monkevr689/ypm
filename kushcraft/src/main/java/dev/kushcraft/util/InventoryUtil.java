@@ -3,7 +3,7 @@ package dev.kushcraft.util;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.Inventory;
 
 import java.util.Map;
 import java.util.function.Predicate;
@@ -23,8 +23,12 @@ public final class InventoryUtil {
     }
 
     public static int count(Player p, Predicate<ItemStack> match) {
+        return count(p.getInventory(), match);
+    }
+
+    public static int count(Inventory inv, Predicate<ItemStack> match) {
         int n = 0;
-        for (ItemStack it : p.getInventory().getStorageContents()) {
+        for (ItemStack it : inv.getStorageContents()) {
             if (it != null && !it.getType().isAir() && match.test(it)) {
                 n += it.getAmount();
             }
@@ -38,7 +42,10 @@ public final class InventoryUtil {
 
     /** Removes up to amount matching items. Returns how many were removed. */
     public static int remove(Player p, Predicate<ItemStack> match, int amount) {
-        PlayerInventory inv = p.getInventory();
+        return remove(p.getInventory(), match, amount);
+    }
+
+    public static int remove(Inventory inv, Predicate<ItemStack> match, int amount) {
         ItemStack[] contents = inv.getStorageContents();
         int left = amount;
         for (int i = 0; i < contents.length && left > 0; i++) {

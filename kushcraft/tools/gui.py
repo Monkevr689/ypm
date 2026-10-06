@@ -421,7 +421,7 @@ DRUG_ROWS = [9, 6, 6, 4, 9]
 DRUG_COLORS = ["5aa83a", "a05ad8", "3aa8d8", "d8803a", "8a8a96"]
 SHOP_SEEDS = 36
 GEAR_SLOTS = 18
-HIRE_SLOTS = ((3, 2), (3, 6))
+HIRE_SLOTS = ((3, 1), (3, 4), (3, 7))
 TRADE_SHELVES = 7
 TRADE_SLOTS = 27
 AWARD_SLOTS = 45
@@ -484,7 +484,7 @@ def shop():
 
 def gear():
     """Shop > Gear & Workers: gear on two metal racks (rows 1-2), a hiring board with
-    two workers (3,2) (3,6), back to seeds (5,0) and your workers (5,4). The Shop tab is lit."""
+    three workers (3,1) (3,4) (3,7), back to seeds (5,0) and your workers (5,4). The Shop tab is lit."""
     img, a = tab_page("gear", 26, tab="shop")
     d = ImageDraw.Draw(img)
     x0, x1 = 5, 170
@@ -500,8 +500,8 @@ def gear():
     # the hiring board: cork with a sign and two posters
     by0, by1 = slot_xy(3, 0)[1] - 8, slot_xy(4, 0)[1] + 17
     cork(img, 8, by0, 167, by1, 61)
-    label_plate(img, 88, by0 + 1, "HIRING", plate="f8e8a8")
-    for (r, c), col in zip(HIRE_SLOTS, ("4caa32", "e8a832")):
+    label_plate(img, 88, by1 - 8, "HIRING", plate="f8e8a8")
+    for (r, c), col in zip(HIRE_SLOTS, ("4caa32", "e8a832", "3ac8e8")):
         x, y = slot_xy(r, c)
         d.rectangle((x - 9, y - 3, x + 26, y + 26), fill=rgba("f4ecd4"), outline=rgba("8a7a5a"))
         d.rectangle((x - 9, y + 22, x + 26, y + 26), fill=rgba(col))
@@ -567,7 +567,7 @@ def trade():
 
 def cartel():
     """Cartel room: banner (1,1), bank (1,3), level (1,5), members (1,7);
-    contracts (3,1..3) on a cork board; shipment (3,6) on a crate; Top Dealers (5,4)."""
+    how cartels work (3,1) on a note, the shipment (3,4) on a crate, Top Dealers (3,7)."""
     img, a = tab_page("cartel", 25)
     d = ImageDraw.Draw(img)
     top, bottom = slot_xy(1, 0)[1] - 1, slot_xy(5, 0)[1] + 18
@@ -600,30 +600,25 @@ def cartel():
                   fill=rgba("f8d040" if k < 3 else "6a5a3a"))
     cslot(img, 1, 5, "big", "f2c23a")
     cslot(img, 1, 7, "big", "e8e0d0")
-    # contracts board
-    cx0, cy0 = slot_xy(3, 1)
-    cork(img, cx0 - 6, cy0 - 9, cx0 + 18 * 3 + 5, cy0 + 21, 26)
-    label_plate(img, cx0 + 27, cy0 - 8, "CONTRACTS")
-    for c in (1, 2, 3):
-        cslot(img, 3, c, "big", "f2e6c8")
-        x, y = slot_xy(3, c)
-        pin(img, x + 8, y - 3)
+    # how it works: a pinned paper note with a question mark
+    hx, hy = slot_xy(3, 1)
+    d.rectangle((hx - 6, hy - 6, hx + 23, hy + 26), fill=rgba("f4ecd4"), outline=rgba("8a7a5a"))
+    pin(img, hx + 8, hy - 7)
+    text(img, hx + 6, hy + 21, "HOW?", rgba("6a4a2a"))
+    cslot(img, 3, 1, "big", "5ad8f0")
     # shipment: a crate on a pallet, the slot set into its front
-    sx, sy = slot_xy(3, 6)
+    sx, sy = slot_xy(3, 4)
     crate(img, sx - 14, sy - 9, sx + 31, sy + 21, 27)
     d.rectangle((sx - 16, sy + 22, sx + 33, sy + 24), fill=rgba("6a4a2a"))
     for k in range(4):
         d.rectangle((sx - 15 + k * 15, sy + 25, sx - 12 + k * 15, sy + 26), fill=rgba("4a3018"))
     stencil(img, sx - 11, sy - 7, "SHIP")
-    cslot(img, 3, 6, "glow", "f2c23a")
+    cslot(img, 3, 4, "glow", "f2c23a")
     # Top Dealers: a crown plaque
-    tx, ty = slot_xy(5, 4)
-    gold_frame(img, tx - 30, ty - 2, tx + 47, ty + 19)
-    d.rectangle((tx - 28, ty, tx + 45, ty + 17), fill=rgba("2a0e10"))
-    for (px_, py_) in ((tx - 22, ty + 6), (tx + 37, ty + 6)):
-        d.polygon([(px_, py_ + 6), (px_, py_), (px_ + 2, py_ + 3), (px_ + 4, py_), (px_ + 6, py_ + 3),
-                   (px_ + 8, py_), (px_ + 8, py_ + 6)], fill=rgba("f8d040"))
-    cslot(img, 5, 4, "big", "f2c23a")
+    tx, ty = slot_xy(3, 7)
+    gold_frame(img, tx - 8, ty - 6, tx + 25, ty + 23)
+    d.rectangle((tx - 6, ty - 4, tx + 23, ty + 21), fill=rgba("2a0e10"))
+    cslot(img, 3, 7, "big", "f2c23a")
     player_inv(img, 6)
     return "cartel", img, 6
 
@@ -696,7 +691,9 @@ def awards():
 # Drug Lab pages (5 rows). MUST match dev.kushcraft.gui.LabTabMenu.Tab order.
 # ---------------------------------------------------------------------------
 LAB_TABS = ["COOK", "ROLL", "DRY", "MIX"]
-COOK_RECIPES = 21
+# recipes per group, in LabRecipe order: weed, psychedelics, uppers, downers
+COOK_GROUPS = [8, 6, 7, 6]
+COOK_RECIPES = sum(COOK_GROUPS)
 
 
 def lab_page(name, seed):
@@ -712,10 +709,14 @@ def lab_page(name, seed):
 
 
 def cook():
-    """Recipes rows 1-3 (COOK_RECIPES); progress tube (4,0..6); arrow (4,7); output (4,8)."""
+    """Recipes rows 1-3 (COOK_RECIPES), tinted by group like the Drugs page;
+    progress tube (4,0..6); arrow (4,7); output (4,8)."""
     img, a = lab_page("cook", 30)
-    for i in range(COOK_RECIPES):
-        cslot(img, 1 + i // 9, i % 9)
+    i = 0
+    for n, col in zip(COOK_GROUPS, DRUG_COLORS):
+        for _ in range(n):
+            cslot(img, 1 + i // 9, i % 9, tint=col)
+            i += 1
     d = ImageDraw.Draw(img)
     x0, y0 = slot_xy(4, 0)
     # glass tube around the progress slots
@@ -872,14 +873,15 @@ def plain_page(name, rows, seed, title):
 
 
 def worker():
-    """A worker's menu (5 rows): portrait (0,0), rename / pause / train / dismiss (0,5..8);
-    the satchel (rows 1-3); wages (4,1), take all (4,4), how they work (4,7)."""
+    """A worker's menu (5 rows): portrait (0,0), their job (0,4), rename / pause / train /
+    dismiss (0,5..8); the satchel (rows 1-3); take all (4,4)."""
     rows = 5
     img, a = plain_page("worker", rows, 50, "WORKER")
     d = ImageDraw.Draw(img)
     cslot(img, 0, 0, "big", "f2c23a")
     x, y = slot_xy(0, 1)
     text(img, x + 4, y + 6, "YOUR HIRE", rgba(a), shadow=rgba(DARK))
+    cslot(img, 0, 4, "glow", "5ad8f0")
     for c, col in zip((5, 6, 7, 8), ("e8e0d0", "f0a03a", "f2c23a", "e84a4a")):
         cslot(img, 0, c, "big", col)
     # the satchel: a burlap sack behind rows 1-3
@@ -898,9 +900,7 @@ def worker():
     for r in (1, 2, 3):
         for c in range(9):
             cslot(img, r, c, tint="b8945a")
-    cslot(img, 4, 1, "big", "f2c23a")
     cslot(img, 4, 4, "glow", "6ae05a")
-    cslot(img, 4, 7, "big", "5ad8f0")
     player_inv(img, rows)
     return "worker", img, rows
 

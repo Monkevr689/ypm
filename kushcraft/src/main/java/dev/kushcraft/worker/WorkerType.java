@@ -15,7 +15,10 @@ public enum WorkerType {
             "Give them seeds and fertilizer to plant empty farmland."),
     DRYER("Dryer", "<gold>", ItemType.DRYER, Material.SHEARS,
             "Hangs fresh buds on your Drug Lab racks and collects them dry.",
-            "Takes fresh buds from your Farmhands nearby.");
+            "Takes fresh buds from your Farmhands nearby."),
+    COOK("Cook", "<aqua>", ItemType.COOK, Material.GLASS_BOTTLE,
+            "Cooks the drug you pick at your Drug Lab, batch after batch.",
+            "Put the ingredients in their satchel. Takes dried buds from your Dryers.");
 
     private final String display;
     private final String color;

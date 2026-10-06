@@ -105,7 +105,9 @@ public final class PlantManager {
                 owner = o == null ? null : UUID.fromString(o);
             } catch (IllegalArgumentException ignored) {
             }
-            add(new Plant(key, kind, s.getString("strain"), s.getDouble("growth"), s.getBoolean("fert"), owner));
+            Plant plant = new Plant(key, kind, s.getString("strain"), s.getDouble("growth"), s.getBoolean("fert"), owner);
+            plant.wildUntil(s.getLong("wild-until", 0));
+            add(plant);
         }
         plugin.getLogger().info("Loaded " + plants.size() + " plants.");
     }
@@ -123,6 +125,9 @@ public final class PlantManager {
             s.set("fert", p.fertilized());
             if (p.owner() != null) {
                 s.set("owner", p.owner().toString());
+            }
+            if (p.wild()) {
+                s.set("wild-until", p.wildUntil());
             }
         }
         try {
@@ -360,6 +365,9 @@ public final class PlantManager {
         if (who != null) {
             who.giveExp(3);
             plugin.awards().harvested(who, p.kind(), p.strainId(), h.conditions().fit(), Climate.of(p.key().block()));
+            if (p.wild()) {
+                plugin.awards().foraged(who);
+            }
         }
         pickEffect(p);
         remove(p);
@@ -594,7 +602,16 @@ public final class PlantManager {
         double poppyMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.poppy-minutes", 14));
         double peyoteMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.peyote-minutes", 18));
         Map<UUID, Integer> ripened = new HashMap<>();
+        long now = System.currentTimeMillis();
         for (Plant p : new ArrayList<>(plants.values())) {
+            if (p.wild() && now > p.wildUntil()) {
+                // nobody picked it: it withers away
+                if (p.key().isLoaded()) {
+                    breakEffect(p);
+                }
+                remove(p);
+                continue;
+            }
             if (p.mature() || !p.key().isLoaded()) {
                 continue;
             }
@@ -827,13 +844,17 @@ public final class PlantManager {
     /** Short status for the action bar when a plant is right-clicked. */
     public void showInfo(Player player, Plant p) {
         Conditions c = conditions(p);
-        String name = switch (p.kind()) {
+        String name;
+        name = switch (p.kind()) {
             case MUSHROOM -> "<gold>Magic Mushrooms";
             case COCA -> "<green>Coca Bush";
             case POPPY -> "<red>Opium Poppy";
             case PEYOTE -> "<gold>Peyote Cactus";
             case CANNABIS -> plugin.strains().getOrDefault(p.strainId()).colored();
         };
+        if (p.wild()) {
+            name = "<green>Wild</green> " + name;
+        }
         String line = name + " <dark_gray>|</dark_gray> <white>" + p.stageName() + " <gray>"
                 + (int) p.growth() + "%</gray> <dark_gray>|</dark_gray> " + Text.stars(c.quality());
         if (p.status != null && !p.status.isEmpty()) {

@@ -10,10 +10,15 @@ import dev.kushcraft.recipe.Recipes;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.Text;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Boss;
+import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Warden;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -107,7 +112,45 @@ public final class PlayerListener implements Listener {
 
     @EventHandler
     public void onDeath(PlayerDeathEvent e) {
-        plugin.effects().clear(e.getEntity());
+        Player p = e.getEntity();
+        plugin.effects().clear(p);
+        loseCash(p);
+    }
+
+    /** What dying costs with this much cash (rounded down to the cent). */
+    public static double cashLost(double balance, double pct) {
+        return balance <= 0 ? 0 : Math.floor(balance * Math.max(0, Math.min(1, pct)) * 100) / 100.0;
+    }
+
+    /** death.cash-lost of the wallet is gone (nobody gets it). Returns the amount lost. */
+    public double loseCash(Player p) {
+        double pct = Math.max(0, Math.min(1, plugin.getConfig().getDouble("death.cash-lost", 0.2)));
+        double lost = cashLost(plugin.economy().balance(p), pct);
+        if (pct <= 0 || lost < 0.01 || !plugin.economy().withdraw(p, lost)) {
+            return 0;
+        }
+        p.sendMessage(Text.msg("<red>You died and lost <gold>" + plugin.economy().format(lost) + "</gold> <gray>("
+                + Math.round(pct * 100) + "% of your cash)."));
+        return lost;
+    }
+
+    /** Pain Relief: no fall damage. */
+    @EventHandler(ignoreCancelled = true)
+    public void onFall(EntityDamageEvent e) {
+        if (e.getCause() == EntityDamageEvent.DamageCause.FALL && e.getEntity() instanceof Player p
+                && plugin.effects().has(p, EffectType.PAIN_RELIEF)) {
+            e.setCancelled(true);
+        }
+    }
+
+    /** Ghost: monsters don't notice you (bosses still do). */
+    @EventHandler(ignoreCancelled = true)
+    public void onTarget(EntityTargetLivingEntityEvent e) {
+        if (e.getTarget() instanceof Player p && e.getEntity() instanceof Monster
+                && !(e.getEntity() instanceof Boss) && !(e.getEntity() instanceof Warden)
+                && plugin.effects().has(p, EffectType.GHOST)) {
+            e.setCancelled(true);
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

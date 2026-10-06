@@ -3,6 +3,7 @@ package dev.kushcraft.gui;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
+import dev.kushcraft.lab.Cooking;
 import dev.kushcraft.lab.LabRecipe;
 import dev.kushcraft.machine.Machine;
 import dev.kushcraft.strain.Strain;
@@ -17,7 +18,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Drug Lab > Cook: every recipe (green glow = you have everything), a
@@ -30,8 +30,7 @@ public final class LabMenu extends LabTabMenu {
     static final int SLOTS = 27;
     static final int[] PROGRESS = {at(4, 0), at(4, 1), at(4, 2), at(4, 3), at(4, 4), at(4, 5), at(4, 6)};
     static final int OUTPUT = at(4, 8);
-    /** Shift-click cooks up to this many batches in one go (each takes the full time). */
-    static final int MAX_BATCHES = 4;
+    static final int MAX_BATCHES = Cooking.MAX_BATCHES;
 
     private String pickStrain;
     private int pickQuality;
@@ -86,7 +85,8 @@ public final class LabMenu extends LabTabMenu {
                     : InventoryUtil.count(player, ing::matches);
             boolean ok = have >= ing.amount();
             all &= ok;
-            lore.add((ok ? "<green>✔ " : "<red>✘ ") + "<white>" + ing.amount() + " " + ing.name());
+            lore.add((ok ? "<green>✔ " : "<red>✘ ") + "<white>" + ing.amount() + " " + ing.name()
+                    + (ok ? "" : " <dark_gray>(" + ing.where() + ")"));
         }
         lore.add("<dark_gray>⌚ " + Text.time((int) Math.round(r.seconds() * timeFactor(machine)))
                 + " · Shift: up to " + MAX_BATCHES + " batches");
@@ -143,60 +143,22 @@ public final class LabMenu extends LabTabMenu {
                 return;
             }
         }
-        StrainStock.Group g = null;
-        for (LabRecipe.Ingredient ing : r.ingredients()) {
-            if (ing.strainSource()) {
-                g = StrainStock.pick(player, ing.custom(), ing.amount(), pickStrain, pickQuality);
-                if (g == null) {
-                    missing(ing);
-                    return;
-                }
-            } else if (InventoryUtil.count(player, ing::matches) < ing.amount()) {
-                missing(ing);
-                return;
-            }
+        Cooking.Result res = Cooking.start(player.getInventory(), machine, r, wanted, pickStrain, pickQuality,
+                left -> InventoryUtil.give(player, left));
+        if (!res.ok()) {
+            player.sendActionBar(Text.mm("<red>" + res.error()));
+            failSound();
+            return;
         }
-        // how many batches: what you have, the shift-click limit and one stack of output
-        int batches = Math.max(1, Math.min(wanted, r.output().maxStack() / Math.max(1, r.amount())));
-        for (LabRecipe.Ingredient ing : r.ingredients()) {
-            int have = ing.strainSource() ? g.count() : InventoryUtil.count(player, ing::matches);
-            batches = Math.max(1, Math.min(batches, have / ing.amount()));
+        if (res.bonus() > 0) {
+            player.sendActionBar(Text.mm("<green>Lab bonus: +" + res.bonus() + " " + r.output().display()));
+        } else if (res.batches() > 1) {
+            player.sendActionBar(Text.mm("<green>Cooking " + res.batches() + " batches at once."));
         }
-        for (LabRecipe.Ingredient ing : r.ingredients()) {
-            if (ing.strainSource()) {
-                StrainStock.take(player, ing.custom(), g, ing.amount() * batches);
-            } else {
-                InventoryUtil.remove(player, ing::matches, ing.amount() * batches);
-            }
-        }
-        int amount = r.amount() * batches;
-        int bonus = 0;
-        for (int b = 0; b < batches; b++) {
-            if (ThreadLocalRandom.current().nextDouble() < bonusChance(machine)) {
-                bonus++;
-            }
-        }
-        amount = Math.min(r.output().maxStack(), amount + bonus);
-        ItemStack result = r.output().strainBound() && g != null
-                ? Items.strainItem(r.output(), g.strain(), g.quality(), amount)
-                : Items.create(r.output(), amount);
-        if (bonus > 0) {
-            player.sendActionBar(Text.mm("<green>Lab bonus: +" + bonus + " " + r.output().display()));
-        } else if (batches > 1) {
-            player.sendActionBar(Text.mm("<green>Cooking " + batches + " batches at once."));
-        }
-        machine.startJob(r.name(), (long) (r.seconds() * 1000L * batches * timeFactor(machine)), result);
-        KushCraft.get().machines().markDirty();
         KushCraft.get().awards().cooked(player, r);
         successSound();
         player.playSound(player.getLocation(), "minecraft:block.brewing_stand.brew", SoundCategory.BLOCKS, 1f, 1f);
         render();
-    }
-
-    private void missing(LabRecipe.Ingredient ing) {
-        player.sendActionBar(Text.mm("<red>You need " + ing.amount() + " " + ing.name()
-                + (ing.strainSource() ? " (one strain)" : "")));
-        failSound();
     }
 
     /** Clicking a strain item below picks which strain the weed recipes use. */

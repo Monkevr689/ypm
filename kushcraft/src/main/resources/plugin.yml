@@ -2,7 +2,7 @@ name: KushCraft
 version: ${project.version}
 main: dev.kushcraft.KushCraft
 api-version: '1.21.4'
-description: Grow custom strains, run a lab, roll joints and sell it all - with custom textures, no client mods.
+description: Grow custom strains, cook step by step, hire workers and sell it all - with custom textures, no client mods.
 author: KushCraft
 softdepend: [Vault]
 commands:

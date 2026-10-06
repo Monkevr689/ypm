@@ -2,29 +2,29 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 7
+config-version: 8
 
-# Custom textures/models are delivered with a server resource pack that
-# KushCraft builds and hosts by itself. Players get the usual
-# "this server uses a resource pack" prompt when they join.
+# Custom textures/models come in a server resource pack. Players get the
+# usual "this server uses a resource pack" prompt when they join.
 resource-pack:
   enabled: true
   # true = players must accept the pack to stay on the server.
   required: false
-  # Port of the small built-in web server that hosts the pack. It must be
-  # reachable by players (open it in your firewall / hosting panel).
+  # Where players download the pack from:
+  #   auto -> the copy of this exact KushCraft version hosted on GitHub.
+  #           Works on every host (Shockbyte and most game hosts only open
+  #           the game port). Recommended.
+  #   ''   -> KushCraft hosts the zip itself on 'port' below (that port
+  #           must be open to players).
+  #   a direct link to a zip you host yourself, e.g. Dropbox with ?dl=1.
+  #           plugins/KushCraft/KushCraft-pack.zip is written on start-up.
+  # The plugin works out the file's hash by itself. Then /kush reload.
+  url: auto
+  # Only used when url is ''.
   port: 8163
-  # Public address players use to reach the pack server. Leave empty to use
-  # the same address the player typed to join the server (works for most setups).
+  # Public address for the built-in pack server. Empty = the address the
+  # player typed to join.
   host: ''
-  # No open port? (Shockbyte and most game hosts only open the game port.)
-  # Host the zip somewhere else and paste a DIRECT download link here, e.g.
-  #   https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip
-  #   https://www.dropbox.com/s/xxxx/KushCraft-pack.zip?dl=1
-  # The zip is also written to plugins/KushCraft/KushCraft-pack.zip on start-up.
-  # When set, the built-in web server is not started and the plugin works out
-  # the file's hash by itself (so any copy of the zip works). Then /kush reload.
-  url: ''
   prompt: '<green><bold>KushCraft</bold></green> <gray>adds custom plants, machines and items. Accept the pack to see them!'
 
 growth:
@@ -59,6 +59,24 @@ wild:
   # Chance to find ergot (the fungus LSD is made from) when breaking ripe wheat.
   # It can also be cooked from wheat at a Drug Lab.
   ergot-chance: 0.06
+  # Wild plants grow by themselves out in the world, 20-56 blocks from
+  # players: cannabis strains by biome, coca in jungles and savannas, poppies
+  # on plains, peyote in deserts, magic mushrooms in dark forests and swamps.
+  # Anyone can pick them (buds and seeds!). Never near someone's farm.
+  plants: true
+  # One spot near every player is tried this often (seconds).
+  plant-seconds: 45
+  # Most wild plants on the whole server, and around one player.
+  max-plants: 80
+  max-near-player: 6
+  # Unpicked wild plants wither after this many hours.
+  plant-hours: 6
+
+# Right-click an animal with a joint, an edible or any drug: its eyes go
+# red and it gets high (slow, or the zoomies on uppers) for a while.
+animals:
+  enabled: true
+  seconds: 90
 
 drying:
   # Seconds fresh buds need on a drying rack (every Drug Lab has 5 racks).
@@ -105,7 +123,7 @@ market:
   # ...down to this fraction of the normal price...
   min-price: 0.4
   # ...and it recovers this much per minute. Sell a mix of products!
-  recovery-per-minute: 0.02
+  recovery-per-minute: 0.025
   # A random "hot" product sells for extra for a while.
   hot-item-bonus: 1.5
   hot-item-minutes: 60
@@ -139,9 +157,10 @@ awards:
 
 # =====================================================================
 #  CARTELS  (/kush > Cartel)
-#  Players team up: a shared bank, cartel levels with bonuses for every
-#  member, and big shipments to fill together. The best cartels are on the
-#  Top Dealers page.
+#  A cartel is a team: a shared bank (a cut of every member's sale goes
+#  in), levels bought from the bank (more members, better prices for
+#  everyone) and big shipments to fill together. The best cartels are on
+#  the Top Dealers page.
 # =====================================================================
 cartel:
   enabled: true
@@ -158,14 +177,15 @@ cartel:
   shipment-bonus: 1.5
   shipment-hours: 24
   shipment-cooldown-minutes: 30
-  # Levels: cost comes out of the cartel bank. members = max members.
-  # Bonuses go to every member: sales price, plant growth, Drug Lab speed.
+  # Levels: cost comes out of the cartel bank. members = max members,
+  # sell-bonus = better prices for every member. (grow-bonus and lab-bonus
+  # also work if you want them: faster plants / Drug Labs for members.)
   levels:
-    - {name: Crew, cost: 0, members: 4, sell-bonus: 0, grow-bonus: 0, lab-bonus: 0}
-    - {name: Gang, cost: 10000, members: 6, sell-bonus: 0.03, grow-bonus: 0.05, lab-bonus: 0}
-    - {name: Syndicate, cost: 40000, members: 8, sell-bonus: 0.06, grow-bonus: 0.10, lab-bonus: 0.05}
-    - {name: Cartel, cost: 120000, members: 12, sell-bonus: 0.09, grow-bonus: 0.15, lab-bonus: 0.10}
-    - {name: Empire, cost: 350000, members: 16, sell-bonus: 0.12, grow-bonus: 0.20, lab-bonus: 0.15}
+    - {name: Crew, cost: 0, members: 4, sell-bonus: 0}
+    - {name: Gang, cost: 10000, members: 6, sell-bonus: 0.04}
+    - {name: Syndicate, cost: 40000, members: 8, sell-bonus: 0.08}
+    - {name: Cartel, cost: 120000, members: 12, sell-bonus: 0.12}
+    - {name: Empire, cost: 350000, members: 16, sell-bonus: 0.16}
 
 # Give new players the KushCraft Menu book on their first join.
 give-guide-on-first-join: true
@@ -188,11 +208,14 @@ harvest:
 
 # =====================================================================
 #  WORKERS  (Shop > Gear & Workers)
-#  Hire people who work your farm: a Farmhand harvests your ripe plants
-#  and plants a seed from the harvest again (and plants / fertilizes from
-#  their satchel), a Dryer hangs fresh buds on your Drug Lab racks and
-#  collects them dry. They only touch the plants and labs of the player
-#  who hired them. Right-click a worker for their satchel and buttons.
+#  Hire people who work for you. They're expensive, but they never stop:
+#   Farmhand - harvests your ripe plants and plants a seed from the harvest
+#              again (and plants / fertilizes from their satchel)
+#   Dryer    - hangs fresh buds on your Drug Lab racks and collects them dry
+#   Cook     - cooks the drug you pick at your Drug Lab, from what's in their
+#              satchel (and takes dried buds from your Dryers)
+#  They only touch the plants and labs of the player who hired them.
+#  Right-click a worker for their satchel and buttons.
 # =====================================================================
 workers:
   enabled: true
@@ -203,13 +226,20 @@ workers:
   radius: [6, 9, 12]
   rest-seconds: [6, 4, 2]
   # Price to train a worker to level 2 and 3.
-  upgrade-costs: [3000, 8000]
-  # Wage for every job (one harvest, one planting, one trip to the racks),
-  # paid from the owner's wallet. No money = no work.
+  upgrade-costs: [10000, 25000]
+  # Wage for every job (one harvest, one planting, one trip to the racks,
+  # one batch cooked), paid from the owner's wallet. No money = no work.
   farmhand:
-    wage: 3
+    wage: 5
   dryer:
-    wage: 2
+    wage: 4
+  cook:
+    wage: 8
+
+# Dying costs you this much of the cash in your wallet (0.2 = 20%).
+# The money is gone - nobody gets it, so killing players doesn't pay.
+death:
+  cash-lost: 0.2
 
 menu:
   # Shift + F (sneak + swap hands) opens the /kush menu from anywhere.
@@ -243,32 +273,32 @@ exchange:
       name: Ores & Gems
       icon: diamond
       items:
-        - {item: coal, price: 25, amount: 16}
-        - {item: charcoal, price: 20, amount: 16}
-        - {item: raw_copper, price: 15, amount: 16}
-        - {item: copper_ingot, price: 20, amount: 16}
-        - {item: raw_iron, price: 60, amount: 8}
-        - {item: iron_ingot, price: 80, amount: 8}
-        - {item: iron_nugget, price: 10, amount: 16}
-        - {item: raw_gold, price: 120, amount: 8}
-        - {item: gold_ingot, price: 150, amount: 8}
-        - {item: gold_nugget, price: 18, amount: 16}
-        - {item: redstone, price: 15, amount: 16}
-        - {item: lapis_lazuli, price: 30, amount: 16}
-        - {item: quartz, price: 35, amount: 16}
-        - {item: amethyst_shard, price: 40, amount: 8}
-        - {item: emerald, price: 600, amount: 1}
-        - {item: diamond, price: 1500, amount: 1}
-        - {item: netherite_scrap, price: 9000, amount: 1}
-        - {item: netherite_ingot, price: 40000, amount: 1}
-        - {item: coal_block, price: 225, amount: 4}
-        - {item: copper_block, price: 180, amount: 1}
-        - {item: iron_block, price: 720, amount: 1}
-        - {item: gold_block, price: 1350, amount: 1}
-        - {item: redstone_block, price: 135, amount: 4}
-        - {item: lapis_block, price: 270, amount: 4}
-        - {item: emerald_block, price: 5400, amount: 1}
-        - {item: diamond_block, price: 13500, amount: 1}
+        - {item: coal, price: 32, amount: 16}
+        - {item: charcoal, price: 26, amount: 16}
+        - {item: raw_copper, price: 20, amount: 16}
+        - {item: copper_ingot, price: 26, amount: 16}
+        - {item: raw_iron, price: 78, amount: 8}
+        - {item: iron_ingot, price: 105, amount: 8}
+        - {item: iron_nugget, price: 13, amount: 16}
+        - {item: raw_gold, price: 155, amount: 8}
+        - {item: gold_ingot, price: 195, amount: 8}
+        - {item: gold_nugget, price: 23, amount: 16}
+        - {item: redstone, price: 20, amount: 16}
+        - {item: lapis_lazuli, price: 40, amount: 16}
+        - {item: quartz, price: 45, amount: 16}
+        - {item: amethyst_shard, price: 52, amount: 8}
+        - {item: emerald, price: 780, amount: 1}
+        - {item: diamond, price: 1950, amount: 1}
+        - {item: netherite_scrap, price: 11700, amount: 1}
+        - {item: netherite_ingot, price: 52000, amount: 1}
+        - {item: coal_block, price: 290, amount: 4}
+        - {item: copper_block, price: 235, amount: 1}
+        - {item: iron_block, price: 940, amount: 1}
+        - {item: gold_block, price: 1750, amount: 1}
+        - {item: redstone_block, price: 175, amount: 4}
+        - {item: lapis_block, price: 350, amount: 4}
+        - {item: emerald_block, price: 7000, amount: 1}
+        - {item: diamond_block, price: 17500, amount: 1}
     farming:
       name: Farming & Food
       icon: wheat
@@ -556,7 +586,7 @@ jobs:
 # =====================================================================
 shop:
   seed-price-multiplier: 1.25
-  # Workers (farmhand, dryer) are listed here too: they show on the hiring board.
+  # Workers (farmhand, dryer, cook) are listed here too: they show on the hiring board.
   buy:
     - {item: mushroom_spores, amount: 1, price: 30}
     - {item: coca_seeds, amount: 1, price: 50}
@@ -571,43 +601,50 @@ shop:
     - {item: grow_lamp, amount: 1, price: 200}
     - {item: dealer, amount: 1, price: 300}
     - {item: lab_station, amount: 1, price: 650}
-    - {item: farmhand, amount: 1, price: 2500}
-    - {item: dryer, amount: 1, price: 2000}
+    - {item: farmhand, amount: 1, price: 12000}
+    - {item: dryer, amount: 1, price: 9000}
+    - {item: cook, amount: 1, price: 15000}
   sell:
     # weed
-    bud_fresh: 4
-    bud_dried: 15
-    joint: 24
-    blunt: 45
-    hash: 60
-    moon_rock: 140
-    space_brownie: 40
-    gummies: 35
-    wax: 130
-    vape_pen: 320
+    bud_fresh: 5
+    bud_dried: 20
+    joint: 32
+    blunt: 60
+    kief: 32
+    hash: 80
+    wax: 175
+    moon_rock: 190
+    vape_pen: 430
+    canna_butter: 30
+    space_brownie: 55
+    gummies: 48
     # psychedelics
-    magic_mushroom: 10
-    shroom_tea: 30
-    lucid_tab: 25
-    peyote_button: 10
-    mescaline: 85
-    dmt: 120
+    magic_mushroom: 14
+    shroom_tea: 42
+    ergot_extract: 35
+    lucid_tab: 34
+    peyote_button: 14
+    mescaline: 115
+    dmt: 160
     # uppers
-    cocaine: 80
-    crack: 70
-    blue_crystal: 100
-    ecstasy: 45
-    pixie_dust: 60
-    angel_dust: 120
+    coca_paste: 45
+    cocaine: 110
+    crack: 95
+    blue_crystal: 135
+    ecstasy: 60
+    pixie_dust: 80
+    angel_dust: 160
     # downers
-    opium: 40
-    heroin: 110
-    lean: 35
-    ketamine: 65
+    opium: 55
+    morphine: 75
+    heroin: 150
+    cough_syrup: 40
+    lean: 55
+    ketamine: 88
     # harvest & seeds
-    coca_leaves: 5
-    poppy_pod: 5
-    ergot: 3
+    coca_leaves: 7
+    poppy_pod: 7
+    ergot: 4
     seed_pack: 8
     coca_seeds: 10
     poppy_seeds: 10

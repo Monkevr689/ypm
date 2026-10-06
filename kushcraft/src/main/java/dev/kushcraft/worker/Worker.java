@@ -39,6 +39,8 @@ public final class Worker {
     boolean paused;
     int jobs;
     double wages;
+    /** Cook: the LabRecipe they make (null = not picked yet). */
+    String recipe;
 
     // live state
     transient UUID entityId;
@@ -105,6 +107,11 @@ public final class Worker {
     /** Wages paid since hired. */
     public double wages() {
         return wages;
+    }
+
+    /** Cook: the recipe they make, or null. */
+    public dev.kushcraft.lab.LabRecipe recipe() {
+        return recipe == null ? null : dev.kushcraft.lab.LabRecipe.parse(recipe);
     }
 
     /** What they're doing right now (shown in their menu). */

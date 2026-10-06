@@ -154,7 +154,7 @@ public final class AdminMenu extends Menu {
                 done("Config reloaded.");
             }
             case PACK -> {
-                Bukkit.getOnlinePlayers().forEach(o -> plugin.pack().send(o));
+                Bukkit.getOnlinePlayers().forEach(o -> plugin.pack().resend(o));
                 done("Pack sent to everyone online.");
             }
             case TOGGLE_WORKERS -> {

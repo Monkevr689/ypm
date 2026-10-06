@@ -32,6 +32,8 @@ public final class Plant {
     private double growth;
     private boolean fertilized;
     private final UUID owner;
+    /** Wild plants (grown by themselves, owner null): when they wither, else 0. */
+    private long wildUntil;
 
     transient UUID displayId;
     transient UUID hitboxId;
@@ -74,6 +76,19 @@ public final class Plant {
 
     public void fertilized(boolean f) {
         this.fertilized = f;
+    }
+
+    /** True for a plant that grew by itself out in the world (anyone can pick it). */
+    public boolean wild() {
+        return wildUntil > 0;
+    }
+
+    public long wildUntil() {
+        return wildUntil;
+    }
+
+    public void wildUntil(long until) {
+        wildUntil = until;
     }
 
     public UUID owner() {

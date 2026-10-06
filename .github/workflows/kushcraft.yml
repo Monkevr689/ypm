@@ -77,54 +77,54 @@ jobs:
           exec 3>console
           for i in $(seq 1 240); do grep -q "Done (" server.log && break; sleep 2; done
           grep -q "Done (" server.log || { tail -100 server.log; echo "::error::server did not start"; exit 1; }
+          # url: auto -> the pack of this exact version, hosted on GitHub (works on every host)
+          for i in $(seq 1 60); do grep -qE "KB at the link|resource pack link" server.log && break; sleep 1; done
           echo "kush selftest" >&3
           sleep 8
           echo "kush strains" >&3
           sleep 2
-          curl -sSf http://127.0.0.1:8163/KushCraft-test.zip -o pack.zip
-          unzip -l pack.zip | tail -3
-          unzip -p pack.zip pack.mcmeta
-          unzip -l pack.zip | grep -q "assets/kush/items/machine_lab_station.json"
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
+          grep -iE "resource pack" server.log || true
+          grep -q "players download it from https://raw.githubusercontent.com/.*/KushCraft-pack-.*\.zip" server.log \
+            || { echo "::error::url: auto does not point at the hosted pack"; exit 1; }
+          grep -q "(same as this plugin's pack)" server.log \
+            || { echo "::error::the pack hosted on GitHub is not the pack this jar builds"; exit 1; }
+          if grep -q "Resource pack hosted on port" server.log; then
+            echo "::error::built-in web server must not start with url: auto"; exit 1
+          fi
           # worker skins are resolved like other client assets: textures/<path>.png
           VJAR=$(find versions -name "*.jar" | head -1)
           echo "vanilla jar: $VJAR"
           unzip -l "$VJAR" | grep -iE "ClientAsset|PlayerSkin" | head -5 || true
 
-      - name: Run server again with an external resource-pack.url
+      - name: Upgrade a 3.0 server (old config, old pack link) to this version
         working-directory: server
         run: |
-          # hosted servers often cannot open port 8163: the pack is then hosted elsewhere
-          # re-zip it with Python: different zip bytes, same files (like a re-uploaded copy)
-          mkdir -p ../host
-          python3 - <<'PY'
-          import zipfile
-          src = zipfile.ZipFile("plugins/KushCraft/KushCraft-pack.zip")
-          with zipfile.ZipFile("../host/pack.zip", "w", zipfile.ZIP_DEFLATED, compresslevel=9) as out:
-              for n in sorted(src.namelist()):
-                  out.writestr(n, src.read(n))
-          PY
-          cmp -s plugins/KushCraft/KushCraft-pack.zip ../host/pack.zip && echo "zips identical?" || echo "re-zipped copy differs in bytes"
-          sha1sum ../host/pack.zip | cut -d' ' -f1 > ../host/sha1.txt
-          python3 -m http.server 9000 --directory ../host --bind 127.0.0.1 > /dev/null 2>&1 &
-          sleep 1
-          sed -i "s#^  url: .*#  url: 'http://127.0.0.1:9000/pack.zip'#" plugins/KushCraft/config.yml
-          grep -n "url:" plugins/KushCraft/config.yml
-          # also pretend this is a 3.0 config (version 6: no workers / new-players /
-          # harvest sections, the old cheaper shop, the softer market) and a 2.0
-          # strains.yml (no looks or climates, plus a bred strain) to test the upgrade to 4.0
+          # pretend this is a 3.0 config (version 6: no workers / new-players / harvest /
+          # death / animals sections, the old cheaper shop and ores, the softer market,
+          # cartel levels with grow and lab bonuses, the pack on the old GitHub link)
+          # and a 2.0 strains.yml (no looks or climates, plus a bred strain)
           python3 - <<'PY'
           lines = open("plugins/KushCraft/config.yml").read().split("\n")
           out, skip = [], False
           for l in lines:
               if l and not l[0].isspace() and not l.startswith("#"):
-                  skip = l.split(":")[0] in ("workers", "new-players", "harvest", "shop")
+                  skip = l.split(":")[0] in ("workers", "new-players", "harvest", "shop", "death", "animals")
               if l.startswith("config-version:"):
                   l = "config-version: 6"
               if l.startswith("  demand-drop:"):
                   l = "  demand-drop: 0.004"
+              if l.startswith("  url:"):
+                  l = "  url: 'https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip'"
+              if "{item: diamond, price:" in l:
+                  l = "        - {item: diamond, price: 1500, amount: 1}"
+              if "{name: Gang," in l:
+                  l = "    - {name: Gang, cost: 10000, members: 6, sell-bonus: 0.03, grow-bonus: 0.05, lab-bonus: 0}"
+              if l.startswith("  plants:") or l.startswith("  plant-") or l.startswith("  max-plants") \
+                      or l.startswith("  max-near-player"):
+                  continue
               if not skip:
                   out.append(l)
           out += [
@@ -163,62 +163,72 @@ jobs:
               creator-name: Tester
           """)
           PY
-          head -5 plugins/KushCraft/strains.yml
-          grep -c "^exchange:" plugins/KushCraft/config.yml || true
+          grep -n "url:\|^config-version" plugins/KushCraft/config.yml
           rm -f console && mkfifo console
           java -Xmx2G -jar paper.jar --nogui < console > server2.log 2>&1 &
           PID=$!
           exec 3>console
           for i in $(seq 1 240); do grep -q "Done (" server2.log && break; sleep 2; done
           grep -q "Done (" server2.log || { tail -100 server2.log; echo "::error::server did not start"; exit 1; }
-          for i in $(seq 1 30); do grep -q "Resource pack: downloaded" server2.log && break; sleep 1; done
+          for i in $(seq 1 60); do grep -qE "KB at the link|resource pack link" server2.log && break; sleep 1; done
           echo "kush selftest" >&3
           sleep 8
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
           grep -iE "kushcraft|resource pack" server2.log || true
-          grep -q "Resource pack: downloaded .* sha1 $(cat ../host/sha1.txt)" server2.log \
-            || { echo "::error::external pack hash not computed correctly"; exit 1; }
-          grep -q "(same as this plugin's pack)" server2.log \
-            || { echo "::error::re-zipped copy of the same pack was not recognised"; exit 1; }
-          if grep -q "Resource pack hosted on port" server2.log; then
-            echo "::error::built-in web server must not start when resource-pack.url is set"; exit 1
-          fi
-          echo "External URL test passed"
-          grep -q "Updated config.yml to version 7" server2.log || { echo "::error::config was not upgraded"; exit 1; }
-          grep -q "Updated strains.yml: 32 new strains" server2.log || { echo "::error::strains.yml was not upgraded"; exit 1; }
-          grep -q "^workers:" plugins/KushCraft/config.yml || { echo "::error::workers section not added"; exit 1; }
-          grep -q "^new-players:" plugins/KushCraft/config.yml || { echo "::error::starter kit not added"; exit 1; }
-          grep -q "^harvest:" plugins/KushCraft/config.yml || { echo "::error::harvest section not added"; exit 1; }
-          grep -q "item: farmhand" plugins/KushCraft/config.yml || { echo "::error::workers not in the shop"; exit 1; }
-          # Bukkit writes the shop list in block style (item / amount / price on separate lines)
-          grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 650" \
-            || { grep -A3 "item: lab_station" plugins/KushCraft/config.yml; echo "::error::new shop prices not written"; exit 1; }
-          if grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 400"; then
-            echo "::error::old shop prices kept"; exit 1
-          fi
-          grep -q "^  demand-drop: 0.006" plugins/KushCraft/config.yml || { echo "::error::market not updated"; exit 1; }
-          grep -q "^cartel:" plugins/KushCraft/config.yml || { echo "::error::cartel section lost"; exit 1; }
-          grep -q "^  categories:" plugins/KushCraft/config.yml || { echo "::error::Trade shelves lost"; exit 1; }
-          grep -q "^  seconds: 30" plugins/KushCraft/config.yml || { echo "::error::drying seconds lost"; exit 1; }
-          grep -q "^  titles:" plugins/KushCraft/config.yml || { echo "::error::leaderboard ranks lost"; exit 1; }
-          grep -q "^jobs:" plugins/KushCraft/config.yml || { echo "::error::jobs section lost"; exit 1; }
-          grep -q "^awards:" plugins/KushCraft/config.yml || { echo "::error::awards section lost"; exit 1; }
-          grep -q "^version: 4" plugins/KushCraft/strains.yml || { echo "::error::strains.yml version not set"; exit 1; }
-          grep -q "creator-name: Tester" plugins/KushCraft/strains.yml || { echo "::error::bred strain lost"; exit 1; }
-          grep -q "^  solar_flare:" plugins/KushCraft/strains.yml || { echo "::error::new strains not added"; exit 1; }
+          fail() { echo "::error::$1"; exit 1; }
+          grep -q "Updated config.yml to version 8" server2.log || fail "config was not upgraded"
+          grep -q "Updated strains.yml: 32 new strains" server2.log || fail "strains.yml was not upgraded"
+          grep -q "^  url: auto" plugins/KushCraft/config.yml || fail "the old pack link was not switched to auto"
+          grep -q "(same as this plugin's pack)" server2.log || fail "the upgraded server does not get the matching pack"
+          for section in workers new-players harvest death animals cartel jobs awards; do
+            grep -q "^$section:" plugins/KushCraft/config.yml || fail "$section section missing after the upgrade"
+          done
+          grep -q "^  plants: true" plugins/KushCraft/config.yml || fail "wild plants not added"
+          grep -q "item: cook" plugins/KushCraft/config.yml || fail "the Cook is not in the shop"
+          # Bukkit writes lists of maps in block style (item / price / amount on separate lines)
+          grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 650" || fail "new shop prices not written"
+          grep -A3 "item: farmhand" plugins/KushCraft/config.yml | grep -q "price: 12000" || fail "workers did not get pricier"
+          if grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 400"; then fail "old shop prices kept"; fi
+          grep -A3 "item: diamond$" plugins/KushCraft/config.yml | grep -q "price: 1950" || fail "ores did not get pricier"
+          grep -A4 "name: Gang" plugins/KushCraft/config.yml | grep -q "sell-bonus: 0.04" || fail "cartel levels not simplified"
+          if grep -q "grow-bonus: 0.05" plugins/KushCraft/config.yml; then fail "old cartel bonuses kept"; fi
+          grep -q "^  demand-drop: 0.006" plugins/KushCraft/config.yml || fail "market not updated"
+          grep -q "^  categories:" plugins/KushCraft/config.yml || fail "Trade shelves lost"
+          grep -q "^  seconds: 30" plugins/KushCraft/config.yml || fail "drying seconds lost"
+          grep -q "^  titles:" plugins/KushCraft/config.yml || fail "leaderboard ranks lost"
+          grep -q "^version: 4" plugins/KushCraft/strains.yml || fail "strains.yml version not set"
+          grep -q "creator-name: Tester" plugins/KushCraft/strains.yml || fail "bred strain lost"
+          grep -q "^  solar_flare:" plugins/KushCraft/strains.yml || fail "new strains not added"
           awk '/^  og_kush:$/{f=1;next} /^  [a-z0-9_]+:$/{f=0} f' plugins/KushCraft/strains.yml > og.txt
-          cat og.txt
-          grep -q "color: '#A8E05A'" og.txt || { echo "::error::own strain colour was overwritten"; exit 1; }
-          grep -q "climate:" og.txt || { echo "::error::built-in strain did not get its climate"; exit 1; }
-          grep -q "SELFTEST PASS" server2.log || { grep "selftest failure" server2.log; echo "::error::selftest failed on the upgraded config"; exit 1; }
-          grep -q "url: .*127.0.0.1:9000/pack.zip" plugins/KushCraft/config.yml \
-            || { echo "::error::upgrade lost resource-pack.url"; exit 1; }
-          if grep -nE "Exception|Error" server2.log | grep -iE "kushcraft"; then
-            echo "::error::KushCraft errors in the second run"; exit 1
-          fi
-          echo "Config upgrade test passed"
+          grep -q "color: '#A8E05A'" og.txt || fail "own strain colour was overwritten"
+          grep -q "climate:" og.txt || fail "built-in strain did not get its climate"
+          grep -q "SELFTEST PASS" server2.log || { grep "selftest failure" server2.log; fail "selftest failed on the upgraded config"; }
+          if grep -nE "Exception|Error" server2.log | grep -iE "kushcraft"; then fail "KushCraft errors in the upgrade run"; fi
+          echo "Upgrade test passed"
+
+      - name: Run server again hosting the pack itself (url '')
+        working-directory: server
+        run: |
+          sed -i "s#^  url: .*#  url: ''#" plugins/KushCraft/config.yml
+          rm -f console && mkfifo console
+          java -Xmx2G -jar paper.jar --nogui < console > server3.log 2>&1 &
+          PID=$!
+          exec 3>console
+          for i in $(seq 1 240); do grep -q "Done (" server3.log && break; sleep 2; done
+          grep -q "Done (" server3.log || { tail -100 server3.log; echo "::error::server did not start"; exit 1; }
+          curl -sSf http://127.0.0.1:8163/KushCraft-test.zip -o pack.zip
+          echo "stop" >&3
+          timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
+          exec 3>&-
+          grep -q "Resource pack hosted on port 8163" server3.log || { echo "::error::built-in pack server did not start"; exit 1; }
+          unzip -l pack.zip | tail -3
+          unzip -p pack.zip pack.mcmeta
+          unzip -l pack.zip | grep -q "assets/kush/items/machine_lab_station.json"
+          unzip -l pack.zip | grep -q "assets/kush/items/worker_cook.json"
+          cmp -s pack.zip plugins/KushCraft/KushCraft-pack.zip || { echo "::error::served zip differs"; exit 1; }
+          echo "Built-in pack server test passed"
 
       - name: Check log
         if: always()
@@ -243,3 +253,4 @@ jobs:
           path: |
             server/server.log
             server/server2.log
+            server/server3.log

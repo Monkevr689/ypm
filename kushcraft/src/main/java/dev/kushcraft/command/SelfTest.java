@@ -76,6 +76,7 @@ final class SelfTest {
             plants(w, bx, y, bz);
             machines(w, bx + 3, y, bz);
             workers(w, bx + 8, y, bz);
+            nature(w, bx + 18, y, bz);
             guide();
             jobs(w, bx - 4, y, bz);
         } catch (Throwable t) {
@@ -116,24 +117,56 @@ final class SelfTest {
         check(Items.hits(Items.strainItem(ItemType.VAPE_PEN, s, 3, 1)) == Items.VAPE_HITS, "vape pen puffs");
         check(Dose.strain(s, 5, 60, 10).effects().size() == s.effects().size(), "dose effects");
         check(GuiFont.space(-169).length() == 4, "negative space builder");
-        check(LabRecipe.values().length == 21, "lab recipes");
+        check(LabRecipe.values().length == 27, "lab recipes");
         int seconds = 0;
         for (LabRecipe r : LabRecipe.values()) {
-            check(r.ingredients().size() <= 3, "recipe needs 1-3 kinds of things: " + r);
+            check(r.ingredients().size() <= 4, "recipe needs 1-4 kinds of things: " + r);
             int count = 0;
-            for (LabRecipe.Ingredient in : r.ingredients()) {
-                check(in.custom() != ItemType.CATALYST, "no catalyst needed: " + r);
-                count += in.amount();
+            double in = 0;
+            for (LabRecipe.Ingredient ing : r.ingredients()) {
+                check(ing.custom() != ItemType.CATALYST, "no catalyst needed: " + r);
+                check(!ing.where().isEmpty(), "recipe says where to get " + ing.name());
+                count += ing.amount();
+                if (ing.custom() != null) {
+                    in += plugin.shop().basePrice(ing.custom()) * ing.amount();
+                }
             }
-            check(count <= 8, "recipe needs 8 items at most: " + r);
+            check(count <= 10, "recipe needs 10 items at most: " + r);
             check(r.seconds() <= 60, "recipe takes a minute at most: " + r);
+            double out = plugin.shop().basePrice(r.output()) * r.amount();
+            check(out > in, "every cooking step adds value: " + r + " (" + in + " -> " + out + ")");
             seconds += r.seconds();
         }
         check(seconds / LabRecipe.values().length >= 30, "cooking takes some effort (30s+ on average)");
-        check(LabRecipe.LUCID_TAB.ingredients().stream().anyMatch(i -> i.custom() == ItemType.ERGOT),
-                "LSD is made from ergot");
+        // the steps follow real life loosely: drugs come from an in-between product
+        check(uses(LabRecipe.LUCID_TAB, ItemType.ERGOT_EXTRACT) && uses(LabRecipe.ERGOT_EXTRACT, ItemType.ERGOT),
+                "LSD: ergot > extract > tabs");
         check(LabRecipe.ERGOT.ingredients().stream().anyMatch(i -> i.vanilla() == Material.WHEAT),
                 "ergot comes from wheat");
+        check(uses(LabRecipe.COCAINE, ItemType.COCA_PASTE) && uses(LabRecipe.COCA_PASTE, ItemType.COCA_LEAVES),
+                "cocaine: leaves > paste > cocaine");
+        check(uses(LabRecipe.HEROIN, ItemType.MORPHINE) && uses(LabRecipe.MORPHINE, ItemType.OPIUM),
+                "heroin: opium > morphine > heroin");
+        check(uses(LabRecipe.HASH, ItemType.KIEF) && uses(LabRecipe.KIEF, ItemType.BUD_DRIED), "hash: buds > kief > hash");
+        check(uses(LabRecipe.SPACE_BROWNIE, ItemType.CANNA_BUTTER) && uses(LabRecipe.LEAN, ItemType.COUGH_SYRUP),
+                "edibles and lean have their own step");
+        for (ItemType t : ItemType.values()) {
+            if (!t.ingredient()) {
+                continue;
+            }
+            check(LabRecipe.making(t) != null || t == ItemType.ERGOT, "something makes " + t);
+            check(java.util.Arrays.stream(LabRecipe.values()).anyMatch(r -> uses(r, t)), "something uses " + t);
+            check(plugin.shop().basePrice(t) > 0, "in-between product sells: " + t);
+        }
+        // milk comes back as a bucket, water bottles as bottles
+        LabRecipe.Ingredient milk = LabRecipe.CANNA_BUTTER.ingredients().get(1);
+        check(milk.remainder() == Material.BUCKET && milk.matches(new ItemStack(Material.MILK_BUCKET)), "milk gives the bucket back");
+        ItemStack water = new ItemStack(Material.POTION);
+        water.editMeta(org.bukkit.inventory.meta.PotionMeta.class, m -> m.setBasePotionType(org.bukkit.potion.PotionType.WATER));
+        ItemStack swift = new ItemStack(Material.POTION);
+        swift.editMeta(org.bukkit.inventory.meta.PotionMeta.class, m -> m.setBasePotionType(org.bukkit.potion.PotionType.SWIFTNESS));
+        LabRecipe.Ingredient w = LabRecipe.SHROOM_TEA.ingredients().get(1);
+        check(w.matches(water) && !w.matches(swift) && w.name().equals("Water Bottle"), "water bottle ingredient");
         for (ItemType t : ItemType.values()) {
             if (!t.retired() && dev.kushcraft.catalog.Catalog.of(t) == null
                     && t.machine() == null && dev.kushcraft.worker.WorkerType.of(t) == null) {
@@ -144,6 +177,10 @@ final class SelfTest {
                 check(dev.kushcraft.catalog.Catalog.dose(t) != null, "dose for " + t);
             }
         }
+    }
+
+    private static boolean uses(LabRecipe r, ItemType t) {
+        return r.ingredients().stream().anyMatch(i -> i.custom() == t);
     }
 
     private void shop() {
@@ -166,7 +203,7 @@ final class SelfTest {
             check(e.price() <= 800, "gear is affordable: " + e.type() + " " + e.price());
         }
         for (var e : plugin.shop().hires()) {
-            check(e.price() >= 1000, "workers cost real money: " + e.type() + " " + e.price());
+            check(e.price() >= 8000, "workers are expensive: " + e.type() + " " + e.price());
         }
         for (var e : plugin.shop().buyEntries()) {
             check(Items.type(plugin.shop().create(e)) == e.type(), "shop item " + e.type());
@@ -332,6 +369,50 @@ final class SelfTest {
     }
 
     /** A Farmhand harvests and replants, a Dryer fetches, hangs and collects - all for one owner. */
+    /** Wild plants, high animals and what dying costs. */
+    private void nature(World w, int x, int y, int z) {
+        Block soil = w.getBlockAt(x, y, z);
+        soil.setType(Material.GRASS_BLOCK);
+        w.getBlockAt(x, y + 1, z).setType(Material.AIR);
+        Plant wild = plugin.wild().grow(soil, Plant.Kind.CANNABIS);
+        check(wild != null && wild.wild() && wild.owner() == null && wild.strainId() != null,
+                "a wild plant grows by itself");
+        check(wild != null && plugin.plants().at(BlockKey.of(soil).up()) == wild, "the wild plant is in the world");
+        check(plugin.wild().grow(soil, Plant.Kind.CANNABIS) == null, "only one plant per spot");
+        if (wild != null) {
+            plugin.plants().save();
+            var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                    new File(plugin.getDataFolder(), "plants.yml"));
+            check(saved.getLong("plants." + wild.key().serialize() + ".wild-until") > System.currentTimeMillis(),
+                    "wild plants are saved with the time they wither");
+            plugin.plants().remove(wild);
+        }
+        check(dev.kushcraft.plant.WildPlants.kindFor("desert", Material.SAND) == Plant.Kind.PEYOTE,
+                "peyote grows wild in deserts");
+        check(dev.kushcraft.plant.WildPlants.kindFor("mushroom_fields", Material.MYCELIUM) == Plant.Kind.MUSHROOM,
+                "mushrooms grow wild on mycelium");
+        check(dev.kushcraft.plant.WildPlants.kindFor("deep_ocean", Material.GRASS_BLOCK) == null,
+                "nothing grows wild in the ocean");
+        check(plugin.getConfig().getBoolean("wild.plants") && plugin.getConfig().getInt("wild.max-plants") > 0,
+                "wild plants are on");
+        // animals get high: red eyes, slowed down
+        var cow = w.spawn(new Location(w, x + 0.5, y + 1, z + 2.5), org.bukkit.entity.Cow.class);
+        plugin.animals().makeHigh(cow, dev.kushcraft.catalog.Catalog.Category.WEED, 5);
+        check(plugin.animals().isHigh(cow) && cow.hasPotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS),
+                "a cow gets high");
+        check(cow.getPersistentDataContainer().has(dev.kushcraft.Keys.HIGH), "it stays high when its chunk reloads");
+        cow.remove();
+        // dying costs 20% of your cash, and nobody gets it
+        check(Math.abs(plugin.getConfig().getDouble("death.cash-lost") - 0.2) < 1e-9, "dying costs 20% of your cash");
+        check(dev.kushcraft.listener.PlayerListener.cashLost(1234.56, 0.2) == 246.91
+                && dev.kushcraft.listener.PlayerListener.cashLost(0, 0.2) == 0, "the death loss is worked out right");
+        // the pack: by default players get the copy of this version from GitHub
+        String url = plugin.pack().externalUrl();
+        check(url != null && url.startsWith(dev.kushcraft.pack.ResourcePackManager.HOSTED)
+                && url.endsWith("KushCraft-pack-" + plugin.getPluginMeta().getVersion() + ".zip"),
+                "the resource pack comes from GitHub (" + url + ")");
+    }
+
     private void workers(World w, int x, int y, int z) {
         var ws = plugin.workers();
         var eco = plugin.economy();
@@ -399,6 +480,22 @@ final class SelfTest {
             dried |= Items.type(it) == ItemType.BUD_DRIED;
         }
         check(dried, "dried buds in the dryer's satchel");
+        // the cook: picks up dried buds from the dryer, cooks kief at the lab and collects it
+        var cook = ws.hireAt(new Location(w, x + 4.5, y + 1, z + 2.5), dev.kushcraft.worker.WorkerType.COOK, boss, 1);
+        check(!ws.workNow(cook) && cook.status().contains("Pick"), "a new cook waits for a drug to cook");
+        ws.setRecipe(cook, LabRecipe.KIEF);
+        check(cook.recipe() == LabRecipe.KIEF, "the cook got their recipe");
+        ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
+        check(ws.workNow(cook) && cook.carried() >= 4, "the cook fetches dried buds from the dryer");
+        check(ws.workNow(cook) && lab.busy() && "KIEF".equals(lab.job()), "the cook starts a batch at the lab");
+        check(cook.jobs() == 1, "the cook is paid per batch");
+        lab.finishNow();
+        check(ws.workNow(cook) && !lab.busy(), "the cook collects the finished batch");
+        boolean kief = false;
+        for (ItemStack it : cook.satchel().getStorageContents()) {
+            kief |= Items.type(it) == ItemType.KIEF;
+        }
+        check(kief, "kief in the cook's satchel");
         // nobody to pay: no work
         eco.set(owner, 0);
         ripe = plugin.plants().at(key);
@@ -618,6 +715,7 @@ final class SelfTest {
         check(dev.kushcraft.award.Starter.next(p) == dev.kushcraft.award.Starter.PLANT
                 && dev.kushcraft.award.Starter.doneCount(p) == 0, "new players start at step 1");
         check(dev.kushcraft.award.Starter.values().length == 7, "7 getting-started steps");
+        check(dev.kushcraft.award.Starter.values()[6] == dev.kushcraft.award.Starter.FORAGE, "the last step: a wild plant");
         check(!plugin.getConfig().getMapList("new-players.starter-kit").isEmpty(), "a starter kit is set up");
     }
 

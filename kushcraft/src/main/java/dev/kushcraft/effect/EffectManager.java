@@ -293,9 +293,6 @@ public final class EffectManager {
     }
 
     private void onStart(Player p, EffectType t) {
-        if (t == EffectType.PAIN_RELIEF) {
-            p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, 20 * 60, 1, true, false, false));
-        }
     }
 
     private void onEnd(Player p, EffectType t) {
@@ -311,18 +308,18 @@ public final class EffectManager {
         return switch (t) {
             case GIGGLES -> new PotionEffectType[]{PotionEffectType.LUCK};
             case MUNCHIES -> new PotionEffectType[]{PotionEffectType.HUNGER};
-            case COUCH_LOCK -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.RESISTANCE};
+            case COUCH_LOCK -> new PotionEffectType[]{PotionEffectType.SLOWNESS};
             case ENERGY -> new PotionEffectType[]{PotionEffectType.SPEED, PotionEffectType.HASTE};
             case EUPHORIA -> new PotionEffectType[]{PotionEffectType.REGENERATION};
             case CREATIVE -> new PotionEffectType[]{PotionEffectType.HASTE};
             case FLOATY -> new PotionEffectType[]{PotionEffectType.JUMP_BOOST, PotionEffectType.SLOW_FALLING};
             case PARANOIA -> new PotionEffectType[]{PotionEffectType.DARKNESS};
             case SLEEPY -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.MINING_FATIGUE};
-            case FOCUS -> new PotionEffectType[]{PotionEffectType.NIGHT_VISION, PotionEffectType.STRENGTH};
-            case PAIN_RELIEF -> new PotionEffectType[]{PotionEffectType.RESISTANCE};
+            case FOCUS -> new PotionEffectType[]{PotionEffectType.NIGHT_VISION, PotionEffectType.LUCK};
+            case PAIN_RELIEF -> new PotionEffectType[0];
             case TRIPPY -> new PotionEffectType[]{PotionEffectType.NAUSEA};
             case HYPER -> new PotionEffectType[]{PotionEffectType.SPEED, PotionEffectType.HASTE,
-                    PotionEffectType.JUMP_BOOST, PotionEffectType.STRENGTH};
+                    PotionEffectType.JUMP_BOOST};
             case GLOW -> new PotionEffectType[]{PotionEffectType.GLOWING, PotionEffectType.NIGHT_VISION,
                     PotionEffectType.LEVITATION};
             case CRASH -> new PotionEffectType[]{PotionEffectType.WEAKNESS, PotionEffectType.SLOWNESS,
@@ -333,12 +330,12 @@ public final class EffectManager {
             case NIGHT_OWL -> new PotionEffectType[]{PotionEffectType.NIGHT_VISION};
             case AQUATIC -> new PotionEffectType[]{PotionEffectType.WATER_BREATHING, PotionEffectType.DOLPHINS_GRACE};
             case FIREPROOF -> new PotionEffectType[]{PotionEffectType.FIRE_RESISTANCE};
-            case GHOST -> new PotionEffectType[]{PotionEffectType.INVISIBILITY};
+            case GHOST -> new PotionEffectType[0];
             case LOVED_UP -> new PotionEffectType[]{PotionEffectType.REGENERATION};
             case VISIONS -> new PotionEffectType[]{PotionEffectType.NIGHT_VISION};
-            case RAGE -> new PotionEffectType[]{PotionEffectType.STRENGTH, PotionEffectType.SPEED};
+            case RAGE -> new PotionEffectType[]{PotionEffectType.HASTE, PotionEffectType.HUNGER};
             case DIZZY -> new PotionEffectType[]{PotionEffectType.NAUSEA};
-            case ZEN -> new PotionEffectType[]{PotionEffectType.REGENERATION, PotionEffectType.RESISTANCE};
+            case ZEN -> new PotionEffectType[]{PotionEffectType.REGENERATION};
             case GREEN_THUMB, SMOOTH_TALKER, FROSTY, MAGNETIC, SIXTH_SENSE -> new PotionEffectType[0];
             case DISSOCIATED -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.SLOW_FALLING,
                     PotionEffectType.BLINDNESS};
@@ -367,7 +364,9 @@ public final class EffectManager {
             case MUNCHIES -> pot(p, PotionEffectType.HUNGER, 0);
             case COUCH_LOCK -> {
                 pot(p, PotionEffectType.SLOWNESS, 1);
-                pot(p, PotionEffectType.RESISTANCE, 0);
+                if (left % 8 == 0 && p.getFoodLevel() < 20) {
+                    p.setFoodLevel(p.getFoodLevel() + 1);
+                }
             }
             case ENERGY -> {
                 pot(p, PotionEffectType.SPEED, 1);
@@ -423,9 +422,14 @@ public final class EffectManager {
             }
             case FOCUS -> {
                 pot(p, PotionEffectType.NIGHT_VISION, 0, 260);
-                pot(p, PotionEffectType.STRENGTH, 0);
+                pot(p, PotionEffectType.LUCK, 0);
             }
-            case PAIN_RELIEF -> pot(p, PotionEffectType.RESISTANCE, 0);
+            case PAIN_RELIEF -> {
+                // no fall damage: dev.kushcraft.listener.PlayerListener
+                if (left % 8 == 0) {
+                    heal(p, 1);
+                }
+            }
             case TRIPPY -> {
                 if (nausea && left % 20 == 0) {
                     pot(p, PotionEffectType.NAUSEA, 0, 140);
@@ -446,7 +450,6 @@ public final class EffectManager {
                 pot(p, PotionEffectType.SPEED, 2);
                 pot(p, PotionEffectType.HASTE, 1);
                 pot(p, PotionEffectType.JUMP_BOOST, 0);
-                pot(p, PotionEffectType.STRENGTH, 0);
                 p.getWorld().spawnParticle(Particle.ELECTRIC_SPARK, p.getLocation().add(0, 1, 0), 3, 0.3, 0.5, 0.3, 0.05);
             }
             case GLOW -> {
@@ -494,10 +497,7 @@ public final class EffectManager {
                 }
             }
             case GHOST -> {
-                // fade in and out of sight
-                if (left % 10 < 4) {
-                    pot(p, PotionEffectType.INVISIBILITY, 0, 85);
-                }
+                // monsters don't notice you: dev.kushcraft.listener.PlayerListener
                 if (random.nextInt(5) == 0) {
                     p.getWorld().spawnParticle(Particle.WHITE_ASH, p.getLocation().add(0, 1, 0), 8, 0.4, 0.6, 0.4, 0.01);
                 }
@@ -533,8 +533,8 @@ public final class EffectManager {
                 }
             }
             case RAGE -> {
-                pot(p, PotionEffectType.STRENGTH, 1);
-                pot(p, PotionEffectType.SPEED, 0);
+                pot(p, PotionEffectType.HASTE, 2);
+                pot(p, PotionEffectType.HUNGER, 0);
                 if (random.nextInt(4) == 0) {
                     p.getWorld().spawnParticle(Particle.ANGRY_VILLAGER, head.clone().add(0, 0.4, 0), 1, 0.3, 0.2, 0.3, 0);
                 }
@@ -601,7 +601,6 @@ public final class EffectManager {
                 s.last = now;
                 if (still) {
                     pot(p, PotionEffectType.REGENERATION, 1);
-                    pot(p, PotionEffectType.RESISTANCE, 1);
                     p.getWorld().spawnParticle(Particle.ENCHANT, head, 10, 0.6, 0.4, 0.6, 0.4);
                 }
             }
@@ -641,6 +640,13 @@ public final class EffectManager {
                             "<dark_red>you shouldn't have taken that")));
                 }
             }
+        }
+    }
+
+    private static void heal(Player p, double hp) {
+        var max = p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+        if (max != null && p.getHealth() > 0 && p.getHealth() < max.getValue()) {
+            p.setHealth(Math.min(max.getValue(), p.getHealth() + hp));
         }
     }
 

@@ -130,7 +130,7 @@ public final class Workers implements Listener {
 
     /** Price to hire one in the Shop (for the menus). */
     public double hirePrice(WorkerType t) {
-        for (var e : plugin.shop().gear()) {
+        for (var e : plugin.shop().hires()) {
             if (e.type() == t.item()) {
                 return e.price();
             }
@@ -179,6 +179,7 @@ public final class Workers implements Listener {
                 w.paused = s.getBoolean("paused");
                 w.jobs = s.getInt("jobs");
                 w.wages = s.getDouble("wages");
+                w.recipe = s.getString("recipe");
                 ConfigurationSection items = s.getConfigurationSection("satchel");
                 if (items != null) {
                     for (String slot : items.getKeys(false)) {
@@ -219,6 +220,9 @@ public final class Workers implements Listener {
             }
             s.set("jobs", w.jobs);
             s.set("wages", Math.round(w.wages * 100) / 100.0);
+            if (w.recipe != null) {
+                s.set("recipe", w.recipe);
+            }
             ItemStack[] items = w.satchel.getStorageContents();
             for (int i = 0; i < items.length; i++) {
                 if (items[i] != null && !items[i].getType().isAir()) {
@@ -369,6 +373,9 @@ public final class Workers implements Listener {
         p.sendMessage(Text.msg(type.colored() + " " + Text.escape(w.name) + " <gray>started working for you. "
                 + type.job() + " <dark_gray>(Right-click them for their satchel.)"));
         plugin.awards().hired(p, of(p.getUniqueId()).size());
+        if (type == WorkerType.COOK) {
+            plugin.awards().hiredCook(p);
+        }
         return true;
     }
 
@@ -443,6 +450,15 @@ public final class Workers implements Listener {
         if (paused) {
             w.steps.clear();
         }
+        dirty = true;
+        nameplate(w);
+    }
+
+    /** Cook: what they make from now on. */
+    public void setRecipe(Worker w, dev.kushcraft.lab.LabRecipe r) {
+        w.recipe = r == null ? null : r.name();
+        w.status = r == null ? "Pick a drug for them" : "Ready to cook " + r.output().display();
+        w.restTicks = 1;
         dirty = true;
         nameplate(w);
     }
@@ -527,7 +543,9 @@ public final class Workers implements Listener {
         e.customName(Text.mm(w.type().color() + Text.escape(w.name)));
         e.setCustomNameVisible(true);
         if (e instanceof Mannequin m) {
+            var r = w.recipe();
             m.setDescription(Text.mm(w.paused ? "<red>Paused" : "<gray>" + w.type().display()
+                    + (r != null ? " <dark_gray>· <aqua>" + r.output().display() : "")
                     + " <dark_gray>· <gold>Lv " + w.level));
         }
     }
@@ -630,6 +648,7 @@ public final class Workers implements Listener {
         return switch (w.type()) {
             case FARMHAND -> planFarmhand(w);
             case DRYER -> planDryer(w);
+            case COOK -> planCook(w);
         };
     }
 
@@ -926,6 +945,122 @@ public final class Workers implements Listener {
         }
         w.status = "Waiting for fresh buds";
         return false;
+    }
+
+    // ---- cook ----
+
+    private List<Machine> labsNear(Worker w, int r) {
+        List<Machine> labs = new ArrayList<>();
+        for (Machine m : plugin.machines().all()) {
+            if (m.type() == MachineType.LAB_STATION && w.owner().equals(m.owner()) && near(m.key(), w, r)
+                    && m.key().isLoaded()) {
+                labs.add(m);
+            }
+        }
+        return labs;
+    }
+
+    private boolean planCook(Worker w) {
+        dev.kushcraft.lab.LabRecipe recipe = w.recipe();
+        if (recipe == null) {
+            w.status = "<yellow>Pick a drug for them to cook (button at the top).";
+            return false;
+        }
+        int r = radius(w);
+        List<Machine> labs = labsNear(w, r);
+        if (labs.isEmpty()) {
+            w.status = "<red>No Drug Lab of yours within " + r + " blocks.";
+            return false;
+        }
+        // 1. collect finished batches
+        for (Machine lab : labs) {
+            if (lab.busy() && lab.jobDone() && lab.output() != null) {
+                if (w.freeSlots() < 1) {
+                    w.status = "<red>Satchel full! Empty it so they can collect.";
+                    return false;
+                }
+                w.status = "Collecting a batch";
+                go(w, lab.key(), () -> {
+                    if (!lab.busy() || !lab.jobDone() || lab.output() == null) {
+                        return false;
+                    }
+                    ItemStack out = lab.output().clone();
+                    lab.clearJob();
+                    plugin.machines().markDirty();
+                    drop(w, stash(w, List.of(out)), lab.key());
+                    w.status = "Collected " + out.getAmount() + " " + Text.plain(out.effectiveName());
+                    return true;
+                });
+                return true;
+            }
+        }
+        // 2. start a batch at a free lab
+        dev.kushcraft.lab.LabRecipe.Ingredient missing = dev.kushcraft.lab.Cooking.missing(w.satchel, recipe, null, 0);
+        if (missing == null) {
+            for (Machine lab : labs) {
+                if (lab.busy()) {
+                    continue;
+                }
+                if (!canPay(w)) {
+                    return false;
+                }
+                w.status = "Cooking " + recipe.output().display();
+                go(w, lab.key(), () -> {
+                    var res = dev.kushcraft.lab.Cooking.start(w.satchel, lab, recipe, dev.kushcraft.lab.Cooking.MAX_BATCHES,
+                            null, 0, left -> drop(w, stash(w, List.of(left)), lab.key()));
+                    if (!res.ok()) {
+                        return false;
+                    }
+                    Location c = lab.key().center();
+                    if (c != null) {
+                        c.getWorld().playSound(c, "minecraft:block.brewing_stand.brew", SoundCategory.BLOCKS, 0.8f, 1f);
+                    }
+                    pay(w);
+                    w.status = "Cooking " + res.batches() + " batch" + (res.batches() > 1 ? "es" : "") + " of "
+                            + recipe.output().display();
+                    return true;
+                });
+                return true;
+            }
+            w.status = "Waiting for the lab to finish";
+            return false;
+        }
+        // 3. dried buds: fetch them from a Dryer nearby
+        if (missing.custom() == ItemType.BUD_DRIED && w.freeSlots() > 0) {
+            for (Worker d : of(w.owner())) {
+                if (d.type() != WorkerType.DRYER || d.pos == null || !d.worldName().equals(w.worldName())
+                        || d.home().distanceSquared(w.home()) > 4.0 * r * r
+                        || first(d, it -> Items.type(it) == ItemType.BUD_DRIED) == null) {
+                    continue;
+                }
+                w.status = "Fetching dried buds from " + d.name();
+                go(w, BlockKey.of(d.home()), () -> moveAll(d, w, it -> Items.type(it) == ItemType.BUD_DRIED) > 0);
+                return true;
+            }
+        }
+        w.status = "<yellow>Needs " + missing.amount() + " " + missing.name() + " in the satchel";
+        return false;
+    }
+
+    /** Moves matching items from one satchel to another; returns how many moved. */
+    private int moveAll(Worker from, Worker to, Predicate<ItemStack> match) {
+        int moved = 0;
+        ItemStack[] items = from.satchel.getStorageContents();
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] == null || !match.test(items[i])) {
+                continue;
+            }
+            int had = items[i].getAmount();
+            List<ItemStack> left = new ArrayList<>(to.satchel.addItem(items[i].clone()).values());
+            int kept = left.isEmpty() ? 0 : left.get(0).getAmount();
+            moved += had - kept;
+            from.satchel.setItem(i, kept > 0 ? left.get(0) : null);
+            if (kept > 0) {
+                break;
+            }
+        }
+        dirty |= moved > 0;
+        return moved;
     }
 
     /** Hangs every fresh bud in the satchel that fits on this lab's racks. */

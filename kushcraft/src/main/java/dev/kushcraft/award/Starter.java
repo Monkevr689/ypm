@@ -21,11 +21,11 @@ public enum Starter {
     DRY("Dry your buds", "bud_dried", List.of(Award.FIRST_DRY),
             "Right-click the lab, open Dry and", "click your fresh buds. 30 seconds!"),
     MAKE("Roll or cook", "joint", List.of(Award.FIRST_ROLL, Award.FIRST_COOK),
-            "Drug Lab > Roll for joints, or", "Cook for hash, LSD, cocaine..."),
+            "Drug Lab > Roll for joints, or Cook:", "dried buds > kief > hash, and more."),
     SELL("Sell your product", "cash", List.of(Award.FIRST_SALE),
             "Shop > Sell all, or click product", "in your inventory while it's open."),
-    HIRE("Hire a worker", "worker_farmhand", List.of(Award.HIRED),
-            "Shop > Gear & Workers: a Farmhand", "harvests and replants for you.");
+    FORAGE("Pick a wild plant", "award_forager", List.of(Award.FORAGER),
+            "Wild plants grow out in the world,", "away from farms. Go exploring!");
 
     private final String title;
     private final String icon;

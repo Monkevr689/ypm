@@ -54,6 +54,8 @@ public final class KushCraft extends JavaPlugin {
     private Awards awards;
     private Cartels cartels;
     private Workers workers;
+    private dev.kushcraft.plant.WildPlants wild;
+    private dev.kushcraft.effect.HighAnimals animals;
     private ResourcePackManager pack;
 
     public static KushCraft get() {
@@ -92,6 +94,8 @@ public final class KushCraft extends JavaPlugin {
         workers = new Workers(this);
         workers.load();
         effects = new EffectManager(this);
+        wild = new dev.kushcraft.plant.WildPlants(this);
+        animals = new dev.kushcraft.effect.HighAnimals(this);
         pack = new ResourcePackManager(this, getFile());
 
         Recipes.register(this);
@@ -109,6 +113,7 @@ public final class KushCraft extends JavaPlugin {
         pm.registerEvents(jobs.placed(), this);
         pm.registerEvents(awards, this);
         pm.registerEvents(workers, this);
+        pm.registerEvents(animals, this);
 
         PluginCommand cmd = getCommand("kush");
         if (cmd != null) {
@@ -128,6 +133,8 @@ public final class KushCraft extends JavaPlugin {
         machines.start();
         plants.start();
         workers.start();
+        wild.start();
+        animals.start();
         MenuListener.start(this);
         // Vault's economy provider registers on enable, so hook one tick later
         Bukkit.getScheduler().runTask(this, economy::hook);
@@ -246,18 +253,27 @@ public final class KushCraft extends JavaPlugin {
         return workers;
     }
 
+    public dev.kushcraft.plant.WildPlants wild() {
+        return wild;
+    }
+
+    public dev.kushcraft.effect.HighAnimals animals() {
+        return animals;
+    }
+
     /**
      * Older configs are brought up to date. 2.0 (version 5) brought new shop
      * prices, the leaderboard ranks and the Trade list; 3.0 (version 6)
      * cheaper gear and recipes, strain seed prices from strains.yml, Trade
      * shelves, 30 second drying and cartels; 4.0 (version 7) workers, new
-     * shop prices, a tougher market and the new-player kit. Options added
-     * since are filled in; everything else you set yourself is kept,
-     * including resource-pack.url.
+     * shop prices, a tougher market and the new-player kit; 5.0 (version 8)
+     * the Cook, pricier workers and ores, better drug prices, cash lost on
+     * death and the hosted resource pack. Options added since are filled in;
+     * everything else you set yourself is kept.
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 7) {
+        if (version >= 8) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -280,19 +296,33 @@ public final class KushCraft extends JavaPlugin {
                 getConfig().set(key, null);
             }
         }
-        // 4.0: new shop prices (with the workers), lab / mix costs and the tougher market
+        if (version < 7) {
+            for (String key : List.of("strain-maker.cost", "lab.upgrade-costs", "shop.seed-price-multiplier",
+                    "market.demand-drop", "market.min-price")) {
+                getConfig().set(key, def.get(key));
+            }
+        }
+        // 5.0: shop prices (with the Cook), pricier workers and ores, a faster market recovery
+        // (removed keys come back from the defaults when saving, in their usual place)
         getConfig().set("shop.buy", null);
         getConfig().set("shop.sell", null);
-        for (String key : List.of("strain-maker.cost", "lab.upgrade-costs", "shop.seed-price-multiplier",
-                "market.demand-drop", "market.min-price", "market.recovery-per-minute")) {
+        getConfig().set("exchange.categories.ores", null);
+        getConfig().set("cartel.levels", null);
+        for (String key : List.of("market.recovery-per-minute", "workers.upgrade-costs", "workers.farmhand.wage",
+                "workers.dryer.wage")) {
             getConfig().set(key, def.get(key));
+        }
+        // players on most hosts can't reach the built-in pack server: use the hosted copy
+        String url = getConfig().getString("resource-pack.url", "");
+        if (url == null || url.isBlank() || url.contains("raw.githubusercontent.com/Monkevr689/ypm/")) {
+            getConfig().set("resource-pack.url", "auto");
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 7);
+        getConfig().set("config-version", 8);
         saveConfig();
-        getLogger().info("Updated config.yml to version 7 (4.0: workers, new shop prices, a tougher market)."
-                + " Your resource pack settings were kept.");
+        getLogger().info("Updated config.yml to version 8 (5.0: the Cook, new prices, cash lost on death,"
+                + " resource pack from GitHub). Your other settings were kept.");
     }
 
     public ResourcePackManager pack() {

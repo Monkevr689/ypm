@@ -3,6 +3,7 @@ package dev.kushcraft.gui;
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
+import dev.kushcraft.lab.LabRecipe;
 import dev.kushcraft.plant.PlantManager;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.Text;
@@ -19,22 +20,21 @@ import java.util.List;
 
 /**
  * A worker's menu (right-click them): who they are and what they're doing,
- * their satchel (click an item to take it, click your own seeds / buds to
- * give them), and buttons to rename, pause, train and dismiss them.
- * Layout: tools/gui.py worker().
+ * their job (a Cook's drug), their satchel (click an item to take it, click
+ * your own seeds / buds / ingredients to give them), and buttons to rename,
+ * pause, train and dismiss them. Layout: tools/gui.py worker().
  */
 public final class WorkerMenu extends Menu {
 
     static final int ROWS = 5;
     static final int INFO = 0;
+    static final int JOB = 4;
     static final int RENAME = 5;
     static final int PAUSE = 6;
     static final int UPGRADE = 7;
     static final int DISMISS = 8;
     static final int FIRST = 9;
-    static final int WAGES = 37;
     static final int TAKE_ALL = 40;
-    static final int HELP = 43;
 
     private final Worker worker;
     private boolean confirmDismiss;
@@ -58,11 +58,12 @@ public final class WorkerMenu extends Menu {
         Workers ws = workers();
         WorkerType t = worker.type();
         List<String> info = new ArrayList<>();
-        info.add("<gray>" + t.job());
-        info.add("<gold>Level " + worker.level() + " <dark_gray>· <gray>works " + ws.radius(worker) + " blocks around,"
-                + " rests " + ws.restSeconds(worker) + "s");
         info.add("<white>" + (worker.paused() ? "<red>Paused" : worker.status()));
+        info.add("<gold>Level " + worker.level() + " <dark_gray>· <gray>works " + ws.radius(worker) + " blocks around");
+        info.add("<gray>" + money(ws.wage(t)) + " per job <dark_gray>· " + worker.jobs() + " jobs, "
+                + money(worker.wages()) + " paid");
         set(INFO, Items.icon(t.item().model(), t.color() + Text.escape(worker.name()) + " <gray>the " + t.display(), info));
+        set(JOB, jobIcon());
         set(RENAME, Items.icon("ui_rename", "<white>Rename", "<dark_gray>Type a new name in chat."));
         set(PAUSE, worker.paused() ? Items.icon("ui_play", "<green>Back to work")
                 : Items.icon("ui_pause", "<yellow>Take a break", "<dark_gray>They stop working until you click again."));
@@ -83,13 +84,36 @@ public final class WorkerMenu extends Menu {
                 set(FIRST + i, items[i].clone());
             }
         }
-        set(WAGES, Items.icon("cash", "<gold>" + money(ws.wage(t)) + " <gray>per job",
-                "<gray>" + worker.jobs() + " jobs done, " + money(worker.wages()) + " paid",
-                "<dark_gray>Paid from your wallet."));
         int carried = worker.carried();
         set(TAKE_ALL, Items.glint(Items.icon("ui_take", carried > 0 ? "<green><bold>Take all</bold> <gray>(" + carried + ")"
                 : "<gray>Satchel is empty", "<dark_gray>Click an item to take just that."), carried > 0));
-        set(HELP, Items.icon("ui_guide", "<aqua>How they work", t == WorkerType.FARMHAND ? List.of(
+    }
+
+    private org.bukkit.inventory.ItemStack jobIcon() {
+        WorkerType t = worker.type();
+        if (t == WorkerType.COOK) {
+            LabRecipe r = worker.recipe();
+            List<String> lore = new ArrayList<>();
+            if (r == null) {
+                lore.add("<yellow>Click to pick the drug they cook.");
+            } else {
+                lore.add("<gray>Put in their satchel, per batch:");
+                for (LabRecipe.Ingredient ing : r.ingredients()) {
+                    lore.add("<white>" + ing.amount() + " " + ing.name());
+                }
+                lore.add("<dark_gray>Click: cook something else");
+            }
+            ItemStack icon = r == null ? Items.icon("tab_cook", "<aqua>Cooking: <white>nothing yet", lore)
+                    : CatalogIcons.sample(r.output());
+            if (r != null) {
+                icon.editMeta(m -> {
+                    m.itemName(Text.mm("<aqua>Cooking: <white>" + r.output().display()));
+                    m.lore(Text.lines(lore));
+                });
+            }
+            return Items.glint(icon, r == null);
+        }
+        return Items.icon("ui_guide", "<aqua>How they work", t == WorkerType.FARMHAND ? List.of(
                 "<gray>Picks your ripe plants near them and",
                 "<gray>plants a seed from the harvest again.",
                 "<gray>Click seeds or fertilizer below to give",
@@ -97,7 +121,7 @@ public final class WorkerMenu extends Menu {
                 : List.of("<gray>Put them near your Drug Lab.",
                 "<gray>They hang fresh buds on its racks and",
                 "<gray>take them off dry. They fetch fresh",
-                "<gray>buds from your Farmhands, or click yours.")));
+                "<gray>buds from your Farmhands, or click yours."));
     }
 
     private int radiusAt(int level) {
@@ -116,6 +140,12 @@ public final class WorkerMenu extends Menu {
             confirmDismiss = false;
         }
         switch (slot) {
+            case JOB -> {
+                if (worker.type() == WorkerType.COOK) {
+                    openChild(new CookRecipeMenu(player, worker));
+                    return;
+                }
+            }
             case RENAME -> {
                 player.closeInventory();
                 ChatInput.ask(player, "<green>New name for " + Text.escape(worker.name()) + "?</green> <gray>(up to 16 letters)",
@@ -194,12 +224,17 @@ public final class WorkerMenu extends Menu {
     @Override
     public void clickOwn(int slot, ItemStack item, ClickType click) {
         ItemType t = Items.type(item);
-        boolean wanted = worker.type() == WorkerType.FARMHAND
-                ? t == ItemType.FERTILIZER || PlantManager.kindOf(t) != null
-                : t == ItemType.BUD_FRESH;
+        boolean wanted = switch (worker.type()) {
+            case FARMHAND -> t == ItemType.FERTILIZER || PlantManager.kindOf(t) != null;
+            case DRYER -> t == ItemType.BUD_FRESH;
+            case COOK -> usedByCook(item);
+        };
         if (!wanted) {
-            player.sendActionBar(Text.mm("<gray>" + Text.escape(worker.name()) + " only takes "
-                    + (worker.type() == WorkerType.FARMHAND ? "seeds and fertilizer." : "fresh buds.")));
+            player.sendActionBar(Text.mm("<gray>" + Text.escape(worker.name()) + " only takes " + switch (worker.type()) {
+                case FARMHAND -> "seeds and fertilizer.";
+                case DRYER -> "fresh buds.";
+                case COOK -> worker.recipe() == null ? "ingredients - pick a drug first." : "what their recipe needs.";
+            }));
             return;
         }
         ItemStack inSlot = player.getInventory().getItem(slot);
@@ -215,6 +250,20 @@ public final class WorkerMenu extends Menu {
         }
         player.playSound(player.getLocation(), "minecraft:item.bundle.insert", SoundCategory.PLAYERS, 0.8f, 1f);
         render();
+    }
+
+    /** A Cook takes the ingredients of their recipe. */
+    private boolean usedByCook(ItemStack item) {
+        LabRecipe r = worker.recipe();
+        if (r == null) {
+            return false;
+        }
+        for (LabRecipe.Ingredient ing : r.ingredients()) {
+            if (ing.matches(item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

@@ -2,6 +2,7 @@ package dev.kushcraft.guide;
 
 import dev.kushcraft.KushCraft;
 import dev.kushcraft.effect.EffectType;
+import dev.kushcraft.lab.LabRecipe;
 import dev.kushcraft.recipe.RecipeBook;
 import dev.kushcraft.recipe.Recipes;
 import dev.kushcraft.strain.Strain;
@@ -62,6 +63,9 @@ public final class Guide {
         sections.add(new Section("Money & cartels", money()));
         sections.add(new Section("Breeding strains", strain()));
         sections.add(new Section("Effects", effects()));
+        sections.add(new Section("Animals", List.of("<dark_green><bold>Animals</bold>\n\n<black>Right-click an"
+                + " animal with a joint, an edible or any drug: its <red>eyes go red</red> and it gets high for a"
+                + " while.\n\n<dark_gray>Uppers give it the zoomies, downers slow it right down.")));
         sections.add(new Section("Strains", strains()));
 
         // page numbers: 1 = cover, 2 = contents
@@ -136,7 +140,7 @@ public final class Guide {
     private static List<String> quickStart() {
         return List.of("<dark_green><bold>Quick start</bold>\n\n<black>1. Buy or find seeds\n"
                 + "2. Plant on farmland\n3. Harvest when grown\n4. Get a <dark_green>Drug Lab</dark_green>\n"
-                + "5. Dry, roll & cook\n6. Sell at the <gold>Shop</gold>\n7. Hire a <dark_green>worker</dark_green>\n\n"
+                + "5. Dry, roll & cook\n6. Sell at the <gold>Shop</gold>\n7. Find a <dark_green>wild plant</dark_green>\n\n"
                 + "<dark_gray>The glowing <dark_aqua>Next</dark_aqua> button in the menu shows your step.\n"
                 + run("/kush start", "> Getting started"));
     }
@@ -154,6 +158,9 @@ public final class Guide {
                         + " seeds - the <dark_aqua>biome</dark_aqua> picks the strain.\n\nJungle grass: <dark_green>coca"
                         + "</dark_green>.\nRed poppies: <red>poppy</red>.\nDead bushes: <gold>peyote</gold>.\n"
                         + "Ripe wheat: <dark_purple>ergot</dark_purple>.\nOr buy any strain in the Shop.",
+                "<dark_green><bold>Wild plants</bold>\n\n<black>Plants grow by themselves out in the world:"
+                        + " the biome's strain, coca in jungles, poppies on plains, peyote in deserts.\n\n"
+                        + "Anyone can pick them. They wither after a few hours.",
                 "<dark_green><bold>Growing</bold>\n\n<black>Right-click the <dark_aqua>top</dark_aqua> of farmland,"
                         + " grass, dirt or a <dark_green>Planter</dark_green>.\n\nNeeds <gold>light 9+</gold> or a"
                         + " <dark_purple>Grow Lamp</dark_purple>. Mushrooms like the dark.\nWater, Planters and"
@@ -165,19 +172,23 @@ public final class Guide {
     }
 
     private static List<String> lab() {
-        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: 21 drugs\n<bold>Roll</bold>:"
-                + " joints & blunts\n<bold>Dry</bold>: 5 racks, 30s\n<bold>Mix</bold>: breed strains\n"
-                + "<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Glowing = you have it all."
-                + " Shift-click cooks up to 4 batches.\n<black>LSD: wheat > ergot > LSD.");
+        return List.of("<dark_green><bold>Drug Lab</bold>\n\n<black><bold>Cook</bold>: " + LabRecipe.values().length
+                + " recipes\n<bold>Roll</bold>: joints & blunts\n<bold>Dry</bold>: 5 racks, 30s\n<bold>Mix</bold>:"
+                + " breed strains\n<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Glowing = you have it all."
+                + " Shift-click cooks up to 4 batches.",
+                "<dark_green><bold>Step by step</bold>\n\n<black>Most drugs take 2-3 cooks:\n<dark_gray>"
+                        + "buds > kief > hash\nbuds > butter > brownie\ncoca > paste > cocaine\n"
+                        + "opium > morphine > heroin\nergot > extract > LSD\n<black>Red = missing (it says"
+                        + " where to get it).");
     }
 
     private static List<String> workers() {
         return List.of("<dark_green><bold>Workers</bold>\n\n<black>Shop > <dark_aqua>Gear & Workers</dark_aqua>."
                         + " Right-click the ground to put them there.\n\n<dark_green>Farmhand</dark_green>:"
-                        + " harvests your ripe plants and plants them again.\n<gold>Dryer</gold>: dries your"
-                        + " buds at your Drug Lab.",
-                "<dark_green><bold>Your workers</bold>\n\n<black>Right-click one for their satchel: take the"
-                        + " harvest, give seeds or fertilizer.\n\nThey get a small <gold>wage</gold> per job."
+                        + " harvests and replants.\n<gold>Dryer</gold>: dries your buds at your lab.\n"
+                        + "<dark_aqua>Cook</dark_aqua>: cooks the drug you pick, batch after batch.",
+                "<dark_green><bold>Your workers</bold>\n\n<black>Right-click one for their satchel: take what"
+                        + " they made, give seeds or ingredients.\n\nThey get a <gold>wage</gold> per job."
                         + " <dark_gray>No money, no work!</dark_gray>\nTrain them to work further and faster.\n"
                         + run("/kush workers", "> Your workers"));
     }
@@ -247,9 +258,14 @@ public final class Guide {
                 "<dark_green><bold>Trade</bold>\n\n<black>7 shelves: ores, farming, wood, blocks, mob drops,"
                         + " nether & end, tools. They cost a lot of product!\n\n<bold>Jobs</bold>: mining,"
                         + " farming and hunting pay a little.\n" + run("/kush trade", "> Trade"),
-                "<dark_green><bold>Cartels</bold>\n\n<black>Team up! A shared <gold>bank</gold> (+5% of every"
-                        + " sale), 5 levels with bonuses, big <gold>shipments</gold> to fill together.\n\n"
-                        + "<gold>Contracts</gold> pay extra for big batches.\n" + run("/kush cartel", "> Cartel"),
+                "<dark_green><bold>Cartels</bold>\n\n<black>A team. A shared <gold>bank</gold> (+5% of every"
+                        + " sale), levels that pay every member more, and big <gold>shipments</gold> to fill"
+                        + " together.\n" + run("/kush cartel", "> Cartel"),
+                "<dark_green><bold>Market</bold>\n\n<black>Shop > <gold>Market</gold>: contracts pay extra"
+                        + " for big batches. Sell a mix - flooded products pay less.\n\n<red>Dying costs you "
+                        + Math.round((KushCraft.get() == null ? 0.2
+                        : KushCraft.get().getConfig().getDouble("death.cash-lost", 0.2)) * 100)
+                        + "%</red> of your cash, so bank on selling, not fighting.",
                 "<dark_green><bold>Top Dealers</bold>\n\n<black>The players who sold the most get the titles:"
                         + "\n<dark_red>#1 Cartel Boss\n<red>#2 Kingpin\n<gold>#3 The Plug\n<dark_gray>top 5, 10, 25..."
                         + "\n\n<black>Titles pay extra on every sale.\n" + run("/kush top", "> Top"),

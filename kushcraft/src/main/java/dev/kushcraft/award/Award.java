@@ -22,6 +22,7 @@ public enum Award {
     IDEAL_CLIMATE("Green Climate", "Harvest a plant grown in its ideal climate.", "award_climate", 200, Frame.TASK, FIRST_HARVEST, false),
     ALL_CLIMATES("World Grower", "Harvest in all 6 climates.", "award_globe", 5000, Frame.GOAL, IDEAL_CLIMATE, false),
     COLLECTOR("Seed Collector", "Grow 10 different strains.", "award_seeds", 2000, Frame.GOAL, FIRST_HARVEST, false),
+    FORAGER("Forager", "Pick a wild plant.", "award_forager", 150, Frame.TASK, FIRST_HARVEST, false),
     // the lab
     BUILD_LAB("Breaking Bad", "Place a Drug Lab.", "award_lab", 250, Frame.TASK, null, false),
     FIRST_DRY("Dry Season", "Dry your first buds.", "bud_dried", 100, Frame.TASK, BUILD_LAB, false),
@@ -37,6 +38,7 @@ public enum Award {
     // workers
     HIRED("Hired Help", "Hire a worker.", "award_worker", 250, Frame.TASK, FIRST_HARVEST, false),
     WORKFORCE("Workforce", "Have 4 workers at once.", "award_workforce", 2500, Frame.GOAL, HIRED, false),
+    HEAD_CHEF("Head Chef", "Hire a Cook.", "award_chef", 1000, Frame.GOAL, HIRED, false),
     // money
     FIRST_SALE("First Deal", "Sell some product.", "cash", 100, Frame.TASK, null, false),
     SOLD_10K("Hustler", "Sell $10,000 of product.", "award_cash_stack", 500, Frame.TASK, FIRST_SALE, false),
@@ -61,6 +63,8 @@ public enum Award {
     GREEN_OUT("Lightweight", "Green out.", "effect_green_out", 100, Frame.TASK, FIRST_HIGH, true),
     BAD_TRIP("Bad Trip", "Have a bad trip.", "effect_bad_trip", 100, Frame.TASK, FIRST_HIGH, true),
     COCKTAIL("Cocktail", "Feel 6 effects at once.", "effect_trippy", 500, Frame.GOAL, FIRST_HIGH, false),
+    PARTY_ANIMAL("Party Animal", "Give an animal a treat... and see its eyes go red.", "award_red_eyes", 150,
+            Frame.TASK, FIRST_HIGH, true),
     TRY_10("Connoisseur", "Try 10 different drugs.", "lucid_tab", 1500, Frame.GOAL, FIRST_HIGH, false),
     TRY_ALL("Tried It All", "Try every drug.", "award_rainbow", 10000, Frame.CHALLENGE, TRY_10, false);
 

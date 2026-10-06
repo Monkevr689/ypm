@@ -59,7 +59,8 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "recipes", "recipe", "drugs", "catalog" -> open(sender, DrugsMenu::new);
-            case "market", "shop" -> open(sender, ShopMenu::new);
+            case "shop" -> open(sender, ShopMenu::new);
+            case "market", "contracts" -> open(sender, dev.kushcraft.gui.MarketMenu::new);
             case "exchange", "trade" -> {
                 if (!plugin.exchange().enabled()) {
                     sender.sendMessage(Text.msg("<red>The exchange is turned off on this server."));
@@ -126,7 +127,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             }
             case "pack" -> {
                 if (sender instanceof Player p) {
-                    plugin.pack().send(p);
+                    plugin.pack().resend(p);
                     p.sendMessage(Text.msg("<gray>Resource pack sent. <dark_gray>" + plugin.pack().url(p)));
                 }
             }
@@ -193,6 +194,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Text.mm(" <white>/kush cartel invite|join|leave <gray>- cartels"));
                 sender.sendMessage(Text.mm(" <white>/kush sell <gray>- sell all your product"));
                 sender.sendMessage(Text.mm(" <white>/kush workers <gray>- your workers"));
+                sender.sendMessage(Text.mm(" <white>/kush market <gray>- contracts and flooded products"));
                 sender.sendMessage(Text.mm(" <white>/kush start <gray>- getting started: your next steps"));
                 sender.sendMessage(Text.mm(" <white>/kush pay <player> <amount> <gray>- send money"));
                 sender.sendMessage(Text.mm(" <white>/kush guide <gray>- the handbook"));
@@ -360,7 +362,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         List<String> out = new ArrayList<>();
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
-            out.addAll(List.of("menu", "shop", "gear", "drugs", "trade", "cartel", "top", "awards", "sell", "workers",
+            out.addAll(List.of("menu", "shop", "gear", "market", "drugs", "trade", "cartel", "top", "awards", "sell", "workers",
                     "start", "pay", "guide", "pack", "balance", "strains", "help"));
             if (admin) {
                 out.addAll(List.of("admin", "give", "items", "money", "sales", "reload"));

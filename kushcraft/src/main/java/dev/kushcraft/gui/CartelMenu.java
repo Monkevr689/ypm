@@ -4,7 +4,6 @@ import dev.kushcraft.KushCraft;
 import dev.kushcraft.cartel.Cartel;
 import dev.kushcraft.cartel.Cartels;
 import dev.kushcraft.item.Items;
-import dev.kushcraft.shop.Market;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.Text;
 import org.bukkit.SoundCategory;
@@ -16,10 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Cartel: your cartel (banner, bank, level, members), the daily contracts
- * everyone can fill, your cartel's shipment and the way to Top Dealers.
- * Without a cartel the top row starts one or shows your invites.
- * Layout matches tools/gui.py cartel().
+ * Cartel: a team of players. Top row: your cartel (banner), its shared bank,
+ * its level and members. Below: how cartels work, the cartel's big shared
+ * shipment and the way to Top Dealers. Without a cartel the top row starts
+ * one or shows your invites. Layout matches tools/gui.py cartel().
  */
 public final class CartelMenu extends TabMenu {
 
@@ -27,11 +26,10 @@ public final class CartelMenu extends TabMenu {
     static final int BANK = at(1, 3);
     static final int LEVEL = at(1, 5);
     static final int MEMBERS = at(1, 7);
-    static final int[] CONTRACTS = {at(3, 1), at(3, 2), at(3, 3)};
-    static final int SHIPMENT = at(3, 6);
-    static final int TOP = at(5, 4);
+    static final int HELP = at(3, 1);
+    static final int SHIPMENT = at(3, 4);
+    static final int TOP = at(3, 7);
 
-    private List<Market.Order> shownOrders = List.of();
     private List<Cartel> shownInvites = List.of();
     private long leaveClick;
     private int ticks;
@@ -55,11 +53,14 @@ public final class CartelMenu extends TabMenu {
         } else {
             cartelRow(c);
         }
-        List<Market.Order> orders = plugin.market().orders();
-        shownOrders = List.copyOf(orders.subList(0, Math.min(orders.size(), CONTRACTS.length)));
-        for (int i = 0; i < shownOrders.size(); i++) {
-            set(CONTRACTS[i], contractIcon(shownOrders.get(i), c != null));
-        }
+        set(HELP, Items.icon("ui_guide", "<aqua>How cartels work",
+                "<gray>A cartel is a team. Members get:",
+                "<white>· a shared bank <gray>(+" + pct(plugin.getConfig().getDouble("cartel.bank-cut", 0.05))
+                        + " of every sale goes in)",
+                "<white>· levels <gray>bought from the bank: more",
+                "<gray>  members and better prices for all",
+                "<white>· big shipments <gray>to fill together",
+                "<dark_gray>Invite friends: Members > Invite."));
         set(SHIPMENT, shipmentIcon(c));
         set(TOP, Items.icon("award_crown", "<gold>Top Dealers", plugin.ranks().label(player),
                 "<dark_gray>Click: the leaderboards"));
@@ -68,8 +69,8 @@ public final class CartelMenu extends TabMenu {
     private void noCartel() {
         Cartels cs = cartels();
         set(BANNER, Items.glint(Items.tintedIcon("cartel_banner", 0x9A9AA8, "<white>Start a cartel <gold>"
-                + money(cs.createCost()), List.of("<gray>Shared bank, levels, shipments.",
-                "<dark_gray>Click and type a name.")), false));
+                + money(cs.createCost()), List.of("<gray>Team up with friends.", "<dark_gray>Click and type a name.")),
+                false));
         shownInvites = cs.invitesFor(player.getUniqueId());
         int[] slots = {BANK, LEVEL, MEMBERS};
         for (int i = 0; i < shownInvites.size() && i < slots.length; i++) {
@@ -87,27 +88,21 @@ public final class CartelMenu extends TabMenu {
         List<String> banner = new ArrayList<>();
         banner.add("<white>#" + place + " <gray>cartel · <gold>" + money(c.sales()) + " <dark_gray>sold");
         banner.add("<gray>Boss: <white>" + Text.escape(Cartels.name(c.leader())));
-        if (boss) {
-            banner.add("<dark_gray>Right-click: colour");
-        }
-        banner.add("<dark_gray>Shift-click twice: leave");
+        banner.add("<dark_gray>" + (boss ? "Right-click: new colour · " : "") + "Shift-click twice: leave");
         set(BANNER, Items.tintedIcon("cartel_banner", c.color(), c.colored(), banner));
 
         List<String> bank = new ArrayList<>();
-        bank.add("<gray>+" + pct(KushCraft.get().getConfig().getDouble("cartel.bank-cut", 0.05)) + " of every sale");
-        bank.add("<dark_gray>Click: put in $1,000 · Shift: $10,000");
-        if (boss) {
-            bank.add("<dark_gray>Right-click: take out $1,000");
-        }
+        bank.add("<gray>Cartel bank. Pays for levels.");
+        bank.add("<dark_gray>Click: put in $1,000" + (boss ? " · Right-click: take out" : ""));
         set(BANK, Items.icon("ui_bank", "<gold>" + money(c.bank()), bank));
 
         Cartels.Tier tier = cs.tier(c), next = cs.next(c);
         List<String> lvl = new ArrayList<>();
         lvl.add(perks(tier));
         if (next != null) {
-            lvl.add("<gray>Next: <white>" + next.name() + " <dark_gray>- " + perks(next));
-            lvl.add((c.bank() >= next.cost() ? "<green>" : "<red>") + money(next.cost()) + " <dark_gray>from the bank"
-                    + (boss ? "" : " (boss)"));
+            lvl.add("<gray>Next: <white>" + next.name() + " <dark_gray>- " + perks(next) + ", " + next.members() + " members");
+            lvl.add((c.bank() >= next.cost() ? "<green>Click: " : "<red>") + money(next.cost()) + " <dark_gray>from the bank"
+                    + (boss ? "" : " (the boss clicks)"));
         }
         set(LEVEL, Items.glint(Items.amount(Items.icon("ui_upgrade", "<gold>" + tier.name() + " <gray>(level "
                 + c.level() + ")", lvl), c.level()), boss && next != null && c.bank() >= next.cost()));
@@ -134,25 +129,10 @@ public final class CartelMenu extends TabMenu {
         return Math.round(v * 100) + "%";
     }
 
-    private ItemStack contractIcon(Market.Order o, boolean inCartel) {
-        int have = InventoryUtil.count(player, it -> Items.type(it) == o.type());
-        long mins = Math.max(0, (o.expires() - System.currentTimeMillis()) / 60_000L);
-        ItemStack it = CatalogIcons.sample(o.type());
-        it.setAmount(Math.max(1, Math.min(99, o.amount())));
-        boolean ok = have >= o.amount();
-        it.editMeta(m -> {
-            m.itemName(Text.mm("<yellow>Contract: <white>" + o.amount() + "x " + o.type().display()));
-            List<String> lore = new ArrayList<>();
-            lore.add("<gold>Pays " + money(o.reward()) + (inCartel ? " <dark_gray>+ bank cut" : ""));
-            lore.add((ok ? "<green>" : "<gray>") + have + "/" + o.amount() + " <dark_gray>· " + mins + " min left");
-            m.lore(Text.lines(lore));
-        });
-        return Items.glint(it, ok);
-    }
-
     private ItemStack shipmentIcon(Cartel c) {
         if (c == null) {
-            return Items.icon("ui_shipment", "<gray>Shipments", "<dark_gray>Cartels get big shipments.");
+            return Items.icon("ui_shipment", "<gray>Shipments", "<dark_gray>Cartels get a big order to fill",
+                    "<dark_gray>together, paid into the bank.");
         }
         Cartel.Shipment s = c.shipment();
         if (s == null) {
@@ -182,17 +162,6 @@ public final class CartelMenu extends TabMenu {
         if (slot == TOP) {
             openChild(new TopMenu(player));
             return;
-        }
-        for (int i = 0; i < shownOrders.size(); i++) {
-            if (CONTRACTS[i] == slot) {
-                if (plugin.market().complete(player, shownOrders.get(i))) {
-                    successSound();
-                } else {
-                    failSound();
-                }
-                render();
-                return;
-            }
         }
         if (!cs.enabled()) {
             return;

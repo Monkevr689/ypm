@@ -305,6 +305,18 @@ public final class Awards implements Listener {
     }
 
     /** A worker was hired (count = how many the player has now). */
+    public void foraged(Player p) {
+        grant(p, Award.FORAGER);
+    }
+
+    public void partyAnimal(Player p) {
+        grant(p, Award.PARTY_ANIMAL);
+    }
+
+    public void hiredCook(Player p) {
+        grant(p, Award.HEAD_CHEF);
+    }
+
     public void hired(Player p, int count) {
         grant(p, Award.HIRED);
         if (count >= 4) {

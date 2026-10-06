@@ -743,6 +743,132 @@ def ketamine():
 
 
 # ---------------------------------------------------------------------------
+# in-between steps (cooked at the Drug Lab on the way to a drug)
+# ---------------------------------------------------------------------------
+@item("kief")
+def kief():
+    """Golden-green sifted trichome dust in a little round tin."""
+    s = Sprite(seed=131)
+    tin = ellipse(16, 21, 12, 7)
+    s.shade(tin, ramp("a8b0b8", 5, spread=0.4), dither=0.3)
+    rim = ellipse(16, 18, 12, 6)
+    s.shade(rim, ramp("c8d0d8", 4, spread=0.3), rim=False)
+    inner = ellipse(16, 18, 10.5, 4.8)
+    s.fill(inner, c("6a7078"))
+    pile = ellipse(16, 17, 9.5, 4.2) | ellipse(15, 14.5, 6, 3.6) | ellipse(17, 12.5, 3.4, 2.4)
+    s.shade(pile, ramp("c8c46a", 5, spread=0.38), dither=0.7)
+    s.speckle(pile, [c("e8e8a0"), c("8a9a3a")], 0.22)
+    s.speckle(pile, [alpha(c("ffffff"), 230)], 0.07, layer=2)
+    # a few grains on the rim
+    for (x, y) in ((6, 19), (25, 18), (24, 21)):
+        s.put(x, y, c("c8c46a"))
+    s.outline(0.42)
+    return s
+
+
+@item("canna_butter")
+def canna_butter():
+    """A stick of green-tinted butter on its paper wrapper, with a leaf stamp."""
+    s = Sprite(seed=132)
+    wrap = poly([(3, 20), (17, 13), (29, 18), (15, 26)])
+    s.shade(wrap, ramp("f2ecd8", 4, spread=0.2), rim=False, dither=0.2)
+    top = poly([(6, 15), (17, 9), (26, 13), (15, 19)])
+    front = poly([(6, 15), (15, 19), (15, 24), (6, 20)])
+    right = poly([(15, 19), (26, 13), (26, 18), (15, 24)])
+    r = ramp("d8d870", 5, spread=0.3)
+    s.fill(front, r[2])
+    s.fill(right, r[1])
+    s.shade(top, r[2:], dither=0.4, rim=False)
+    s.line(6, 15, 15, 19, r[4])
+    s.line(15, 19, 26, 13, r[3])
+    # leaf stamp on top
+    for (x, y) in ((16, 12), (15, 13), (16, 13), (17, 13), (14, 14), (16, 14), (18, 14), (16, 15)):
+        s.put(x, y, c("6a9a2a"))
+    # a knife-cut slice on the end
+    s.fill(poly([(22, 15), (26, 13), (26, 16), (22, 18)]), c("eef0a0"))
+    s.outline(0.45)
+    return s
+
+
+@item("coca_paste")
+def coca_paste():
+    """Off-white paste lumps on a coca leaf."""
+    s = Sprite(seed=133)
+    oval_leaf(s, 3, 25, 18, 26, 6.5, "3f9a3a")
+    lump = ellipse(15, 17, 7.5, 5.5) | ellipse(21, 14, 4.8, 4) | ellipse(10, 15, 4, 3.2)
+    s.shade(lump, ramp("e2d6a8", 5, spread=0.32), dither=0.6)
+    s.speckle(lump, [c("c8b47a"), c("f4ecd0")], 0.2)
+    s.glint(12, 13)
+    s.glint(20, 11)
+    s.outline(0.42)
+    return s
+
+
+@item("morphine")
+def morphine():
+    """Brown morphine base powder in a stoppered lab jar."""
+    s = Sprite(seed=134)
+    jar = rounded(8, 9, 23, 29, 3)
+    s.fill(jar, c("d8e8f4", 100))
+    powder = rounded(9, 17, 22, 28, 2)
+    s.shade(powder, ramp("9a6a42", 5, spread=0.35), dither=0.6)
+    s.speckle(powder, [c("c89a6a"), c("6a4428")], 0.2)
+    s.fill(rect(8, 5, 23, 9), c("4a3a30"))
+    s.fill(rect(8, 5, 23, 5), c("6a5a4a"))
+    label = rect(11, 12, 20, 15)
+    s.fill(label, c("f4ecd8"))
+    s.line(12, 13, 19, 13, c("8a3a2a"))
+    s.line(12, 14, 16, 14, c("8a8a8a"))
+    glass_shine(s, 10, 11, 10, 26)
+    s.outline(0.42)
+    return s
+
+
+@item("ergot_extract")
+def ergot_extract():
+    """A small amber dropper bottle of violet ergot extract."""
+    s = Sprite(seed=135)
+    bottle = rounded(9, 13, 22, 29, 3)
+    s.shade(bottle, ramp("b8742a", 5, spread=0.4), dither=0.3)
+    liquid = rounded(10, 18, 21, 28, 2)
+    s.shade(liquid, ramp("8a3ab8", 4, spread=0.35), dither=0.3)
+    s.fill(rect(13, 8, 18, 13), c("2a2a30"))
+    bulb = ellipse(15.5, 5.5, 3, 3)
+    s.shade(bulb, ramp("2a2a34", 3, spread=0.4))
+    label = rect(11, 20, 20, 24)
+    s.fill(label, c("f4ecd8"))
+    for (x, y) in ((13, 22), (14, 21), (15, 22), (16, 21), (17, 22), (18, 21)):
+        s.put(x, y, c("8a3ab8"))
+    glass_shine(s, 11, 15, 11, 27)
+    # a drop falling
+    s.put(26, 20, c("b86ae8"))
+    s.put(26, 21, c("8a3ab8"))
+    s.outline(0.42)
+    return s
+
+
+@item("cough_syrup")
+def cough_syrup():
+    """A pharmacy bottle of purple syrup with a measuring cup on top."""
+    s = Sprite(seed=136)
+    body = rounded(8, 11, 23, 29, 3)
+    s.shade(body, ramp("7a2ab0", 5, spread=0.35), dither=0.3)
+    s.fill(rect(12, 7, 19, 11), c("7a2ab0"))
+    cup = poly([(10, 2), (21, 2), (20, 7), (11, 7)])
+    s.shade(cup, ramp("e8e8f0", 4, spread=0.2), rim=False)
+    for x in (13, 16, 19):
+        s.put(x, 4, c("a8a8b8"))
+    label = rect(10, 16, 21, 24)
+    s.fill(label, c("f8f4ec"))
+    s.fill(rect(10, 16, 21, 17), c("e83a3a"))
+    s.fill(rect(14, 19, 17, 22), c("e83a3a"))
+    s.fill(rect(13, 20, 18, 21), c("e83a3a"))
+    glass_shine(s, 10, 12, 10, 27)
+    s.outline(0.42)
+    return s
+
+
+# ---------------------------------------------------------------------------
 # harvest & seeds
 # ---------------------------------------------------------------------------
 def oval_leaf(s, x, y, ang, length, width, col="3fae3a"):
@@ -1693,7 +1819,16 @@ def worker_face(s, kind, x0, y0, k=2):
                     for dx in range(k):
                         s.put(x0 + x * k + dx, y0 + y * k + dy, col)
     w = 8 * k
-    if kind == "farmhand":
+    if kind == "cook":
+        # a tall white toque
+        top = rect(x0 - 1, y0 - 7, x0 + w, y0 - 1)
+        s.shade(top, ramp("f4f4ee", 4, spread=0.15), dither=0.2)
+        s.fill(rect(x0, y0 - 1, x0 + w - 1, y0 + 1), c("e6e6e0"))
+        for xx in range(x0 + 1, x0 + w, 3):
+            s.line(xx, y0 - 6, xx, y0 - 2, c("d0d0c8"))
+        for (x, y) in edge(top | rect(x0, y0 - 1, x0 + w - 1, y0 + 1)):
+            s.put(x, y, c("8a8a84"))
+    elif kind == "farmhand":
         # straw hat: wide brim and crown with a red band
         s.shade(rect(x0 - 3, y0 - 1, x0 + w + 2, y0), ramp("e8c870", 3, spread=0.3), rim=False)
         s.shade(rect(x0 + 2, y0 - 6, x0 + w - 3, y0 - 2), ramp("ecd078", 4, spread=0.3), dither=0.3)
@@ -1705,7 +1840,7 @@ def worker_face(s, kind, x0, y0, k=2):
 
 
 def contract(kind, ribbon):
-    s = Sprite(seed=701 if kind == "farmhand" else 702)
+    s = Sprite(seed={"farmhand": 701, "dryer": 702, "cook": 708}[kind])
     card = rounded(4, 5, 27, 29, 2)
     s.shade(card, ramp("f0e6c8", 4, spread=0.2), dither=0.3, rim=False)
     s.fill(rect(4, 25, 27, 29), c(ribbon))
@@ -1725,6 +1860,11 @@ def worker_farmhand():
 @item("worker_dryer")
 def worker_dryer():
     return contract("dryer", "e8a832")
+
+
+@item("worker_cook")
+def worker_cook():
+    return contract("cook", "3ac8e8")
 
 
 @icon("ui_workers")
@@ -1979,4 +2119,53 @@ def effect_zen():
         s.shade(poly(pts), ramp(col, 4, spread=0.3), dither=0.2)
     s.shade(ellipse(16, 26, 11, 2.5), ramp("4ab89a", 4, spread=0.3), rim=False)
     s.outline(0.4)
+    return s
+
+
+@icon("award_forager")
+def award_forager():
+    """A woven basket with a wild cannabis leaf and a mushroom."""
+    s = Sprite(seed=711)
+    cannabis_leaf(s, 13, 11, 9, layer=0, col="4caa32")
+    shroom(s, 21, 14, 7, 7)
+    basket = poly([(4, 15), (28, 15), (25, 29), (7, 29)])
+    s.shade(basket, ramp("c8904a", 5, spread=0.35), dither=0.3)
+    for y in range(17, 29, 3):
+        s.line(5, y, 27, y, c("8a5a2a"))
+    for x in range(8, 26, 4):
+        s.line(x, 16, x, 28, c("a8743a"))
+    s.fill(rect(3, 14, 29, 16), c("e0a85a"))
+    s.outline(0.42)
+    return s
+
+
+@icon("award_chef")
+def award_chef():
+    s = Sprite(seed=712)
+    medal(s, 16, 20, 10, "e8c870", ribbon=("3ac8e8", "e8e8f0"))
+    worker_face(s, "cook", 12, 17, 1)
+    s.outline(0.4)
+    return s
+
+
+@icon("award_red_eyes")
+def award_red_eyes():
+    """A pig's face with bloodshot red eyes and a puff of smoke."""
+    s = Sprite(seed=713)
+    head = rounded(5, 8, 26, 27, 5)
+    s.shade(head, ramp("f0a0a8", 5, spread=0.3), dither=0.3)
+    for (x0, x1) in ((5, 9), (22, 26)):
+        s.fill(poly([(x0, 10), (x1, 4), (x1 if x0 == 5 else x0, 11)]), c("e8909a"))
+    snout = rounded(11, 18, 20, 24, 2)
+    s.shade(snout, ramp("f8b8c0", 4, spread=0.25))
+    s.fill(rect(13, 20, 14, 22), c("a85a64"))
+    s.fill(rect(17, 20, 18, 22), c("a85a64"))
+    for x0 in (8, 19):
+        s.fill(rect(x0, 12, x0 + 4, 16), c("ffffff"))
+        s.fill(rect(x0 + 1, 13, x0 + 3, 15), c("e81a1a"))
+        s.put(x0 + 2, 14, c("6a0a0a"))
+        s.line(x0, 12, x0 + 4, 12, c("e85a5a"))
+    for (x, y, a) in ((27, 6, 200), (28, 3, 160), (26, 1, 120)):
+        s.fill(ellipse(x, y, 2, 1.6), alpha(c("d8d8d8"), a), 2)
+    s.outline(0.42)
     return s

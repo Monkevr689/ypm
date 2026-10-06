@@ -19,10 +19,14 @@ public enum ItemType {
             "<gray>Right-click to smoke."),
     BLUNT("Blunt", "blunt", true, false,
             "<gray>Right-click to smoke."),
+    KIEF("Kief", "kief", true, false,
+            "<gray>Sifted from dried buds. Press it into Hash."),
     HASH("Hash", "hash", true, false,
             "<gray>Smoke it in a Bong."),
     MOON_ROCK("Moon Rock", "moon_rock", true, true,
             "<gray>Smoke it in a Bong. <red>Very strong."),
+    CANNA_BUTTER("Canna Butter", "canna_butter", true, false,
+            "<gray>Bake it into brownies."),
     SPACE_BROWNIE("Space Brownie", "space_brownie", true, false,
             "<gray>Right-click to eat. Kicks in slowly."),
     GUMMIES("THC Gummies", "gummies", true, true,
@@ -40,6 +44,8 @@ public enum ItemType {
             "<gray>Right-click to drink."),
     ERGOT("Ergot", "ergot", false, false,
             "<gray>Fungus from wheat. Cook it into LSD."),
+    ERGOT_EXTRACT("Ergot Extract", "ergot_extract", false, false,
+            "<gray>Drip it on paper for LSD tabs."),
     // --- hard drugs -----------------------------------------------------
     LUCID_TAB("LSD Tab", "lucid_tab", false, false,
             "<gray>Right-click to use."),
@@ -50,19 +56,25 @@ public enum ItemType {
     COCA_SEEDS("Coca Seeds", "coca_seeds", false, false,
             "<gray>Plant it. Likes warm biomes."),
     COCA_LEAVES("Coca Leaves", "coca_leaves", false, false,
+            "<gray>Cook into Coca Paste."),
+    COCA_PASTE("Coca Paste", "coca_paste", false, false,
             "<gray>Cook into Cocaine."),
     COCAINE("Cocaine", "cocaine", false, false,
             "<gray>Right-click to use."),
     POPPY_SEEDS("Poppy Seeds", "poppy_seeds", false, false,
             "<gray>Plant it. Likes mild biomes."),
     POPPY_POD("Poppy Pod", "poppy_pod", false, false,
-            "<gray>Cook into Opium or Heroin."),
+            "<gray>Cook into Opium."),
+    MORPHINE("Morphine Base", "morphine", false, false,
+            "<gray>Cook into Heroin."),
     HEROIN("Heroin", "heroin", false, false,
             "<gray>Right-click to use."),
     CRACK("Crack Rock", "crack", false, false,
             "<gray>Right-click to use."),
     OPIUM("Opium", "opium", false, false,
             "<gray>Right-click to use."),
+    COUGH_SYRUP("Cough Syrup", "cough_syrup", false, false,
+            "<gray>Mix it into Lean."),
     LEAN("Lean", "lean", false, false,
             "<gray>Right-click to sip."),
     ECSTASY("Ecstasy", "ecstasy", false, false,
@@ -99,6 +111,8 @@ public enum ItemType {
             "<gray>Harvests and replants your plants.", "<gray>Right-click the ground to hire them there."),
     DRYER("Dryer", "worker_dryer", false, false,
             "<gray>Dries your buds at your Drug Lab.", "<gray>Right-click the ground near a lab to hire them."),
+    COOK("Cook", "worker_cook", false, false,
+            "<gray>Cooks the drug you pick at your Drug Lab.", "<gray>Right-click the ground near a lab to hire them."),
     // --- blocks (placed like a block, punch to pick up) ------------------
     LAB_STATION("Drug Lab", "machine_lab_station", MachineType.LAB_STATION,
             "<gray>Cook, roll, dry and breed."),
@@ -177,12 +191,20 @@ public enum ItemType {
         if (this == BONG || this == GROWER_GUIDE || this == VAPE_PEN) {
             return 1;
         }
-        return machine != null || this == FARMHAND || this == DRYER ? 16 : 64;
+        return machine != null || this == FARMHAND || this == DRYER || this == COOK ? 16 : 64;
     }
 
     /** Old stations replaced by the Drug Lab: still work, but not sold or crafted any more. */
     public boolean retired() {
         return this == STRAIN_MAKER || this == ROLLING_TABLE || this == DRYING_RACK || this == CATALYST;
+    }
+
+    /** Made at the Drug Lab on the way to a drug (kief, coca paste...). */
+    public boolean ingredient() {
+        return switch (this) {
+            case KIEF, CANNA_BUTTER, ERGOT, ERGOT_EXTRACT, COCA_PASTE, MORPHINE, COUGH_SYRUP -> true;
+            default -> false;
+        };
     }
 
     /** Things players consume for an effect. */

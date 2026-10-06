@@ -16,7 +16,7 @@ import random
 from PIL import Image
 
 G = None
-TYPES = ("farmhand", "dryer")
+TYPES = ("farmhand", "dryer", "cook")
 
 
 def rgba(h):
@@ -36,7 +36,7 @@ def face_of(skin):
 
 
 def skin(t):
-    return farmhand_skin() if t == "farmhand" else dryer_skin()
+    return {"farmhand": farmhand_skin, "dryer": dryer_skin, "cook": cook_skin}[t]()
 
 
 # ---------------------------------------------------------------------------
@@ -289,6 +289,93 @@ def dryer_skin():
 
 
 # ---------------------------------------------------------------------------
+# the cook: white chef's jacket, red neckerchief, checked trousers, moustache
+# ---------------------------------------------------------------------------
+def cook_skin():
+    rng = random.Random(85)
+    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    skin, hair = "f0c09a", "3a2a20"
+
+    def head(f, x, y, w, h):
+        if f == "top":
+            return noisy(hair, rng, 0.08)
+        if f == "bottom":
+            return shade(rgba(skin), 0.82)
+        c = noisy(skin, rng, 0.03)
+        if f == "front":
+            if y == 0:
+                return noisy(hair, rng, 0.08)
+            if y == 3 and x in (1, 2, 5, 6):
+                return rgba("2a1a10")  # brows
+            if y == 4 and x in (1, 6):
+                return rgba("ffffff")
+            if y == 4 and x in (2, 5):
+                return rgba("4a7a3a")  # eyes
+            if y == 5 and x in (3, 4):
+                return shade(rgba(skin), 0.84)
+            if y == 6 and 1 <= x <= 6:
+                return rgba("3a2416") if x not in (3, 4) or rng.random() < 0.7 else rgba("4a2e1c")  # moustache
+            if y == 7 and x in (3, 4):
+                return rgba("b8645a")
+            return c
+        if f == "back":
+            return noisy(hair, rng, 0.08) if y < 5 else c
+        if y < 2:
+            return noisy(hair, rng, 0.08)
+        if y in (4, 5) and x == (2 if f == "right" else 5):
+            return shade(rgba(skin), 0.84)
+        return c
+
+    def jacket(x, y):
+        return shade(rgba("f6f6f2"), (0.94 if (x + y) % 5 == 0 else 1.0) + rng.uniform(-0.02, 0.02))
+
+    def body(f, x, y, w, h):
+        if f in ("top", "bottom"):
+            return jacket(x, y) if f == "top" else rgba("2a2a2a")
+        if f == "front":
+            if y == 0 and 2 <= x <= 5:
+                return rgba("d83a2a") if x in (3, 4) else rgba("b82a20")  # neckerchief
+            if y == 1 and x in (3, 4):
+                return rgba("b82a20")
+            if y >= 10:
+                return checks(x, y)
+            if x in (2, 5) and y in (3, 5, 7):
+                return rgba("2a2a2a")  # buttons
+            if x == 4 and 2 <= y <= 9:
+                return shade(rgba("f6f6f2"), 0.86)  # the jacket's fold
+            return jacket(x, y)
+        if f == "back":
+            return checks(x, y) if y >= 10 else jacket(x, y)
+        return checks(x, y) if y >= 10 else jacket(x, y)
+
+    def checks(x, y):
+        dark = ((x // 1) + (y // 1)) % 2 == 0
+        return shade(rgba("2a2a30" if dark else "e8e8e8"), 1 + rng.uniform(-0.04, 0.04))
+
+    def arm(f, x, y, w, h):
+        if f == "bottom" or (y >= 10 and f != "top"):
+            return noisy(skin, rng, 0.03)
+        if y == 9:
+            return shade(rgba("f6f6f2"), 0.88)  # cuff
+        return jacket(x, y)
+
+    def leg(f, x, y, w, h):
+        if f == "bottom" or y >= 10:
+            return rgba("1a1a1e")
+        if f == "top":
+            return checks(x, y)
+        return checks(x, y)
+
+    paint(img, "head", head)
+    paint(img, "body", body)
+    paint(img, "right_arm", arm)
+    paint(img, "left_arm", arm)
+    paint(img, "right_leg", leg)
+    paint(img, "left_leg", leg)
+    return img
+
+
+# ---------------------------------------------------------------------------
 # hats: item models worn in the head slot
 # ---------------------------------------------------------------------------
 def straw_tex():
@@ -366,7 +453,29 @@ def hat_model(name, textures, elements):
     G.save_json(G.item_definition(f"{G.NS}:item/{name}"), f"items/{name}.json")
 
 
+def toque_tex():
+    rng = random.Random(86)
+    img = Image.new("RGBA", (16, 16))
+    for y in range(16):
+        for x in range(16):
+            c = rgba("fafaf6")
+            if x % 3 == 0:
+                c = shade(c, 0.9)  # pleats
+            img.putpixel((x, y), shade(c, 1 + rng.uniform(-0.03, 0.02)))
+    return img
+
+
+def toque_band_tex():
+    img = Image.new("RGBA", (16, 16), rgba("f0f0ea"))
+    for x in range(16):
+        img.putpixel((x, 0), rgba("ffffff"))
+        img.putpixel((x, 15), rgba("c8c8c0"))
+    return img
+
+
 def hats():
+    G.save_png(toque_tex(), "item/worker/toque")
+    G.save_png(toque_band_tex(), "item/worker/toque_band")
     G.save_png(straw_tex(), "item/worker/straw")
     G.save_png(ribbon_tex(), "item/worker/ribbon")
     G.save_png(cap_tex(), "item/worker/cap")
@@ -385,6 +494,13 @@ def hats():
         box([1.2, 11.2, 1.2], [14.8, 15.4, 14.8], "#cap"),
         box([2.4, 15.4, 2.4], [13.6, 16.4, 13.6], "#cap"),
         box([2.4, 11.2, -2.6], [13.6, 11.9, 1.2], "#visor"),
+    ])
+    # a tall chef's toque: a band round the head and a puffy top
+    hat_model("worker_hat_cook", {"particle": "item/worker/toque", "toque": "item/worker/toque",
+                                  "band": "item/worker/toque_band"}, [
+        box([1.4, 12.4, 1.4], [14.6, 15.6, 14.6], "#band"),
+        box([0.8, 15.6, 0.8], [15.2, 20.4, 15.2], "#toque"),
+        box([2.2, 20.4, 2.2], [13.8, 21.4, 13.8], "#toque"),
     ])
 
 
@@ -417,6 +533,10 @@ def front_view(skin, hat=None):
                 out.putpixel((x, y), rgba("ecd078") if y else rgba("c8a850"))
         for x in range(5, 11):
             out.putpixel((x, 2), rgba("c8302a"))
+    elif hat == "cook":
+        for y in range(0, 4):
+            for x in range(3 if y < 3 else 4, 13 if y < 3 else 12):
+                out.putpixel((x, y), rgba("fafaf6") if (x + y) % 3 else rgba("e0e0da"))
     elif hat == "dryer":
         for y in range(1, 4):
             for x in range(4, 12):
@@ -435,7 +555,7 @@ def generate(g):
     for t, img in skins.items():
         G.save_png(img, f"entity/worker/{t}")
     hats()
-    sheet = Image.new("RGBA", (4 + (64 + 4) * 2 + (16 + 4) * 2, 72), (44, 52, 40, 255))
+    sheet = Image.new("RGBA", (4 + (64 + 4) * len(TYPES) + (16 + 4) * len(TYPES), 72), (44, 52, 40, 255))
     x = 4
     for t in TYPES:
         sheet.alpha_composite(skins[t], (x, 4))

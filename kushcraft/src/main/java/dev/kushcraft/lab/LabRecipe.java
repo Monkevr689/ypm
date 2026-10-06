@@ -5,44 +5,58 @@ import dev.kushcraft.item.Items;
 import dev.kushcraft.util.Text;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionType;
 
 import java.util.List;
 
 /**
- * Drug Lab recipes. Every recipe needs one to three cheap things and
- * everyone can cook everything. The first strain-source ingredient decides
- * the strain of the product. Same order as tools/recipe_images.py COOK.
+ * Drug Lab recipes. They follow the real steps loosely (sift kief, press
+ * hash, make coca paste first, morphine before heroin...) but with game
+ * ingredients and a made-up Lab Solvent, never real chemistry. Most drugs
+ * take two or three steps. The first strain-source ingredient decides the
+ * strain of the product. Same order as tools/recipe_images.py COOK.
  */
 public enum LabRecipe {
-    // weed
+    // weed: sift, press, extract, bake
+    KIEF(ItemType.KIEF, 2, 20,
+            Ingredient.strain(ItemType.BUD_DRIED, 3)),
     HASH(ItemType.HASH, 2, 30,
-            Ingredient.strain(ItemType.BUD_DRIED, 4)),
-    MOON_ROCK(ItemType.MOON_ROCK, 2, 40,
-            Ingredient.strain(ItemType.BUD_DRIED, 2), Ingredient.of(ItemType.HASH, 1)),
+            Ingredient.strain(ItemType.KIEF, 3), Ingredient.of(Material.PAPER, 1)),
     WAX(ItemType.WAX, 2, 45,
             Ingredient.strain(ItemType.HASH, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    MOON_ROCK(ItemType.MOON_ROCK, 2, 40,
+            Ingredient.strain(ItemType.BUD_DRIED, 2), Ingredient.of(ItemType.WAX, 1), Ingredient.of(ItemType.KIEF, 1)),
     VAPE_PEN(ItemType.VAPE_PEN, 1, 30,
             Ingredient.strain(ItemType.WAX, 1), Ingredient.of(Material.IRON_NUGGET, 2), Ingredient.of(Material.GLASS_PANE, 1)),
-    SPACE_BROWNIE(ItemType.SPACE_BROWNIE, 3, 30,
-            Ingredient.strain(ItemType.BUD_DRIED, 2), Ingredient.of(Material.COCOA_BEANS, 1), Ingredient.of(Material.WHEAT, 1)),
-    GUMMIES(ItemType.GUMMIES, 4, 30,
-            Ingredient.strain(ItemType.HASH, 1), Ingredient.of(Material.SUGAR, 2), Ingredient.of(Material.SWEET_BERRIES, 1)),
+    CANNA_BUTTER(ItemType.CANNA_BUTTER, 2, 40,
+            Ingredient.strain(ItemType.BUD_DRIED, 2), Ingredient.of(Material.MILK_BUCKET, 1)),
+    SPACE_BROWNIE(ItemType.SPACE_BROWNIE, 4, 40,
+            Ingredient.strain(ItemType.CANNA_BUTTER, 1), Ingredient.of(Material.COCOA_BEANS, 2),
+            Ingredient.of(Material.WHEAT, 2), Ingredient.of(Material.SUGAR, 1)),
+    GUMMIES(ItemType.GUMMIES, 4, 35,
+            Ingredient.strain(ItemType.KIEF, 1), Ingredient.of(Material.SUGAR, 2), Ingredient.of(Material.SLIME_BALL, 1),
+            Ingredient.of(Material.SWEET_BERRIES, 1)),
     // psychedelics
     SHROOM_TEA(ItemType.SHROOM_TEA, 2, 20,
-            Ingredient.of(ItemType.MAGIC_MUSHROOM, 3), Ingredient.of(Material.GLASS_BOTTLE, 1)),
+            Ingredient.of(ItemType.MAGIC_MUSHROOM, 3), Ingredient.water(1)),
     ERGOT(ItemType.ERGOT, 2, 15,
             Ingredient.of(Material.WHEAT, 4)),
-    LUCID_TAB(ItemType.LUCID_TAB, 4, 30,
-            Ingredient.of(ItemType.ERGOT, 1), Ingredient.of(Material.PAPER, 1), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    ERGOT_EXTRACT(ItemType.ERGOT_EXTRACT, 2, 45,
+            Ingredient.of(ItemType.ERGOT, 3), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    LUCID_TAB(ItemType.LUCID_TAB, 6, 30,
+            Ingredient.of(ItemType.ERGOT_EXTRACT, 1), Ingredient.of(Material.PAPER, 2)),
     MESCALINE(ItemType.MESCALINE, 3, 40,
             Ingredient.of(ItemType.PEYOTE_BUTTON, 4), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     DMT(ItemType.DMT, 3, 50,
             Ingredient.of(Material.GLOW_BERRIES, 3), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     // uppers
-    COCAINE(ItemType.COCAINE, 4, 45,
+    COCA_PASTE(ItemType.COCA_PASTE, 2, 40,
             Ingredient.of(ItemType.COCA_LEAVES, 6), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    COCAINE(ItemType.COCAINE, 3, 50,
+            Ingredient.of(ItemType.COCA_PASTE, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     CRACK(ItemType.CRACK, 2, 30,
-            Ingredient.of(ItemType.COCAINE, 1), Ingredient.of(Material.BONE_MEAL, 1)),
+            Ingredient.of(ItemType.COCAINE, 1), Ingredient.water(1), Ingredient.of(Material.BONE_MEAL, 1)),
     BLUE_CRYSTAL(ItemType.BLUE_CRYSTAL, 4, 60,
             Ingredient.of(Material.LAPIS_LAZULI, 3), Ingredient.of(ItemType.LAB_SOLVENT, 2), Ingredient.of(Material.REDSTONE, 1)),
     ECSTASY(ItemType.ECSTASY, 4, 40,
@@ -54,10 +68,14 @@ public enum LabRecipe {
     // downers
     OPIUM(ItemType.OPIUM, 2, 30,
             Ingredient.of(ItemType.POPPY_POD, 3)),
-    HEROIN(ItemType.HEROIN, 3, 60,
-            Ingredient.of(ItemType.POPPY_POD, 4), Ingredient.of(ItemType.LAB_SOLVENT, 2)),
+    MORPHINE(ItemType.MORPHINE, 2, 45,
+            Ingredient.of(ItemType.OPIUM, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    HEROIN(ItemType.HEROIN, 2, 60,
+            Ingredient.of(ItemType.MORPHINE, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    COUGH_SYRUP(ItemType.COUGH_SYRUP, 2, 30,
+            Ingredient.of(ItemType.OPIUM, 1), Ingredient.of(Material.HONEY_BOTTLE, 1)),
     LEAN(ItemType.LEAN, 2, 30,
-            Ingredient.of(Material.GLASS_BOTTLE, 1), Ingredient.of(Material.PURPLE_DYE, 1), Ingredient.of(Material.SUGAR, 1)),
+            Ingredient.of(ItemType.COUGH_SYRUP, 1), Ingredient.of(Material.SUGAR, 1), Ingredient.of(Material.PURPLE_DYE, 1)),
     KETAMINE(ItemType.KETAMINE, 4, 45,
             Ingredient.of(Material.NETHER_WART, 3), Ingredient.of(ItemType.LAB_SOLVENT, 1));
 
@@ -106,7 +124,17 @@ public enum LabRecipe {
         }
     }
 
-    /** Either a KushCraft item or a plain vanilla material. */
+    /** The recipe that makes this item (null if none). */
+    public static LabRecipe making(ItemType t) {
+        for (LabRecipe r : values()) {
+            if (r.output == t) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    /** Either a KushCraft item or a plain vanilla material (POTION = a water bottle). */
     public record Ingredient(ItemType custom, Material vanilla, int amount, boolean strainSource) {
 
         static Ingredient of(ItemType t, int amount) {
@@ -121,15 +149,81 @@ public enum LabRecipe {
             return new Ingredient(null, m, amount, false);
         }
 
+        /** A plain water bottle. */
+        static Ingredient water(int amount) {
+            return new Ingredient(null, Material.POTION, amount, false);
+        }
+
         public boolean matches(ItemStack it) {
+            if (it == null) {
+                return false;
+            }
             if (custom != null) {
                 return Items.type(it) == custom;
             }
-            return it.getType() == vanilla && !Items.isCustom(it);
+            if (it.getType() != vanilla || Items.isCustom(it)) {
+                return false;
+            }
+            if (vanilla == Material.POTION) {
+                return it.getItemMeta() instanceof PotionMeta pm && pm.getBasePotionType() == PotionType.WATER
+                        && !pm.hasCustomEffects();
+            }
+            return true;
+        }
+
+        /** What is left after using one (the bucket of a milk bucket, the bottle of a honey bottle...). */
+        public Material remainder() {
+            if (vanilla == null) {
+                return null;
+            }
+            return switch (vanilla) {
+                case MILK_BUCKET -> Material.BUCKET;
+                case POTION, HONEY_BOTTLE -> Material.GLASS_BOTTLE;
+                default -> null;
+            };
         }
 
         public String name() {
-            return custom != null ? custom.display() : Text.titleCase(vanilla.name());
+            if (custom != null) {
+                return custom.display();
+            }
+            return vanilla == Material.POTION ? "Water Bottle" : Text.titleCase(vanilla.name());
+        }
+
+        /** Where a new player finds this (shown under the recipe). */
+        public String where() {
+            if (custom != null) {
+                LabRecipe r = making(custom);
+                if (r != null) {
+                    return "cook it here first";
+                }
+                return switch (custom) {
+                    case BUD_DRIED -> "dry fresh buds (Dry tab)";
+                    case LAB_SOLVENT -> "Shop, or craft: bottle + sugar";
+                    case MAGIC_MUSHROOM -> "grow mushroom spores";
+                    case COCA_LEAVES -> "grow coca (warm biomes)";
+                    case POPPY_POD -> "grow poppies";
+                    case PEYOTE_BUTTON -> "grow peyote on sand";
+                    default -> "Shop";
+                };
+            }
+            return switch (vanilla) {
+                case POTION -> "bottle + water source";
+                case MILK_BUCKET -> "milk a cow";
+                case GLOW_BERRIES -> "lush caves, or Trade";
+                case SLIME_BALL -> "slimes, or Trade";
+                case NETHER_WART -> "Nether fortresses, or Trade";
+                case LAPIS_LAZULI, REDSTONE -> "mining, or Trade";
+                case GLOWSTONE_DUST -> "the Nether, or Trade";
+                case GUNPOWDER -> "creepers, or Trade";
+                case HONEY_BOTTLE -> "bee nests, or Trade";
+                case PINK_DYE, PURPLE_DYE -> "flowers/dyes, or Trade";
+                case COCOA_BEANS -> "jungles, or Trade";
+                case SWEET_BERRIES -> "taiga bushes, or Trade";
+                case IRON_NUGGET -> "smelt / craft iron";
+                case GLASS_PANE -> "craft from glass";
+                default -> "farm it, or Trade";
+            };
         }
     }
 }

@@ -135,6 +135,10 @@ public final class InteractListener implements Listener {
                 && b.getType().asBlockType().isInteractable() && !p.isSneaking()) {
             return; // let doors, chests... work
         }
+        if (plugin.animals().justFed(p)) {
+            e.setUseItemInHand(Event.Result.DENY);
+            return; // the click gave it to an animal
+        }
         if (use(p, item, type)) {
             e.setUseItemInHand(Event.Result.DENY);
             e.setUseInteractedBlock(Event.Result.DENY);
@@ -233,8 +237,8 @@ public final class InteractListener implements Listener {
                 p.sendActionBar(Text.mm("<gray>Fresh buds need drying first - <green>Drug Lab</green> > Dry."));
                 return true;
             }
-            case COCA_LEAVES, POPPY_POD -> {
-                p.sendActionBar(Text.mm("<gray>Cook it in a <green>Drug Lab</green> > Cook."));
+            case COCA_LEAVES, POPPY_POD, KIEF, CANNA_BUTTER, ERGOT, ERGOT_EXTRACT, COCA_PASTE, MORPHINE, COUGH_SYRUP -> {
+                p.sendActionBar(Text.mm("<gray>Cook it in a <green>Drug Lab</green> > Cook - it's one step of a recipe."));
                 return true;
             }
             case FERTILIZER -> {

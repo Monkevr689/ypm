@@ -173,6 +173,12 @@ public final class RecipeBook {
             it.editMeta(m -> m.itemName(Text.mm("<white>Any Planks")));
             return it;
         }
+        if (name.equals("potion")) {
+            ItemStack it = new ItemStack(Material.POTION, Math.max(1, amount));
+            it.editMeta(org.bukkit.inventory.meta.PotionMeta.class,
+                    m -> m.setBasePotionType(org.bukkit.potion.PotionType.WATER));
+            return it;
+        }
         Material m = Material.matchMaterial(name);
         return m == null ? null : new ItemStack(m, Math.max(1, amount));
     }

@@ -33,11 +33,13 @@ def generate(g):
     # Minecraft 26.3 uses resource pack format 97.1 (version.json of the 26.3 server).
     # The new format has only min_format / max_format; pack_format and
     # supported_formats are the pre-1.21.9 fields and must not be mixed in.
+    # max_format is open-ended so clients of later 26.x patches don't get an
+    # "incompatible pack" warning.
     meta = {
         "pack": {
             "description": "\u00a7aKushCraft \u00a77textures & models",
             "min_format": 97,
-            "max_format": 97,
+            "max_format": 120,
         }
     }
     with open(os.path.join(G.PACK, "pack.mcmeta"), "w") as f:

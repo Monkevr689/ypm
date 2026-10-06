@@ -4,6 +4,7 @@ import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
 import dev.kushcraft.strain.Strain;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -24,8 +25,12 @@ public final class StrainStock {
     }
 
     public static List<Group> groups(Player p, ItemType type) {
+        return groups(p.getInventory(), type);
+    }
+
+    public static List<Group> groups(Inventory inv, ItemType type) {
         Map<String, Group> map = new LinkedHashMap<>();
-        for (ItemStack it : p.getInventory().getStorageContents()) {
+        for (ItemStack it : inv.getStorageContents()) {
             if (it == null || Items.type(it) != type) {
                 continue;
             }
@@ -43,7 +48,11 @@ public final class StrainStock {
 
     /** The preferred group if it has enough, otherwise the first group that has enough. */
     public static Group pick(Player p, ItemType type, int needed, String preferStrain, int preferQuality) {
-        List<Group> groups = groups(p, type);
+        return pick(p.getInventory(), type, needed, preferStrain, preferQuality);
+    }
+
+    public static Group pick(Inventory inv, ItemType type, int needed, String preferStrain, int preferQuality) {
+        List<Group> groups = groups(inv, type);
         if (preferStrain != null) {
             for (Group g : groups) {
                 if (g.is(preferStrain, preferQuality) && g.count() >= needed) {
@@ -60,7 +69,11 @@ public final class StrainStock {
     }
 
     public static int take(Player p, ItemType type, Group g, int amount) {
-        return InventoryUtil.remove(p, it -> Items.type(it) == type && Items.strain(it) != null
+        return take(p.getInventory(), type, g, amount);
+    }
+
+    public static int take(Inventory inv, ItemType type, Group g, int amount) {
+        return InventoryUtil.remove(inv, it -> Items.type(it) == type && Items.strain(it) != null
                 && g.is(Items.strain(it).id(), Items.quality(it)), amount);
     }
 }

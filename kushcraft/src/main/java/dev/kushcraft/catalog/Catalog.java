@@ -20,7 +20,7 @@ public final class Catalog {
         UPPERS("Uppers", "cocaine"),
         DOWNERS("Downers", "heroin"),
         GEAR("Gear", "bong"),
-        GROW("Seeds & Harvest", "seed_pack");
+        GROW("Seeds & Ingredients", "seed_pack");
 
         private final String display;
         private final String icon;
@@ -57,30 +57,30 @@ public final class Catalog {
         add(ItemType.BUD_DRIED, Category.WEED, "Strain effects", "Dry fresh buds at a Drug Lab.");
         add(ItemType.JOINT, Category.WEED, "Strain effects, 3 hits", "Roll at a Drug Lab.");
         add(ItemType.BLUNT, Category.WEED, "Strain effects, 5 strong hits", "Roll at a Drug Lab.");
-        add(ItemType.HASH, Category.WEED, "Strong strain effects", "Cook at a Drug Lab.");
+        add(ItemType.HASH, Category.WEED, "Strong strain effects", "Buds > kief > hash.");
         add(ItemType.MOON_ROCK, Category.WEED, "Very strong strain effects", "Cook at a Drug Lab.");
-        add(ItemType.SPACE_BROWNIE, Category.WEED, "Long strain effects + Munchies", "Cook at a Drug Lab.");
+        add(ItemType.SPACE_BROWNIE, Category.WEED, "Long strain effects + Munchies", "Buds > canna butter > brownies.");
         add(ItemType.GUMMIES, Category.WEED, "Very long strain effects", "Cook at a Drug Lab.");
         add(ItemType.WAX, Category.WEED, "Huge strain effects", "Cook at a Drug Lab.");
         add(ItemType.VAPE_PEN, Category.WEED, "Strain effects, 10 puffs", "Cook at a Drug Lab.");
         // psychedelics
         drug(ItemType.MAGIC_MUSHROOM, Category.PSYCH, "Grow magic mushrooms.");
         drug(ItemType.SHROOM_TEA, Category.PSYCH, "Cook at a Drug Lab.");
-        drug(ItemType.LUCID_TAB, Category.PSYCH, "Cook ergot + paper at a Drug Lab.");
+        drug(ItemType.LUCID_TAB, Category.PSYCH, "Wheat > ergot > extract > tabs.");
         drug(ItemType.PEYOTE_BUTTON, Category.PSYCH, "Grow a peyote cactus.");
         drug(ItemType.MESCALINE, Category.PSYCH, "Cook at a Drug Lab.");
         drug(ItemType.DMT, Category.PSYCH, "Cook at a Drug Lab.");
         // uppers
-        drug(ItemType.COCAINE, Category.UPPERS, "Cook at a Drug Lab.");
+        drug(ItemType.COCAINE, Category.UPPERS, "Coca leaves > coca paste > cocaine.");
         drug(ItemType.CRACK, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.BLUE_CRYSTAL, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.ECSTASY, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.PIXIE_DUST, Category.UPPERS, "Cook at a Drug Lab.");
         drug(ItemType.ANGEL_DUST, Category.UPPERS, "Cook at a Drug Lab.");
         // downers
-        drug(ItemType.OPIUM, Category.DOWNERS, "Cook at a Drug Lab.");
-        drug(ItemType.HEROIN, Category.DOWNERS, "Cook at a Drug Lab.");
-        drug(ItemType.LEAN, Category.DOWNERS, "Cook at a Drug Lab.");
+        drug(ItemType.OPIUM, Category.DOWNERS, "Cook poppy pods at a Drug Lab.");
+        drug(ItemType.HEROIN, Category.DOWNERS, "Opium > morphine base > heroin.");
+        drug(ItemType.LEAN, Category.DOWNERS, "Opium > cough syrup > lean.");
         drug(ItemType.KETAMINE, Category.DOWNERS, "Cook at a Drug Lab.");
         // supplies & blocks
         add(ItemType.LAB_STATION, Category.GEAR, null, "Crafting table.");
@@ -102,6 +102,13 @@ public final class Catalog {
         add(ItemType.COCA_LEAVES, Category.GROW, null, "Harvest a grown coca bush.");
         add(ItemType.POPPY_POD, Category.GROW, null, "Harvest grown poppies.");
         add(ItemType.ERGOT, Category.GROW, null, "Cook wheat at a Drug Lab, or find it harvesting wheat.");
+        // in-between steps, all cooked at a Drug Lab
+        add(ItemType.KIEF, Category.GROW, null, "Cook dried buds at a Drug Lab.");
+        add(ItemType.CANNA_BUTTER, Category.GROW, null, "Cook dried buds + milk at a Drug Lab.");
+        add(ItemType.ERGOT_EXTRACT, Category.GROW, null, "Cook ergot at a Drug Lab.");
+        add(ItemType.COCA_PASTE, Category.GROW, null, "Cook coca leaves at a Drug Lab.");
+        add(ItemType.MORPHINE, Category.GROW, null, "Cook opium at a Drug Lab.");
+        add(ItemType.COUGH_SYRUP, Category.GROW, null, "Cook opium + honey at a Drug Lab.");
         add(ItemType.GROWER_GUIDE, Category.GROW, null, "Type /kush.");
     }
 

@@ -340,6 +340,31 @@ def bottle(name, liquid):
 
 bottle("glass_bottle", None)
 bottle("honey_bottle", "f8a828")
+bottle("potion", "3a6af0")  # a water bottle
+
+
+def bucket(name, inside):
+    art(name, [
+        "................",
+        "................",
+        "....KKKKKKKK....",
+        "...K........K...",
+        "..K..........K..",
+        "..KhhhhhhhhhhK..",
+        "..KhllllllllmK..",
+        "..KhllllllllmK..",
+        "...KmmmmmmmmK...",
+        "...KhmmmmmmdK...",
+        "...KhmmmmmmdK...",
+        "....KhmmmmdK....",
+        "....KhmmmmdK....",
+        "....KhmmmmdK....",
+        ".....KKKKKK.....",
+        "................",
+    ], {"K": "2a2a30", "h": "e8e8ec", "m": "b8b8c0", "d": "7a7a84", "l": inside})
+
+
+bucket("milk_bucket", "fafaf6")
 
 art("paper", [
     "................",

@@ -157,15 +157,13 @@ public abstract class LabTabMenu extends Menu {
         return row * 9 + col;
     }
 
-    /** Cook time multiplier: config x 0.85 per upgrade level, minus the owner's cartel bonus. */
+    /** Cook time multiplier (see Cooking). */
     public static double timeFactor(Machine m) {
-        return Math.max(0.01, KushCraft.get().getConfig().getDouble("lab.time-multiplier", 1.0))
-                * Math.pow(0.85, Math.max(0, m.level() - 1))
-                * (1 - KushCraft.get().cartels().labBonus(m.owner()));
+        return dev.kushcraft.lab.Cooking.timeFactor(m);
     }
 
-    /** Chance of one extra item per batch: 8% per upgrade level. */
+    /** Chance of one extra item per batch (see Cooking). */
     public static double bonusChance(Machine m) {
-        return 0.08 * Math.max(0, m.level() - 1);
+        return dev.kushcraft.lab.Cooking.bonusChance(m);
     }
 }

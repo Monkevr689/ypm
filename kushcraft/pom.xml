@@ -6,7 +6,7 @@
 
     <groupId>dev.kushcraft</groupId>
     <artifactId>KushCraft</artifactId>
-    <version>4.0.0</version>
+    <version>5.0.0</version>
     <packaging>jar</packaging>
     <name>KushCraft</name>
     <description>Server-side grow, lab and dealer plugin for Paper 26.3 with custom textures</description>

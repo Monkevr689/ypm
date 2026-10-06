@@ -136,6 +136,48 @@ def textures():
     d.line((6, 11, 9, 11), fill=rgba("2a2e32"))
     tex("lab_cabinet", cab)
 
+    # 5.0 lab: brushed steel cabinet with two drawers and a hazard sticker
+    def brushed(base_hex, seed):
+        r = random.Random(seed)
+        img = Image.new("RGBA", (16, 16))
+        base_c = rgba(base_hex)
+        for y in range(16):
+            band = 1 + 0.035 * math.sin(y * 2.3) + r.uniform(-0.015, 0.015)
+            for x in range(16):
+                img.putpixel((x, y), G.shade(base_c, band + r.uniform(-0.03, 0.03) + (0.05 if (x + y * 3) % 11 == 0 else 0)))
+        return img
+    front = brushed("c4cad0", 7)
+    d = ImageDraw.Draw(front)
+    for (y0, y1) in ((1, 6), (8, 13)):
+        d.rectangle((1, y0, 14, y1), outline=rgba("5a626a"))
+        d.line((2, y0 + 1, 13, y0 + 1), fill=rgba("e8eef2"))
+        d.line((5, y0 + 3, 10, y0 + 3), fill=rgba("2a2e32"))
+        d.line((5, y0 + 2, 10, y0 + 2), fill=rgba("f0f4f8"))
+    d.rectangle((0, 14, 15, 15), fill=rgba("2a2e32"))
+    for (x, y) in ((12, 9), (11, 10), (12, 10), (13, 10), (10, 11), (11, 11), (12, 11), (13, 11), (14, 11)):
+        front.putpixel((x, y), rgba("f2c83a"))
+    front.putpixel((12, 10), rgba("2a2a2a"))
+    tex("lab_cabinet_front", front)
+    side = brushed("b4bac0", 8)
+    d = ImageDraw.Draw(side)
+    d.rectangle((0, 14, 15, 15), fill=rgba("2a2e32"))
+    for i in range(14):
+        side.putpixel((0, i), rgba("d8dee4"))
+        side.putpixel((15, i), rgba("7a828a"))
+    tex("lab_cabinet_side", side)
+    # bunsen burner flame: a blue cone, transparent around it
+    flame = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    for y in range(16):
+        half = max(0.0, (y - 1) / 15 * 4.2)
+        for x in range(16):
+            dx = abs(x - 7.5)
+            if dx <= half:
+                inner = dx <= half * 0.45 and y > 6
+                col = rgba("bfe8ff") if inner else rgba("3a8af0") if y > 4 else rgba("8ac0ff")
+                flame.putpixel((x, y), col[:3] + (230 if inner else 200,))
+    tex("lab_flame", flame)
+    tex("liquid_yellow", liquid("f0d83a", random.Random(98)))
+
     tex("glass_clear", glass("d8f4ff", 70))
     tex("glass_green", glass("b8f0c8", 90))
     tex("liquid_green", liquid("5ae86a", rng))
@@ -360,28 +402,52 @@ def model(name, textures_, elements, tinted=False, item=True, item_name=None):
 
 
 def lab_station():
+    cab = {"north": face("#front"), "south": face("#side"), "east": face("#side"), "west": face("#side"),
+           "down": face("#edge")}
+    cross = {"origin": [4.5, 15, 11.5], "axis": "y", "angle": 45, "rescale": True}
     els = [
-        cube([1, 0, 1], [15, 10, 15], sides("#cabinet", down="#edge")),
+        cube([1, 0, 1], [15, 10, 15], cab),
         cube([0, 10, 0], [16, 12, 16], sides("#edge", up="#top", down="#edge")),
-        # erlenmeyer flask (glass + liquid)
+        # erlenmeyer flask (glass + liquid) and its neck
         cube([3, 12, 3], [7, 15, 7], sides("#liquid_g", up="#liquid_g")),
         cube([2.5, 12, 2.5], [7.5, 16, 7.5], sides("#glass", up="#glass")),
         cube([4, 16, 4], [6, 19, 6], sides("#glass", up="#glass")),
         # tall graduated cylinder
         cube([10.5, 12, 3.5], [12.5, 18, 5.5], sides("#liquid_b", up="#liquid_b")),
         cube([10, 12, 3], [13, 21, 6], sides("#glass", up="#glass")),
-        # beaker
-        cube([9.5, 12, 9.5], [13.5, 14.5, 13.5], sides("#liquid_p", up="#liquid_p")),
-        cube([9, 12, 9], [14, 16, 14], sides("#glass", up="#glass")),
         # connecting tube
         cube([6, 18, 4.5], [11, 18.6, 5.1], sides("#glass", up="#glass", down="#glass")),
-        # burner
-        cube([3.5, 12, 10], [6.5, 13.5, 13], sides("#steel", up="#steel_dark")),
+        # bunsen burner with a blue flame (crossed planes, not shaded so it glows)
+        cube([3, 12, 10], [6, 12.8, 13], sides("#steel_dark", up="#steel_dark")),
+        cube([4.1, 12.8, 11.1], [4.9, 14.6, 11.9], sides("#steel", up="#steel_dark")),
+        cube([3, 14.6, 11.5], [6, 17, 11.5], {"north": face("#flame", [0, 0, 16, 16]),
+                                               "south": face("#flame", [0, 0, 16, 16])}, rot=cross, shade=False),
+        cube([4.5, 14.6, 10], [4.5, 17, 13], {"east": face("#flame", [0, 0, 16, 16]),
+                                               "west": face("#flame", [0, 0, 16, 16])}, rot=cross, shade=False),
+        # ring stand: a rod and a ring holding a round flask over the flame
+        cube([1.2, 12, 13.6], [1.8, 21, 14.2], sides("#steel", up="#steel")),
+        cube([1.8, 17.2, 13.7], [3.4, 17.6, 14.1], sides("#steel", up="#steel")),
+        cube([2.6, 17, 10.2], [6.4, 17.4, 13.8], sides("#steel", up="#steel", down="#steel")),
+        cube([3.2, 17.4, 10.8], [5.8, 19.4, 13.2], sides("#liquid_y", up="#liquid_y")),
+        cube([2.8, 17.4, 10.4], [6.2, 19.8, 13.6], sides("#glass", up="#glass")),
+        cube([4, 19.8, 11.6], [5, 21.4, 12.6], sides("#glass", up="#glass")),
+        # test tube rack with three coloured tubes
+        cube([8.6, 12, 9.4], [14.6, 13, 12.6], sides("#wood", up="#wood", down="#wood")),
+        cube([8.6, 15, 9.4], [14.6, 15.6, 12.6], sides("#wood", up="#wood", down="#wood")),
+        cube([8.6, 13, 9.4], [9.2, 15, 12.6], sides("#wood")),
+        cube([14, 13, 9.4], [14.6, 15, 12.6], sides("#wood")),
+        cube([9.9, 13, 10.5], [10.9, 15.2, 11.5], sides("#liquid_p", up="#liquid_p")),
+        cube([11.5, 13, 10.5], [12.5, 14.6, 11.5], sides("#liquid_g", up="#liquid_g")),
+        cube([13.0, 13, 10.5], [13.8, 15.6, 11.5], sides("#liquid_b", up="#liquid_b")),
+        cube([9.7, 13, 10.3], [11.1, 17.2, 11.7], sides("#glass", up="#glass")),
+        cube([11.3, 13, 10.3], [12.7, 17.0, 11.7], sides("#glass", up="#glass")),
+        cube([12.8, 13, 10.3], [14.0, 17.4, 11.7], sides("#glass", up="#glass")),
     ]
     model("lab_station", {
-        "particle": "steel", "cabinet": "lab_cabinet", "edge": "lab_edge", "top": "lab_top",
-        "glass": "glass_clear", "liquid_g": "liquid_green", "liquid_b": "liquid_blue", "liquid_p": "liquid_purple",
-        "steel": "steel", "steel_dark": "steel_dark",
+        "particle": "steel", "front": "lab_cabinet_front", "side": "lab_cabinet_side", "edge": "lab_edge",
+        "top": "lab_top", "glass": "glass_clear", "liquid_g": "liquid_green", "liquid_b": "liquid_blue",
+        "liquid_p": "liquid_purple", "liquid_y": "liquid_yellow", "steel": "steel", "steel_dark": "steel_dark",
+        "flame": "lab_flame", "wood": "pine",
     }, els)
 
 

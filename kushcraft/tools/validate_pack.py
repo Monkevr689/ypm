@@ -203,6 +203,21 @@ def check_menus():
                               ("AwardsMenu.java", "SLOTS", gui.AWARD_SLOTS)):
         if java_int(fn, const) != expect:
             errors.append(f"{fn} {const} = {java_int(fn, const)} but tools/gui.py draws {expect}")
+    # framed slots that Java and the backgrounds must agree on
+    gear_src = open(os.path.join(gui_dir, "GearMenu.java"), encoding="utf-8").read()
+    hire = re.search(r"static final int\[\] HIRE = \{([^}]*)\};", gear_src)
+    hire_slots = tuple((int(a), int(b)) for a, b in re.findall(r"at\((\d+), (\d+)\)", hire.group(1))) if hire else ()
+    if hire_slots != tuple(gui.HIRE_SLOTS):
+        errors.append(f"GearMenu HIRE {hire_slots} but tools/gui.py draws {gui.HIRE_SLOTS}")
+    worker_types = len(re.findall(r'^    [A-Z]+\("', open(os.path.join(JAVA, "dev", "kushcraft", "worker", "WorkerType.java"),
+                                                        encoding="utf-8").read(), re.M))
+    if worker_types != len(gui.HIRE_SLOTS):
+        errors.append(f"{worker_types} worker types but {len(gui.HIRE_SLOTS)} hiring posters")
+    cartel_src = open(os.path.join(gui_dir, "CartelMenu.java"), encoding="utf-8").read()
+    for const, cell in (("HELP", (3, 1)), ("SHIPMENT", (3, 4)), ("TOP", (3, 7))):
+        m = re.search(r"static final int " + const + r" = at\((\d+), (\d+)\);", cartel_src)
+        if not m or (int(m.group(1)), int(m.group(2))) != cell:
+            errors.append(f"CartelMenu {const} should be at {cell} (tools/gui.py cartel())")
     starter = open(os.path.join(JAVA, "dev", "kushcraft", "award", "Starter.java"), encoding="utf-8").read()
     steps = len(re.findall(r'^    [A-Z]+\("', starter, re.M))
     if steps != gui.GUIDE_STEPS:
