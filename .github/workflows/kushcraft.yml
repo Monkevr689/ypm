@@ -204,10 +204,10 @@ jobs:
           grep -q "^awards:" plugins/KushCraft/config.yml || { echo "::error::awards section lost"; exit 1; }
           grep -q "^version: 3" plugins/KushCraft/strains.yml || { echo "::error::strains.yml version not set"; exit 1; }
           grep -q "creator-name: Tester" plugins/KushCraft/strains.yml || { echo "::error::bred strain lost"; exit 1; }
-          grep -A12 "^  og_kush:" plugins/KushCraft/strains.yml | grep -q "color: '#A8E05A'" \
-            || { echo "::error::own strain colour was overwritten"; exit 1; }
-          grep -A14 "^  og_kush:" plugins/KushCraft/strains.yml | grep -q "climate:" \
-            || { echo "::error::built-in strain did not get its climate"; exit 1; }
+          awk '/^  og_kush:$/{f=1;next} /^  [a-z0-9_]+:$/{f=0} f' plugins/KushCraft/strains.yml > og.txt
+          cat og.txt
+          grep -q "color: '#A8E05A'" og.txt || { echo "::error::own strain colour was overwritten"; exit 1; }
+          grep -q "climate:" og.txt || { echo "::error::built-in strain did not get its climate"; exit 1; }
           grep -q "SELFTEST PASS" server2.log || { grep "selftest failure" server2.log; echo "::error::selftest failed on the upgraded config"; exit 1; }
           grep -q "url: .*127.0.0.1:9000/pack.zip" plugins/KushCraft/config.yml \
             || { echo "::error::upgrade lost resource-pack.url"; exit 1; }
