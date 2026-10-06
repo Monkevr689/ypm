@@ -5,13 +5,13 @@
    "id": "craft_lab_station",
    "char": "",
    "title": "Drug Lab",
-   "sig": "craft:kush:lab_stationx1:iron_ingot,glass_bottle,iron_ingot,iron_ingot,crafting_table,iron_ingot"
+   "sig": "craft:kush:lab_stationx1:iron_ingot,glass_bottle,iron_ingot,iron_ingot,crafting_table,iron_ingot,-,-,-"
   },
   {
    "id": "craft_grow_lamp",
    "char": "",
    "title": "Grow Lamp",
-   "sig": "craft:kush:grow_lampx1:iron_ingot,iron_ingot,iron_ingot,redstone,lantern,redstone"
+   "sig": "craft:kush:grow_lampx1:iron_ingot,iron_ingot,iron_ingot,redstone,lantern,redstone,-,-,-"
   },
   {
    "id": "craft_planter_box",
@@ -23,13 +23,13 @@
    "id": "craft_dealer",
    "char": "",
    "title": "Dealer Stand",
-   "sig": "craft:kush:dealerx1:planks,gold_ingot,planks,planks,chest,planks"
+   "sig": "craft:kush:dealerx1:planks,gold_ingot,planks,planks,chest,planks,-,-,-"
   },
   {
    "id": "craft_bong",
    "char": "",
    "title": "Bong",
-   "sig": "craft:kush:bongx1:-,glass,-,glass,glass_bottle,glass"
+   "sig": "craft:kush:bongx1:-,glass,-,glass,glass_bottle,glass,-,-,-"
   },
   {
    "id": "craft_rolling_papers",

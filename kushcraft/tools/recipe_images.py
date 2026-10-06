@@ -91,10 +91,15 @@ MACHINES = {"lab_station": "block/lab_station", "grow_lamp": "block/grow_lamp",
 # ---------------------------------------------------------------------------
 # signatures (same format as RecipeBook.signature in Java)
 # ---------------------------------------------------------------------------
+def rows3(shape):
+    """A crafting shape padded to 3 rows of 3 (like the game's grid)."""
+    return [r.ljust(3) for r in shape] + ["   "] * (3 - len(shape))
+
+
 def craft_sig(result, amount, shape, key):
     if shape:
         cells = []
-        for row in shape:
+        for row in rows3(shape):
             for ch in row.ljust(3):
                 cells.append(key[ch] if ch != " " else "-")
         body = ",".join(cells)
@@ -238,7 +243,7 @@ def all_recipes():
     out = []
     for result, amount, shape, key in CRAFTING:
         if shape:
-            cells = [None if ch == " " else (key[ch], 1) for row in shape for ch in row.ljust(3)]
+            cells = [None if ch == " " else (key[ch], 1) for row in rows3(shape) for ch in row]
         else:
             cells = [(n, 1) for n in key] + [None] * (9 - len(key))
         out.append(("craft_" + result, NAMES[result], draw(["CRAFTING", "TABLE"], cells, result, amount),
