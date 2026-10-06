@@ -209,7 +209,9 @@ jobs:
               plugins/KushCraft/config.yml; then fail "OP PvP or End items still in Trade"; fi
           grep -q "^    lab:" plugins/KushCraft/config.yml || fail "no Lab Ingredients shelf"
           grep -q "^  max-per-player: 0" plugins/KushCraft/config.yml || fail "worker limit kept"
-          grep -q "^  radius: \[8, 12, 16\]" plugins/KushCraft/config.yml || fail "workers did not get their new reach"
+          # (Bukkit writes the upgraded list one item per line)
+          grep -A3 "^  radius:" plugins/KushCraft/config.yml | tr -d ' \n' | grep -qE "radius:(-8-12-16|\[8,12,16\])" \
+            || fail "workers did not get their new reach"
           grep -q "^    speed: 50" plugins/KushCraft/config.yml || fail "new drug prices missing"
           if grep -qE "^    seed_pack: [0-9]" plugins/KushCraft/config.yml; then fail "seeds still sell"; fi
           # Bukkit writes lists of maps in block style (item / price / amount on separate lines)
