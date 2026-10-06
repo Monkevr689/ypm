@@ -62,10 +62,12 @@ public final class Guide {
         sections.add(new Section("Recipes (pictures)", null));
         sections.add(new Section("Money & cartels", money()));
         sections.add(new Section("Breeding strains", strain()));
-        sections.add(new Section("Effects", effects()));
-        sections.add(new Section("Animals", List.of("<dark_green><bold>Animals</bold>\n\n<black>Right-click an"
-                + " animal with a joint, an edible or any drug: its <red>eyes go red</red> and it gets high for a"
-                + " while.\n\n<dark_gray>Uppers give it the zoomies, downers slow it right down.")));
+        // the animals page sits at the end of the effects (the contents page has room for 11 lines)
+        List<String> effects = new ArrayList<>(effects());
+        effects.add("<dark_green><bold>Animals</bold>\n\n<black>Right-click an animal with a joint, an edible or"
+                + " any drug: its <red>eyes go red</red> and it gets high for a while.\n\n<dark_gray>Uppers give it"
+                + " the zoomies, downers slow it right down.");
+        sections.add(new Section("Effects & animals", effects));
         sections.add(new Section("Strains", strains()));
 
         // page numbers: 1 = cover, 2 = contents

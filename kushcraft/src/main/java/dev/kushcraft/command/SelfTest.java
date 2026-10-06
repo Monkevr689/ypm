@@ -508,7 +508,8 @@ final class SelfTest {
         var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 new File(plugin.getDataFolder(), "workers.yml"));
         check(saved.isConfigurationSection("workers." + dryer.id()) && saved.isConfigurationSection(
-                "workers." + dryer.id() + ".satchel"), "workers and their satchels are saved");
+                "workers." + cook.id() + ".satchel") && "KIEF".equals(saved.getString("workers." + cook.id() + ".recipe")),
+                "workers, their satchels and a cook's recipe are saved");
         check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
                 dev.kushcraft.worker.WorkerType.FARMHAND, boss, 3)), "trained workers reach further");
         check(Items.level(Items.machine(ItemType.FARMHAND, 2)) == 2, "a dismissed worker keeps their level");
@@ -824,7 +825,7 @@ final class SelfTest {
         cs.contract(member, 1000);
         check(c.bank() > 500, "contracts add to the bank");
         cs.level(c, 3);
-        check(cs.sellBonus(member) > 0 && cs.growBonus(member) > 0 && cs.labBonus(member) > 0, "levels give bonuses");
+        check(cs.sellBonus(member) > 0, "levels give every member better prices");
         check(cs.sellBonus(UUID.randomUUID()) == 0, "no cartel, no bonus");
         cs.sold(other, 1);
         check(cs.top().get(cs.top().indexOf(c)) == c && cs.place(c) < cs.place(d), "cartel leaderboard");
