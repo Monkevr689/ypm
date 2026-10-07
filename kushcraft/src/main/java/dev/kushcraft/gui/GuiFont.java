@@ -25,7 +25,7 @@ public final class GuiFont {
      */
     public static final List<String> GUIS = List.of(
             "shop", "drugs", "trade", "cartel", "top", "awards", "cook", "roll", "dry", "mix", "recipe", "list",
-            "gear", "worker", "guide", "admin", "workers", "seeds");
+            "gear", "worker", "guide", "admin");
     private static final int GUI_WIDTH = 176;
     private static final int TITLE_X = 8;
 

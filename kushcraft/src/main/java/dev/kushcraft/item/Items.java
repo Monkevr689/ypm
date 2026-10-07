@@ -43,10 +43,6 @@ public final class Items {
         meta.setItemModel(Keys.model(type.model()));
         meta.itemName(Text.mm("<white>" + type.display()));
         List<String> lore = new ArrayList<>(type.lore());
-        dev.kushcraft.effect.EffectType sig = dev.kushcraft.catalog.Catalog.signature(type);
-        if (sig != null) {
-            lore.add(sig.signatureLine());
-        }
         if (type.machine() != null) {
             lore.add("<dark_gray>Place it. Punch it to pick it up.");
         }
@@ -77,7 +73,7 @@ public final class Items {
         if (item == null || !item.hasItemMeta()) {
             return 1;
         }
-        Integer l = item.getItemMeta().getPersistentDataContainer().get(Keys.LEVEL, PersistentDataType.INTEGER);
+        Integer l = item.getPersistentDataContainer().get(Keys.LEVEL, PersistentDataType.INTEGER);
         return l == null ? 1 : l;
     }
 
@@ -127,10 +123,6 @@ public final class Items {
             lore.add("<dark_gray>Bred by " + Text.escape(strain.creatorName()));
         }
         lore.addAll(type.lore());
-        dev.kushcraft.effect.EffectType sig = dev.kushcraft.catalog.Catalog.signature(type);
-        if (sig != null) {
-            lore.add(sig.signatureLine());
-        }
         meta.lore(Text.lines(lore));
         meta.setMaxStackSize(type.maxStack());
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
@@ -233,11 +225,15 @@ public final class Items {
     // reading
     // --------------------------------------------------------------------
 
+    /*
+     * The look-ups below read the item's data without copying its meta (getItemMeta() copies everything,
+     * and workers look at thousands of items a second).
+     */
     public static ItemType type(ItemStack item) {
         if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
             return null;
         }
-        String id = item.getItemMeta().getPersistentDataContainer().get(Keys.ID, PersistentDataType.STRING);
+        String id = item.getPersistentDataContainer().get(Keys.ID, PersistentDataType.STRING);
         return ItemType.parse(id);
     }
 
@@ -249,7 +245,7 @@ public final class Items {
         if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
             return false;
         }
-        PersistentDataContainer pdc = item.getItemMeta().getPersistentDataContainer();
+        io.papermc.paper.persistence.PersistentDataContainerView pdc = item.getPersistentDataContainer();
         return pdc.has(Keys.ID, PersistentDataType.STRING) || pdc.has(Keys.ICON, PersistentDataType.BYTE);
     }
 
@@ -257,7 +253,7 @@ public final class Items {
         if (item == null || !item.hasItemMeta()) {
             return null;
         }
-        String id = item.getItemMeta().getPersistentDataContainer().get(Keys.STRAIN, PersistentDataType.STRING);
+        String id = item.getPersistentDataContainer().get(Keys.STRAIN, PersistentDataType.STRING);
         return KushCraft.get().strains().get(id);
     }
 
@@ -265,7 +261,7 @@ public final class Items {
         if (item == null || !item.hasItemMeta()) {
             return 3;
         }
-        Integer q = item.getItemMeta().getPersistentDataContainer().get(Keys.QUALITY, PersistentDataType.INTEGER);
+        Integer q = item.getPersistentDataContainer().get(Keys.QUALITY, PersistentDataType.INTEGER);
         return q == null ? 3 : q;
     }
 
@@ -273,7 +269,7 @@ public final class Items {
         if (item == null || !item.hasItemMeta()) {
             return 0;
         }
-        Integer h = item.getItemMeta().getPersistentDataContainer().get(Keys.HITS, PersistentDataType.INTEGER);
+        Integer h = item.getPersistentDataContainer().get(Keys.HITS, PersistentDataType.INTEGER);
         return h == null ? 0 : h;
     }
 

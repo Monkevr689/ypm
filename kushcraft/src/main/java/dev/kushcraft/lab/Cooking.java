@@ -31,15 +31,11 @@ public final class Cooking {
     private Cooking() {
     }
 
-    /**
-     * Cook time multiplier: config x 0.85 per upgrade level, minus the owner's cartel bonus, x 0.75
-     * while the owner has the Chemist signature (Meth).
-     */
+    /** Cook time multiplier: config x 0.85 per upgrade level, minus the owner's cartel bonus. */
     public static double timeFactor(Machine m) {
         return Math.max(0.01, KushCraft.get().getConfig().getDouble("lab.time-multiplier", 1.0))
                 * Math.pow(0.85, Math.max(0, m.level() - 1))
-                * (1 - KushCraft.get().cartels().labBonus(m.owner()))
-                * (KushCraft.get().effects().chemist(m.owner()) ? 0.75 : 1.0);
+                * (1 - KushCraft.get().cartels().labBonus(m.owner()));
     }
 
     /** Chance of one extra item per batch: 8% per upgrade level. */

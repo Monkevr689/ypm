@@ -16,7 +16,7 @@ import random
 from PIL import Image
 
 G = None
-TYPES = ("farmhand", "dryer", "cook", "runner", "supplier")
+TYPES = ("farmhand", "dryer", "cook", "runner")
 
 
 def rgba(h):
@@ -36,8 +36,7 @@ def face_of(skin):
 
 
 def skin(t):
-    return {"farmhand": farmhand_skin, "dryer": dryer_skin, "cook": cook_skin, "runner": runner_skin,
-            "supplier": supplier_skin}[t]()
+    return {"farmhand": farmhand_skin, "dryer": dryer_skin, "cook": cook_skin, "runner": runner_skin}[t]()
 
 
 # ---------------------------------------------------------------------------
@@ -458,96 +457,6 @@ def runner_skin():
 
 
 # ---------------------------------------------------------------------------
-# the supplier: a delivery driver - brown uniform with a gold badge, khaki
-# shorts, white socks, work boots and a clipboard pen behind the ear
-# ---------------------------------------------------------------------------
-def supplier_skin():
-    rng = random.Random(89)
-    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    skin, hair, shirt, shorts = "d8a07a", "6a3a1a", "6a4a2a", "c8b07a"
-
-    def head(f, x, y, w, h):
-        if f == "top":
-            return noisy(hair, rng, 0.1)
-        if f == "bottom":
-            return shade(rgba(skin), 0.82)
-        c = noisy(skin, rng, 0.03)
-        if f == "front":
-            if y == 0:
-                return noisy(hair, rng, 0.1)
-            if y == 3 and x in (1, 2, 5, 6):
-                return rgba("4a2a12")  # eyebrows
-            if y == 4 and x in (2, 5):
-                return rgba("2a5a8a")  # eyes
-            if y == 4 and x in (1, 6):
-                return rgba("f4f4f0")
-            if y == 6 and 2 <= x <= 5:
-                return rgba("a85a4a") if x in (2, 5) else rgba("f4f4f0")  # smile
-            if y == 7 and 2 <= x <= 5:
-                return noisy(hair, rng, 0.1)  # a short beard
-            return c
-        if f == "back":
-            return noisy(hair, rng, 0.1) if y < 5 else c
-        if f == "right" and y in (2, 3) and x == 5:
-            return rgba("e8c83a")  # a pen behind the ear
-        if y < 2:
-            return noisy(hair, rng, 0.1)
-        return c
-
-    def uni(x, y):
-        return shade(rgba(shirt), 1 + rng.uniform(-0.05, 0.05))
-
-    def body(f, x, y, w, h):
-        if f in ("top", "bottom"):
-            return uni(x, y)
-        if f == "front":
-            if y == 0 and 2 <= x <= 5:
-                return shade(rgba(shirt), 0.75)  # collar
-            if x == 4 and 1 <= y <= 8:
-                return shade(rgba(shirt), 0.82)  # buttons line
-            if (x, y) in ((1, 2), (2, 2), (1, 3), (2, 3)):
-                return rgba("f0c83a")  # the gold badge
-            if y == 9:
-                return rgba("3a2a1a")  # belt
-            if y >= 10:
-                return shade(rgba(shorts), 1 + rng.uniform(-0.04, 0.04))
-            return uni(x, y)
-        if f == "back" and 2 <= y <= 4 and 1 <= x <= 6:
-            return rgba("f0c83a") if y == 3 else shade(rgba(shirt), 0.9)  # a stripe on the back
-        if y == 9:
-            return rgba("3a2a1a")
-        if y >= 10:
-            return shade(rgba(shorts), 1 + rng.uniform(-0.04, 0.04))
-        return uni(x, y)
-
-    def arm(f, x, y, w, h):
-        if f == "top" or y < 4:
-            return uni(x, y)  # short sleeves
-        if y == 4:
-            return shade(rgba(shirt), 0.78)
-        return noisy(skin, rng, 0.03)
-
-    def leg(f, x, y, w, h):
-        if f == "bottom":
-            return rgba("3a2a1a")
-        if y < 4:
-            return shade(rgba(shorts), 1 + rng.uniform(-0.04, 0.04))  # shorts
-        if y < 7:
-            return noisy(skin, rng, 0.03)
-        if y < 10:
-            return rgba("f4f4f0")  # white socks
-        return rgba("4a3020") if y < 11 else rgba("2a1a10")  # work boots
-
-    paint(img, "head", head)
-    paint(img, "body", body)
-    paint(img, "right_arm", arm)
-    paint(img, "left_arm", arm)
-    paint(img, "right_leg", leg)
-    paint(img, "left_leg", leg)
-    return img
-
-
-# ---------------------------------------------------------------------------
 # hats: item models worn in the head slot
 # ---------------------------------------------------------------------------
 def straw_tex():
@@ -666,28 +575,6 @@ def toque_band_tex():
     return img
 
 
-def delivery_cap_tex():
-    rng = random.Random(90)
-    img = Image.new("RGBA", (16, 16))
-    for y in range(16):
-        for x in range(16):
-            c = rgba("5a3e22")
-            if y % 4 == 0:
-                c = shade(c, 0.88)
-            img.putpixel((x, y), shade(c, 1 + rng.uniform(-0.05, 0.05)))
-    # the gold badge on the front
-    for (x, y) in ((7, 5), (8, 5), (6, 6), (7, 6), (8, 6), (9, 6), (7, 7), (8, 7)):
-        img.putpixel((x, y), rgba("f0c83a"))
-    return img
-
-
-def delivery_visor_tex():
-    img = Image.new("RGBA", (16, 16), rgba("3a2814"))
-    for x in range(16):
-        img.putpixel((x, 0), rgba("5a3e22"))
-    return img
-
-
 def hats():
     G.save_png(toque_tex(), "item/worker/toque")
     G.save_png(toque_band_tex(), "item/worker/toque_band")
@@ -703,15 +590,6 @@ def hats():
         box([1.2, 11.2, 1.2], [14.8, 15.4, 14.8], "#cap"),
         box([2.4, 15.4, 2.4], [13.6, 16.4, 13.6], "#cap"),
         box([3.4, 11.2, 14.8], [12.6, 11.9, 18.4], "#visor"),
-    ])
-    # a delivery cap with a long visor over the face (north) and a badge
-    G.save_png(delivery_cap_tex(), "item/worker/delivery_cap")
-    G.save_png(delivery_visor_tex(), "item/worker/delivery_visor")
-    hat_model("worker_hat_supplier", {"particle": "item/worker/delivery_cap", "cap": "item/worker/delivery_cap",
-                                      "visor": "item/worker/delivery_visor"}, [
-        box([1.2, 11.2, 1.2], [14.8, 15.6, 14.8], "#cap"),
-        box([2.0, 15.6, 2.0], [14.0, 16.6, 14.0], "#cap"),
-        box([1.8, 11.2, -3.4], [14.2, 11.9, 1.2], "#visor"),
     ])
     # straw sun hat: a wide brim at forehead height and a round-ish crown
     hat_model("worker_hat_farmhand", {"particle": "item/worker/straw", "straw": "item/worker/straw",
@@ -776,14 +654,6 @@ def front_view(skin, hat=None):
                 out.putpixel((x, y), rgba("f0c83a"))
         for x in range(4, 12):
             out.putpixel((x, 4), rgba("c8a020"))
-    elif hat == "supplier":
-        for y in range(1, 4):
-            for x in range(4, 12):
-                out.putpixel((x, y), rgba("5a3e22"))
-        for x in range(3, 13):
-            out.putpixel((x, 4), rgba("3a2814"))
-        out.putpixel((7, 2), rgba("f0c83a"))
-        out.putpixel((8, 2), rgba("f0c83a"))
     elif hat == "dryer":
         for y in range(1, 4):
             for x in range(4, 12):

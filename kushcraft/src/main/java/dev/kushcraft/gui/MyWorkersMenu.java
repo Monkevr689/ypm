@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Every worker on the server (admin panel): where they are and what they're
+ * Your workers (Shop > Gear &amp; Workers): where they are and what they're
  * doing. Click one to open their menu from anywhere. Admins see everyone's.
  */
 public final class MyWorkersMenu extends ListMenu {

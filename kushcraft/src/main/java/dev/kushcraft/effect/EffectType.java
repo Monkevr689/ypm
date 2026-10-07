@@ -43,35 +43,7 @@ public enum EffectType {
     HYPER("Hyper", "#FF4A3A", "effect_hyper", "Insane speed... the crash will hurt.", false),
     GLOW("Glow", "#FFF27A", "effect_glow", "You sparkle, glow and float.", false),
     CRASH("Crash", "#9A9AAA", "effect_crash", "Weak, slow and starving.", false),
-    GREEN_OUT("Greened Out", "#8AD84A", "effect_green_out", "Way too much. Sit down for a minute.", false),
-    // --- signatures: one of a kind, each drug has its own (icon = the drug) ---
-    SMOKE_RINGS("Smoke Rings", "#D8D8D8", "joint", "You blow perfect smoke rings.", false),
-    HOTBOX("Hotbox", "#B8B8B8", "blunt", "A smoke cloud follows you - friends in it get the giggles.", false),
-    CLOUD_CHASER("Cloud Chaser", "#E0F0FF", "vape_pen", "Huge vapour clouds, and you drift down like one.", false),
-    FAIRY_RING("Fairy Ring", "#C88AF0", "magic_mushroom", "Spores swirl; animals come to you.", false),
-    SUNNY("Sunny Mood", "#FFD86A", "shroom_tea", "The rain stops - for you.", false),
-    SWEET_TOOTH("Sweet Tooth", "#C8844A", "shroom_chocolate", "Food heals 2 hearts too.", false),
-    KALEIDOSCOPE("Kaleidoscope", "#FF5AD8", "lucid_tab", "The ground flickers into colours (only you see it).",
-            false),
-    SPIRIT_FOX("Spirit Fox", "#FF9A3A", "peyote_button", "A ghostly fox walks with you.", false),
-    CACTUS_SKIN("Cactus Skin", "#6AC84A", "mescaline", "Cactus, berry bushes and magma can't hurt you.", false),
-    MACHINE_ELVES("Machine Elves", "#6AF0E8", "dmt", "Glowing elves circle you under a frozen night sky.", false),
-    VINE_SIGHT("Vine Sight", "#5AE85A", "ayahuasca", "Ores near you shimmer through the walls.", false),
-    NOSE_CANDY("Nose Candy", "#F4F4FF", "cocaine", "Sprinting doesn't make you hungry.", false),
-    TWEAKING("Tweaking", "#E8D84A", "crack", "Lightning-fast hands, but you can't stop twitching.", false),
-    CHEMIST("Chemist", "#3AC8FF", "blue_crystal", "Your Drug Labs cook 25% faster.", false),
-    QUICK_STEP("Quick Step", "#FFE23A", "speed", "Walk straight up blocks without jumping.", false),
-    RAVE("Rave", "#FF3AE8", "ecstasy", "A beat drops, lights flash and animals dance.", false),
-    FAIRY_WINGS("Fairy Wings", "#FFB4F0", "pixie_dust", "Jump again in mid-air.", false),
-    ANGEL_WINGS("Angel Wings", "#F4F4FF", "angel_dust", "Glide forward when you fall (sneak to drop).", false),
-    POPPY_TRAIL("Poppy Trail", "#E83A3A", "opium", "Poppies bloom where you walk (only you see them).", false),
-    NUMB("Numb", "#B48AD8", "heroin", "35% less damage from mobs and the world.", false),
-    BOUNCE("Bounce", "#8AE8FF", "oxy", "No fall damage - big falls bounce you back up.", false),
-    SLOW_MO("Slow-Mo", "#A050D8", "lean", "Monsters near you move in slow motion.", false),
-    MOON_GRAVITY("Moon Gravity", "#C8D0E8", "ketamine", "Low gravity: huge jumps, slow falls.", false),
-    CHILL_PILL("Chill Pill", "#9AE8C8", "xanny_bars", "No paranoia, bad trips or spinning.", false),
-    BEER_GOGGLES("Beer Goggles", "#F0C85A", "moonshine", "Villagers give you discounts.", false),
-    BALLOON("Balloon", "#FF8AC8", "laughing_gas", "You float up like a balloon, then drift down.", false);
+    GREEN_OUT("Greened Out", "#8AD84A", "effect_green_out", "Way too much. Sit down for a minute.", false);
 
     private final String display;
     private final String color;
@@ -110,16 +82,6 @@ public enum EffectType {
 
     public boolean selectable() {
         return selectable;
-    }
-
-    /** A drug's one-of-a-kind effect (the icon is that drug). */
-    public boolean signature() {
-        return ordinal() >= SMOKE_RINGS.ordinal();
-    }
-
-    /** "✦ Fairy Wings: Jump again in mid-air." for lore. */
-    public String signatureLine() {
-        return "<color:" + color + ">✦ " + display + ":</color> <gray>" + description;
     }
 
     public static EffectType parse(String s) {

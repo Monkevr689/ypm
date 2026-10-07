@@ -41,9 +41,6 @@ public enum Award {
     HEAD_CHEF("Head Chef", "Hire a Cook.", "award_chef", 1000, Frame.GOAL, HIRED, false),
     ASSEMBLY_LINE("Assembly Line", "Have a Farmhand, Dryer, Cook and Runner work together.", "award_chain", 5000,
             Frame.CHALLENGE, HIRED, false),
-    SUPPLIER("Fully Stocked", "Hire a Supplier to buy your ingredients.", "award_supplier", 1000, Frame.GOAL, HIRED,
-            false),
-    LOGISTICS("Logistics", "Have a Runner take a Farmhand's harvest to a Dryer.", "award_logistics", 300, Frame.TASK, HIRED, false),
     // money
     FIRST_SALE("First Deal", "Sell some product.", "cash", 100, Frame.TASK, null, false),
     SOLD_10K("Hustler", "Sell $10,000 of product.", "award_cash_stack", 500, Frame.TASK, FIRST_SALE, false),
@@ -73,9 +70,7 @@ public enum Award {
     PARTY_ANIMAL("Party Animal", "Give an animal a treat... and see its eyes go red.", "award_red_eyes", 150,
             Frame.TASK, FIRST_HIGH, true),
     TRY_10("Connoisseur", "Try 10 different drugs.", "lucid_tab", 1500, Frame.GOAL, FIRST_HIGH, false),
-    TRY_ALL("Tried It All", "Try every drug.", "award_rainbow", 10000, Frame.CHALLENGE, TRY_10, false),
-    SIGNATURES("Signature Moves", "Feel the signature effect of 10 different drugs.", "award_signature", 2500,
-            Frame.GOAL, TRY_10, false);
+    TRY_ALL("Tried It All", "Try every drug.", "award_rainbow", 10000, Frame.CHALLENGE, TRY_10, false);
 
     public enum Frame {
         TASK, GOAL, CHALLENGE;

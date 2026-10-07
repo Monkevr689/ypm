@@ -191,26 +191,6 @@ public final class PlantManager {
         return plants.values();
     }
 
-    /** Plants in the chunks within r blocks of x, z (a quick look-up by chunk; check the distance yourself). */
-    public List<Plant> near(String world, int x, int z, int r) {
-        List<Plant> out = new ArrayList<>();
-        for (int cx = (x - r) >> 4; cx <= (x + r) >> 4; cx++) {
-            for (int cz = (z - r) >> 4; cz <= (z + r) >> 4; cz++) {
-                Set<BlockKey> keys = byChunk.get(BlockKey.chunkId(world, cx, cz));
-                if (keys == null) {
-                    continue;
-                }
-                for (BlockKey k : keys) {
-                    Plant p = plants.get(k);
-                    if (p != null) {
-                        out.add(p);
-                    }
-                }
-            }
-        }
-        return out;
-    }
-
     public Plant fromEntity(Entity e) {
         String s = e.getPersistentDataContainer().get(Keys.PLANT, PersistentDataType.STRING);
         if (s == null) {
@@ -720,15 +700,9 @@ public final class PlantManager {
     private long sparkleTick;
 
     /** Mythic plants sparkle in their colours once they flower. */
-    /** Mythic plants sparkle - only the ones near a player (nobody sees the rest: no work for big farms). */
     private void sparkle() {
         sparkleTick++;
-        Set<Plant> seen = new HashSet<>();
-        for (Player pl : Bukkit.getOnlinePlayers()) {
-            Location l = pl.getLocation();
-            seen.addAll(near(pl.getWorld().getName(), l.getBlockX(), l.getBlockZ(), 40));
-        }
-        for (Plant p : seen) {
+        for (Plant p : plants.values()) {
             if (p.kind() != Plant.Kind.CANNABIS || p.stage() < 3 || p.displayId == null) {
                 continue;
             }

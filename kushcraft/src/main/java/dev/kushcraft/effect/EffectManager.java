@@ -35,15 +35,9 @@ public final class EffectManager {
     private final KushCraft plugin;
     private final Map<UUID, State> states = new HashMap<>();
     private final Random random = new Random();
-    private final Signatures signatures;
 
     public EffectManager(KushCraft plugin) {
         this.plugin = plugin;
-        this.signatures = new Signatures(plugin, this);
-    }
-
-    public Signatures signatures() {
-        return signatures;
     }
 
     private static final class State {
@@ -59,32 +53,22 @@ public final class EffectManager {
     }
 
     public void start() {
-        Bukkit.getPluginManager().registerEvents(signatures, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::fast, 4L, 4L);
     }
 
-    /** Five times a second: Frosty freezes water underfoot, Magnetic pulls items in, signatures move. */
+    /** Five times a second: Frosty freezes water underfoot, Magnetic pulls items in. */
     private void fast() {
         for (Map.Entry<UUID, State> e : states.entrySet()) {
             State s = e.getValue();
             boolean frosty = s.effects.containsKey(EffectType.FROSTY);
             boolean magnetic = s.effects.containsKey(EffectType.MAGNETIC);
-            java.util.Set<EffectType> sigs = java.util.EnumSet.noneOf(EffectType.class);
-            for (EffectType t : s.effects.keySet()) {
-                if (t.signature()) {
-                    sigs.add(t);
-                }
-            }
-            if (!frosty && !magnetic && sigs.isEmpty()) {
+            if (!frosty && !magnetic) {
                 continue;
             }
             Player p = Bukkit.getPlayer(e.getKey());
             if (p == null || p.isDead()) {
                 continue;
-            }
-            if (!sigs.isEmpty()) {
-                signatures.fast(p, sigs);
             }
             if (frosty) {
                 freeze(p);
@@ -155,17 +139,9 @@ public final class EffectManager {
     }
 
     private void applyNow(Player p, State s, Dose dose) {
-        boolean chill = s.effects.containsKey(EffectType.CHILL_PILL) || dose.effects().containsKey(EffectType.CHILL_PILL);
         for (Map.Entry<EffectType, Integer> e : dose.effects().entrySet()) {
-            EffectType t = e.getKey();
-            if (chill && (t == EffectType.PARANOIA || t == EffectType.BAD_TRIP || t == EffectType.DIZZY)) {
-                continue; // a Chill Pill keeps you calm
-            }
-            boolean fresh = !s.effects.containsKey(t);
-            s.effects.merge(t, e.getValue(), (a, b) -> Math.min(MAX_SECONDS, a + b));
-            if (t.signature()) {
-                signatures.start(p, t, fresh);
-            }
+            s.effects.merge(e.getKey(), e.getValue(), (a, b) -> Math.min(MAX_SECONDS, a + b));
+            onStart(p, e.getKey());
         }
         s.high += dose.high();
         if (!dose.effects().isEmpty()) {
@@ -188,25 +164,6 @@ public final class EffectManager {
     public boolean has(Player p, EffectType type) {
         State s = states.get(p.getUniqueId());
         return s != null && s.effects.containsKey(type);
-    }
-
-    /** Chemist: the owner of a Drug Lab is on meth right now (their labs cook faster). */
-    public boolean chemist(UUID owner) {
-        Player p = owner == null ? null : Bukkit.getPlayer(owner);
-        return p != null && has(p, EffectType.CHEMIST);
-    }
-
-    /** Ends one effect right away. */
-    void remove(Player p, EffectType type) {
-        State s = states.get(p.getUniqueId());
-        if (s != null && s.effects.remove(type) != null) {
-            onEnd(p, type);
-        }
-    }
-
-    /** A vanilla potion piece (for signatures). */
-    void potion(Player p, PotionEffectType type, int amplifier) {
-        pot(p, type, amplifier);
     }
 
     /** Copy of the active effects (seconds left) for menus. */
@@ -235,11 +192,9 @@ public final class EffectManager {
                 p.hideBossBar(s.bar);
             }
         }
-        signatures.clear(p);
     }
 
     public void quit(Player p) {
-        signatures.clear(p);
         State s = states.get(p.getUniqueId());
         if (s != null && s.bar != null) {
             p.hideBossBar(s.bar);
@@ -254,17 +209,10 @@ public final class EffectManager {
         State s = states.get(p.getUniqueId());
         if (s != null) {
             updateBar(p, s);
-            // back online: signatures switch their attributes, flight and weather back on
-            for (EffectType t : s.effects.keySet()) {
-                if (t.signature()) {
-                    signatures.start(p, t, false);
-                }
-            }
         }
     }
 
     public void shutdown() {
-        signatures.shutdown();
         for (Map.Entry<UUID, State> e : states.entrySet()) {
             Player p = Bukkit.getPlayer(e.getKey());
             if (p != null) {
@@ -344,10 +292,10 @@ public final class EffectManager {
         p.addPotionEffect(new PotionEffect(type, ticks, amplifier, true, false, false));
     }
 
+    private void onStart(Player p, EffectType t) {
+    }
+
     private void onEnd(Player p, EffectType t) {
-        if (t.signature()) {
-            signatures.end(p, t);
-        }
         for (PotionEffectType type : potions(t)) {
             PotionEffect cur = p.getPotionEffect(type);
             if (cur != null && cur.isAmbient() && cur.getDuration() <= 300) {
@@ -394,19 +342,10 @@ public final class EffectManager {
             case SYRUPY -> new PotionEffectType[]{PotionEffectType.SLOWNESS, PotionEffectType.SLOW_FALLING};
             case BAD_TRIP -> new PotionEffectType[]{PotionEffectType.DARKNESS, PotionEffectType.HUNGER,
                     PotionEffectType.WEAKNESS};
-            case TWEAKING -> new PotionEffectType[]{PotionEffectType.HASTE};
-            case BEER_GOGGLES -> new PotionEffectType[]{PotionEffectType.HERO_OF_THE_VILLAGE};
-            case BALLOON -> new PotionEffectType[]{PotionEffectType.LEVITATION, PotionEffectType.SLOW_FALLING};
-            case CLOUD_CHASER -> new PotionEffectType[]{PotionEffectType.SLOW_FALLING};
-            default -> new PotionEffectType[0];
         };
     }
 
     private void tickEffect(Player p, State s, EffectType t, int left) {
-        if (t.signature()) {
-            signatures.tick(p, t, left);
-            return;
-        }
         Location head = p.getEyeLocation();
         boolean nausea = plugin.getConfig().getBoolean("effects.nausea", true);
         switch (t) {

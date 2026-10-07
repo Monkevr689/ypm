@@ -220,18 +220,11 @@ def check_menus():
         if java_int(fn, const) != expect:
             errors.append(f"{fn} {const} = {java_int(fn, const)} but tools/gui.py draws {expect}")
     # framed slots that Java and the backgrounds must agree on
-    workers_src = open(os.path.join(gui_dir, "WorkersMenu.java"), encoding="utf-8").read()
-    hire = re.search(r"static final int\[\] HIRE = \{([^}]*)\};", workers_src)
+    gear_src = open(os.path.join(gui_dir, "GearMenu.java"), encoding="utf-8").read()
+    hire = re.search(r"static final int\[\] HIRE = \{([^}]*)\};", gear_src)
     hire_slots = tuple((int(a), int(b)) for a, b in re.findall(r"at\((\d+), (\d+)\)", hire.group(1))) if hire else ()
     if hire_slots != tuple(gui.HIRE_SLOTS):
-        errors.append(f"WorkersMenu HIRE {hire_slots} but tools/gui.py draws {gui.HIRE_SLOTS}")
-    if java_int("WorkersMenu.java", "SLOTS") != gui.WORKER_SLOTS:
-        errors.append(f"WorkersMenu SLOTS = {java_int('WorkersMenu.java', 'SLOTS')} but tools/gui.py draws "
-                      f"{gui.WORKER_SLOTS}")
-    tab_src = open(os.path.join(gui_dir, "TabMenu.java"), encoding="utf-8").read()
-    tabs = [t.upper() for t in re.findall(r'^        ([A-Z]+)\("', tab_src, re.M)]
-    if tabs != gui.TABS:
-        errors.append(f"TabMenu tabs {tabs} but tools/gui.py draws {gui.TABS}")
+        errors.append(f"GearMenu HIRE {hire_slots} but tools/gui.py draws {gui.HIRE_SLOTS}")
     worker_types = len(re.findall(r'^    [A-Z]+\("', open(os.path.join(JAVA, "dev", "kushcraft", "worker", "WorkerType.java"),
                                                         encoding="utf-8").read(), re.M))
     if worker_types != len(gui.HIRE_SLOTS):

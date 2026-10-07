@@ -13,12 +13,12 @@ import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Pick what a Cook makes: whatever pays best, new strains, joints or blunts, or any Drug Lab recipe. */
+/** Pick what a Cook makes: roll joints or blunts, or any Drug Lab recipe. Click one. */
 public final class CookRecipeMenu extends ListMenu {
 
-    /** The jobs in the order shown: auto, rolling, then every lab recipe. */
+    /** The jobs in the order shown: rolling first, then every lab recipe. */
     private static List<String> jobs() {
-        List<String> out = new ArrayList<>(List.of(Worker.AUTO, Worker.MIX, Worker.ROLL_JOINT, Worker.ROLL_BLUNT));
+        List<String> out = new ArrayList<>(List.of(Worker.ROLL_JOINT, Worker.ROLL_BLUNT));
         for (LabRecipe r : LabRecipe.values()) {
             out.add(r.name());
         }
@@ -37,26 +37,6 @@ public final class CookRecipeMenu extends ListMenu {
         List<ItemStack> out = new ArrayList<>();
         for (String job : jobs()) {
             boolean now = job.equals(currentJob());
-            if (job.equals(Worker.AUTO)) {
-                out.add(Items.glint(Items.icon("ui_auto", (now ? "<green>" : "<white>") + "Auto: whatever pays best",
-                        "<gray>They make the most valuable drug they",
-                        "<gray>have everything for, and switch when",
-                        "<gray>ingredients run out. Pairs well with",
-                        "<gray>a Supplier and a Runner.",
-                        now ? "<green>Doing this now" : "<gray>Click: let them pick"), now));
-                continue;
-            }
-            if (job.equals(Worker.MIX)) {
-                out.add(Items.glint(Items.icon("tab_mix", (now ? "<green>" : "<white>") + "Mix strains",
-                        "<gray>At your Drug Lab they cross the two",
-                        "<gray>best strains they have seeds of, with",
-                        "<gray>your money (" + KushCraft.get().economy().format(KushCraft.get().getConfig()
-                                .getDouble("strain-maker.cost", 1500)) + " a mix), and keep the",
-                        "<gray>rare ones (you set how rare). Seeds",
-                        "<gray>come from your Farmhands or a Supplier.",
-                        now ? "<green>Doing this now" : "<gray>Click: breed new strains"), now));
-                continue;
-            }
             LabRecipe r = LabRecipe.parse(job);
             ItemType made = r != null ? r.output() : job.equals(Worker.ROLL_JOINT) ? ItemType.JOINT : ItemType.BLUNT;
             ItemStack it = CatalogIcons.sample(made);
@@ -84,12 +64,6 @@ public final class CookRecipeMenu extends ListMenu {
     }
 
     private String currentJob() {
-        if (worker.autoPick()) {
-            return Worker.AUTO;
-        }
-        if (worker.mixes()) {
-            return Worker.MIX;
-        }
         LabRecipe r = worker.recipe();
         if (r != null) {
             return r.name();
@@ -102,8 +76,8 @@ public final class CookRecipeMenu extends ListMenu {
     protected ItemStack header() {
         return Items.icon("tab_cook", "<aqua>Pick a drug",
                 "<gray>" + Text.escape(worker.name()) + " makes it batch after batch,",
-                "<gray>fetching the ingredients from chests and",
-                "<gray>workers they can walk to.");
+                "<gray>fetching the ingredients from your other",
+                "<gray>workers and the chests next to them.");
     }
 
     @Override
@@ -117,9 +91,7 @@ public final class CookRecipeMenu extends ListMenu {
             return;
         }
         KushCraft.get().workers().setJob(worker, jobs.get(index));
-        player.sendActionBar(Text.mm("<aqua>" + Text.escape(worker.name()) + " now makes <white>"
-                + (worker.autoPick() ? "whatever pays best" : worker.mixes() ? "new strains"
-                : worker.product() != null ? worker.product().display() : "nothing")));
+        player.sendActionBar(Text.mm("<aqua>" + Text.escape(worker.name()) + " now makes <white>" + worker.product().display()));
         successSound();
         new WorkerMenu(player, worker).open();
     }

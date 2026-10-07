@@ -17,9 +17,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shop: seeds of every strain (cheapest first) and the other seeds in rows
- * 1-4, 36 a page; the bottom row has the page arrows, Gear, Sell all (or
- * click product below to sell it) and the market news. Layout: tools/gui.py shop().
+ * Shop: seeds of every strain (cheapest first, Mythic ones last) and the
+ * other seeds in rows 1-4, 36 a page; the bottom row has the page arrows,
+ * Gear &amp; Workers, Sell all (or click product below to sell it) and the
+ * market news. Layout: tools/gui.py shop().
  */
 public final class ShopMenu extends TabMenu {
 
@@ -28,6 +29,8 @@ public final class ShopMenu extends TabMenu {
     static final int GEAR = at(5, 1);
     static final int SELL_ALL = at(5, 4);
     static final int MARKET = at(5, 7);
+    static final int PREV = at(5, 0);
+    static final int NEXT = at(5, 8);
 
     private final boolean atDealer;
     private int ticks;
@@ -62,13 +65,19 @@ public final class ShopMenu extends TabMenu {
         }
         double bal = plugin.economy().balance(player);
         List<Shop.BuyEntry> seeds = shop().seeds();
-        page = Math.min(page, Math.max(0, pages() - 1));
+        page = Math.min(page, pages() - 1);
         for (int i = 0; i < SEEDS && page * SEEDS + i < seeds.size(); i++) {
             set(FIRST_SEED + i, entryIcon(seeds.get(page * SEEDS + i), bal));
         }
-        arrows(page, pages());
-        set(GEAR, Items.icon("ui_gear", "<aqua><bold>Gear",
-                "<gray>Papers, solvent, lamps, the Drug Lab...", "<dark_gray>Workers have their own tab."));
+        if (page > 0) {
+            set(PREV, Items.icon("ui_arrow", "<gray>Page " + page + "/" + pages()));
+        }
+        if (page < pages() - 1) {
+            set(NEXT, Items.icon("ui_arrow", "<white>More seeds <gray>(page " + (page + 2) + "/" + pages() + ")",
+                    page == pages() - 2 ? "<light_purple>Mythic seeds are on the last page." : "<dark_gray>Click"));
+        }
+        set(GEAR, Items.icon("ui_gear", "<aqua><bold>Gear & Workers",
+                "<gray>Papers, solvent, lamps, the Drug Lab...", "<gray>and workers who farm for you."));
         set(MARKET, marketIcon());
         double value = Selling.allValue(player);
         List<String> sell = new ArrayList<>();
@@ -132,9 +141,8 @@ public final class ShopMenu extends TabMenu {
         if (!allowed()) {
             return;
         }
-        int next = turn(slot, page, pages());
-        if (next != page) {
-            page = next;
+        if ((slot == PREV && page > 0) || (slot == NEXT && page < pages() - 1)) {
+            page += slot == NEXT ? 1 : -1;
             clickSound();
             render();
             return;

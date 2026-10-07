@@ -2353,20 +2353,6 @@ def award_chain():
 # ---------------------------------------------------------------------------
 # 7.0: the Supplier, the Workers tab, chest links, Exotic strains, signatures
 # ---------------------------------------------------------------------------
-@item("worker_supplier")
-def worker_supplier():
-    return contract("supplier", "c8843a")
-
-
-@icon("tab_workers")
-def tab_workers():
-    """Three of your workers: a Farmhand, a Cook and a Supplier."""
-    s = Sprite(seed=730)
-    worker_face(s, "farmhand", 2, 13, 2)
-    worker_face(s, "supplier", 15, 15, 2)
-    worker_face(s, "cook", 9, 8, 1)
-    s.outline(0.4)
-    return s
 
 
 def small_chest(s, x0, y0, x1, y1):
@@ -2416,24 +2402,6 @@ def ui_show():
     return s
 
 
-@icon("ui_reserve")
-def ui_reserve():
-    """A wallet with a padlock: money the Supplier must leave alone."""
-    s = Sprite(seed=734)
-    wallet = rounded(3, 10, 24, 27, 3)
-    s.shade(wallet, ramp("8a5a2a", 4, spread=0.35), dither=0.3)
-    s.fill(rect(16, 15, 24, 21), c("6a4420"))
-    coin(s, 12, 9, 3.6)
-    lock = rounded(19, 19, 29, 29, 1)
-    s.shade(lock, ramp("f2c23a", 4, spread=0.35))
-    shackle = ellipse(24, 18, 3.6, 3.6) - ellipse(24, 18, 2, 2)
-    s.fill({(x, y) for (x, y) in shackle if y <= 19}, c("c8ccd4"))
-    s.put(24, 23, c("3a2a10"))
-    s.put(24, 24, c("3a2a10"))
-    s.outline(0.42)
-    return s
-
-
 @icon("ui_auto")
 def ui_auto():
     """Two circling arrows around a flask: the Cook picks what to make."""
@@ -2444,30 +2412,6 @@ def ui_auto():
     arrow(s, 4, 18, 8, 6, "f2c23a", 1.8, 3.2)
     arrow(s, 28, 14, 24, 26, "f2c23a", 1.8, 3.2)
     s.outline(0.42)
-    return s
-
-
-@icon("ui_supply")
-def ui_supply():
-    """A crate with a green plus: what the Supplier buys."""
-    s = Sprite(seed=736)
-    crate = rect(4, 10, 25, 28)
-    s.shade(crate, ramp("c8944a", 4, spread=0.3), dither=0.3)
-    for y in (16, 22):
-        s.line(4, y, 25, y, c("8a5a2a"))
-    s.fill(thick_line(5, 27, 24, 11, 1.6), c("a87436"))
-    s.fill(rect(20, 2, 22, 12), c("5ae85a"))
-    s.fill(rect(16, 6, 26, 8), c("5ae85a"))
-    s.outline(0.42)
-    return s
-
-
-@icon("award_supplier")
-def award_supplier():
-    s = Sprite(seed=737)
-    medal(s, 16, 20, 10, "e8c870", ribbon=("c8843a", "5ae85a"))
-    worker_face(s, "supplier", 12, 17, 1)
-    s.outline(0.4)
     return s
 
 

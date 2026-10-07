@@ -2,7 +2,7 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 10
+config-version: 9
 
 # Custom textures/models come in a server resource pack. Players get the
 # usual "this server uses a resource pack" prompt when they join.
@@ -117,14 +117,13 @@ economy:
 market:
   # Players can open the market from /kush. false = only at a Dealer Stand.
   anywhere: true
-  # Every item sold lowers that product's price by this much (0.0025 =
-  # 0.25%), even inside one big sale, so mass production pays a little
-  # less...
-  demand-drop: 0.0025
-  # ...but never below this fraction of the normal price...
-  min-price: 0.7
-  # ...and it recovers this much per minute.
-  recovery-per-minute: 0.05
+  # Every item sold lowers that product's price by this much (0.01 = 1%),
+  # even inside one big sale, so dumping 200 of one thing pays less...
+  demand-drop: 0.006
+  # ...down to this fraction of the normal price...
+  min-price: 0.4
+  # ...and it recovers this much per minute. Sell a mix of products!
+  recovery-per-minute: 0.025
   # A random "hot" product sells for extra for a while.
   hot-item-bonus: 1.5
   hot-item-minutes: 60
@@ -210,41 +209,25 @@ harvest:
   ripe-notice: true
 
 # =====================================================================
-#  WORKERS  (/kush > Workers)
+#  WORKERS  (Shop > Gear & Workers)
 #  Hire people who work for you. They're expensive, but they never stop:
-#   Farmhand - plants every empty farmland / Planter near them first,
-#              harvests ripe plants and plants them again, fertilizes;
-#              seeds go in a seed backpack (45 stacks), never the satchel
+#   Farmhand - harvests your ripe plants and plants a seed from the harvest
+#              again (and plants / fertilizes from their satchel)
 #   Dryer    - dries fresh buds on your Drug Lab racks
-#   Cook     - cooks the drug you pick at your Drug Lab, rolls joints,
-#              mixes new strains, or on Auto makes the best drug they
-#              have everything for
-#   Runner   - empties your workers' satchels, carries work from worker
-#              to worker and sells whatever nobody needs on the spot
-#              (never seeds); gets through walls the back way
-#   Supplier - buys whatever your workers are short of (seeds for empty
-#              farmland, fertilizer, Trade items, Lab Solvent, papers,
-#              water) with your money: no budget, they stop only when you
-#              can't pay
-#  No chests: work goes hand to hand. Your workers within chain-radius of
-#  each other are a crew - Farmhand > Runner > Dryer > Cook or Runner,
-#  who sells it. Nobody works through walls and nobody takes what another
-#  worker needs for their own job, and nobody is given more than they
-#  have room for (no more stuck full satchels). A stuck worker tells
-#  their owner.
-#  They only touch the plants and labs of the player who hired them.
+#   Cook     - cooks the drug you pick at your Drug Lab, or rolls joints
+#   Runner   - sells your workers' finished product for you
+#  The work chain: your workers within chain-radius of each other fetch
+#  what they need from each other by themselves - Farmhand > Dryer > Cook >
+#  Runner, or Cook > Cook (coca paste > cocaine) - and from chests or
+#  barrels right next to any of them. A worker with a chest next to them
+#  puts what they make in it. Nobody takes what another worker needs.
+#  They only touch the plants, labs and stands of the player who hired them.
 #  Right-click a worker for their satchel and buttons.
 # =====================================================================
 workers:
   enabled: true
   # Most workers one player can have. 0 = no limit.
   max-per-player: 0
-  # Workers keep working when their owner is offline or far away: the
-  # chunks around them stay loaded (Runners keep selling, Dryers keep
-  # drying). Switch off to let them sleep when nobody is near.
-  work-offline: true
-  # The most chunks kept loaded for workers (protects the server).
-  work-offline-max-chunks: 100
   # How far apart (blocks) your workers can be and still work together.
   chain-radius: 32
   # Per level (1, 2, 3): how far from where they stand they work, and the
@@ -265,11 +248,6 @@ workers:
   runner:
     # No wage: the Runner keeps this much of every sale (0.1 = 10%).
     cut: 0.1
-  supplier:
-    # Wage for every delivery (on top of what they buy for you).
-    wage: 6
-    # Water bottles cost this much each (Trade items cost what Trade asks).
-    water-price: 2
 
 # Dying costs you this much of the cash in your wallet (0.2 = 20%).
 # The money is gone - nobody gets it, so killing players doesn't pay.
@@ -296,12 +274,12 @@ exchange:
   enabled: true
   # All prices below are multiplied by this.
   price-multiplier: 1.0
-  # Price change per "amount" bought, 0.005 = 0.5%...
-  price-step: 0.005
+  # Price change per "amount" bought, 0.01 = 1%...
+  price-step: 0.01
   # ...up to this much of the normal price...
   max-price: 1.25
   # ...and back towards normal this much per minute.
-  recovery-per-minute: 0.04
+  recovery-per-minute: 0.02
   categories:
     lab:
       name: Lab Ingredients
@@ -732,7 +710,7 @@ jobs:
 # =====================================================================
 shop:
   seed-price-multiplier: 1.25
-  # Workers (farmhand, dryer, cook, runner, supplier) are listed here too: they show in the Workers tab.
+  # Workers (farmhand, dryer, cook, runner) are listed here too: they show on the hiring board.
   buy:
     - {item: mushroom_spores, amount: 1, price: 30}
     - {item: coca_seeds, amount: 1, price: 50}
@@ -751,7 +729,6 @@ shop:
     - {item: dryer, amount: 1, price: 9000}
     - {item: cook, amount: 1, price: 15000}
     - {item: runner, amount: 1, price: 11000}
-    - {item: supplier, amount: 1, price: 13000}
   sell:
     # weed
     bud_fresh: 5

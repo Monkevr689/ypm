@@ -283,7 +283,6 @@ public final class InteractListener implements Listener {
             case VAPE_PEN -> Dose.strain(s, q, 35, 7);
             default -> Dose.strain(s, q, 55, 11);
         };
-        d.add(Catalog.signature(type), Catalog.signatureSeconds(type));
         plugin.effects().apply(p, d);
         plugin.awards().used(p, type);
         if (type == ItemType.VAPE_PEN) {

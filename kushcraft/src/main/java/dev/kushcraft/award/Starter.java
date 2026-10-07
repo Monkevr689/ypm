@@ -17,7 +17,7 @@ public enum Starter {
     HARVEST("Harvest it", "bud_fresh", List.of(Award.FIRST_HARVEST),
             "Wait until it's fully grown, then", "right-click the plant."),
     LAB("Get a Drug Lab", "machine_lab_station", List.of(Award.BUILD_LAB),
-            "Shop > Gear, or craft one.", "Place it like a block."),
+            "Shop > Gear & Workers, or craft one.", "Place it like a block."),
     DRY("Dry your buds", "bud_dried", List.of(Award.FIRST_DRY),
             "Right-click the lab, open Dry and", "click your fresh buds. 30 seconds!"),
     MAKE("Roll or cook", "joint", List.of(Award.FIRST_ROLL, Award.FIRST_COOK),

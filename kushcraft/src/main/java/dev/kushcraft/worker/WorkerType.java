@@ -11,20 +11,17 @@ import java.util.Locale;
  */
 public enum WorkerType {
     FARMHAND("Farmhand", "<green>", ItemType.FARMHAND, Material.IRON_HOE,
-            "Plants every empty farmland, harvests and replants.",
-            "Seeds go in a backpack; a Runner takes the harvest."),
+            "Harvests your ripe plants and plants them again.",
+            "Your Dryers and Cooks take the harvest from them."),
     DRYER("Dryer", "<gold>", ItemType.DRYER, Material.SHEARS,
             "Dries fresh buds on your Drug Lab racks.",
-            "Gets fresh buds from a Runner; dried ones go on to sale."),
+            "Fetches fresh buds from your Farmhands by themselves."),
     COOK("Cook", "<aqua>", ItemType.COOK, Material.GLASS_BOTTLE,
-            "Cooks your pick at the Drug Lab, rolls, or mixes strains.",
-            "Gets what they need from your other workers."),
+            "Cooks the drug you pick at your Drug Lab, or rolls joints.",
+            "Fetches what they need from your other workers."),
     RUNNER("Runner", "<light_purple>", ItemType.RUNNER, Material.BUNDLE,
-            "Empties your workers' satchels and sells whatever nobody needs.",
-            "Keeps a small cut. Gets through walls the back way."),
-    SUPPLIER("Supplier", "<yellow>", ItemType.SUPPLIER, Material.WRITABLE_BOOK,
-            "Buys whatever your workers are short of, with your money.",
-            "No budget: they stop only when you can't pay.");
+            "Sells your workers' finished product for you.",
+            "Keeps a small cut. The money goes to your wallet.");
 
     private final String display;
     private final String color;

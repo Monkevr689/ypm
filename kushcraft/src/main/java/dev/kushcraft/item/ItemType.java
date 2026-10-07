@@ -130,9 +130,7 @@ public enum ItemType {
     COOK("Cook", "worker_cook", false, false,
             "<gray>Cooks or rolls the drug you pick.", "<gray>Right-click the ground near a lab to hire them."),
     RUNNER("Runner", "worker_runner", false, false,
-            "<gray>Sells product, carries things around.", "<gray>Right-click the ground to hire them."),
-    SUPPLIER("Supplier", "worker_supplier", false, false,
-            "<gray>Buys ingredients for your workers.", "<gray>Right-click the ground to hire them."),
+            "<gray>Sells your workers' finished product.", "<gray>Right-click the ground to hire them."),
     // --- blocks (placed like a block, punch to pick up) ------------------
     LAB_STATION("Drug Lab", "machine_lab_station", MachineType.LAB_STATION,
             "<gray>Cook, roll, dry and breed."),
@@ -211,7 +209,7 @@ public enum ItemType {
         if (this == BONG || this == GROWER_GUIDE || this == VAPE_PEN) {
             return 1;
         }
-        return machine != null || dev.kushcraft.worker.WorkerType.of(this) != null ? 16 : 64;
+        return machine != null || this == FARMHAND || this == DRYER || this == COOK || this == RUNNER ? 16 : 64;
     }
 
     /** Old stations replaced by the Drug Lab: still work, but not sold or crafted any more. */
@@ -245,9 +243,22 @@ public enum ItemType {
         };
     }
 
+    private static final java.util.Map<String, ItemType> BY_ID = new java.util.HashMap<>();
+
+    static {
+        for (ItemType t : values()) {
+            BY_ID.put(t.name(), t);
+            BY_ID.put(t.name().toLowerCase(Locale.ROOT), t);
+        }
+    }
+
     public static ItemType parse(String s) {
         if (s == null) {
             return null;
+        }
+        ItemType t = BY_ID.get(s);
+        if (t != null) {
+            return t;
         }
         try {
             return valueOf(s.trim().toUpperCase(Locale.ROOT));

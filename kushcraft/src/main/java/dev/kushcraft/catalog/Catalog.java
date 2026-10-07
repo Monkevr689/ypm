@@ -145,64 +145,8 @@ public final class Catalog {
         return null;
     }
 
-    /** The one-of-a-kind effect each drug has (null for everything else). */
-    public static EffectType signature(ItemType t) {
-        return switch (t) {
-            case JOINT -> EffectType.SMOKE_RINGS;
-            case BLUNT -> EffectType.HOTBOX;
-            case VAPE_PEN -> EffectType.CLOUD_CHASER;
-            case MAGIC_MUSHROOM -> EffectType.FAIRY_RING;
-            case SHROOM_TEA -> EffectType.SUNNY;
-            case SHROOM_CHOCOLATE -> EffectType.SWEET_TOOTH;
-            case LUCID_TAB -> EffectType.KALEIDOSCOPE;
-            case PEYOTE_BUTTON -> EffectType.SPIRIT_FOX;
-            case MESCALINE -> EffectType.CACTUS_SKIN;
-            case DMT -> EffectType.MACHINE_ELVES;
-            case AYAHUASCA -> EffectType.VINE_SIGHT;
-            case COCAINE -> EffectType.NOSE_CANDY;
-            case CRACK -> EffectType.TWEAKING;
-            case BLUE_CRYSTAL -> EffectType.CHEMIST;
-            case SPEED -> EffectType.QUICK_STEP;
-            case ECSTASY -> EffectType.RAVE;
-            case PIXIE_DUST -> EffectType.FAIRY_WINGS;
-            case ANGEL_DUST -> EffectType.ANGEL_WINGS;
-            case OPIUM -> EffectType.POPPY_TRAIL;
-            case HEROIN -> EffectType.NUMB;
-            case OXY -> EffectType.BOUNCE;
-            case LEAN -> EffectType.SLOW_MO;
-            case KETAMINE -> EffectType.MOON_GRAVITY;
-            case XANNY_BARS -> EffectType.CHILL_PILL;
-            case MOONSHINE -> EffectType.BEER_GOGGLES;
-            case LAUGHING_GAS -> EffectType.BALLOON;
-            default -> null;
-        };
-    }
-
-    /** How long a drug's signature lasts (seconds; weed: per hit). */
-    public static int signatureSeconds(ItemType t) {
-        return switch (t) {
-            case JOINT -> 40;
-            case BLUNT -> 60;
-            case VAPE_PEN -> 30;
-            case LAUGHING_GAS -> 25;
-            case MAGIC_MUSHROOM, PEYOTE_BUTTON, DMT -> 90;
-            case CRACK -> 60;
-            case LUCID_TAB, MESCALINE, AYAHUASCA -> 180;
-            default -> 150;
-        };
-    }
-
-    /** Fixed doses for drugs that are not tied to a cannabis strain (with their signature). */
+    /** Fixed doses for drugs that are not tied to a cannabis strain. */
     public static Dose dose(ItemType t) {
-        Dose d = baseDose(t);
-        EffectType sig = signature(t);
-        if (d != null && sig != null) {
-            d.add(sig, signatureSeconds(t));
-        }
-        return d;
-    }
-
-    private static Dose baseDose(ItemType t) {
         return switch (t) {
             case MAGIC_MUSHROOM -> new Dose().add(EffectType.TRIPPY, 90).add(EffectType.GIGGLES, 90).high(16);
             case SHROOM_TEA -> new Dose().add(EffectType.TRIPPY, 180).add(EffectType.EUPHORIA, 180).high(26)
@@ -267,9 +211,6 @@ public final class Catalog {
         }
         StringBuilder b = new StringBuilder();
         for (Map.Entry<EffectType, Integer> e : d.effects().entrySet()) {
-            if (e.getKey().signature()) {
-                continue;
-            }
             if (!b.isEmpty()) {
                 b.append(", ");
             }

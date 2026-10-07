@@ -91,7 +91,7 @@ public final class Shop {
         return Collections.unmodifiableList(gear);
     }
 
-    /** Workers for hire (the Workers tab). */
+    /** Workers for hire (Shop > Gear & Workers). */
     public List<BuyEntry> hires() {
         return Collections.unmodifiableList(hires);
     }

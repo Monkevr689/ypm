@@ -186,23 +186,17 @@ public final class Guide {
 
     private static List<String> workers() {
         int chain = KushCraft.get() == null ? 32 : KushCraft.get().workers().chainRadius();
-        return List.of("<dark_green><bold>Workers</bold>\n\n<black>The <dark_aqua>Workers</dark_aqua> tab:"
-                        + " hire, then right-click the ground.\n<dark_green>Farmhand</dark_green>: harvests\n"
-                        + "<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>: cooks, rolls, mixes\n"
-                        + "<light_purple>Runner</light_purple>: carries, sells\n<gold>Supplier</gold>: buys"
-                        + " what's missing",
-                "<dark_green><bold>Hand to hand</bold>\n\n<black>No chests: <dark_green>Farmhand</dark_green> >"
-                        + " <light_purple>Runner</light_purple> > <gold>Dryer</gold> > <dark_aqua>Cook</dark_aqua>"
-                        + " or the Runner, who <gold>sells</gold> it on the spot.\n<black>Seeds go in the"
-                        + " Farmhand's <dark_green>backpack</dark_green> and on every empty farmland first.\n"
-                        + "<dark_gray>Nobody's satchel gets stuck full.",
-                "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks are a crew."
-                        + " A <light_purple>Runner</light_purple> brings what one is missing, through walls the"
-                        + " back way. A <gold>Supplier</gold> buys it with your money.\n<gold>⚠</gold> = stuck:"
-                        + " they tell you why.",
+        return List.of("<dark_green><bold>Workers</bold>\n\n<black>Shop > <dark_aqua>Gear & Workers</dark_aqua>."
+                        + " Right-click the ground to put them there.\n\n<dark_green>Farmhand</dark_green>:"
+                        + " harvests, replants\n<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>:"
+                        + " cooks or rolls\n<light_purple>Runner</light_purple>: sells it all",
+                "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks of each other"
+                        + " pass things along by themselves:\n<dark_gray>Farmhand > Dryer > Cook > Runner\n\n"
+                        + "<black>A <gold>chest</gold> next to a worker: they put their work in it and take"
+                        + " supplies from it.",
                 "<dark_green><bold>Your workers</bold>\n\n<black>Hire as many as you like. Right-click one for"
-                        + " their satchel.\n\nThey get a <gold>wage</gold> per job.\n<dark_gray>No money, no"
-                        + " work!</dark_gray>\nTrain them: further, faster.\n"
+                        + " their satchel.\n\nThey get a <gold>wage</gold> per job (Runners keep a cut)."
+                        + " <dark_gray>No money, no work!</dark_gray>\nTrain them: further, faster.\n"
                         + run("/kush workers", "> Your workers"));
     }
 
@@ -265,9 +259,9 @@ public final class Guide {
 
     private static List<String> money() {
         return List.of(
-                "<dark_green><bold>Shop</bold>\n\n<black>Seeds and gear.\n\n<gold>Selling drugs is"
-                        + " the only way to make money.</gold> Click product to sell it, or Sell all. Lots of"
-                        + " one thing pays a little less.\n" + run("/kush shop", "> Shop"),
+                "<dark_green><bold>Shop</bold>\n\n<black>Seeds, gear and workers.\n\n<gold>Selling drugs is"
+                        + " the only way to make money.</gold> Click product to sell it, or Sell all. The more of"
+                        + " one thing you sell, the less it pays.\n" + run("/kush shop", "> Shop"),
                 "<dark_green><bold>Trade</bold>\n\n<black>Spend it: lab ingredients, ores, food, wood,"
                         + " blocks, colours, decor, redstone, tools, mob drops, Nether.\n\n<dark_gray>Trade only"
                         + " sells - nothing can be sold back.\n" + run("/kush trade", "> Trade"),
@@ -290,9 +284,8 @@ public final class Guide {
 
     private static List<String> strain() {
         return List.of("<dark_green><bold>Breeding</bold>\n\n<black>Drug Lab > <dark_green>Mix</dark_green>."
-                        + " Pick two strains on the seed tray, press MIX.\nThe child is <bold>random</bold>:"
-                        + " effects, potency, colours, pattern - or a <dark_purple>mutation</dark_purple>.\n"
-                        + "<dark_gray>A Cook can mix for you.",
+                        + " Click two seeds and press MIX.\n\nThe child is <bold>random</bold>: effects, potency,"
+                        + " climate, colours and bud shape from the parents - or a <dark_purple>mutation</dark_purple>.",
                 "<dark_green><bold>Mythic</bold>\n\n<black>About 1 in 15 children is <dark_purple><bold>Mythic"
                         + "</bold></dark_purple>: rainbow, galaxy, aurora, toxic, sakura, plasma... buds that"
                         + " sparkle and sell for <gold>4x</gold>.\n\nTwo <gold>Legendary</gold> parents: about"
@@ -305,11 +298,7 @@ public final class Guide {
 
     private static List<String> effects() {
         List<String> out = new ArrayList<>();
-        List<EffectType> effects = new ArrayList<>();
-        List<EffectType> signatures = new ArrayList<>();
-        for (EffectType e : EffectType.values()) {
-            (e.signature() ? signatures : effects).add(e);
-        }
+        List<EffectType> effects = List.of(EffectType.values());
         for (int i = 0; i < effects.size(); i += 3) {
             StringBuilder b = new StringBuilder("<dark_green><bold>Effects</bold>\n");
             for (int j = i; j < Math.min(effects.size(), i + 3); j++) {
@@ -318,28 +307,11 @@ public final class Guide {
             }
             out.add(b.toString());
         }
-        // every drug has its own one-of-a-kind effect
-        Map<EffectType, String> drug = new java.util.EnumMap<>(EffectType.class);
-        for (dev.kushcraft.item.ItemType t : dev.kushcraft.item.ItemType.values()) {
-            EffectType sig = dev.kushcraft.catalog.Catalog.signature(t);
-            if (sig != null) {
-                drug.put(sig, t.display());
-            }
-        }
-        for (int i = 0; i < signatures.size(); i += 3) {
-            StringBuilder b = new StringBuilder("<dark_purple><bold>Signatures</bold>\n");
-            for (int j = i; j < Math.min(signatures.size(), i + 3); j++) {
-                EffectType e = signatures.get(j);
-                b.append("\n<black><bold>").append(drug.getOrDefault(e, "?")).append("</bold>: ").append(e.display())
-                        .append("\n<dark_gray>").append(e.description());
-            }
-            out.add(b.toString());
-        }
         return out;
     }
 
     private static List<String> strains() {
-        // the Mythic ones (the Shop lists the rest; Exotic strains are for breeders to find)
+        // the Mythic ones (the Shop sells them on its last page; Exotic strains are for breeders to find)
         List<String> out = new ArrayList<>();
         List<Strain> strains = new ArrayList<>();
         for (Strain s : KushCraft.get().strains().all()) {
@@ -347,7 +319,7 @@ public final class Guide {
                 strains.add(s);
             }
         }
-        for (int i = 0; i < strains.size() && i < 18; i += 3) {
+        for (int i = 0; i < strains.size() && i < 24; i += 3) {
             StringBuilder b = new StringBuilder("<dark_purple><bold>Mythic strains</bold>\n");
             for (int j = i; j < Math.min(strains.size(), i + 3); j++) {
                 Strain s = strains.get(j);
@@ -359,7 +331,7 @@ public final class Guide {
         }
         out.add("<dark_purple><bold>Exotic strains</bold>\n\n<black>Ten famous Exotic strains exist.\n\nEach one comes"
                 + " from crossing <bold>two particular Mythic strains</bold>. Put two Mythic seeds in the mixer: if they"
-                + " are a pair, it tells you.");
+                + " are a pair, it tells you.\n<dark_gray>Mythic seeds: last Shop page.");
         return out;
     }
 }

@@ -70,7 +70,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             }
             case "top", "ranks", "leaderboard" -> open(sender, TopMenu::new);
             case "gear" -> open(sender, dev.kushcraft.gui.GearMenu::new);
-            case "workers", "worker", "crew" -> open(sender, dev.kushcraft.gui.WorkersMenu::new);
+            case "workers", "worker" -> open(sender, dev.kushcraft.gui.MyWorkersMenu::new);
             case "start", "steps", "help-me", "tutorial" -> open(sender, dev.kushcraft.gui.StarterMenu::new);
             case "sell" -> {
                 if (!(sender instanceof Player p)) {
@@ -173,10 +173,6 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             case "selftest" -> {
                 if (sender instanceof Player || !admin) {
                     sender.sendMessage(Text.msg("<red>Run this from the server console on a test world."));
-                    return true;
-                }
-                if (args.length > 1 && args[1].equalsIgnoreCase("live")) {
-                    new LiveTest(plugin).start(sender);
                     return true;
                 }
                 List<String> fails = new SelfTest(plugin).run();

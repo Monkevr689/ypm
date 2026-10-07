@@ -20,21 +20,9 @@ public final class Worker {
 
     /** Satchel slots. */
     public static final int SATCHEL = 27;
-    /** Farmhand: slots of the seed backpack (only seeds go in it: 45 stacks, thousands of seeds). */
-    public static final int SEED_BAG = 45;
 
-    /**
-     * One stop of a trip: walk to stand, look at look, then do act (false = stop the trip).
-     * jump: Runners and Suppliers can't walk there - they take the back way (vanish and appear).
-     */
-    record Step(Location stand, Location look, BooleanSupplier act, boolean jump) {
-        Step(Location stand, Location look, BooleanSupplier act) {
-            this(stand, look, act, false);
-        }
-    }
-
-    /** What a worker is missing right now (Runners bring it, the Supplier buys it). */
-    record Want(java.util.function.Predicate<ItemStack> match, String what, int amount) {
+    /** One stop of a trip: walk to stand, look at look, then do act (false = stop the trip). */
+    record Step(Location stand, Location look, BooleanSupplier act) {
     }
 
     private final UUID id;
@@ -46,21 +34,13 @@ public final class Worker {
     private final double z;
     private final float yaw;
     final Inventory satchel = Bukkit.createInventory(null, SATCHEL);
-    /** Farmhand: the seed backpack. Harvested and bought seeds go here, so they never fill the satchel. */
-    final Inventory seeds = Bukkit.createInventory(null, SEED_BAG);
     String name;
     int level = 1;
     boolean paused;
     int jobs;
     double wages;
-    /** Supplier: money spent on supplies since hired. */
-    double spent;
-    /** Cook: the LabRecipe they make, ROLL_JOINT / ROLL_BLUNT or AUTO (null = not picked yet). */
+    /** Cook: the LabRecipe they make, or ROLL_JOINT / ROLL_BLUNT (null = not picked yet). */
     String recipe;
-    /** Dryer: every dried bud goes to the Runners to sell (Cooks don't get them from this Dryer). */
-    boolean sell;
-    /** Cook mixing strains: the rarity a new strain needs to be kept (Rarity ordinal; RARE by default). */
-    int keep = 2;
 
     // live state
     transient UUID entityId;
@@ -70,17 +50,6 @@ public final class Worker {
     transient int workTicks;
     transient int restTicks;
     transient String status = "Starting work...";
-    transient Want want;
-    /** When their status turned into a problem (0 = none), and when the owner was last told. */
-    transient long problemSince;
-    transient long notifiedAt;
-    /** Cook on AUTO: what they decided to make this time. */
-    transient dev.kushcraft.lab.LabRecipe auto;
-    final transient Deque<Location> path = new ArrayDeque<>();
-    /** A player is close enough to see them walk (else the mannequin is only moved at the end of a walk). */
-    transient boolean watched = true;
-    /** Since when they've had nothing to do (0 = busy). */
-    transient long idleSince;
 
     Worker(UUID id, WorkerType type, UUID owner, Location home, String name) {
         this.id = id;
@@ -140,55 +109,13 @@ public final class Worker {
         return wages;
     }
 
-    /** Supplier: what they spent on supplies since hired. */
-    public double spent() {
-        return spent;
-    }
-
-    /** Cook recipe ids for rolling instead of cooking, and for picking by themselves. */
+    /** Cook recipe ids for rolling instead of cooking. */
     public static final String ROLL_JOINT = "ROLL_JOINT";
     public static final String ROLL_BLUNT = "ROLL_BLUNT";
-    public static final String AUTO = "AUTO";
-    /** Cook job: breed new strains from the seeds they get at a Drug Lab. */
-    public static final String MIX = "MIX";
 
-    /** Cook: the Drug Lab recipe they make (on AUTO: what they picked), or null. */
+    /** Cook: the Drug Lab recipe they make, or null (nothing picked, or they roll). */
     public dev.kushcraft.lab.LabRecipe recipe() {
-        if (AUTO.equals(recipe)) {
-            return auto;
-        }
         return recipe == null ? null : dev.kushcraft.lab.LabRecipe.parse(recipe);
-    }
-
-    /** Cook: they pick the best drug they have the ingredients for. */
-    public boolean autoPick() {
-        return AUTO.equals(recipe);
-    }
-
-    /** Cook: they breed new strains instead of cooking. */
-    public boolean mixes() {
-        return MIX.equals(recipe);
-    }
-
-    /** Cook mixing strains: the lowest rarity they keep. */
-    public dev.kushcraft.strain.Rarity keepRarity() {
-        dev.kushcraft.strain.Rarity[] all = dev.kushcraft.strain.Rarity.values();
-        return all[Math.max(0, Math.min(all.length - 1, keep))];
-    }
-
-    /** What's wrong when they've been stuck for a while (shown to the owner), else null. */
-    public String problem() {
-        return problemSince > 0 && System.currentTimeMillis() - problemSince > 15_000L ? status : null;
-    }
-
-    /** Dryer: hands everything they dry to the Runners to sell. */
-    public boolean sells() {
-        return sell;
-    }
-
-    /** What they're missing right now (null = nothing). */
-    public String wants() {
-        return want == null ? null : want.what();
     }
 
     /** Cook: JOINT or BLUNT when they roll instead of cooking, else null. */
@@ -217,33 +144,6 @@ public final class Worker {
 
     public Inventory satchel() {
         return satchel;
-    }
-
-    /** Farmhand: the seed backpack (empty for everyone else). */
-    public Inventory seedBag() {
-        return seeds;
-    }
-
-    /** Seeds in the backpack. */
-    public int seedCount() {
-        int n = 0;
-        for (ItemStack it : seeds.getStorageContents()) {
-            if (it != null && !it.getType().isAir()) {
-                n += it.getAmount();
-            }
-        }
-        return n;
-    }
-
-    /** Backpack slots in use. */
-    public int seedSlots() {
-        int n = 0;
-        for (ItemStack it : seeds.getStorageContents()) {
-            if (it != null && !it.getType().isAir()) {
-                n++;
-            }
-        }
-        return n;
     }
 
     public String worldName() {
