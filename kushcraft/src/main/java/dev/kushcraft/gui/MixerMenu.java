@@ -234,6 +234,10 @@ public final class MixerMenu extends LabTabMenu {
         lore.add("<white>14% <gray>a two-tone pattern");
         lore.add(Exotic.RAINBOW.wrap(String.format(java.util.Locale.ROOT, "%.1f%% Mythic",
                 Breeding.mythicChance(sa, sb) * 100)));
+        if (sa.rarity() != dev.kushcraft.strain.Rarity.LEGENDARY || sb.rarity() != dev.kushcraft.strain.Rarity.LEGENDARY) {
+            lore.add("<dark_gray>Two Legendary parents: " + Math.round(Breeding.MYTHIC * 100 + Breeding.LEGENDARY_PARENT * 200)
+                    + "% Mythic");
+        }
         double exotic = Breeding.exoticChance(sa, sb);
         lore.add(exotic > 0 ? Exotic.PRISM.wrap(String.format(java.util.Locale.ROOT, "%.0f%% Exotic", exotic * 100))
                 : "<dark_gray>Exotic: only from two Mythic parents");

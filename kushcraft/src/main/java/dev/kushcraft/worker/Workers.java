@@ -182,6 +182,7 @@ public final class Workers implements Listener {
             despawn(w);
         }
         workers.clear();
+        list = new Worker[0];
         byEntity.clear();
         byChunk.clear();
         if (!file.exists()) {
@@ -210,15 +211,10 @@ public final class Workers implements Listener {
                 w.keep = s.getInt("keep", 2);
                 w.spent = s.getDouble("spent");
                 w.sell = s.getBoolean("sell");
-                ConfigurationSection items = s.getConfigurationSection("satchel");
-                if (items != null) {
-                    for (String slot : items.getKeys(false)) {
-                        ItemStack it = decode(items.getString(slot));
-                        int i = Integer.parseInt(slot);
-                        if (it != null && i >= 0 && i < Worker.SATCHEL) {
-                            w.satchel.setItem(i, it);
-                        }
-                    }
+                readItems(s.getConfigurationSection("satchel"), w.satchel);
+                readItems(s.getConfigurationSection("seeds"), w.seeds);
+                if (type == WorkerType.FARMHAND) {
+                    bagSeeds(w); // from 7.1 and older: their seeds were in the satchel
                 }
                 add(w);
             } catch (IllegalArgumentException e) {
@@ -226,6 +222,32 @@ public final class Workers implements Listener {
             }
         }
         plugin.getLogger().info("Loaded " + workers.size() + " workers.");
+    }
+
+    private static void readItems(ConfigurationSection items, Inventory into) {
+        if (items == null) {
+            return;
+        }
+        for (String slot : items.getKeys(false)) {
+            ItemStack it = decode(items.getString(slot));
+            try {
+                int i = Integer.parseInt(slot);
+                if (it != null && i >= 0 && i < into.getSize()) {
+                    into.setItem(i, it);
+                }
+            } catch (NumberFormatException ignored) {
+                // not a slot
+            }
+        }
+    }
+
+    private static void writeItems(ConfigurationSection s, String path, Inventory from) {
+        ItemStack[] items = from.getStorageContents();
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] != null && !items[i].getType().isAir()) {
+                s.set(path + "." + i, encode(items[i]));
+            }
+        }
     }
 
     public void save() {
@@ -262,12 +284,8 @@ public final class Workers implements Listener {
             if (w.mixes()) {
                 s.set("keep", w.keep);
             }
-            ItemStack[] items = w.satchel.getStorageContents();
-            for (int i = 0; i < items.length; i++) {
-                if (items[i] != null && !items[i].getType().isAir()) {
-                    s.set("satchel." + i, encode(items[i]));
-                }
-            }
+            writeItems(s, "satchel", w.satchel);
+            writeItems(s, "seeds", w.seeds);
         }
         try {
             y.save(file);
@@ -414,15 +432,20 @@ public final class Workers implements Listener {
         return held.values().stream().mapToInt(Set::size).sum();
     }
 
+    /** Every worker, for the tick loop (no new list every tick). */
+    private Worker[] list = new Worker[0];
+
     private void add(Worker w) {
         crewCache.clear();
         workers.put(w.id(), w);
+        list = workers.values().toArray(new Worker[0]);
         byChunk.computeIfAbsent(w.chunkId(), k -> new HashSet<>()).add(w.id());
     }
 
     private void forget(Worker w) {
         crewCache.clear();
         workers.remove(w.id());
+        list = workers.values().toArray(new Worker[0]);
         Set<UUID> set = byChunk.get(w.chunkId());
         if (set != null) {
             set.remove(w.id());
@@ -557,12 +580,14 @@ public final class Workers implements Listener {
         water.remove(w.id());
         List<ItemStack> back = new ArrayList<>();
         back.add(Items.machine(w.type().item(), w.level()));
-        for (ItemStack it : w.satchel.getStorageContents()) {
-            if (it != null && !it.getType().isAir()) {
-                back.add(it);
+        for (Inventory inv : List.of(w.satchel, w.seeds)) {
+            for (ItemStack it : inv.getStorageContents()) {
+                if (it != null && !it.getType().isAir()) {
+                    back.add(it);
+                }
             }
+            inv.clear();
         }
-        w.satchel.clear();
         if (p != null) {
             InventoryUtil.give(p, back.toArray(new ItemStack[0]));
         } else {
@@ -628,16 +653,37 @@ public final class Workers implements Listener {
         nameplate(w);
     }
 
-    /** Puts items in a worker's satchel; whatever doesn't fit is returned. */
+    /** Puts items in a worker's satchel (a Farmhand's seeds in the backpack); whatever doesn't fit is returned. */
     public List<ItemStack> stash(Worker w, List<ItemStack> items) {
         List<ItemStack> left = new ArrayList<>();
         for (ItemStack it : items) {
-            if (it != null && !it.getType().isAir()) {
+            if (it == null || it.getType().isAir()) {
+                continue;
+            }
+            if (w.type() == WorkerType.FARMHAND && isSeed(it)) {
+                for (ItemStack rest : w.seeds.addItem(it).values()) {
+                    left.addAll(w.satchel.addItem(rest).values());
+                }
+            } else {
                 left.addAll(w.satchel.addItem(it).values());
             }
         }
         dirty = true;
         return left;
+    }
+
+    /** A Farmhand's seeds in the satchel go into the backpack (as many as fit). */
+    private void bagSeeds(Worker w) {
+        ItemStack[] items = w.satchel.getStorageContents();
+        for (int i = 0; i < items.length; i++) {
+            ItemStack it = items[i];
+            if (!isSeed(it)) {
+                continue;
+            }
+            Map<Integer, ItemStack> left = w.seeds.addItem(it.clone());
+            w.satchel.setItem(i, left.isEmpty() ? null : left.values().iterator().next());
+            dirty = true;
+        }
     }
 
     // ------------------------------------------------------------------
@@ -772,15 +818,18 @@ public final class Workers implements Listener {
 
     private void tick() {
         ticks++;
-        for (Worker w : new ArrayList<>(workers.values())) {
+        for (Worker w : list) {
             if (w.pos == null) {
                 continue; // not loaded
             }
             // every worker thinks once a second, but not all on the same tick (no lag spikes)
             boolean think = (ticks + phase(w)) % 20 == 0;
-            if (think && mannequins && w.entityId != null && entity(w) == null && w.isLoaded()) {
-                spawn(w); // the mannequin got unloaded on a walk: put them back home
-                continue;
+            if (think) {
+                if (mannequins && w.entityId != null && entity(w) == null && w.isLoaded()) {
+                    spawn(w); // the mannequin got unloaded on a walk: put them back home
+                    continue;
+                }
+                w.watched = watched(w);
             }
             if (w.busy()) {
                 move(w);
@@ -792,6 +841,20 @@ public final class Workers implements Listener {
 
     private static int phase(Worker w) {
         return Math.floorMod(w.id().hashCode(), 20);
+    }
+
+    /** A player near enough to see them walk (else the mannequin only moves at the end of each walk: less lag). */
+    private static boolean watched(Worker w) {
+        Location at = w.pos;
+        if (at == null || at.getWorld() == null) {
+            return false;
+        }
+        for (Player p : at.getWorld().getPlayers()) {
+            if (p.getLocation().distanceSquared(at) < 96 * 96) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean atHome(Worker w) {
@@ -813,7 +876,16 @@ public final class Workers implements Listener {
             return;
         }
         w.restTicks = restSeconds(w);
-        if (!plan(w) && !stroll(w)) {
+        if (plan(w)) {
+            w.idleSince = 0;
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (w.idleSince == 0) {
+            w.idleSince = now;
+        }
+        // Runners and Suppliers wait where they are for a while (the next job is often close by)
+        if (!stroll(w) && (!courier(w) || now - w.idleSince > 45_000L)) {
             goHome(w);
         }
     }
@@ -1103,6 +1175,28 @@ public final class Workers implements Listener {
         return false;
     }
 
+    /** Room for more of this item in the stacks of it that aren't full yet. */
+    private static int partialRoom(Inventory inv, ItemStack it) {
+        int n = 0;
+        for (ItemStack s : inv.getStorageContents()) {
+            if (s != null && !s.getType().isAir() && s.isSimilar(it)) {
+                n += Math.max(0, s.getMaxStackSize() - s.getAmount());
+            }
+        }
+        return n;
+    }
+
+    /** How many more of this item fit in the inventory. */
+    private static int roomIn(Inventory inv, ItemStack it) {
+        int free = 0;
+        for (ItemStack s : inv.getStorageContents()) {
+            if (s == null || s.getType().isAir()) {
+                free++;
+            }
+        }
+        return free * it.getMaxStackSize() + partialRoom(inv, it);
+    }
+
     /** Another worker's satchel to take things from. stand = where to go, jump = the back way. */
     private record Source(Worker worker, Location stand, BlockKey where, boolean jump) {
     }
@@ -1180,18 +1274,20 @@ public final class Workers implements Listener {
         return Items.type(it).name() + ":" + (s == null ? "" : s.id());
     }
 
-    /** Seeds a Farmhand keeps of each kind for planting; the rest they hand on (or compost). */
-    static final int SEED_KEEP = 16;
+    /** Seeds a Farmhand keeps of each kind in the backpack; spare ones go to another Farmhand or a Cook mixing strains. */
+    static final int SEED_KEEP = 32;
+    /** A full backpack: common seeds past this many of a kind become fertilizer. */
+    static final int COMPOST_KEEP = 64;
 
-    /** A satchel running out of room: they keep fewer seeds and throw out what nobody needs. */
+    /** A satchel running out of room: Runners empty it first, and sell what nobody can take in time. */
     static boolean tight(Worker w) {
         return w.freeSlots() < 6;
     }
 
-    /** Seeds a worker keeps of each kind: a Farmhand 16 (4 when the satchel is tight), a Cook mixing strains 2. */
+    /** Seeds a worker keeps of each kind: a Farmhand 32 (in their backpack), a Cook mixing strains 2. */
     static int seedKeep(Worker w) {
         if (w.type() == WorkerType.FARMHAND) {
-            return tight(w) ? 4 : SEED_KEEP;
+            return SEED_KEEP;
         }
         return w.type() == WorkerType.COOK && w.mixes() ? 2 : 0;
     }
@@ -1211,23 +1307,47 @@ public final class Workers implements Listener {
         return w.type() == WorkerType.DRYER && w.sell && hasRunner(w);
     }
 
-    /**
-     * How many of each matching stack a worker hands on: everything they don't use themselves,
-     * and seeds past {@link #seedKeep} of a kind. index = satchel slot.
-     */
-    private int[] spare(Worker o, Predicate<ItemStack> want) {
-        ItemStack[] items = o.satchel.getStorageContents();
-        int[] out = new int[items.length];
-        int keep = seedKeep(o);
-        Map<String, Integer> seeds = new HashMap<>();
-        for (ItemStack it : items) {
-            if (keep > 0 && isSeed(it) && uses(o, it)) {
-                seeds.merge(seedKey(it), it.getAmount(), Integer::sum);
+    /** How many of each matching stack a worker can hand on, in the satchel and in the seed backpack (index = slot). */
+    private record Spare(int[] satchel, int[] bag) {
+        int total() {
+            int n = 0;
+            for (int c : satchel) {
+                n += c;
             }
+            for (int c : bag) {
+                n += c;
+            }
+            return n;
         }
+    }
+
+    /**
+     * What a worker can hand on: everything they don't use themselves, and seeds past
+     * {@link #seedKeep} of a kind (counting the satchel and the backpack).
+     */
+    private Spare spare(Worker o, Predicate<ItemStack> want) {
+        ItemStack[] items = o.satchel.getStorageContents();
+        ItemStack[] bag = o.seeds.getStorageContents();
+        int keep = seedKeep(o);
         Map<String, Integer> allowance = new HashMap<>();
-        seeds.forEach((k, n) -> allowance.put(k, Math.max(0, n - keep)));
+        if (keep > 0) {
+            Map<String, Integer> seeds = new HashMap<>();
+            for (ItemStack[] inv : List.of(items, bag)) {
+                for (ItemStack it : inv) {
+                    if (isSeed(it) && uses(o, it)) {
+                        seeds.merge(seedKey(it), it.getAmount(), Integer::sum);
+                    }
+                }
+            }
+            seeds.forEach((k, n) -> allowance.put(k, Math.max(0, n - keep)));
+        }
         boolean reserved = sellsToRunner(o);
+        return new Spare(spareOf(o, items, want, keep, allowance, reserved), spareOf(o, bag, want, keep, allowance, reserved));
+    }
+
+    private int[] spareOf(Worker o, ItemStack[] items, Predicate<ItemStack> want, int keep, Map<String, Integer> allowance,
+                          boolean reserved) {
+        int[] out = new int[items.length];
         for (int i = 0; i < items.length; i++) {
             ItemStack it = items[i];
             if (it == null || it.getType().isAir() || !want.test(it)) {
@@ -1249,11 +1369,7 @@ public final class Workers implements Listener {
     }
 
     private int spareCount(Worker o, Predicate<ItemStack> want) {
-        int n = 0;
-        for (int c : spare(o, want)) {
-            n += c;
-        }
-        return n;
+        return spare(o, want).total();
     }
 
     /** Moves matching items from one inventory to another; returns how many moved. */
@@ -1289,13 +1405,119 @@ public final class Workers implements Listener {
         return moved;
     }
 
-    /** Takes the spare matching items out of another worker's satchel. */
+    /** Takes the spare matching items out of another worker's satchel (and spare seeds out of their backpack). */
     private int take(Source src, Inventory to, Predicate<ItemStack> want, int max) {
-        return move(src.worker().satchel, to, want, max, spare(src.worker(), want));
+        Worker o = src.worker();
+        Spare sp = spare(o, want);
+        int n = move(o.satchel, to, want, max, sp.satchel());
+        if (n < max) {
+            n += move(o.seeds, to, want, max - n, sp.bag());
+        }
+        return n;
     }
 
     private boolean has(Source src, Predicate<ItemStack> want) {
         return spareCount(src.worker(), want) > 0;
+    }
+
+    // ---- how much a worker takes (nobody gets so much they can't work any more) ----
+
+    /** Free satchel slots a worker keeps for what they make: deliveries stop there. */
+    static int reserve(Worker o) {
+        return o.type() == WorkerType.FARMHAND ? 8 : 6;
+    }
+
+    /** The most of one kind of thing a worker wants to hold. */
+    private int cap(Worker o, ItemStack it) {
+        ItemType t = Items.type(it);
+        switch (o.type()) {
+            case FARMHAND:
+                return isSeed(it) ? SEED_KEEP : 64;
+            case DRYER:
+                return 192;
+            case COOK:
+                if (o.mixes()) {
+                    return seedKeep(o);
+                }
+                if (o.rolls() != null) {
+                    return t == ItemType.BUD_DRIED ? 128 : 64;
+                }
+                LabRecipe r = o.recipe();
+                if (r != null) {
+                    for (LabRecipe.Ingredient ing : r.ingredients()) {
+                        if (ing.matches(it) || matcher(ing).test(it)) {
+                            return Math.max(16, ing.amount() * dev.kushcraft.lab.Cooking.MAX_BATCHES * 2);
+                        }
+                    }
+                }
+                return 16; // empty bottles
+            default:
+                return 0;
+        }
+    }
+
+    private static boolean sameKind(ItemStack a, ItemStack b) {
+        if (a == null || b == null || a.getType().isAir()) {
+            return false;
+        }
+        ItemType ta = Items.type(a);
+        if (ta == null) {
+            return Items.type(b) == null && a.getType() == b.getType();
+        }
+        return ta == Items.type(b) && (!isSeed(a) || seedKey(a).equals(seedKey(b)));
+    }
+
+    /** How many of the same kind they hold (seeds: of that strain, in the backpack too). */
+    private static int holding(Worker o, ItemStack it) {
+        int n = InventoryUtil.count(o.satchel, x -> sameKind(x, it));
+        return isSeed(it) ? n + InventoryUtil.count(o.seeds, x -> sameKind(x, it)) : n;
+    }
+
+    /** How many of this a worker takes right now: they use it, are short of it and keep room for their own work. */
+    int acceptAmount(Worker o, ItemStack it) {
+        if (it == null || courier(o) || !uses(o, it)) {
+            return 0;
+        }
+        int short_ = cap(o, it) - holding(o, it);
+        if (short_ <= 0) {
+            return 0;
+        }
+        int space;
+        if (o.type() == WorkerType.FARMHAND && isSeed(it)) {
+            space = roomIn(o.seeds, it);
+        } else {
+            space = partialRoom(o.satchel, it) + Math.max(0, o.freeSlots() - reserve(o)) * it.getMaxStackSize();
+        }
+        return Math.min(short_, space);
+    }
+
+    /** Gives another worker everything they take from a satchel (no more than they have room for). */
+    private int handOver(Inventory from, Worker to) {
+        int moved = 0;
+        ItemStack[] items = from.getStorageContents();
+        for (int i = 0; i < items.length; i++) {
+            ItemStack it = items[i];
+            if (it == null || it.getType().isAir()) {
+                continue;
+            }
+            int n = Math.min(it.getAmount(), acceptAmount(to, it));
+            if (n <= 0) {
+                continue;
+            }
+            ItemStack part = it.clone();
+            part.setAmount(n);
+            int kept = 0;
+            for (ItemStack left : stash(to, List.of(part))) {
+                kept += left.getAmount();
+            }
+            int done = n - kept;
+            ItemStack rest = it.clone();
+            rest.setAmount(it.getAmount() - done);
+            from.setItem(i, rest.getAmount() <= 0 ? null : rest);
+            moved += done;
+        }
+        dirty |= moved > 0;
+        return moved;
     }
 
     /** The satchels of crew members a worker can walk up to, the nearest first. Nothing behind walls. */
@@ -1350,6 +1572,9 @@ public final class Workers implements Listener {
                 int n = take(src, w.satchel, want, max);
                 if (n > 0) {
                     w.status = "Got " + n + " " + what + " from " + from;
+                    if (w.type() == WorkerType.FARMHAND) {
+                        bagSeeds(w);
+                    }
                 }
                 return n > 0;
             });
@@ -1373,6 +1598,11 @@ public final class Workers implements Listener {
         w.steps.add(new Worker.Step(w.pos != null ? w.pos.clone() : w.home(), null, act));
     }
 
+    /** After the steps planned so far: act wherever they are by then (it may plan more steps). */
+    private void then(Worker w, BooleanSupplier act) {
+        w.steps.add(new Worker.Step(null, null, act));
+    }
+
     /** Tells Runners (and the Supplier) what this worker is missing. */
     private void want(Worker w, Predicate<ItemStack> match, String what, int amount) {
         w.want = new Worker.Want(match, what, amount);
@@ -1387,6 +1617,7 @@ public final class Workers implements Listener {
     /** A tight satchel: a Farmhand composts spare seeds, a Cook throws out empty bottles nobody needs. */
     private void tidy(Worker w) {
         if (w.type() == WorkerType.FARMHAND) {
+            bagSeeds(w);
             compost(w);
         } else if (w.type() == WorkerType.COOK) {
             int n = InventoryUtil.remove(w.satchel, it -> junk(w, it), Integer.MAX_VALUE);
@@ -1396,24 +1627,68 @@ public final class Workers implements Listener {
 
     // ---- farmhand ----
 
-    private boolean planFarmhand(Worker w) {
-        int r = radius(w);
+    /** The owner's plants within r blocks of the worker's home (looked up by chunk, not one by one). */
+    private List<Plant> plantsNear(Worker w, int r) {
         Location h = w.home();
+        List<Plant> out = new ArrayList<>();
+        if (h == null) {
+            return out;
+        }
+        for (Plant p : plugin.plants().near(w.worldName(), h.getBlockX(), h.getBlockZ(), r + 1)) {
+            if (w.owner().equals(p.owner()) && near(p.key(), w, r)) {
+                out.add(p);
+            }
+        }
+        return out;
+    }
+
+    private static boolean plantable(ItemStack it) {
+        Plant.Kind k = it == null || it.getType().isAir() ? null : PlantManager.kindOf(Items.type(it));
+        return k != null && it.getAmount() > 0 && (k != Plant.Kind.CANNABIS || Items.strain(it) != null);
+    }
+
+    /** Seeds from the backpack that grow on this soil: the kind they have the most of. Null when none do. */
+    private ItemStack seedFor(Worker w, Block soilBlock) {
+        ItemStack best = null;
+        for (ItemStack it : w.seeds.getStorageContents()) {
+            if (plantable(it) && plugin.plants().isSoil(soilBlock, PlantManager.kindOf(Items.type(it)))
+                    && (best == null || it.getAmount() > best.getAmount())) {
+                best = it;
+            }
+        }
+        return best;
+    }
+
+    /** A backpack (mostly) full of seeds: they plant before anything else, in big rounds. */
+    static boolean lotsOfSeeds(Worker w) {
+        return w.seedSlots() >= Worker.SEED_BAG / 2 || w.seedCount() >= 192;
+    }
+
+    private boolean planFarmhand(Worker w) {
+        bagSeeds(w);
+        if (w.seeds.firstEmpty() < 0) {
+            compost(w);
+        }
+        if (!canPay(w)) {
+            return false;
+        }
+        int r = radius(w);
         Location from = spot(w);
-        // 1. harvest ripe plants they can walk to, a few in one round
+        // 1. seeds go in the ground right away: every empty farmland / Planter they can walk to
+        if (planPlanting(w, lotsOfSeeds(w) ? 10 + 2 * w.level() : 4 + 2 * w.level())) {
+            return true;
+        }
+        List<Plant> mine = plantsNear(w, r);
+        // 2. harvest ripe plants they can walk to, a few in one round
         List<Plant> ripe = new ArrayList<>();
-        for (Plant p : plugin.plants().all()) {
-            if (p.mature() && w.owner().equals(p.owner()) && near(p.key(), w, r) && p.key().isLoaded()
-                    && reaches(w, p.key(), true)) {
+        for (Plant p : mine) {
+            if (p.mature() && p.key().isLoaded() && reaches(w, p.key(), true)) {
                 ripe.add(p);
             }
         }
         if (!ripe.isEmpty() && w.freeSlots() >= 2) {
-            if (!canPay(w)) {
-                return false;
-            }
-            // a harvest is 2-3 kinds of items: only as many plants as there's room for, so they never stop half way
-            int room = Math.max(1, (w.freeSlots() - 1) / 2);
+            // the harvest takes about a slot a plant (seeds go in the backpack): never stop half way
+            int room = Math.max(1, w.freeSlots() - 1);
             List<Plant> round = route(ripe, from, Math.min(2 + w.level(), room));
             w.status = "Harvesting " + round.size() + " plant" + (round.size() > 1 ? "s" : "");
             for (Plant target : round) {
@@ -1437,12 +1712,11 @@ public final class Workers implements Listener {
             }
             return true;
         }
-        // 2. fertilize growing plants, a few in one round
+        // 3. fertilize growing plants, a few in one round
         ItemStack fert = first(w, it -> Items.type(it) == ItemType.FERTILIZER);
         List<Plant> growing = new ArrayList<>();
-        for (Plant p : plugin.plants().all()) {
-            if (!p.fertilized() && !p.mature() && w.owner().equals(p.owner()) && near(p.key(), w, r)
-                    && p.key().isLoaded() && reaches(w, p.key(), true)) {
+        for (Plant p : mine) {
+            if (!p.fertilized() && !p.mature() && p.key().isLoaded() && reaches(w, p.key(), true)) {
                 growing.add(p);
             }
         }
@@ -1464,50 +1738,14 @@ public final class Workers implements Listener {
             }
             return true;
         }
-        // 3. plant seeds from the satchel on empty farmland / planters, a few in one round
-        Predicate<ItemStack> isSeed = it -> {
-            Plant.Kind k = PlantManager.kindOf(Items.type(it));
-            return k != null && (k != Plant.Kind.CANNABIS || Items.strain(it) != null);
-        };
-        ItemStack seed = first(w, isSeed);
-        if (seed != null) {
-            Plant.Kind kind = PlantManager.kindOf(Items.type(seed));
-            List<Block> soils = emptySoil(w, kind, Math.min(seed.getAmount(), 2 + w.level()));
-            if (!soils.isEmpty()) {
-                if (!canPay(w)) {
-                    return false;
-                }
-                ItemStack chosen = seed;
-                w.status = "Planting " + Text.plain(chosen.effectiveName());
-                for (Block soilBlock : soils) {
-                    BlockKey spot = BlockKey.of(soilBlock).up();
-                    go(w, spot, true, () -> {
-                        Block s = spot.block();
-                        if (chosen.getAmount() <= 0 || !canPay(w)) {
-                            return false;
-                        }
-                        if (s == null || !s.getType().isAir() || plugin.plants().at(spot) != null
-                                || !plugin.plants().isSoil(s.getRelative(BlockFace.DOWN), kind)) {
-                            return true;
-                        }
-                        Strain strain = kind == Plant.Kind.CANNABIS ? Items.strain(chosen) : null;
-                        chosen.setAmount(chosen.getAmount() - 1);
-                        plugin.plants().plantAt(spot, kind, strain, w.owner());
-                        soil.remove(w.id());
-                        Location c = spot.bottomCenter();
-                        c.getWorld().playSound(c, "minecraft:item.crop.plant", SoundCategory.BLOCKS, 1f, 1f);
-                        pay(w);
-                        return true;
-                    });
-                }
+        // 4. empty farmland but no seeds that grow there: another Farmhand's spare ones, a Runner or the Supplier
+        boolean bare = !emptySoil(w, null, 1).isEmpty();
+        if (bare) {
+            Predicate<ItemStack> seeds = Workers::plantable;
+            if (fetch(w, seeds, "seeds", SEED_KEEP)) {
                 return true;
             }
-        } else if (!emptySoil(w, null, 1).isEmpty()) {
-            // 4. out of seeds but there's room to plant: another Farmhand's spare ones, a Runner or the Supplier
-            if (fetch(w, isSeed, "seeds", 16)) {
-                return true;
-            }
-            want(w, isSeed, "seeds", 8);
+            want(w, seeds, "seeds", 16);
         }
         if (fert == null && !growing.isEmpty()) {
             if (fetch(w, it -> Items.type(it) == ItemType.FERTILIZER, "fertilizer", 16)) {
@@ -1519,10 +1757,89 @@ public final class Workers implements Listener {
         }
         if (!ripe.isEmpty()) {
             w.status = full(w, "the harvest");
+        } else if (bare) {
+            w.status = "Out of seeds for the empty farmland" + (crew(w).stream().anyMatch(o -> o.type() == WorkerType.SUPPLIER)
+                    ? " <gray>(the Supplier buys some)" : " <gray>(give them seeds or hire a Supplier)");
         } else {
             w.status = "Waiting for your plants to ripen";
         }
         return false;
+    }
+
+    /**
+     * Plants seeds from the backpack on empty farmland and Planters they can walk to (whatever grows
+     * there: the kind they have most of), up to max in one round. False when there's nothing to plant.
+     */
+    private boolean planPlanting(Worker w, int max) {
+        if (w.seedCount() == 0) {
+            return false;
+        }
+        List<Block> round = new ArrayList<>();
+        int seeds = w.seedCount();
+        for (Block b : emptySoil(w, null, 64)) {
+            if (round.size() >= Math.min(max, seeds)) {
+                break;
+            }
+            if (seedFor(w, b) != null) {
+                round.add(b);
+            }
+        }
+        if (round.isEmpty()) {
+            return false;
+        }
+        w.status = "Planting " + round.size() + " seed" + (round.size() > 1 ? "s" : "") + " <dark_gray>(" + seeds
+                + " in the backpack)";
+        for (Block soilBlock : order(round, spot(w))) {
+            BlockKey spot = BlockKey.of(soilBlock).up();
+            go(w, spot, true, () -> {
+                Block s = spot.block();
+                if (s == null || !s.getType().isAir() || plugin.plants().at(spot) != null) {
+                    return true; // planted already: on to the next one
+                }
+                ItemStack seed = seedFor(w, s.getRelative(BlockFace.DOWN));
+                if (seed == null) {
+                    return true;
+                }
+                if (!canPay(w)) {
+                    return false;
+                }
+                Plant.Kind kind = PlantManager.kindOf(Items.type(seed));
+                Strain strain = kind == Plant.Kind.CANNABIS ? Items.strain(seed) : null;
+                String name = Text.plain(seed.effectiveName());
+                seed.setAmount(seed.getAmount() - 1);
+                dirty = true;
+                plugin.plants().plantAt(spot, kind, strain, w.owner());
+                Location c = spot.bottomCenter();
+                c.getWorld().playSound(c, "minecraft:item.crop.plant", SoundCategory.BLOCKS, 1f, 1f);
+                pay(w);
+                w.status = "Planted " + name;
+                return true;
+            });
+        }
+        return true;
+    }
+
+    /** Blocks in walking order: the closest one first, then always the closest to the last one. */
+    private static List<Block> order(List<Block> blocks, Location start) {
+        List<Block> left = new ArrayList<>(blocks);
+        List<Block> out = new ArrayList<>();
+        double x = start.getX(), z = start.getZ();
+        while (!left.isEmpty()) {
+            Block best = null;
+            double bestD = Double.MAX_VALUE;
+            for (Block b : left) {
+                double dx = b.getX() + 0.5 - x, dz = b.getZ() + 0.5 - z;
+                if (dx * dx + dz * dz < bestD) {
+                    bestD = dx * dx + dz * dz;
+                    best = b;
+                }
+            }
+            left.remove(best);
+            out.add(best);
+            x = best.getX() + 0.5;
+            z = best.getZ() + 0.5;
+        }
+        return out;
     }
 
     /** Up to max plants: the closest one to start, then always the closest to the last one. */
@@ -1549,37 +1866,40 @@ public final class Workers implements Listener {
     }
 
     /**
-     * Spare seeds become fertilizer: when the satchel gets tight, every seed past 4 of a kind is
-     * composted (4 seeds = 1 fertilizer) - except Rare and better strains, and seeds another worker
-     * of the crew uses (a Cook making morphine base, a Cook mixing strains): a Runner takes those.
+     * A full seed backpack: every common seed past 64 of a kind becomes fertilizer (4 seeds = 1) -
+     * never Rare and better strains, nor seeds a Cook of the crew uses (morphine base, mixing).
      */
     public void compost(Worker w) {
-        if (!tight(w)) {
+        if (w.seeds.firstEmpty() >= 0 && !tight(w)) {
             return;
         }
         List<Worker> crew = crew(w);
-        int keepN = seedKeep(w);
         Map<String, Integer> kept = new HashMap<>();
         int spare = 0;
-        ItemStack[] items = w.satchel.getStorageContents();
-        for (int i = 0; i < items.length; i++) {
-            ItemStack it = items[i];
-            ItemType t = Items.type(it);
-            Strain st = Items.strain(it);
-            if (PlantManager.kindOf(t) == null || (st != null && st.rarity().ordinal() >= dev.kushcraft.strain.Rarity.RARE
-                    .ordinal()) || crew.stream().anyMatch(o -> o.type() != WorkerType.FARMHAND && uses(o, it))) {
-                continue; // rare strains' seeds are never composted
-            }
-            String key = seedKey(it);
-            int have = kept.getOrDefault(key, 0);
-            int keep = Math.max(0, Math.min(it.getAmount(), keepN - have));
-            kept.put(key, have + keep);
-            spare += it.getAmount() - keep;
-            if (keep <= 0) {
-                w.satchel.setItem(i, null);
-            } else {
-                it.setAmount(keep);
-                w.satchel.setItem(i, it);
+        for (Inventory inv : List.of(w.seeds, w.satchel)) {
+            ItemStack[] items = inv.getStorageContents();
+            for (int i = 0; i < items.length; i++) {
+                ItemStack it = items[i];
+                if (!isSeed(it)) {
+                    continue;
+                }
+                Strain st = Items.strain(it);
+                if ((st != null && st.rarity().ordinal() >= dev.kushcraft.strain.Rarity.RARE.ordinal())
+                        || crew.stream().anyMatch(o -> o.type() != WorkerType.FARMHAND && uses(o, it))) {
+                    continue; // rare strains' seeds are never composted
+                }
+                String key = seedKey(it);
+                int have = kept.getOrDefault(key, 0);
+                int keep = Math.max(0, Math.min(it.getAmount(), COMPOST_KEEP - have));
+                kept.put(key, have + keep);
+                spare += it.getAmount() - keep;
+                if (keep <= 0) {
+                    inv.setItem(i, null);
+                } else if (keep < it.getAmount()) {
+                    ItemStack less = it.clone();
+                    less.setAmount(keep);
+                    inv.setItem(i, less);
+                }
             }
         }
         if (spare >= 4) {
@@ -1660,7 +1980,11 @@ public final class Workers implements Listener {
     /** The owner's Drug Labs within r that they can walk up to. */
     private List<Machine> labsNear(Worker w, int r) {
         List<Machine> labs = new ArrayList<>();
-        for (Machine m : plugin.machines().all()) {
+        Location h = w.home();
+        if (h == null) {
+            return labs;
+        }
+        for (Machine m : plugin.machines().near(w.worldName(), h.getBlockX(), h.getBlockZ(), r + 1)) {
             if (m.type() == MachineType.LAB_STATION && w.owner().equals(m.owner()) && near(m.key(), w, r)
                     && m.key().isLoaded() && reaches(w, m.key(), false)) {
                 labs.add(m);
@@ -1672,7 +1996,9 @@ public final class Workers implements Listener {
     }
 
     private String noLab(Worker w, int r) {
-        for (Machine m : plugin.machines().all()) {
+        Location h = w.home();
+        for (Machine m : h == null ? List.<Machine>of()
+                : plugin.machines().near(w.worldName(), h.getBlockX(), h.getBlockZ(), r + 1)) {
             if (m.type() == MachineType.LAB_STATION && w.owner().equals(m.owner()) && near(m.key(), w, r)) {
                 return "<red>They can't walk to your Drug Lab - walls in the way.";
             }
@@ -1746,7 +2072,9 @@ public final class Workers implements Listener {
         // 3. fetch fresh buds from a Farmhand they can walk to - or a Runner brings them
         Predicate<ItemStack> fresh = it -> Items.type(it) == ItemType.BUD_FRESH && Items.strain(it) != null;
         if (first(w, it -> Items.type(it) == ItemType.BUD_FRESH) == null) {
-            if (fetch(w, fresh, "fresh buds", Integer.MAX_VALUE)) {
+            // never so many that there's no room left for the dried ones
+            int room = (w.freeSlots() - reserve(w)) * 64;
+            if (room > 0 && fetch(w, fresh, "fresh buds", room)) {
                 return true;
             }
             want(w, fresh, "fresh buds", 16);
@@ -1899,7 +2227,7 @@ public final class Workers implements Listener {
         }
         // 4. fetch what's missing from workers they can walk to
         Predicate<ItemStack> need = matcher(missing);
-        if (fetch(w, need, missing.name(), Integer.MAX_VALUE)) {
+        if (fetch(w, need, missing.name(), missing.amount() * dev.kushcraft.lab.Cooking.MAX_BATCHES * 2)) {
             return true;
         }
         // 5. nobody nearby has it: Runners bring it, the Supplier buys it
@@ -2179,13 +2507,14 @@ public final class Workers implements Listener {
     }
 
     /**
-     * The Runner keeps the chain moving, worker to worker (no chests): they take a Farmhand's harvest
-     * to the Dryer, the Dryer's buds to a Cook or straight to the dealer, and sell whatever sells the
-     * moment they pick it up (never seeds - those go to whoever plants or mixes them).
+     * The Runner keeps the chain moving, worker to worker (no chests): they empty the other workers'
+     * satchels, take a Farmhand's fresh buds to the Dryer, the Dryer's buds to a Cook who uses them,
+     * spare seeds to whoever plants or mixes them - and sell everything else the moment they have it
+     * (never seeds). Nobody gets more than they have room for, so nobody gets stuck with a full satchel.
      */
     private boolean planRunner(Worker w) {
         List<Worker> crew = crew(w);
-        // 1. what they carry: sell it, or hand it to whoever uses it
+        // 1. what they carry: hand it to whoever takes it, sell the rest right here
         if (w.carried() > 0 && planUnload(w, crew)) {
             return true;
         }
@@ -2193,12 +2522,12 @@ public final class Workers implements Listener {
         if (w.freeSlots() > 2 && planDelivery(w, crew)) {
             return true;
         }
-        // 3. pass finished work down the chain, 4. pick up what sells and sell it on the spot
-        if (w.freeSlots() > 1 && (planTransfer(w, crew) || planSale(w, crew))) {
+        // 3. empty a satchel: what someone takes goes on, what sells is sold on the spot
+        if (w.freeSlots() > 2 && planPickup(w, crew)) {
             return true;
         }
-        if (tight(w) && w.carried() > 0) {
-            w.status = "<yellow>Satchel full of things nobody needs: take them out of their satchel.";
+        if (w.freeSlots() <= 2) {
+            w.status = "<yellow>Satchel full of things nobody needs or buys: take them out of their satchel.";
         } else {
             w.status = crew.isEmpty() ? "<yellow>Hire workers near them: they carry and sell what they make."
                     : "Waiting for something to carry";
@@ -2206,16 +2535,9 @@ public final class Workers implements Listener {
         return false;
     }
 
-    /** True when handing this to o helps: they use it, it fits and (seeds) they're short of that kind. */
+    /** True when handing this to o helps: they use it, are short of it and have room (see acceptAmount). */
     private boolean takesFrom(Worker o, ItemStack it) {
-        if (courier(o) || !uses(o, it) || !fits(o.satchel, it)) {
-            return false;
-        }
-        int keep = seedKeep(o);
-        if (keep > 0 && isSeed(it)) {
-            return InventoryUtil.count(o.satchel, x -> isSeed(x) && seedKey(x).equals(seedKey(it))) < keep;
-        }
-        return true;
+        return acceptAmount(o, it) > 0;
     }
 
     /** The crew member nearest to from who takes this (see takesFrom), not counting except. */
@@ -2223,11 +2545,12 @@ public final class Workers implements Listener {
         Worker best = null;
         double bestD = Double.MAX_VALUE;
         for (Worker o : crew) {
-            if (o == except) {
+            if (o == except || courier(o)) {
                 continue;
             }
             Location at = spot(o);
-            double d = at == null || !at.getWorld().equals(from.getWorld()) ? Double.MAX_VALUE / 2 : at.distanceSquared(from);
+            double d = at == null || from == null || !at.getWorld().equals(from.getWorld()) ? Double.MAX_VALUE / 2
+                    : at.distanceSquared(from);
             if (d < bestD && takesFrom(o, it)) {
                 bestD = d;
                 best = o;
@@ -2236,16 +2559,15 @@ public final class Workers implements Listener {
         return best;
     }
 
-    /** What a Runner carries: sold right where they are if it sells and nobody uses it, else to the worker who does. */
+    /** What a Runner carries: sold right where they are unless a crew member takes it; the rest to whoever does. */
     private boolean planUnload(Worker w, List<Worker> crew) {
-        boolean full = tight(w);
-        Predicate<ItemStack> sell = it -> sellable(it) && (full || crew.stream().noneMatch(o -> uses(o, it)));
+        Location from = spot(w);
+        Predicate<ItemStack> sell = it -> sellable(it) && taker(crew, it, null, from) == null;
         if (first(w, sell) != null) {
             w.status = "Selling";
             here(w, () -> sellAll(w, sell) > 0);
             return true;
         }
-        Location from = spot(w);
         for (ItemStack it : w.satchel.getStorageContents()) {
             if (it == null || it.getType().isAir()) {
                 continue;
@@ -2256,22 +2578,35 @@ public final class Workers implements Listener {
                 return true;
             }
         }
+        // seeds nobody is short of: into a Farmhand's backpack anyway (it holds thousands)
+        ItemStack seed = first(w, Workers::isSeed);
+        if (seed != null) {
+            for (Worker o : crew) {
+                if (o.type() == WorkerType.FARMHAND && roomIn(o.seeds, seed) > 0) {
+                    BlockKey at = BlockKey.of(spot(o));
+                    w.status = "Bringing seeds to " + o.name();
+                    go(w, at, standOrJump(w, at), standByWorker(w, o) == null,
+                            () -> move(w.satchel, o.seeds, Workers::isSeed, Integer.MAX_VALUE) > 0);
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
-    /** Walks to target and gives them everything in the satchel they use. from: who it came from (for the award). */
+    /** Walks to target and gives them what they take from the satchel. from: who it came from (for the award). */
     private void handTo(Worker w, Worker target, String what, Worker from) {
         BlockKey at = BlockKey.of(spot(target));
         w.status = "Bringing " + what + " to " + target.name();
         go(w, at, standOrJump(w, at), standByWorker(w, target) == null, () -> {
-            int n = move(w.satchel, target.satchel, x -> uses(target, x), Integer.MAX_VALUE);
+            int n = handOver(w.satchel, target);
             if (n > 0) {
                 target.want = null;
                 target.restTicks = 1;
                 w.jobs++;
                 dirty = true;
                 w.status = "Gave " + n + " " + what + " to " + target.name();
-                if (from != null && from.type() == WorkerType.FARMHAND && target.type() == WorkerType.DRYER) {
+                if (target.type() == WorkerType.DRYER) {
                     Player p = Bukkit.getPlayer(w.owner());
                     if (p != null) {
                         plugin.awards().logistics(p);
@@ -2286,7 +2621,7 @@ public final class Workers implements Listener {
     private boolean planDelivery(Worker w, List<Worker> crew) {
         for (Worker o : crew) {
             Worker.Want want = o.want;
-            if (want == null || courier(o) || o.freeSlots() == 0) {
+            if (want == null || courier(o) || (o.freeSlots() == 0 && o.type() != WorkerType.FARMHAND)) {
                 continue;
             }
             for (Source src : crewSources(w, o)) {
@@ -2294,6 +2629,7 @@ public final class Workers implements Listener {
                     continue;
                 }
                 int max = Math.max(1, want.amount());
+                w.status = "Getting " + want.what() + " for " + o.name();
                 go(w, src.where(), src.stand(), src.jump(), () -> take(src, w.satchel, want.match(), max) > 0);
                 handTo(w, o, want.what(), src.worker());
                 o.want = null; // someone is on it
@@ -2304,70 +2640,101 @@ public final class Workers implements Listener {
     }
 
     /**
-     * Passes finished work down the chain in one trip: a Farmhand's fresh buds to the Dryer, a
-     * Dryer's buds to a Cook who rolls or cooks with them, one Cook's product to the next, spare
-     * seeds to whoever plants or mixes them. Waits for a few at a time (less running around) unless
-     * the other worker has none at all or the giver's satchel is getting full.
+     * One pickup, from the crew member with the most to hand on (a filling satchel first, then whoever
+     * a worker is waiting on): everything they don't need that someone takes or the dealer buys. They
+     * wait for a few at a time (less running around). What nobody can take in time is sold on the spot.
      */
-    private boolean planTransfer(Worker w, List<Worker> crew) {
+    private boolean planPickup(Worker w, List<Worker> crew) {
+        Worker best = null;
+        Predicate<ItemStack> bestGoes = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        Location from = spot(w);
         for (Worker o : crew) {
             if (courier(o)) {
                 continue;
             }
             Location oAt = spot(o);
-            int[] spare = spare(o, it -> produces(o, it) || isSeed(it));
-            ItemStack[] items = o.satchel.getStorageContents();
-            for (int i = 0; i < items.length; i++) {
-                if (spare[i] <= 0) {
-                    continue;
-                }
-                ItemStack it = items[i];
-                Worker target = taker(crew, it, o, oAt);
-                if (target == null) {
-                    continue;
-                }
-                Predicate<ItemStack> match = x -> (produces(o, x) || isSeed(x)) && uses(target, x);
-                int n = spareCount(o, match);
-                boolean waiting = InventoryUtil.count(target.satchel, x -> Items.type(x) == Items.type(it)) == 0;
-                if (n < 4 && !waiting && !tight(o)) {
-                    continue;
-                }
-                Source src = source(w, o);
-                go(w, src.where(), src.stand(), src.jump(), () -> take(src, w.satchel, match, Integer.MAX_VALUE) > 0);
-                handTo(w, target, Text.plain(it.effectiveName()), o);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Picks up what sells and nobody else in the crew uses (a Dryer set to sell: all its dried buds)
-     * and sells it right there. Never seeds.
-     */
-    private boolean planSale(Worker w, List<Worker> crew) {
-        for (Worker o : crew) {
-            if (courier(o)) {
-                continue;
-            }
-            // a Dryer set to sell: everything it dried (never the fresh buds it still has to hang)
-            boolean all = sellsToRunner(o) && first(o.satchel, it -> sellable(it) && produces(o, it)) != null;
-            Predicate<ItemStack> match = all ? it -> sellable(it) && produces(o, it)
-                    : it -> sellable(it) && crew.stream().noneMatch(u -> u != o && uses(u, it));
-            int n = all ? InventoryUtil.count(o.satchel, match) : spareCount(o, match);
+            boolean selling = sellsToRunner(o);
+            boolean filling = tight(o) || o.freeSlots() <= reserve(o);
+            // what goes: someone takes it, or it sells and nobody else uses it (or their satchel is filling up)
+            Predicate<ItemStack> goes = it -> taker(crew, it, o, oAt) != null
+                    || (sellable(it) && (filling || crew.stream().noneMatch(u -> u != o && uses(u, it))));
+            int n = spareCount(o, goes) + (selling ? InventoryUtil.count(o.satchel, x -> produces(o, x) && sellable(x)) : 0);
             if (n <= 0) {
                 continue;
             }
-            Source src = source(w, o);
-            w.status = "Picking up product from " + o.name();
-            go(w, src.where(), src.stand(), src.jump(), () -> {
-                int got = all ? move(o.satchel, w.satchel, match, Integer.MAX_VALUE)
-                        : take(src, w.satchel, match, Integer.MAX_VALUE);
-                return got > 0 && sellAll(w, match) > 0;
-            });
-            return true;
+            boolean waiting = false;
+            // worth a trip: a few things, something worth a lot, or a Runner with nothing else to do for a while
+            boolean worth = n >= 4 || (w.idleSince > 0 && System.currentTimeMillis() - w.idleSince > 20_000L)
+                    || saleValue(o, goes) >= 60;
+            if (!filling && !worth) {
+                // a worker with none of it right now (a Dryer with nothing to hang) doesn't wait for more
+                for (ItemStack it : o.satchel.getStorageContents()) {
+                    if (it != null && !it.getType().isAir() && !uses(o, it)) {
+                        Worker t = taker(crew, it, o, oAt);
+                        if (t != null && holding(t, it) == 0) {
+                            waiting = true;
+                            break;
+                        }
+                    }
+                }
+                if (!waiting) {
+                    continue;
+                }
+            }
+            double dist = oAt == null || from == null || !oAt.getWorld().equals(from.getWorld()) ? 0
+                    : Math.sqrt(oAt.distanceSquared(from));
+            double score = n + (filling ? 1000 : 0) + (waiting ? 200 : 0) - dist;
+            if (score > bestScore) {
+                bestScore = score;
+                best = o;
+                bestGoes = goes;
+            }
         }
-        return false;
+        if (best == null) {
+            return false;
+        }
+        Worker o = best;
+        Predicate<ItemStack> goes = bestGoes;
+        boolean selling = sellsToRunner(o);
+        Source src = source(w, o);
+        w.status = "Picking up from " + o.name();
+        go(w, src.where(), src.stand(), src.jump(), () -> {
+            int got = take(src, w.satchel, goes, Integer.MAX_VALUE);
+            if (selling) {
+                got += move(o.satchel, w.satchel, x -> produces(o, x) && sellable(x), Integer.MAX_VALUE);
+            }
+            if (got <= 0) {
+                return false;
+            }
+            w.status = "Picked up " + got + " things from " + o.name();
+            // sold right here: what sells and nobody takes (a Dryer set to sell: everything it dried)
+            List<Worker> c = crew(w);
+            Location at = spot(w);
+            sellAll(w, it -> sellable(it) && ((selling && produces(o, it)) || taker(c, it, null, at) == null));
+            return true;
+        });
+        // and straight on to whoever takes the rest
+        then(w, () -> {
+            if (w.carried() > 0) {
+                planUnload(w, crew(w));
+            }
+            return true;
+        });
+        return true;
+    }
+
+    /** What the spare matching items of a worker would sell for (for the Runner: is it worth a trip?). */
+    private double saleValue(Worker o, Predicate<ItemStack> which) {
+        Spare sp = spare(o, which);
+        ItemStack[] items = o.satchel.getStorageContents();
+        double v = 0;
+        for (int i = 0; i < items.length; i++) {
+            if (sp.satchel()[i] > 0 && sellable(items[i])) {
+                v += plugin.shop().sellPrice(items[i]) * sp.satchel()[i];
+            }
+        }
+        return v;
     }
 
     /** Sells everything sellable in a Runner's satchel for the owner. Returns what the owner got. */
@@ -2490,11 +2857,11 @@ public final class Workers implements Listener {
         return null;
     }
 
-    /** One pack of seeds from the Shop. */
-    private Buy seedPack(dev.kushcraft.shop.Shop.BuyEntry e) {
+    /** Packs of seeds from the Shop. */
+    private Buy seedPack(dev.kushcraft.shop.Shop.BuyEntry e, int packs) {
         int n = Math.max(1, e.amount());
         String name = e.strain() != null ? plugin.strains().getOrDefault(e.strain()).name() + " seeds" : e.type().display();
-        return new Buy(name, n, e.price() / n, null, null, false, e);
+        return new Buy(name, n * Math.max(1, packs), e.price() / n, null, null, false, e);
     }
 
     /**
@@ -2540,7 +2907,7 @@ public final class Workers implements Listener {
                     }
                     seeds.sort(java.util.Comparator.comparingDouble(e -> -e.price()));
                     for (int i = 0; i < seeds.size() && have.size() + i < 2; i++) {
-                        out.add(seedPack(seeds.get(i)));
+                        out.add(seedPack(seeds.get(i), 1));
                     }
                 }
                 return out;
@@ -2575,17 +2942,28 @@ public final class Workers implements Listener {
                 }
             }
         } else if (o.type() == WorkerType.FARMHAND) {
+            // fertilizer while plants are growing
             int have = InventoryUtil.count(o.satchel, it -> Items.type(it) == ItemType.FERTILIZER);
-            if (have < 4) {
+            if (have < 4 && plantsNear(o, radius(o)).stream().anyMatch(p -> !p.mature() && !p.fertilized())) {
                 Buy b = gear(ItemType.FERTILIZER, 16 - have);
                 if (b != null) {
                     out.add(b);
                 }
             }
-            if (first(o, Workers::isSeed) == null && !emptySoil(o, null, 1).isEmpty()) {
-                var e = seedsFor(o);
+            // seeds for the empty farmland they have nothing to plant on (up to 16 at a time)
+            List<Block> empty = emptySoil(o, null, 64);
+            if (!empty.isEmpty()) {
+                int seeds = 0;
+                for (ItemStack it : o.seeds.getStorageContents()) {
+                    if (plantable(it) && empty.stream().anyMatch(b -> plugin.plants().isSoil(b,
+                            PlantManager.kindOf(Items.type(it))))) {
+                        seeds += it.getAmount();
+                    }
+                }
+                int short_ = empty.size() - seeds;
+                var e = short_ > 0 ? seedsFor(o) : null;
                 if (e != null) {
-                    out.add(seedPack(e));
+                    out.add(seedPack(e, (Math.min(16, short_) + Math.max(1, e.amount()) - 1) / Math.max(1, e.amount())));
                 }
             }
         }
@@ -2595,10 +2973,8 @@ public final class Workers implements Listener {
     /** Seeds for a Farmhand with empty soil: of the strain (or plant) grown most around them, else the cheapest. */
     private dev.kushcraft.shop.Shop.BuyEntry seedsFor(Worker o) {
         Map<String, Integer> grown = new HashMap<>();
-        for (Plant p : plugin.plants().all()) {
-            if (o.owner().equals(p.owner()) && near(p.key(), o, radius(o))) {
-                grown.merge(p.kind() == Plant.Kind.CANNABIS ? "S:" + p.strainId() : "K:" + p.kind().name(), 1, Integer::sum);
-            }
+        for (Plant p : plantsNear(o, radius(o))) {
+            grown.merge(p.kind() == Plant.Kind.CANNABIS ? "S:" + p.strainId() : "K:" + p.kind().name(), 1, Integer::sum);
         }
         Map<Plant.Kind, Boolean> grows = new java.util.EnumMap<>(Plant.Kind.class);
         dev.kushcraft.shop.Shop.BuyEntry best = null;
@@ -2622,13 +2998,20 @@ public final class Workers implements Listener {
     private boolean planSupplier(Worker w) {
         OfflinePlayer owner = Bukkit.getOfflinePlayer(w.owner());
         String broke = null;
-        for (Worker o : crew(w)) {
-            if (courier(o) || o.freeSlots() < 2) {
+        // whoever is waiting for something first
+        List<Worker> crew = new ArrayList<>(crew(w));
+        crew.sort(java.util.Comparator.comparingInt(o -> o.want == null ? 1 : 0));
+        for (Worker o : crew) {
+            if (courier(o)) {
                 continue;
             }
             List<Buy> buys = needs(o);
             if (buys.isEmpty()) {
                 continue;
+            }
+            boolean onlySeeds = o.type() == WorkerType.FARMHAND && buys.stream().allMatch(b -> b.entry() != null);
+            if (o.freeSlots() == 0 && !(onlySeeds && o.seeds.firstEmpty() >= 0)) {
+                continue; // nothing fits: a Runner empties their satchel first
             }
             double cost = wage(w.type()) + buys.get(0).cost();
             if (plugin.economy().balance(owner) < cost) {
@@ -2834,6 +3217,15 @@ public final class Workers implements Listener {
             }
         }
         Worker.Step s = w.current;
+        if (s.stand() == null && s.look() == null && s.act() != null) {
+            // planning on the way (see then): no walking, no work to show
+            boolean ok = act(s);
+            w.current = null;
+            if (!ok) {
+                w.steps.clear();
+            }
+            return;
+        }
         Location to = w.path.isEmpty() ? s.stand() : w.path.peek();
         double dist = to == null || !to.getWorld().equals(w.pos.getWorld()) ? 0 : w.pos.distance(to);
         if (dist > 0.02) {
@@ -2852,7 +3244,8 @@ public final class Workers implements Listener {
                 w.pos.setYaw(yaw);
             }
             w.pos.setPitch(0);
-            if (e != null) {
+            // nobody near: the mannequin jumps along every half second instead of every tick
+            if (e != null && (w.watched || ticks % 10 == 0)) {
                 e.teleport(w.pos);
                 if (e instanceof LivingEntity le) {
                     le.setBodyYaw(w.pos.getYaw());
@@ -2878,30 +3271,36 @@ public final class Workers implements Listener {
             return;
         }
         if (w.workTicks == 0 && e instanceof LivingEntity le) {
+            if (!w.watched) {
+                e.teleport(w.pos); // arrived (it only jumped along on the way)
+            }
             if (s.look() != null) {
                 le.lookAt(s.look().getX(), s.look().getY(), s.look().getZ(), LookAnchor.EYES);
             }
             le.swingMainHand();
         }
         w.workTicks++;
-        if (w.workTicks == 8 && e instanceof LivingEntity le) {
+        if (w.workTicks == 8 && w.watched && e instanceof LivingEntity le) {
             le.swingMainHand();
             if (s.look() != null) {
                 s.look().getWorld().spawnParticle(Particle.HAPPY_VILLAGER, s.look(), 3, 0.25, 0.25, 0.25, 0);
             }
         }
         if (w.workTicks >= 14) {
-            boolean ok;
-            try {
-                ok = s.act().getAsBoolean();
-            } catch (RuntimeException ex) {
-                plugin.getLogger().log(Level.WARNING, "Worker job failed", ex);
-                ok = false;
-            }
+            boolean ok = act(s);
             w.current = null;
             if (!ok) {
                 w.steps.clear();
             }
+        }
+    }
+
+    private boolean act(Worker.Step s) {
+        try {
+            return s.act().getAsBoolean();
+        } catch (RuntimeException ex) {
+            plugin.getLogger().log(Level.WARNING, "Worker job failed", ex);
+            return false;
         }
     }
 

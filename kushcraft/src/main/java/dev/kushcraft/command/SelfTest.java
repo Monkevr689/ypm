@@ -500,16 +500,25 @@ final class SelfTest {
                 && boss.equals(again.owner()), "and plants it again");
         int fresh = count(farm.satchel(), ItemType.BUD_FRESH);
         check(fresh > 0, "the harvest is in the satchel (" + fresh + " buds)");
+        check(count(farm.satchel(), ItemType.SEED_PACK) == 0, "harvested seeds go in the seed backpack, not the satchel");
         check(eco.balance(owner) < 1000 && farm.jobs() == 1, "the farmhand was paid");
-        // seeds in the satchel go on the empty farmland
+        // seeds go in the backpack, and from there on the empty farmland right away
         ws.stash(farm, List.of(Items.create(ItemType.COCA_SEEDS, 2)));
+        check(count(farm.seedBag(), ItemType.COCA_SEEDS) == 2 && count(farm.satchel(), ItemType.COCA_SEEDS) == 0,
+                "seeds you give a farmhand go in their backpack");
         BlockKey empty = BlockKey.of(w.getBlockAt(x, y + 1, z + 2));
-        boolean planted = false;
-        for (int i = 0; i < 3 && !planted; i++) {
-            ws.workNow(farm);
-            planted = plugin.plants().at(empty) != null;
+        check(ws.workNow(farm) && plugin.plants().at(empty) != null, "the farmhand plants seeds from the backpack first");
+        // drying racks: topping one up doesn't start its timer again (racks topped up all the time never dried)
+        Block testLab = w.getBlockAt(x + 7, y + 1, z + 5);
+        Machine racks = plugin.machines().placeAt(testLab, MachineType.LAB_STATION, 0f, boss);
+        if (racks != null) {
+            racks.hang(s.id(), 3, 4, 1_000L, 31_000L);
+            racks.hang(s.id(), 3, 4, 11_000L, 41_000L);
+            Machine.Rack rack = racks.rack(0);
+            check(rack != null && rack.amount() == 8 && rack.done() == 36_000L && rack.start() == 1_000L,
+                    "topping up a rack only moves its finish time a little (" + (rack == null ? "-" : rack.done()) + ")");
+            plugin.machines().breakMachine(racks, null);
         }
-        check(planted, "the farmhand plants seeds from the satchel on empty farmland");
         // the dryer next to a Drug Lab fetches the buds, hangs them and collects them dry
         Block labBlock = w.getBlockAt(x + 5, y + 1, z);
         Machine lab = plugin.machines().placeAt(labBlock, MachineType.LAB_STATION, 0f, boss);
@@ -556,6 +565,23 @@ final class SelfTest {
         check(!ws.workNow(runner) && count(farm.satchel(), ItemType.BUD_FRESH) == 2, "two buds wait for a few more");
         ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 2)));
         check(ws.workNow(runner) && count(farm.satchel(), ItemType.BUD_FRESH) == 0, "four buds make the trip");
+        // nobody gets more than they have room for: the dryer takes up to 192 fresh buds, the runner sells the rest
+        List<ItemStack> heap = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            heap.add(Items.strainItem(ItemType.BUD_FRESH, s, 2, 64));
+        }
+        ws.stash(runner, heap);
+        double cashBefore = eco.balance(owner);
+        for (int i = 0; i < 3 && count(runner.satchel(), ItemType.BUD_FRESH) > 0; i++) {
+            ws.workNow(runner);
+        }
+        check(count(dryer.satchel(), ItemType.BUD_FRESH) <= 192 && dryer.freeSlots() >= 6,
+                "the dryer never gets so many buds there's no room for the dried ones ("
+                        + count(dryer.satchel(), ItemType.BUD_FRESH) + ")");
+        check(count(runner.satchel(), ItemType.BUD_FRESH) == 0 && eco.balance(owner) > cashBefore,
+                "the runner sells what the dryer has no room for");
+        dryer.satchel().clear();
+        ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, dryerFresh + 9)));
         // dryer -> cook: the runner brings the dried buds to the cook who rolls them
         int cookBuds = count(cook.satchel(), ItemType.BUD_DRIED);
         ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
@@ -566,8 +592,8 @@ final class SelfTest {
         before = eco.balance(owner);
         ws.workNow(runner);
         check(eco.balance(owner) == before, "the runner never sells seeds");
-        check(count(runner.satchel(), ItemType.SEED_PACK) + count(farm.satchel(), ItemType.SEED_PACK) >= 3,
-                "seeds go to the farmhand (or stay with the runner)");
+        check(count(runner.satchel(), ItemType.SEED_PACK) == 0 && count(farm.seedBag(), ItemType.SEED_PACK) >= 3,
+                "seeds go in the farmhand's backpack");
         runner.satchel().clear();
         // the cook cooks a vape pen at the lab and collects it; the runner sells it from their satchel
         ws.setRecipe(cook, LabRecipe.VAPE_PEN);
@@ -680,23 +706,45 @@ final class SelfTest {
                 plugin.strains().remove(made.id());
             }
         }
-        // a farmhand hands on spare poppy seeds past 16; a cook crafts morphine base from them
+        // a farmhand hands on spare poppy seeds past 32; a cook crafts morphine base from them
         cook.satchel().clear();
         farm.satchel().clear();
-        ws.stash(farm, List.of(Items.create(ItemType.POPPY_SEEDS, 40)));
+        farm.seedBag().clear();
+        ws.stash(farm, List.of(Items.create(ItemType.POPPY_SEEDS, 64)));
         ws.setRecipe(cook, LabRecipe.MORPHINE);
         runner.satchel().clear();
         check(!ws.workNow(cook) && cook.wants() != null, "with a Runner around the cook stays put and waits for poppy seeds");
-        check(ws.workNow(runner) && count(cook.satchel(), ItemType.POPPY_SEEDS) == 16
-                && count(farm.satchel(), ItemType.POPPY_SEEDS) == 24, "the runner brings the farmhand's spare poppy seeds");
-        check(ws.workNow(runner) && count(cook.satchel(), ItemType.POPPY_SEEDS) == 24
-                && count(farm.satchel(), ItemType.POPPY_SEEDS) == 16, "the farmhand keeps 16 seeds and hands on the rest");
-        // a full satchel never stops a farmhand for good: spare seeds become fertilizer...
+        for (int i = 0; i < 3; i++) {
+            ws.workNow(runner);
+        }
+        int cookPoppy = count(cook.satchel(), ItemType.POPPY_SEEDS), farmPoppy = count(farm.seedBag(), ItemType.POPPY_SEEDS);
+        check(cookPoppy > 0 && farmPoppy >= 32 && cookPoppy + farmPoppy + count(runner.satchel(), ItemType.POPPY_SEEDS) == 64,
+                "the runner brings the farmhand's spare poppy seeds; the farmhand keeps 32 (" + cookPoppy + "/" + farmPoppy + ")");
+        // a full backpack never stops a farmhand: common seeds past 64 a kind become fertilizer, rare ones are kept
         farm.satchel().clear();
-        ws.stash(farm, fullSatchel());
+        farm.seedBag().clear();
+        Strain rare = null;
+        for (Strain o : plugin.strains().all()) {
+            if (o.rarity().ordinal() >= dev.kushcraft.strain.Rarity.RARE.ordinal()) {
+                rare = o;
+                break;
+            }
+        }
+        List<ItemStack> seedsHeap = new ArrayList<>();
+        for (int i = 0; i < 44; i++) {
+            seedsHeap.add(Items.create(ItemType.COCA_SEEDS, 64));
+        }
+        if (rare != null) {
+            seedsHeap.add(Items.strainItem(ItemType.SEED_PACK, rare, 3, 64));
+        }
+        ws.stash(farm, seedsHeap);
+        check(farm.seedCount() >= 44 * 64 && farm.carried() == 0, "a farmhand's backpack holds thousands of seeds ("
+                + farm.seedCount() + ")");
         ws.compost(farm);
-        check(count(farm.satchel(), ItemType.COCA_SEEDS) == 4 && count(farm.satchel(), ItemType.FERTILIZER) == 103,
-                "spare seeds become fertilizer when the satchel is full");
+        check(count(farm.seedBag(), ItemType.COCA_SEEDS) == 64 && count(farm.satchel(), ItemType.FERTILIZER) == 688
+                && (rare == null || count(farm.seedBag(), ItemType.SEED_PACK) == 64),
+                "a full backpack: spare common seeds become fertilizer (" + count(farm.satchel(), ItemType.FERTILIZER) + ")");
+        farm.seedBag().clear();
         // ...and the runner takes the harvest off them, so they go on harvesting
         farm.satchel().clear();
         List<ItemStack> papers = new ArrayList<>();
@@ -730,6 +778,10 @@ final class SelfTest {
                 "workers." + cook.id() + ".satchel") && "MORPHINE".equals(saved.getString("workers." + cook.id() + ".recipe")),
                 "workers, their satchels and a cook's recipe are saved");
         check(saved.getDouble("workers." + supplier.id() + ".spent") > 0, "supplier spending is saved");
+        farm.seedBag().addItem(Items.create(ItemType.COCA_SEEDS, 5));
+        ws.save();
+        saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "workers.yml"));
+        check(saved.isConfigurationSection("workers." + farm.id() + ".seeds"), "the seed backpack is saved");
         check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
                 dev.kushcraft.worker.WorkerType.FARMHAND, boss, 3)), "trained workers reach further");
         check(Items.level(Items.machine(ItemType.FARMHAND, 2)) == 2, "a dismissed worker keeps their level");
@@ -760,18 +812,6 @@ final class SelfTest {
                 e.remove();
             }
         }
-    }
-
-    /** 20 stacks of papers and 416 coca seeds: fills a 27 slot satchel. */
-    private static List<ItemStack> fullSatchel() {
-        List<ItemStack> items = new ArrayList<>();
-        for (int i = 0; i < 20; i++) {
-            items.add(Items.create(ItemType.ROLLING_PAPERS, 64));
-        }
-        for (int i = 0; i < 26; i++) {
-            items.add(Items.create(ItemType.COCA_SEEDS, 16));
-        }
-        return items;
     }
 
     private void guide() {
@@ -856,7 +896,24 @@ final class SelfTest {
             newLooks += res.newLook() ? 1 : 0;
             climatesSeen.add(res.climate());
         }
-        check(mythic > 900 && mythic < 1700, "about 1 in 15 is Mythic (" + mythic + " in 20,000)");
+        double expect = dev.kushcraft.strain.Breeding.newMythicChance(a, b) * 20_000;
+        check(mythic > expect * 0.8 && mythic < expect * 1.2, "about 1 in 15 is Mythic (" + mythic + " in 20,000)");
+        // two Legendary parents: a much better chance of a Mythic child
+        List<Strain> legendary = all.stream().filter(s -> s.rarity() == dev.kushcraft.strain.Rarity.LEGENDARY).toList();
+        check(legendary.size() >= 2, "there are Legendary strains to breed");
+        if (legendary.size() >= 2) {
+            int fromLegend = 0;
+            for (int i = 0; i < 10_000; i++) {
+                if (dev.kushcraft.strain.Breeding.cross(legendary.get(0), legendary.get(1), r).rarity()
+                        == dev.kushcraft.strain.Rarity.MYTHIC) {
+                    fromLegend++;
+                }
+            }
+            check(fromLegend > 2000 && fromLegend < 2900, "two Legendary parents: about 1 in 4 Mythic (" + fromLegend
+                    + " of 10,000)");
+            check(dev.kushcraft.strain.Breeding.mythicChance(legendary.get(0), legendary.get(1))
+                    > 3 * dev.kushcraft.strain.Breeding.MYTHIC, "Legendary parents raise the Mythic chance");
+        }
         check(newLooks > 3000, "new colours mutate in");
         check(climatesSeen.size() == dev.kushcraft.strain.Climate.values().length, "climates can mutate");
         Strain aurora = plugin.strains().get("aurora_kush");

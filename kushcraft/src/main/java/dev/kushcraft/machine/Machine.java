@@ -173,8 +173,10 @@ public final class Machine {
     public static final int RACK_CAPACITY = 64;
 
     /**
-     * Hangs fresh buds: tops up a drying rack with the same buds first (its
-     * timer restarts), then fills empty racks. Returns how many were hung.
+     * Hangs fresh buds: tops up a drying rack with the same buds first, then
+     * fills empty racks. A top-up moves the rack's finish time only as far as
+     * its share of the buds (it used to restart the timer, so racks topped up
+     * every few seconds never dried). Returns how many were hung.
      */
     public int hang(String strain, int quality, int amount, long now, long done) {
         int hung = 0;
@@ -188,7 +190,12 @@ public final class Machine {
                 }
                 int have = r == null ? 0 : r.amount();
                 int add = Math.min(RACK_CAPACITY - have, amount - hung);
-                racks[i] = new Rack(strain, quality, have + add, now, done);
+                if (r == null) {
+                    racks[i] = new Rack(strain, quality, add, now, done);
+                } else {
+                    long finish = r.done() + Math.max(0, done - r.done()) * add / (have + add);
+                    racks[i] = new Rack(strain, quality, have + add, r.start(), finish);
+                }
                 hung += add;
             }
         }

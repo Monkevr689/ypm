@@ -20,6 +20,8 @@ public final class Worker {
 
     /** Satchel slots. */
     public static final int SATCHEL = 27;
+    /** Farmhand: slots of the seed backpack (only seeds go in it: 45 stacks, thousands of seeds). */
+    public static final int SEED_BAG = 45;
 
     /**
      * One stop of a trip: walk to stand, look at look, then do act (false = stop the trip).
@@ -44,6 +46,8 @@ public final class Worker {
     private final double z;
     private final float yaw;
     final Inventory satchel = Bukkit.createInventory(null, SATCHEL);
+    /** Farmhand: the seed backpack. Harvested and bought seeds go here, so they never fill the satchel. */
+    final Inventory seeds = Bukkit.createInventory(null, SEED_BAG);
     String name;
     int level = 1;
     boolean paused;
@@ -73,6 +77,10 @@ public final class Worker {
     /** Cook on AUTO: what they decided to make this time. */
     transient dev.kushcraft.lab.LabRecipe auto;
     final transient Deque<Location> path = new ArrayDeque<>();
+    /** A player is close enough to see them walk (else the mannequin is only moved at the end of a walk). */
+    transient boolean watched = true;
+    /** Since when they've had nothing to do (0 = busy). */
+    transient long idleSince;
 
     Worker(UUID id, WorkerType type, UUID owner, Location home, String name) {
         this.id = id;
@@ -209,6 +217,33 @@ public final class Worker {
 
     public Inventory satchel() {
         return satchel;
+    }
+
+    /** Farmhand: the seed backpack (empty for everyone else). */
+    public Inventory seedBag() {
+        return seeds;
+    }
+
+    /** Seeds in the backpack. */
+    public int seedCount() {
+        int n = 0;
+        for (ItemStack it : seeds.getStorageContents()) {
+            if (it != null && !it.getType().isAir()) {
+                n += it.getAmount();
+            }
+        }
+        return n;
+    }
+
+    /** Backpack slots in use. */
+    public int seedSlots() {
+        int n = 0;
+        for (ItemStack it : seeds.getStorageContents()) {
+            if (it != null && !it.getType().isAir()) {
+                n++;
+            }
+        }
+        return n;
     }
 
     public String worldName() {

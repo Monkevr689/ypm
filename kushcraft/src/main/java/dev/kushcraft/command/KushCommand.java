@@ -175,6 +175,10 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Text.msg("<red>Run this from the server console on a test world."));
                     return true;
                 }
+                if (args.length > 1 && args[1].equalsIgnoreCase("live")) {
+                    new LiveTest(plugin).start(sender);
+                    return true;
+                }
                 List<String> fails = new SelfTest(plugin).run();
                 sender.sendMessage(Text.msg(fails.isEmpty() ? "<green>Self test passed." : "<red>Self test failed: " + fails));
             }

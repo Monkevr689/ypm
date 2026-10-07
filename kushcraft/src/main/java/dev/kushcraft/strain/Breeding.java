@@ -15,7 +15,8 @@ import java.util.Random;
  * not be passed on, a new effect can mutate in, potency drifts around the
  * parents' average and the type, climate, colours, accent pattern and bud
  * shape come from one parent or the other - or mutate into something new.
- * Sometimes the child is Mythic (an animated rainbow, galaxy, gold... look);
+ * Sometimes the child is Mythic (an animated rainbow, galaxy, gold... look) -
+ * much more often from Legendary parents;
  * crossing two Mythic strains can, rarely, give an Exotic one - the only way
  * to get them. Same parents, different results - breed again for a better roll.
  */
@@ -40,6 +41,9 @@ public final class Breeding {
     /** Chance of a Mythic look out of nowhere, and of keeping a Mythic parent's look. */
     public static final double MYTHIC = 0.065;
     public static final double MYTHIC_INHERIT = 0.2;
+    /** Extra chance of a new Mythic look for every Legendary (and Epic) parent: two Legendary = about 1 in 4. */
+    public static final double LEGENDARY_PARENT = 0.09;
+    public static final double EPIC_PARENT = 0.025;
     /** Chance of an Exotic look when both parents are Mythic (or better), and extra per Exotic parent. */
     public static final double EXOTIC = 0.03;
     public static final double EXOTIC_PER_PARENT = 0.02;
@@ -109,7 +113,20 @@ public final class Breeding {
     /** Chance the child is Mythic. */
     public static double mythicChance(Strain a, Strain b) {
         boolean parent = a.exotic() != Exotic.NONE || b.exotic() != Exotic.NONE;
-        return parent ? MYTHIC_INHERIT + MYTHIC : MYTHIC;
+        return parent ? MYTHIC_INHERIT + newMythicChance(a, b) : newMythicChance(a, b);
+    }
+
+    /** Chance of a brand new Mythic look: higher with Legendary (and Epic) parents. */
+    public static double newMythicChance(Strain a, Strain b) {
+        return MYTHIC + parentBonus(a) + parentBonus(b);
+    }
+
+    private static double parentBonus(Strain s) {
+        return switch (s.rarity()) {
+            case LEGENDARY -> LEGENDARY_PARENT;
+            case EPIC -> EPIC_PARENT;
+            default -> 0;
+        };
     }
 
     /** Chance the child is Exotic: only when both parents are Mythic or Exotic. */
@@ -254,7 +271,7 @@ public final class Breeding {
             exotic = !from.isEmpty() && r.nextBoolean() ? from.get(r.nextInt(from.size())) : randomExotic(r);
         } else {
             double roll = r.nextDouble();
-            if (roll < MYTHIC) {
+            if (roll < newMythicChance(a, b)) {
                 exotic = randomMythic(r);
             } else if (roll < mythicChance(a, b)) {
                 // a Mythic parent passes its look on (if both are Mythic, either one); an Exotic

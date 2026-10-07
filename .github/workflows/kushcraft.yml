@@ -83,6 +83,10 @@ jobs:
           sleep 8
           echo "kush strains" >&3
           sleep 2
+          # workers on the server's own clock: walk, harvest, plant, carry, dry, buy and sell by themselves
+          echo "kush selftest live" >&3
+          for i in $(seq 1 180); do grep -qE "LIVETEST (PASS|FAIL)" server.log && break; sleep 1; done
+          grep -E "LIVETEST|livetest" server.log || true
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
@@ -277,6 +281,7 @@ jobs:
           echo "-----"
           grep -q "KushCraft enabled" server.log || { echo "::error::plugin did not enable"; exit 1; }
           grep -q "SELFTEST PASS" server.log || { echo "::error::selftest failed"; exit 1; }
+          grep -q "LIVETEST PASS" server.log || { grep -A12 "LIVETEST" server.log | tail -40; echo "::error::live worker test failed"; exit 1; }
           if grep -qE "Worker skins are not supported|Could not spawn worker mannequins" server.log; then
             echo "::error::worker mannequins or skins do not work"; exit 1
           fi

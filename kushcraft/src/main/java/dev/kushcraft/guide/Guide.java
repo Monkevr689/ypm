@@ -294,7 +294,8 @@ public final class Guide {
                         + "<dark_gray>A Cook can mix for you.",
                 "<dark_green><bold>Mythic</bold>\n\n<black>About 1 in 15 children is <dark_purple><bold>Mythic"
                         + "</bold></dark_purple>: rainbow, galaxy, aurora, toxic, sakura, plasma... buds that"
-                        + " sparkle and sell for <gold>4x</gold>.\n\nA Mythic parent passes it on 1 in 5.",
+                        + " sparkle and sell for <gold>4x</gold>.\n\nTwo <gold>Legendary</gold> parents: about"
+                        + " 1 in 4. A Mythic parent passes it on 1 in 5.",
                 "<dark_green><bold>Exotic</bold>\n\n<black>Only <bold>two Mythic</bold> seeds can make an"
                         + " <light_purple><bold>Exotic</bold></light_purple> one (3%): void, prism, celestial,"
                         + " phoenix, quantum or eclipse. They sell for <gold>7x</gold>.\n\n<dark_gray>Some Mythic"
