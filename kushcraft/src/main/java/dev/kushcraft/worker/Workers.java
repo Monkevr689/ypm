@@ -207,6 +207,7 @@ public final class Workers implements Listener {
                 w.recipe = s.getString("recipe");
                 w.reserve = s.getDouble("reserve", plugin.getConfig().getDouble("workers.supplier.reserve", 1000));
                 w.spent = s.getDouble("spent");
+                w.sell = s.getBoolean("sell");
                 for (String l : s.getStringList("links")) {
                     BlockKey lk = BlockKey.parse(l);
                     if (lk != null && w.links.size() < Worker.MAX_LINKS) {
@@ -255,6 +256,9 @@ public final class Workers implements Listener {
             s.set("wages", Math.round(w.wages * 100) / 100.0);
             if (w.recipe != null) {
                 s.set("recipe", w.recipe);
+            }
+            if (w.sell) {
+                s.set("sell", true);
             }
             if (w.type() == WorkerType.SUPPLIER) {
                 s.set("reserve", w.reserve);
@@ -311,13 +315,110 @@ public final class Workers implements Listener {
                 chunkLoaded(w, c.getX(), c.getZ());
             }
         }
+        Bukkit.getScheduler().runTaskTimer(plugin, this::keepLoaded, 40L, 100L);
     }
 
     public void shutdown() {
         for (Worker w : workers.values()) {
             despawn(w);
         }
+        releaseChunks();
         save();
+    }
+
+    // ------------------------------------------------------------------
+    // working while nobody is around
+    // ------------------------------------------------------------------
+
+    /** Chunks this plugin keeps loaded for the workers, per world (chunk x << 32 | chunk z). */
+    private final Map<String, Set<Long>> held = new HashMap<>();
+
+    /** Workers keep working when their owner is offline or far away: the chunks around them stay loaded. */
+    public boolean workOffline() {
+        return plugin.getConfig().getBoolean("workers.work-offline", true);
+    }
+
+    private static long chunkKey(int cx, int cz) {
+        return ((long) cx << 32) | (cz & 0xFFFFFFFFL);
+    }
+
+    /** Keeps the chunks within every worker's reach loaded (a few new ones per run, at most work-offline-max-chunks). */
+    private void keepLoaded() {
+        Map<String, Set<Long>> want = new HashMap<>();
+        int max = Math.max(0, plugin.getConfig().getInt("workers.work-offline-max-chunks", 300));
+        int total = 0;
+        if (workOffline() && enabled()) {
+            for (Worker w : workers.values()) {
+                Location h = w.home();
+                if (h == null) {
+                    continue;
+                }
+                int r = radius(w) + 1;
+                Set<Long> mine = want.computeIfAbsent(w.worldName(), k -> new HashSet<>());
+                Set<Long> already = held.getOrDefault(w.worldName(), Set.of());
+                for (int cx = (h.getBlockX() - r) >> 4; cx <= (h.getBlockX() + r) >> 4; cx++) {
+                    for (int cz = (h.getBlockZ() - r) >> 4; cz <= (h.getBlockZ() + r) >> 4; cz++) {
+                        long k = chunkKey(cx, cz);
+                        if (!mine.contains(k) && (already.contains(k) || total < max)) {
+                            mine.add(k);
+                            total++;
+                        }
+                    }
+                }
+            }
+        }
+        for (Map.Entry<String, Set<Long>> en : held.entrySet()) {
+            World world = Bukkit.getWorld(en.getKey());
+            Set<Long> keep = want.getOrDefault(en.getKey(), Set.of());
+            en.getValue().removeIf(k -> {
+                if (keep.contains(k)) {
+                    return false;
+                }
+                if (world != null) {
+                    world.removePluginChunkTicket((int) (k >> 32), (int) (long) k, plugin);
+                }
+                return true;
+            });
+        }
+        int added = 0;
+        for (Map.Entry<String, Set<Long>> en : want.entrySet()) {
+            World world = Bukkit.getWorld(en.getKey());
+            if (world == null) {
+                continue;
+            }
+            Set<Long> have = held.computeIfAbsent(en.getKey(), k -> new HashSet<>());
+            for (long k : en.getValue()) {
+                if (!have.contains(k)) {
+                    if (added++ >= 12) {
+                        return;
+                    }
+                    world.addPluginChunkTicket((int) (k >> 32), (int) k, plugin);
+                    have.add(k);
+                }
+            }
+        }
+    }
+
+    private void releaseChunks() {
+        for (Map.Entry<String, Set<Long>> en : held.entrySet()) {
+            World world = Bukkit.getWorld(en.getKey());
+            if (world != null) {
+                for (long k : en.getValue()) {
+                    world.removePluginChunkTicket((int) (k >> 32), (int) k, plugin);
+                }
+            }
+        }
+        held.clear();
+    }
+
+    /** Works out the chunks to keep loaded right now (it also runs every 5 seconds). */
+    public void syncChunks() {
+        keepLoaded();
+    }
+
+    /** Chunks being kept loaded for the workers (for /kush selftest and the admin). */
+    public int keptChunks() {
+        return held.values().stream().mapToInt(Set::size).sum();
     }
 
     private void add(Worker w) {
@@ -1145,10 +1246,14 @@ public final class Workers implements Listener {
         }
         Map<String, Integer> allowance = new HashMap<>();
         seeds.forEach((k, n) -> allowance.put(k, Math.max(0, n - SEED_KEEP)));
+        boolean reserved = sellsToRunner(o);
         for (int i = 0; i < items.length; i++) {
             ItemStack it = items[i];
             if (it == null || it.getType().isAir() || !want.test(it)) {
                 continue;
+            }
+            if (reserved && produces(o, it)) {
+                continue; // a Dryer set to sell keeps its dried buds for the Runners
             }
             if (!uses(o, it)) {
                 out[i] = it.getAmount();
@@ -1308,7 +1413,7 @@ public final class Workers implements Listener {
         for (int i = 0; i < items.length; i++) {
             ItemStack it = items[i];
             if (it != null && !it.getType().isAir()) {
-                out[i] = (produces(w, it) && !uses(w, it)) || junk(w, it) ? it.getAmount() : seeds[i];
+                out[i] = ((produces(w, it) && !uses(w, it) && !sellsToRunner(w)) || junk(w, it)) ? it.getAmount() : seeds[i];
             }
         }
         return out;
@@ -2012,10 +2117,13 @@ public final class Workers implements Listener {
                 }
             }
             for (Worker o : crew) {
-                Predicate<ItemStack> theirs = it -> spare.test(it) && produces(o, it);
+                // a Dryer set to sell gives the Runners everything it dried, Cooks or not
+                boolean all = sellsToRunner(o);
+                Predicate<ItemStack> theirs = it -> produces(o, it) && sellable(it) && (all || spare.test(it));
                 if (!courier(o) && first(o.satchel, theirs) != null) {
                     BlockKey at = BlockKey.of(o.home());
-                    return takeForSale(w, new Source(o, null, standOrJump(w, at), at, standByWorker(w, o) == null), theirs);
+                    return takeForSale(w, new Source(o, null, standOrJump(w, at), at, standByWorker(w, o) == null), theirs,
+                            all);
                 }
             }
             // 5. empty the finished work out of satchels that are filling up, so nobody has to stop
@@ -2150,8 +2258,15 @@ public final class Workers implements Listener {
     }
 
     private boolean takeForSale(Worker w, Source src, Predicate<ItemStack> match) {
+        return takeForSale(w, src, match, false);
+    }
+
+    /** all: take every matching item of a worker's satchel, not just the spare ones. */
+    private boolean takeForSale(Worker w, Source src, Predicate<ItemStack> match, boolean all) {
         w.status = "Picking up product from " + src.name();
-        go(w, src.where(), src.stand(), src.jump(), () -> take(src, w.satchel, match, Integer.MAX_VALUE) > 0);
+        go(w, src.where(), src.stand(), src.jump(), () -> (all && src.worker() != null
+                ? move(src.worker().satchel, w.satchel, match, Integer.MAX_VALUE)
+                : take(src, w.satchel, match, Integer.MAX_VALUE)) > 0);
         return true;
     }
 
@@ -2636,6 +2751,17 @@ public final class Workers implements Listener {
         dirty = true;
         chestLists.remove(w.id());
         return true;
+    }
+
+    /** Dryer: hand everything they dry to the Runners to sell. */
+    public void setSell(Worker w, boolean on) {
+        w.sell = on;
+        dirty = true;
+    }
+
+    /** A Dryer set to sell, with a Runner in the crew to take the buds. */
+    private boolean sellsToRunner(Worker w) {
+        return w.type() == WorkerType.DRYER && w.sell && crew(w).stream().anyMatch(o -> o.type() == WorkerType.RUNNER);
     }
 
     /** Supplier: the money they leave in your wallet. */

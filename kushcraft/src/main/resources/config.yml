@@ -235,6 +235,12 @@ workers:
   enabled: true
   # Most workers one player can have. 0 = no limit.
   max-per-player: 0
+  # Workers keep working when their owner is offline or far away: the
+  # chunks around them stay loaded (Runners keep selling, Dryers keep
+  # drying). Switch off to let them sleep when nobody is near.
+  work-offline: true
+  # The most chunks kept loaded for workers (protects the server).
+  work-offline-max-chunks: 300
   # How far apart (blocks) your workers can be and still work together.
   chain-radius: 32
   # Per level (1, 2, 3): how far from where they stand they work, and the

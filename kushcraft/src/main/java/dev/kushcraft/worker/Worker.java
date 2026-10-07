@@ -60,6 +60,8 @@ public final class Worker {
     final java.util.List<dev.kushcraft.util.BlockKey> links = new java.util.ArrayList<>();
     /** Supplier: never spends the owner's wallet below this. */
     double reserve = 1000;
+    /** Dryer: every dried bud goes to the Runners to sell (Cooks don't get them from this Dryer). */
+    boolean sell;
 
     // live state
     transient UUID entityId;
@@ -157,6 +159,11 @@ public final class Worker {
 
     public double reserve() {
         return reserve;
+    }
+
+    /** Dryer: hands everything they dry to the Runners to sell. */
+    public boolean sells() {
+        return sell;
     }
 
     /** What they're missing right now (null = nothing). */

@@ -139,6 +139,13 @@ public final class WorkerMenu extends Menu {
             return Items.icon("ui_reserve", "<gold>Keep in your wallet: " + money(worker.reserve()),
                     "<gray>They never spend below this.", "<dark_gray>Click: more · Right-click: less");
         }
+        if (worker.type() == WorkerType.DRYER) {
+            boolean on = worker.sells();
+            return Items.glint(Items.icon("ui_sell", on ? "<green>Sell what I dry: ON" : "<yellow>Sell what I dry: OFF",
+                    on ? "<gray>Runners take every dried bud I make" : "<gray>Cooks get the dried buds first;",
+                    on ? "<gray>and sell it (Cooks don't get any)." : "<gray>Runners sell what's left.",
+                    "<dark_gray>Click to switch"), on);
+        }
         int free = worker.freeSlots();
         boolean tight = free < 6;
         return Items.glint(Items.icon("ui_take", (tight ? "<red>" : "<white>") + "Satchel: " + (Worker.SATCHEL - free) + "/"
@@ -291,6 +298,9 @@ public final class WorkerMenu extends Menu {
                     i = click.isRightClick() ? Math.max(0, i - 1) : Math.min(r.length - 1, i + (i < r.length
                             && Math.abs(r[i] - worker.reserve()) < 0.01 ? 1 : 0));
                     ws.setReserve(worker, r[i]);
+                    clickSound();
+                } else if (worker.type() == WorkerType.DRYER) {
+                    ws.setSell(worker, !worker.sells());
                     clickSound();
                 }
             }

@@ -638,6 +638,21 @@ final class SelfTest {
         check(!ws.workNow(cook) && "Cocaine".equals(cook.wants()), "the cook says it needs cocaine");
         check(ws.workNow(runner) && count(cook.satchel(), ItemType.COCAINE) == 3 && count(walledInv, ItemType.COCAINE) == 0,
                 "the runner brings it from behind the walls");
+        // workers keep their chunks loaded so they work while you're away
+        ws.syncChunks();
+        check(ws.workOffline() && ws.keptChunks() > 0, "workers keep the chunks around them loaded");
+        // a Dryer set to sell gives the Runner every dried bud, even ones a Cook could use
+        ws.setJob(cook, dev.kushcraft.worker.Worker.ROLL_JOINT);
+        dryer.satchel().clear();
+        runner.satchel().clear();
+        ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
+        check(ws.uses(cook, Items.strainItem(ItemType.BUD_DRIED, s, 3, 1)), "the cook uses dried buds");
+        ws.setSell(dryer, true);
+        check(ws.workNow(runner) && count(runner.satchel(), ItemType.BUD_DRIED) == 4
+                && count(dryer.satchel(), ItemType.BUD_DRIED) == 0, "a Dryer set to sell gives the Runner every dried bud");
+        ws.setSell(dryer, false);
+        runner.satchel().clear();
+        ws.setRecipe(cook, LabRecipe.CRACK);
         // the supplier buys what the cook and farmhand run low on, with the owner's money
         eco.set(owner, 50_000);
         var supplier = ws.hireAt(new Location(w, x + 1.5, y + 1, z + 1.5), dev.kushcraft.worker.WorkerType.SUPPLIER, boss, 1);
@@ -723,6 +738,8 @@ final class SelfTest {
             check(ent == null || Bukkit.getEntity(ent) == null || Bukkit.getEntity(ent).isDead(), "mannequin removed");
         }
         check(ws.of(boss).isEmpty(), "workers dismissed");
+        ws.syncChunks();
+        check(ws.keptChunks() == 0, "chunks are let go when the workers are gone");
         plugin.machines().breakMachine(lab, null);
         for (BlockKey k : List.of(key, empty)) {
             Plant p = plugin.plants().at(k);

@@ -3,7 +3,7 @@
 A **server-side only** Paper plugin with **86 strains** in weird colours and two-tone patterns, climates, custom plants that also **grow wild**, 26 drugs made **step by step**, each with **its own signature effect**, strain breeding with **Mythic** and even rarer **Exotic** strains, **as many workers as you like** (Farmhand, Dryer, Cook, Runner and Supplier) that **run the whole chain by themselves**, simple cartels, a sales leaderboard, 55 achievements, an admin panel and a living market where **money only comes from selling drugs**. It all comes in **one jar**.
 Players don't install any mods. The plugin builds its own resource pack (32px art, 3D plants and blocks, worker skins and hats, animated Mythic and Exotic buds, menu art and recipe pictures) and every player gets it when they join.
 
-**Download:** [`release/KushCraft-7.0.1.jar`](release/KushCraft-7.0.1.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
+**Download:** [`release/KushCraft-7.0.2.jar`](release/KushCraft-7.0.2.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
 
 | Items | Plants | Blocks |
 |---|---|---|
@@ -222,6 +222,7 @@ There are 55 awards: grow in every climate, pick a wild plant, cook every recipe
 * `config.yml` upgrades itself to version 10. From 6.0: the market (`demand-drop`, `min-price`, `recovery-per-minute`) and Trade price climb (`price-step`, `recovery-per-minute`) are **replaced** with the 7.0 ones, the **Supplier** is added to your `shop.buy` list and the new `workers.supplier` settings are added. From 3.x–5.x also everything 6.0 replaced (shop prices, Trade shelves, jobs off, no worker limit…). Missing settings are added. **`resource-pack.url` is set to `auto`** if it was empty or the old GitHub link. Your cartels, strains, workers and other settings are kept.
 * `strains.yml` gets the 52 new strains (Mythic and Exotic ones too) and the two-tone patterns of the built-in ones; strains your players bred are kept.
 * Workers stop reaching through walls: if one says they can't reach their Drug Lab or chest, open a way, link the chest, or hire a Runner.
+* **7.0.2:** workers **keep working while you're offline or far away** (`workers.work-offline: true` keeps the chunks around them loaded, up to `work-offline-max-chunks: 300`; set it to `false` to let them sleep). A **Dryer** has a **Sell what I dry** switch in its menu: ON, every dried bud goes to your Runners to sell (Cooks don't get any from that Dryer).
 * **7.0.1:** no more linking – workers use the nearest chest of yours they can walk to (old links are kept as yours). Chests placed before 7.0 don't know who placed them: workers use them only when they're right by one of your workers (or an old save had them linked).
 
 ## Admin panel
