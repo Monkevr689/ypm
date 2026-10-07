@@ -193,8 +193,9 @@ public final class Guide {
                         + " what's missing",
                 "<dark_green><bold>Hand to hand</bold>\n\n<black>No chests: <dark_green>Farmhand</dark_green> >"
                         + " <light_purple>Runner</light_purple> > <gold>Dryer</gold> > <dark_aqua>Cook</dark_aqua>"
-                        + " or the Runner, who <gold>sells</gold> it on the spot (never seeds).\n<dark_gray>"
-                        + "Full satchels get emptied - nobody stops.",
+                        + " or the Runner, who <gold>sells</gold> it on the spot.\n<black>Seeds go in the"
+                        + " Farmhand's <dark_green>backpack</dark_green> and on every empty farmland first.\n"
+                        + "<dark_gray>Nobody's satchel gets stuck full.",
                 "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks are a crew."
                         + " A <light_purple>Runner</light_purple> brings what one is missing, through walls the"
                         + " back way. A <gold>Supplier</gold> buys it with your money.\n<gold>⚠</gold> = stuck:"

@@ -18,13 +18,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A worker's menu (right-click them): who they are and what they're doing,
- * who they pass work to (no chests: worker to worker), where they work, an
- * option (a Dryer: sell what it dries; a Cook mixing strains: what they
- * keep; a Supplier: what they spent; else how full the satchel is), their
- * job (a Cook's drug), their satchel (click an item
- * to take it, click your own seeds / buds / ingredients to give them), and
- * buttons to rename, pause, train and dismiss them. Layout: tools/gui.py worker().
+ * A worker's menu (right-click them): who they are, who they work with
+ * (no chests: worker to worker), where they work, an option (a Dryer: sell
+ * what it dries; a Cook mixing strains: what they keep; a Supplier: what
+ * they spent; else how full the satchel is), their job (a Cook's drug),
+ * rename / pause / train / dismiss; their satchel (click an item to take it,
+ * click your own seeds / buds / ingredients to give them); and a bottom bar:
+ * back, their own button (a Farmhand's seed backpack, a Runner's sell now, a
+ * Dryer's racks, a Cook's shopping list, a Supplier's next buys), take all,
+ * what they're doing right now and the handbook. Layout: tools/gui.py worker().
  */
 public final class WorkerMenu extends Menu {
 
@@ -40,7 +42,10 @@ public final class WorkerMenu extends Menu {
     static final int DISMISS = 8;
     static final int FIRST = 9;
     static final int BACK = 36;
+    static final int EXTRA = 38;
     static final int TAKE_ALL = 40;
+    static final int NOW = 42;
+    static final int HELP = 44;
 
     private final Worker worker;
     private boolean confirmDismiss;
@@ -110,9 +115,97 @@ public final class WorkerMenu extends Menu {
             }
         }
         backButton(BACK);
+        set(EXTRA, extraIcon());
         int carried = worker.carried();
         set(TAKE_ALL, Items.glint(Items.icon("ui_take", carried > 0 ? "<green><bold>Take all</bold> <gray>(" + carried + ")"
                 : "<gray>Satchel is empty", "<dark_gray>Click an item to take just that."), carried > 0));
+        set(NOW, nowIcon());
+        set(HELP, Items.icon("ui_guide", "<aqua>Handbook: workers", "<gray>How the work chain works, what each",
+                "<gray>worker does and what they need.", "<dark_gray>Click to open"));
+    }
+
+    /** Right now: their status in big letters, what's wrong and what they're missing. */
+    private ItemStack nowIcon() {
+        boolean stuck = worker.problem() != null && !worker.paused();
+        List<String> lore = new ArrayList<>();
+        if (stuck) {
+            lore.add("<gold>⚠ Stuck for a while - they need you.");
+        }
+        if (worker.wants() != null) {
+            lore.add("<yellow>Missing: <white>" + worker.wants());
+        }
+        lore.add("<gray>" + worker.jobs() + " jobs done since hired.");
+        String status = worker.paused() ? "<red>Paused" : worker.isLoaded() ? worker.status()
+                : "<dark_gray>Asleep (nobody nearby)";
+        return Items.glint(Items.icon(stuck ? "ui_info" : "ui_auto", "<white>Now: " + status, lore), stuck);
+    }
+
+    /** The bottom-bar button of each kind of worker. */
+    private ItemStack extraIcon() {
+        Workers ws = workers();
+        switch (worker.type()) {
+            case FARMHAND -> {
+                int seeds = worker.seedCount();
+                return Items.glint(Items.icon("seed_pack", "<green><bold>Seed backpack</bold> <gray>(" + seeds + " seeds)",
+                        "<gray>" + worker.seedSlots() + "/" + Worker.SEED_BAG + " slots · thousands of seeds fit.",
+                        "<gray>Seeds never fill the satchel: they go",
+                        "<gray>in here and get planted on empty",
+                        "<gray>farmland (" + ws.emptyFarmland(worker) + " near them) before anything else.",
+                        "<dark_gray>Click to open"), seeds > 0);
+            }
+            case RUNNER -> {
+                double value = ws.carriedValue(worker);
+                return Items.glint(Items.icon("ui_sell", value > 0 ? "<gold><bold>Sell now</bold> <gray>(" + money(value) + ")"
+                                : "<gray>Nothing to sell",
+                        "<gray>They sell whatever nobody needs the",
+                        "<gray>moment they get it - this sells what",
+                        "<gray>they carry right now (never seeds).",
+                        "<dark_gray>Keeps " + Math.round(ws.runnerCut() * 100) + "% of every sale."), value > 0);
+            }
+            case DRYER -> {
+                int[] r = ws.racks(worker);
+                if (r == null) {
+                    return Items.icon("ui_rack", "<red>No Drug Lab", "<gray>Put a Drug Lab within " + ws.radius(worker),
+                            "<gray>blocks of them (they walk there).");
+                }
+                return Items.icon("ui_rack", "<gold>Racks: <white>" + r[0] + "/" + r[2] + " <gray>in use, <green>" + r[1]
+                                + " dry", "<gray>They hang fresh buds and take them",
+                        "<gray>off dry. A Runner brings the buds and",
+                        "<gray>sells the dried ones" + (worker.sells() ? " (all of them)." : "."),
+                        "<dark_gray>Click: show where they work");
+            }
+            case COOK -> {
+                List<String> lore = new ArrayList<>();
+                List<Workers.Buy> buys = ws.needs(worker);
+                if (worker.wants() != null) {
+                    lore.add("<yellow>Missing now: <white>" + worker.wants());
+                }
+                for (Workers.Buy b : buys.subList(0, Math.min(5, buys.size()))) {
+                    lore.add("<white>" + b.amount() + " " + b.name() + " <dark_gray>(" + money(b.cost()) + ")");
+                }
+                if (lore.isEmpty()) {
+                    lore.add("<green>They have what they need.");
+                }
+                lore.add("<dark_gray>A Supplier buys it, a Runner brings it.");
+                return Items.icon("ui_supply", "<aqua>Shopping list", lore);
+            }
+            default -> {
+                List<String> lore = new ArrayList<>();
+                for (Worker o : ws.crew(worker)) {
+                    for (Workers.Buy b : ws.needs(o)) {
+                        if (lore.size() < 6) {
+                            lore.add("<white>" + b.amount() + " " + b.name() + " <dark_gray>for " + Text.escape(o.name())
+                                    + " <gold>" + money(b.cost()));
+                        }
+                    }
+                }
+                if (lore.isEmpty()) {
+                    lore.add("<green>Everyone has what they need.");
+                }
+                lore.add("<gray>Spent so far: <gold>" + money(worker.spent()));
+                return Items.icon("ui_supply", "<yellow>Next buys", lore);
+            }
+        }
     }
 
     /** Who they get things from and pass them to: no chests, worker to worker. */
@@ -120,8 +213,8 @@ public final class WorkerMenu extends Menu {
         List<String> lore = new ArrayList<>(switch (worker.type()) {
             case FARMHAND -> List.of("<gray>Their harvest goes to your <light_purple>Runner<gray>,",
                     "<gray>who takes fresh buds to the <gold>Dryer<gray> and",
-                    "<gray>sells the rest. Spare seeds go to other",
-                    "<gray>Farmhands or a Cook mixing strains.");
+                    "<gray>sells the rest. Seeds stay in their",
+                    "<gray>backpack and get planted.");
             case DRYER -> List.of("<gray>Fresh buds come from your Farmhands",
                     "<gray>(a <light_purple>Runner<gray> brings them). Dried buds go",
                     "<gray>to a <aqua>Cook<gray> who uses them, or the Runner",
@@ -130,12 +223,14 @@ public final class WorkerMenu extends Menu {
                     "<gray>a <light_purple>Runner<gray> and the <gold>Supplier<gray>. What they",
                     "<gray>make goes to the next Cook or the Runner,",
                     "<gray>who sells it.");
-            case RUNNER -> List.of("<gray>Takes the harvest to the Dryer, buds to",
-                    "<gray>Cooks, and sells everything else the",
-                    "<gray>moment they get it (never seeds).");
+            case RUNNER -> List.of("<gray>Empties your workers' satchels: the",
+                    "<gray>harvest to the Dryer, buds to Cooks, seeds",
+                    "<gray>to Farmhands - and sells whatever else",
+                    "<gray>the moment they get it (never seeds).");
             case SUPPLIER -> List.of("<gray>Buys whatever your Cooks and Farmhands",
-                    "<gray>are short of with your money - no budget,",
-                    "<gray>as long as you can pay.");
+                    "<gray>are short of with your money - seeds for",
+                    "<gray>empty farmland, fertilizer, ingredients.",
+                    "<gray>No budget, as long as you can pay.");
         });
         lore.addAll(crewLines());
         lore.add("<dark_gray>Click: show who they work with");
@@ -169,9 +264,9 @@ public final class WorkerMenu extends Menu {
         int free = worker.freeSlots();
         boolean tight = free < 6;
         return Items.glint(Items.icon("ui_take", (tight ? "<red>" : "<white>") + "Satchel: " + (Worker.SATCHEL - free) + "/"
-                        + Worker.SATCHEL + " slots",
-                tight ? "<gray>Nearly full: a Runner takes what they" : "<gray>A Runner takes what they make and",
-                tight ? "<gray>made (spare seeds become fertilizer)." : "<gray>passes it on or sells it.",
+                        + Worker.SATCHEL + " slots " + WorkersMenu.bar(Worker.SATCHEL - free, Worker.SATCHEL),
+                tight ? "<gray>Nearly full: the Runner empties it first" : "<gray>A Runner takes what they make and",
+                tight ? "<gray>and sells what nobody can take in time." : "<gray>passes it on or sells it.",
                 "<dark_gray>Take things out below."), tight);
     }
 
@@ -228,12 +323,11 @@ public final class WorkerMenu extends Menu {
         }
         switch (t) {
             case FARMHAND -> lore.addAll(List.of(
-                    "<gray>Picks your ripe plants near them and",
-                    "<gray>plants a seed from the harvest again.",
-                    "<gray>Give them seeds and fertilizer to plant",
-                    "<gray>empty farmland. Spare seeds become",
-                    "<gray>fertilizer. Dryers, Cooks and Runners",
-                    "<gray>take the harvest from them."));
+                    "<gray>Plants every empty farmland near them",
+                    "<gray>from their seed backpack first, then picks",
+                    "<gray>your ripe plants (and plants them again)",
+                    "<gray>and fertilizes the growing ones.",
+                    "<gray>A Runner takes the harvest from them."));
             case DRYER -> lore.addAll(List.of(
                     "<gray>Put them near your Drug Lab. They take",
                     "<gray>fresh buds from your Farmhands, hang",
@@ -242,15 +336,15 @@ public final class WorkerMenu extends Menu {
             case RUNNER -> lore.addAll(List.of(
                     "<gray>Brings your workers what they're",
                     "<gray>missing from anywhere in the crew -",
-                    "<gray>through walls, the back way. Picks up",
-                    "<gray>finished product nobody needs and sells",
-                    "<gray>it, at your Dealer Stand if one is near."));
+                    "<gray>through walls, the back way. Never",
+                    "<gray>gives anyone more than they have room",
+                    "<gray>for, and sells the rest on the spot."));
             case SUPPLIER -> {
                 lore.addAll(List.of(
                         "<gray>Buys what your Cooks and Farmhands",
-                        "<gray>run low on (Trade items, Lab Solvent,",
-                        "<gray>papers, fertilizer, water) with your",
-                        "<gray>money and brings it to them."));
+                        "<gray>run low on (seeds for empty farmland,",
+                        "<gray>fertilizer, Trade items, Lab Solvent,",
+                        "<gray>papers, water) with your money."));
                 List<String> buying = new ArrayList<>();
                 for (Worker o : workers().crew(worker)) {
                     for (Workers.Buy b : workers().needs(o)) {
@@ -267,9 +361,6 @@ public final class WorkerMenu extends Menu {
             }
             default -> {
             }
-        }
-        if (t != WorkerType.SUPPLIER) {
-            lore.add("<white>Nearest chest: <gray>they put their work in it.");
         }
         lore.addAll(crewLines());
         return Items.icon("ui_guide", "<aqua>How they work", lore);
@@ -365,6 +456,39 @@ public final class WorkerMenu extends Menu {
                 return;
             }
             case TAKE_ALL -> takeAll();
+            case EXTRA -> {
+                switch (worker.type()) {
+                    case FARMHAND -> {
+                        openChild(new SeedBagMenu(player, worker));
+                        return;
+                    }
+                    case RUNNER -> {
+                        double got = ws.sellAll(worker);
+                        if (got <= 0) {
+                            failSound();
+                        } else {
+                            successSound();
+                        }
+                    }
+                    case DRYER -> {
+                        player.closeInventory();
+                        ws.show(player, worker);
+                        return;
+                    }
+                    case COOK -> {
+                        openChild(new CookRecipeMenu(player, worker));
+                        return;
+                    }
+                    default -> clickSound();
+                }
+            }
+            case HELP -> {
+                clickSound();
+                player.closeInventory();
+                player.openBook(dev.kushcraft.guide.Guide.book(player));
+                player.sendActionBar(Text.mm("<gray>Workers are in the contents of the handbook."));
+                return;
+            }
             default -> {
                 int i = slot - FIRST;
                 if (i >= 0 && i < Worker.SATCHEL) {
@@ -412,7 +536,7 @@ public final class WorkerMenu extends Menu {
                 : workers().uses(worker, item);
         if (!wanted) {
             player.sendActionBar(Text.mm("<gray>" + Text.escape(worker.name()) + " only takes " + switch (worker.type()) {
-                case FARMHAND -> "seeds and fertilizer.";
+                case FARMHAND -> "seeds (into the backpack) and fertilizer.";
                 case DRYER -> "fresh buds.";
                 case COOK -> worker.product() == null ? "ingredients - pick a drug first." : "what their recipe needs.";
                 case RUNNER -> "product to sell.";
@@ -434,6 +558,8 @@ public final class WorkerMenu extends Menu {
         player.playSound(player.getLocation(), "minecraft:item.bundle.insert", SoundCategory.PLAYERS, 0.8f, 1f);
         if (worker.type() == WorkerType.RUNNER) {
             workers().sellAll(worker); // a Runner sells what they get right away
+        } else {
+            workers().hurry(worker); // they get to work with it right away
         }
         render();
     }

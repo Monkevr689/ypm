@@ -3345,6 +3345,39 @@ public final class Workers implements Listener {
         }.runTaskTimer(plugin, 0L, 10L);
     }
 
+    /** Empty farmland and Planters a Farmhand can walk to (0 when not loaded). */
+    public int emptyFarmland(Worker w) {
+        return w.home() == null || !w.isLoaded() ? 0 : emptySoil(w, null, Integer.MAX_VALUE).size();
+    }
+
+    /** Get going right away (Plant now, after you gave them something). */
+    public void hurry(Worker w) {
+        w.restTicks = 1;
+        w.idleSince = 0;
+        soil.remove(w.id());
+    }
+
+    /** What the sellable things in a worker's satchel would fetch at the dealer right now. */
+    public double carriedValue(Worker w) {
+        double v = 0;
+        for (ItemStack it : w.satchel.getStorageContents()) {
+            if (sellable(it)) {
+                v += plugin.shop().sellPrice(it) * it.getAmount();
+            }
+        }
+        return v;
+    }
+
+    /** Racks of a Dryer's nearest Drug Lab: {in use, dry, total}; null without a lab. */
+    public int[] racks(Worker w) {
+        List<Machine> labs = w.isLoaded() ? labsNear(w, radius(w)) : List.of();
+        if (labs.isEmpty()) {
+            return null;
+        }
+        Machine lab = labs.get(0);
+        return new int[]{lab.racksInUse(), lab.racksDry(), Machine.RACKS};
+    }
+
     /** Dryer: hand everything they dry to the Runners to sell. */
     public void setSell(Worker w, boolean on) {
         w.sell = on;

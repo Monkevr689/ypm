@@ -720,9 +720,15 @@ public final class PlantManager {
     private long sparkleTick;
 
     /** Mythic plants sparkle in their colours once they flower. */
+    /** Mythic plants sparkle - only the ones near a player (nobody sees the rest: no work for big farms). */
     private void sparkle() {
         sparkleTick++;
-        for (Plant p : plants.values()) {
+        Set<Plant> seen = new HashSet<>();
+        for (Player pl : Bukkit.getOnlinePlayers()) {
+            Location l = pl.getLocation();
+            seen.addAll(near(pl.getWorld().getName(), l.getBlockX(), l.getBlockZ(), 40));
+        }
+        for (Plant p : seen) {
             if (p.kind() != Plant.Kind.CANNABIS || p.stage() < 3 || p.displayId == null) {
                 continue;
             }

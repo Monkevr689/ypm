@@ -175,6 +175,15 @@
    "chars": [
     "\ue010"
    ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/seeds.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue011"
+   ]
   }
  ]
 }

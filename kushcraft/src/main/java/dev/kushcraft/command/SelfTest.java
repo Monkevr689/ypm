@@ -512,11 +512,12 @@ final class SelfTest {
         Block testLab = w.getBlockAt(x + 7, y + 1, z + 5);
         Machine racks = plugin.machines().placeAt(testLab, MachineType.LAB_STATION, 0f, boss);
         if (racks != null) {
-            racks.hang(s.id(), 3, 4, 1_000L, 31_000L);
-            racks.hang(s.id(), 3, 4, 11_000L, 41_000L);
+            long t0 = System.currentTimeMillis();
+            racks.hang(s.id(), 3, 4, t0, t0 + 30_000L);
+            racks.hang(s.id(), 3, 4, t0 + 10_000L, t0 + 40_000L);
             Machine.Rack rack = racks.rack(0);
-            check(rack != null && rack.amount() == 8 && rack.done() == 36_000L && rack.start() == 1_000L,
-                    "topping up a rack only moves its finish time a little (" + (rack == null ? "-" : rack.done()) + ")");
+            check(rack != null && rack.amount() == 8 && rack.done() == t0 + 35_000L && rack.start() == t0,
+                    "topping up a rack only moves its finish time a little (" + (rack == null ? "-" : rack.done() - t0) + ")");
             plugin.machines().breakMachine(racks, null);
         }
         // the dryer next to a Drug Lab fetches the buds, hangs them and collects them dry

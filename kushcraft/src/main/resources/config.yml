@@ -212,21 +212,26 @@ harvest:
 # =====================================================================
 #  WORKERS  (/kush > Workers)
 #  Hire people who work for you. They're expensive, but they never stop:
-#   Farmhand - harvests your ripe plants and plants them again (and plants
-#              / fertilizes from their satchel)
+#   Farmhand - plants every empty farmland / Planter near them first,
+#              harvests ripe plants and plants them again, fertilizes;
+#              seeds go in a seed backpack (45 stacks), never the satchel
 #   Dryer    - dries fresh buds on your Drug Lab racks
 #   Cook     - cooks the drug you pick at your Drug Lab, rolls joints,
 #              mixes new strains, or on Auto makes the best drug they
 #              have everything for
-#   Runner   - carries work from worker to worker and sells it on the
-#              spot (never seeds); gets through walls the back way
-#   Supplier - buys whatever your workers are short of (Trade items, Lab
-#              Solvent, papers, fertilizer, seeds, water) with your money:
-#              no budget, they stop only when you can't pay
+#   Runner   - empties your workers' satchels, carries work from worker
+#              to worker and sells whatever nobody needs on the spot
+#              (never seeds); gets through walls the back way
+#   Supplier - buys whatever your workers are short of (seeds for empty
+#              farmland, fertilizer, Trade items, Lab Solvent, papers,
+#              water) with your money: no budget, they stop only when you
+#              can't pay
 #  No chests: work goes hand to hand. Your workers within chain-radius of
 #  each other are a crew - Farmhand > Runner > Dryer > Cook or Runner,
 #  who sells it. Nobody works through walls and nobody takes what another
-#  worker needs for their own job. A stuck worker tells their owner.
+#  worker needs for their own job, and nobody is given more than they
+#  have room for (no more stuck full satchels). A stuck worker tells
+#  their owner.
 #  They only touch the plants and labs of the player who hired them.
 #  Right-click a worker for their satchel and buttons.
 # =====================================================================

@@ -100,7 +100,10 @@ public final class WorkersMenu extends TabMenu {
         set(HELP, Items.icon("ui_guide", "<aqua>How the work chain works",
                 "<gray>No chests: work goes hand to hand.",
                 "<green>Farmhand<gray> > <light_purple>Runner<gray> > <gold>Dryer<gray> > <aqua>Cook",
-                "<gray>or the <light_purple>Runner<gray>, who sells it on the spot.",
+                "<gray>or the <light_purple>Runner<gray>, who sells whatever",
+                "<gray>nobody needs on the spot (never seeds).",
+                "<green>Farmhands<gray> keep seeds in a backpack and",
+                "<gray>plant every empty farmland first.",
                 "<yellow>Suppliers<gray> buy whatever anyone is missing.",
                 "<gold>⚠<gray> = stuck: they tell you what they need.",
                 "<dark_gray>Click: open the handbook"));
@@ -109,8 +112,12 @@ public final class WorkersMenu extends TabMenu {
     private ItemStack icon(Worker w) {
         Location h = w.home();
         List<String> lore = new ArrayList<>();
-        lore.add("<gold>Level " + w.level() + " <dark_gray>· <gray>" + (Worker.SATCHEL - w.freeSlots()) + "/" + Worker.SATCHEL
-                + " satchel slots");
+        int used = Worker.SATCHEL - w.freeSlots();
+        lore.add("<gold>Level " + w.level() + " <dark_gray>· <gray>Satchel " + bar(used, Worker.SATCHEL) + " <gray>" + used + "/"
+                + Worker.SATCHEL);
+        if (w.type() == WorkerType.FARMHAND) {
+            lore.add("<gray>Seed backpack " + bar(w.seedSlots(), Worker.SEED_BAG) + " <gray>" + w.seedCount() + " seeds");
+        }
         lore.add("<white>" + (w.paused() ? "<red>Paused" : w.isLoaded() ? w.status() : "<dark_gray>Asleep (nobody nearby)"));
         if (w.problem() != null && !w.paused()) {
             lore.add("<gold>⚠ Stuck - they need you");
@@ -126,6 +133,13 @@ public final class WorkersMenu extends TabMenu {
         ItemStack it = Items.icon(w.type().item().model(), (stuck ? "<gold>⚠ " : "") + w.type().color()
                 + Text.escape(w.name()) + " <gray>the " + w.type().display(), lore);
         return Items.glint(it, stuck || (w.wants() != null && !w.paused()));
+    }
+
+    /** A ten-block gauge: green, yellow when over half full, red when nearly full. */
+    static String bar(int n, int of) {
+        int filled = of <= 0 ? 0 : (int) Math.round(10.0 * n / of);
+        String col = n * 10 >= of * 8 ? "<red>" : n * 2 >= of ? "<yellow>" : "<green>";
+        return col + "▮".repeat(filled) + "<dark_gray>" + "▮".repeat(10 - filled);
     }
 
     @Override
