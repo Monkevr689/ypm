@@ -259,7 +259,11 @@ jobs:
           c = c.replace("\n  runner:\n", "\n  supplier:\n    wage: 6\n    water-price: 3\n  runner:\n", 1)
           c = c.replace("\nworkers:\n", "\nworkers:\n  work-offline: true\n", 1)
           c = re.sub(r"(?m)^  demand-drop: .*$", "  demand-drop: 0.0025", c)
-          c = c.replace("  buy:\n", "  buy:\n  - item: supplier\n    amount: 1\n    price: 13000\n", 1)
+          # the Supplier in the shop, at whatever indent Bukkit wrote the list with
+          i = c.index("\n  buy:\n") + len("\n  buy:\n")
+          first = c[i:c.index("\n", i)]
+          ind = first[:len(first) - len(first.lstrip())]
+          c = c[:i] + ind + "- item: supplier\n" + ind + "  amount: 1\n" + ind + "  price: 13000\n" + c[i:]
           open("plugins/KushCraft/config.yml", "w").write(c)
           st = open("plugins/KushCraft/strains.yml").read()
           st = re.sub(r"(?m)^version: .*$", "version: 5", st)

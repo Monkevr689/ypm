@@ -6,7 +6,6 @@ import dev.kushcraft.guide.Guide;
 import dev.kushcraft.gui.GuiFont;
 import dev.kushcraft.item.ItemType;
 import dev.kushcraft.item.Items;
-import dev.kushcraft.lab.Cooking;
 import dev.kushcraft.lab.LabRecipe;
 import dev.kushcraft.machine.Machine;
 import dev.kushcraft.machine.MachineType;
@@ -109,9 +108,10 @@ final class SelfTest {
             }
             if (t.tinted()) {
                 var cmd = it.getItemMeta().getCustomModelDataComponent();
-                check(cmd.getColors().size() == 3, "bud, leaf and hair colours " + t);
-                check(cmd.getStrings().size() == 2 && cmd.getStrings().get(0).equals(s.look().shape().id())
-                        && cmd.getStrings().get(1).equals(s.exotic().id()), "bud shape + look strings " + t);
+                check(cmd.getColors().size() == 4, "bud, leaf, hair and accent colours " + t);
+                check(cmd.getStrings().size() == 3 && cmd.getStrings().get(0).equals(s.look().shape().id())
+                        && cmd.getStrings().get(1).equals(s.exotic().id())
+                        && cmd.getStrings().get(2).equals(s.look().pattern().id()), "bud shape, look + pattern strings " + t);
             }
         }
         check(Items.hits(Items.strainItem(ItemType.JOINT, s, 3, 1)) == Items.JOINT_HITS, "joint hits");
@@ -146,8 +146,19 @@ final class SelfTest {
                 "ergot comes from wheat");
         check(uses(LabRecipe.COCAINE, ItemType.COCA_PASTE) && uses(LabRecipe.COCA_PASTE, ItemType.COCA_LEAVES),
                 "cocaine: leaves > paste > cocaine");
-        check(uses(LabRecipe.HEROIN, ItemType.MORPHINE) && uses(LabRecipe.MORPHINE, ItemType.OPIUM),
-                "heroin: opium > morphine > heroin");
+        check(uses(LabRecipe.HEROIN, ItemType.MORPHINE) && uses(LabRecipe.MORPHINE, ItemType.POPPY_SEEDS)
+                && LabRecipe.MORPHINE.ingredients().size() == 1, "heroin: poppy seeds > morphine base > heroin");
+        boolean craft = false;
+        for (dev.kushcraft.recipe.Recipes.Info r : dev.kushcraft.recipe.Recipes.info()) {
+            if (r.result() == ItemType.MORPHINE) {
+                craft = java.util.Arrays.stream(r.grid()).filter(java.util.Objects::nonNull)
+                        .allMatch("kush:poppy_seeds"::equals);
+            }
+        }
+        check(craft, "morphine base crafts straight from poppy seeds");
+        var morphineKey = new NamespacedKey(plugin, ItemType.MORPHINE.id());
+        check(dev.kushcraft.recipe.Recipes.usesCustomItems(morphineKey) && Bukkit.getRecipe(morphineKey) != null,
+                "the morphine base recipe is registered and allowed past the custom-item guard");
         check(uses(LabRecipe.VAPE_PEN, ItemType.BUD_DRIED) && uses(LabRecipe.LEAN, ItemType.COUGH_SYRUP),
                 "vape pens are made from dried buds, lean has its own step");
         check(uses(LabRecipe.AYAHUASCA, ItemType.DMT) && uses(LabRecipe.OXY, ItemType.MORPHINE)
@@ -557,6 +568,7 @@ final class SelfTest {
         chestBlock.setType(Material.CHEST);
         var chest = ((org.bukkit.block.Container) chestBlock.getState(false)).getInventory();
         chest.addItem(Items.create(ItemType.ROLLING_PAPERS, 8));
+        ws.chestsChanged(chestBlock); // (what placing a chest does)
         check(ws.chests(cook).stream().anyMatch(b -> b.getLocation().equals(chestBlock.getLocation())),
                 "any chest of yours near the cook is theirs to use");
         // a chest someone else placed is never touched
@@ -567,6 +579,7 @@ final class SelfTest {
                     org.bukkit.persistence.PersistentDataType.STRING, UUID.randomUUID().toString());
             ts.update();
         }
+        ws.chestsChanged(theirs);
         check(ws.chests(cook).stream().noneMatch(b -> b.getLocation().equals(theirs.getLocation())),
                 "workers leave other players' chests alone");
         check(ws.workNow(cook) && count(cook.satchel(), ItemType.ROLLING_PAPERS) == 8 && count(chest,
@@ -596,6 +609,7 @@ final class SelfTest {
         Block chest2Block = w.getBlockAt(x + 6, y + 1, z + 3);
         chest2Block.setType(Material.BARREL);
         var chest2 = ((org.bukkit.block.Container) chest2Block.getState(false)).getInventory();
+        ws.chestsChanged(chest2Block);
         chest.addItem(new ItemStack(Material.IRON_NUGGET, 8), new ItemStack(Material.GLASS_PANE, 4));
         chest2.addItem(Items.create(ItemType.LAB_SOLVENT, 4), Items.strainItem(ItemType.BUD_DRIED, s, 3, 16));
         check(ws.workNow(cook) && count(cook.satchel(), ItemType.LAB_SOLVENT) == 4
@@ -604,21 +618,26 @@ final class SelfTest {
         check(ws.workNow(cook) && lab.busy() && "VAPE_PEN".equals(lab.job()), "the cook starts a batch at the lab");
         check(cook.jobs() == 2, "the cook is paid per batch");
         lab.finishNow();
-        check(ws.workNow(cook) && !lab.busy() && count(cook.satchel(), ItemType.VAPE_PEN) == Cooking.MAX_BATCHES,
-                "the cook collects the batches");
+        int pens = lab.output() == null ? 0 : lab.output().getAmount(); // vape pens don't stack: one batch at a time
+        check(pens > 0 && ws.workNow(cook) && !lab.busy() && count(cook.satchel(), ItemType.VAPE_PEN) == pens,
+                "the cook collects the batch");
         // the old stuck-lab bug: a finished batch of another drug is collected, the lab is freed
         ws.stash(cook, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4), Items.create(ItemType.LAB_SOLVENT, 1),
                 new ItemStack(Material.IRON_NUGGET, 2), new ItemStack(Material.GLASS_PANE, 1)));
         check(ws.workNow(cook) && lab.busy(), "the cook starts another batch");
         lab.finishNow();
+        pens += lab.output() == null ? 0 : lab.output().getAmount();
         ws.setRecipe(cook, LabRecipe.SHROOM_TEA);
-        check(ws.workNow(cook) && !lab.busy() && count(cook.satchel(), ItemType.VAPE_PEN) == Cooking.MAX_BATCHES + 1,
+        check(ws.workNow(cook) && !lab.busy() && count(cook.satchel(), ItemType.VAPE_PEN) == pens,
                 "a cook on a new drug collects the old batch first (no stuck lab)");
         // nothing to make: they put their work in a chest
         ws.setAutoBuy(boss, false);
         ws.workNow(cook);
-        check(count(chest, ItemType.VAPE_PEN) + count(chest2, ItemType.VAPE_PEN) == Cooking.MAX_BATCHES + 1
+        check(count(chest, ItemType.VAPE_PEN) + count(chest2, ItemType.VAPE_PEN) == pens
                 && count(cook.satchel(), ItemType.VAPE_PEN) == 0, "an idle cook puts their work in a chest");
+        while (count(chest, ItemType.VAPE_PEN) + count(chest2, ItemType.VAPE_PEN) < 4) {
+            chest.addItem(Items.strainItem(ItemType.VAPE_PEN, s, 3, 1)); // a Runner comes for 4 or more
+        }
         before = eco.balance(owner);
         check(ws.workNow(runner) && count(chest, ItemType.VAPE_PEN) + count(chest2, ItemType.VAPE_PEN) == 0
                 && eco.balance(owner) > before && runner.carried() == 0, "the runner sells what's in the chests");
@@ -637,7 +656,7 @@ final class SelfTest {
         chest2Block.setType(Material.AIR);
         theirs.setType(Material.AIR);
         List<ItemStack> seeds = new ArrayList<>();
-        for (int i = 0; i < 24; i++) {
+        for (int i = 0; i < 44; i++) {
             seeds.add(Items.create(ItemType.ROLLING_PAPERS, 64));
         }
         for (int i = 0; i < 26; i++) {
@@ -645,6 +664,7 @@ final class SelfTest {
         }
         farm.satchel().clear();
         ws.stash(farm, seeds);
+        check(farm.freeSlots() < 6, "the farmhand's satchel is nearly full");
         ws.compost(farm);
         check(count(farm.satchel(), ItemType.COCA_SEEDS) == 64 && count(farm.satchel(), ItemType.FERTILIZER) == 88,
                 "spare seeds become fertilizer");

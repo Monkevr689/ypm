@@ -1088,7 +1088,7 @@ public final class Workers implements Listener {
     }
 
     /** Chests changed near here: the workers around forget their chest lists. */
-    private void chestsChanged(Block b) {
+    public void chestsChanged(Block b) {
         for (Worker w : list) {
             Location h = w.home();
             if (h != null && h.getWorld().equals(b.getWorld())) {
