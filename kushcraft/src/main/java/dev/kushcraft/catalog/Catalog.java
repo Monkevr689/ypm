@@ -78,8 +78,8 @@ public final class Catalog {
         drug(ItemType.ANGEL_DUST, Category.UPPERS, "Cook at a Drug Lab.");
         // downers
         drug(ItemType.OPIUM, Category.DOWNERS, "Cook poppy pods at a Drug Lab.");
-        drug(ItemType.HEROIN, Category.DOWNERS, "Opium > morphine base > heroin.");
-        drug(ItemType.OXY, Category.DOWNERS, "Opium > morphine base > oxy.");
+        drug(ItemType.HEROIN, Category.DOWNERS, "Poppy seeds > morphine base > heroin.");
+        drug(ItemType.OXY, Category.DOWNERS, "Poppy seeds > morphine base > oxy.");
         drug(ItemType.LEAN, Category.DOWNERS, "Opium > cough syrup > lean.");
         drug(ItemType.XANNY_BARS, Category.DOWNERS, "Cook at a Drug Lab.");
         drug(ItemType.KETAMINE, Category.DOWNERS, "Cook at a Drug Lab.");
@@ -99,7 +99,8 @@ public final class Catalog {
         add(ItemType.SEED_PACK, Category.GROW, null, "Break grass (the biome picks the strain).");
         add(ItemType.MUSHROOM_SPORES, Category.GROW, null, "Break small mushrooms.");
         add(ItemType.COCA_SEEDS, Category.GROW, null, "Break grass in jungles and savannas.");
-        add(ItemType.POPPY_SEEDS, Category.GROW, null, "Break red poppies.");
+        add(ItemType.POPPY_SEEDS, Category.GROW, null, "Break red poppies, or harvest poppies.",
+                "4 seeds craft into Morphine Base.");
         add(ItemType.PEYOTE_SEEDS, Category.GROW, null, "Break dead bushes in deserts.");
         add(ItemType.COCA_LEAVES, Category.GROW, null, "Harvest a grown coca bush.");
         add(ItemType.POPPY_POD, Category.GROW, null, "Harvest grown poppies.");
@@ -107,7 +108,7 @@ public final class Catalog {
         // in-between steps, all cooked at a Drug Lab
         add(ItemType.ERGOT_EXTRACT, Category.GROW, null, "Cook ergot at a Drug Lab.");
         add(ItemType.COCA_PASTE, Category.GROW, null, "Cook coca leaves at a Drug Lab.");
-        add(ItemType.MORPHINE, Category.GROW, null, "Cook opium at a Drug Lab.");
+        add(ItemType.MORPHINE, Category.GROW, null, "Crafting table: 4 poppy seeds.", "Or let a Cook make it.");
         add(ItemType.COUGH_SYRUP, Category.GROW, null, "Cook opium + honey at a Drug Lab.");
         add(ItemType.GROWER_GUIDE, Category.GROW, null, "Type /kush.");
         // old weed products (not made any more; they still work and sell)
@@ -144,8 +145,64 @@ public final class Catalog {
         return null;
     }
 
-    /** Fixed doses for drugs that are not tied to a cannabis strain. */
+    /** The one-of-a-kind effect each drug has (null for everything else). */
+    public static EffectType signature(ItemType t) {
+        return switch (t) {
+            case JOINT -> EffectType.SMOKE_RINGS;
+            case BLUNT -> EffectType.HOTBOX;
+            case VAPE_PEN -> EffectType.CLOUD_CHASER;
+            case MAGIC_MUSHROOM -> EffectType.FAIRY_RING;
+            case SHROOM_TEA -> EffectType.SUNNY;
+            case SHROOM_CHOCOLATE -> EffectType.SWEET_TOOTH;
+            case LUCID_TAB -> EffectType.KALEIDOSCOPE;
+            case PEYOTE_BUTTON -> EffectType.SPIRIT_FOX;
+            case MESCALINE -> EffectType.CACTUS_SKIN;
+            case DMT -> EffectType.MACHINE_ELVES;
+            case AYAHUASCA -> EffectType.VINE_SIGHT;
+            case COCAINE -> EffectType.NOSE_CANDY;
+            case CRACK -> EffectType.TWEAKING;
+            case BLUE_CRYSTAL -> EffectType.CHEMIST;
+            case SPEED -> EffectType.QUICK_STEP;
+            case ECSTASY -> EffectType.RAVE;
+            case PIXIE_DUST -> EffectType.FAIRY_WINGS;
+            case ANGEL_DUST -> EffectType.ANGEL_WINGS;
+            case OPIUM -> EffectType.POPPY_TRAIL;
+            case HEROIN -> EffectType.NUMB;
+            case OXY -> EffectType.BOUNCE;
+            case LEAN -> EffectType.SLOW_MO;
+            case KETAMINE -> EffectType.MOON_GRAVITY;
+            case XANNY_BARS -> EffectType.CHILL_PILL;
+            case MOONSHINE -> EffectType.BEER_GOGGLES;
+            case LAUGHING_GAS -> EffectType.BALLOON;
+            default -> null;
+        };
+    }
+
+    /** How long a drug's signature lasts (seconds; weed: per hit). */
+    public static int signatureSeconds(ItemType t) {
+        return switch (t) {
+            case JOINT -> 40;
+            case BLUNT -> 60;
+            case VAPE_PEN -> 30;
+            case LAUGHING_GAS -> 25;
+            case MAGIC_MUSHROOM, PEYOTE_BUTTON, DMT -> 90;
+            case CRACK -> 60;
+            case LUCID_TAB, MESCALINE, AYAHUASCA -> 180;
+            default -> 150;
+        };
+    }
+
+    /** Fixed doses for drugs that are not tied to a cannabis strain (with their signature). */
     public static Dose dose(ItemType t) {
+        Dose d = baseDose(t);
+        EffectType sig = signature(t);
+        if (d != null && sig != null) {
+            d.add(sig, signatureSeconds(t));
+        }
+        return d;
+    }
+
+    private static Dose baseDose(ItemType t) {
         return switch (t) {
             case MAGIC_MUSHROOM -> new Dose().add(EffectType.TRIPPY, 90).add(EffectType.GIGGLES, 90).high(16);
             case SHROOM_TEA -> new Dose().add(EffectType.TRIPPY, 180).add(EffectType.EUPHORIA, 180).high(26)
@@ -210,6 +267,9 @@ public final class Catalog {
         }
         StringBuilder b = new StringBuilder();
         for (Map.Entry<EffectType, Integer> e : d.effects().entrySet()) {
+            if (e.getKey().signature()) {
+                continue;
+            }
             if (!b.isEmpty()) {
                 b.append(", ");
             }

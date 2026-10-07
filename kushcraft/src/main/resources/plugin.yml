@@ -2,7 +2,7 @@ name: KushCraft
 version: ${project.version}
 main: dev.kushcraft.KushCraft
 api-version: '1.21.4'
-description: Grow custom strains, cook drugs step by step, hire workers that run the whole chain and sell it all - with custom textures, no client mods.
+description: Grow 86 strains (Mythic and Exotic ones too), cook drugs with their own signature effects, hire workers that run the whole chain - with custom textures, no client mods.
 author: KushCraft
 softdepend: [Vault]
 commands:

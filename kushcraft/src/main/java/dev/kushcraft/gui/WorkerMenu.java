@@ -19,20 +19,25 @@ import java.util.List;
 
 /**
  * A worker's menu (right-click them): who they are and what they're doing,
- * their job (a Cook's drug), their satchel (click an item to take it, click
- * your own seeds / buds / ingredients to give them), and buttons to rename,
- * pause, train and dismiss them. Layout: tools/gui.py worker().
+ * linked chests, where they work, chests around them (a Supplier: the money
+ * they leave you), their job (a Cook's drug), their satchel (click an item
+ * to take it, click your own seeds / buds / ingredients to give them), and
+ * buttons to rename, pause, train and dismiss them. Layout: tools/gui.py worker().
  */
 public final class WorkerMenu extends Menu {
 
     static final int ROWS = 5;
     static final int INFO = 0;
+    static final int LINK = 1;
+    static final int SHOW = 2;
+    static final int OPTION = 3;
     static final int JOB = 4;
     static final int RENAME = 5;
     static final int PAUSE = 6;
     static final int UPGRADE = 7;
     static final int DISMISS = 8;
     static final int FIRST = 9;
+    static final int BACK = 36;
     static final int TAKE_ALL = 40;
 
     private final Worker worker;
@@ -62,11 +67,23 @@ public final class WorkerMenu extends Menu {
         if (t == WorkerType.RUNNER) {
             info.add("<gray>Keeps " + Math.round(ws.runnerCut() * 100) + "% of sales <dark_gray>· " + worker.jobs()
                     + " trips, " + money(worker.wages()) + " kept");
+        } else if (t == WorkerType.SUPPLIER) {
+            info.add("<gray>" + money(ws.wage(t)) + " per delivery <dark_gray>· spent " + money(worker.spent())
+                    + " on supplies");
         } else {
             info.add("<gray>" + money(ws.wage(t)) + " per job <dark_gray>· " + worker.jobs() + " jobs, "
                     + money(worker.wages()) + " paid");
         }
+        if (worker.wants() != null) {
+            info.add("<yellow>Missing: " + worker.wants());
+        }
         set(INFO, Items.icon(t.item().model(), t.color() + Text.escape(worker.name()) + " <gray>the " + t.display(), info));
+        set(LINK, linkIcon());
+        set(SHOW, Items.icon("ui_show", "<aqua>Show where they work",
+                "<gray>For 10 seconds: a ring around their area,",
+                "<green>green<gray> on chests they use, <red>red<gray> on",
+                "<gray>linked chests behind walls."));
+        set(OPTION, optionIcon());
         set(JOB, jobIcon());
         set(RENAME, Items.icon("ui_rename", "<white>Rename", "<dark_gray>Type a new name in chat."));
         set(PAUSE, worker.paused() ? Items.icon("ui_play", "<green>Back to work")
@@ -88,9 +105,48 @@ public final class WorkerMenu extends Menu {
                 set(FIRST + i, items[i].clone());
             }
         }
+        backButton(BACK);
         int carried = worker.carried();
         set(TAKE_ALL, Items.glint(Items.icon("ui_take", carried > 0 ? "<green><bold>Take all</bold> <gray>(" + carried + ")"
                 : "<gray>Satchel is empty", "<dark_gray>Click an item to take just that."), carried > 0));
+    }
+
+    private ItemStack linkIcon() {
+        Workers ws = workers();
+        List<String> lore = new ArrayList<>();
+        int linked = worker.links().size();
+        int blocked = ws.blocked(worker).size();
+        lore.add("<white>" + linked + "/" + Worker.MAX_LINKS + " linked" + (blocked > 0 && worker.type() != WorkerType.RUNNER
+                && worker.type() != WorkerType.SUPPLIER ? " <red>(" + blocked + " behind walls)" : ""));
+        lore.add(switch (worker.type()) {
+            case RUNNER -> "<gray>They sell everything in them.";
+            case SUPPLIER -> "<gray>Nothing to link: they buy what's missing.";
+            default -> "<gray>They take ingredients from them and";
+        });
+        if (worker.type() != WorkerType.RUNNER && worker.type() != WorkerType.SUPPLIER) {
+            lore.add("<gray>put their work in them.");
+            lore.add("<dark_gray>Behind a wall? A Runner carries it.");
+        }
+        lore.add("<dark_gray>Click, then right-click chests.");
+        return Items.amount(Items.icon("ui_link", "<green>Link chests", lore), Math.max(1, linked));
+    }
+
+    private ItemStack optionIcon() {
+        Workers ws = workers();
+        if (worker.type() == WorkerType.SUPPLIER) {
+            return Items.icon("ui_reserve", "<gold>Keep in your wallet: " + money(worker.reserve()),
+                    "<gray>They never spend below this.", "<dark_gray>Click: more · Right-click: less");
+        }
+        if (worker.type() == WorkerType.RUNNER) {
+            return Items.icon("ui_nearby", "<gray>Chests around them", "<dark_gray>Runners only use linked chests",
+                    "<dark_gray>and the one by their spot.");
+        }
+        int around = ws.chests(worker).size();
+        return Items.glint(Items.icon("ui_nearby", worker.nearby() ? "<green>Chests around them: ON"
+                        : "<red>Chests around them: OFF",
+                "<gray>ON: they also use your chests they", "<gray>can walk to (" + around + " now).",
+                "<gray>OFF: only linked chests and the one", "<gray>right by their spot.",
+                "<dark_gray>Click to switch"), worker.nearby());
     }
 
     private org.bukkit.inventory.ItemStack jobIcon() {
@@ -99,6 +155,14 @@ public final class WorkerMenu extends Menu {
         if (t == WorkerType.COOK) {
             ItemType made = worker.product();
             LabRecipe r = worker.recipe();
+            if (worker.autoPick()) {
+                lore.add("<gray>They make the best drug they have");
+                lore.add("<gray>everything for" + (made != null ? " - now: <white>" + made.display() : "."));
+                lore.add("<dark_gray>Click: pick one drug instead");
+                lore.addAll(crewLines());
+                ItemStack icon = Items.icon("ui_auto", "<aqua>Making: <white>whatever pays best", lore);
+                return Items.glint(icon, true);
+            }
             if (made == null) {
                 lore.add("<yellow>Click to pick the drug they make.");
             } else {
@@ -139,15 +203,37 @@ public final class WorkerMenu extends Menu {
                     "<gray>them on the racks and take them off dry.",
                     "<gray>Your Cooks and Runners take the dry buds."));
             case RUNNER -> lore.addAll(List.of(
-                    "<gray>Picks up finished product from your",
-                    "<gray>workers (what nobody else needs) and",
-                    "<gray>sells it - at your Dealer Stand if one",
-                    "<gray>is near. Anything in a chest next to",
-                    "<gray>them gets sold too. Money goes to you."));
+                    "<gray>Brings your workers what they're",
+                    "<gray>missing from anywhere in the crew -",
+                    "<gray>through walls, the back way. Picks up",
+                    "<gray>finished product nobody needs and sells",
+                    "<gray>it, at your Dealer Stand if one is near."));
+            case SUPPLIER -> {
+                lore.addAll(List.of(
+                        "<gray>Buys what your Cooks and Farmhands",
+                        "<gray>run low on (Trade items, Lab Solvent,",
+                        "<gray>papers, fertilizer, water) with your",
+                        "<gray>money and brings it to them."));
+                List<String> buying = new ArrayList<>();
+                for (Worker o : workers().crew(worker)) {
+                    for (Workers.Buy b : workers().needs(o)) {
+                        if (buying.size() < 4) {
+                            buying.add("<white>" + b.amount() + " " + b.name() + " <dark_gray>for " + Text.escape(o.name())
+                                    + " <gold>" + money(b.cost()));
+                        }
+                    }
+                }
+                if (!buying.isEmpty()) {
+                    lore.add("<yellow>Next:");
+                    lore.addAll(buying);
+                }
+            }
             default -> {
             }
         }
-        lore.add("<white>Chest next to them: <gray>they put their work in it.");
+        if (t != WorkerType.SUPPLIER) {
+            lore.add("<white>Chest by their spot: <gray>they put their work in it.");
+        }
         lore.addAll(crewLines());
         return Items.icon("ui_guide", "<aqua>How they work", lore);
     }
@@ -169,7 +255,7 @@ public final class WorkerMenu extends Menu {
         }
         int chests = ws.chests(worker).size();
         if (chests > 0) {
-            out.add("<green>" + chests + " chest" + (chests > 1 ? "s" : "") + " next to them");
+            out.add("<green>Uses " + chests + " chest" + (chests > 1 ? "s" : ""));
         }
         return out;
     }
@@ -190,6 +276,37 @@ public final class WorkerMenu extends Menu {
             confirmDismiss = false;
         }
         switch (slot) {
+            case LINK -> {
+                if (worker.type() == WorkerType.SUPPLIER) {
+                    failSound();
+                    return;
+                }
+                player.closeInventory();
+                ws.startLinking(player, worker);
+                return;
+            }
+            case SHOW -> {
+                player.closeInventory();
+                ws.show(player, worker);
+                player.sendActionBar(Text.mm("<aqua>Look around: green = chests they use, red = behind walls."));
+                return;
+            }
+            case OPTION -> {
+                if (worker.type() == WorkerType.SUPPLIER) {
+                    double[] r = Workers.RESERVES;
+                    int i = 0;
+                    while (i < r.length && r[i] < worker.reserve() - 0.01) {
+                        i++;
+                    }
+                    i = click.isRightClick() ? Math.max(0, i - 1) : Math.min(r.length - 1, i + (i < r.length
+                            && Math.abs(r[i] - worker.reserve()) < 0.01 ? 1 : 0));
+                    ws.setReserve(worker, r[i]);
+                    clickSound();
+                } else if (worker.type() != WorkerType.RUNNER) {
+                    ws.setNearby(worker, !worker.nearby());
+                    clickSound();
+                }
+            }
             case JOB -> {
                 if (worker.type() == WorkerType.COOK) {
                     openChild(new CookRecipeMenu(player, worker));
@@ -273,13 +390,16 @@ public final class WorkerMenu extends Menu {
     /** Clicking your own seeds / fertilizer / fresh buds hands them over. */
     @Override
     public void clickOwn(int slot, ItemStack item, ClickType click) {
-        boolean wanted = worker.type() == WorkerType.RUNNER ? Selling.sellable(item) : workers().uses(worker, item);
+        boolean wanted = worker.type() == WorkerType.RUNNER ? Selling.sellable(item)
+                : worker.type() == WorkerType.COOK && worker.autoPick() ? LabRecipe.anyNeeds(item)
+                : workers().uses(worker, item);
         if (!wanted) {
             player.sendActionBar(Text.mm("<gray>" + Text.escape(worker.name()) + " only takes " + switch (worker.type()) {
                 case FARMHAND -> "seeds and fertilizer.";
                 case DRYER -> "fresh buds.";
                 case COOK -> worker.product() == null ? "ingredients - pick a drug first." : "what their recipe needs.";
                 case RUNNER -> "product to sell.";
+                case SUPPLIER -> "nothing - they buy things themselves.";
             }));
             return;
         }

@@ -102,7 +102,7 @@ TEXT = "d8e4dc"
 ACCENT = {
     "shop": "f2c23a", "drugs": "7ae05a", "trade": "5ad8e8", "cartel": "f04a4a", "top": "f09a3a", "awards": "c08aff",
     "cook": "5ae8c8", "roll": "9ae85a", "dry": "f0c850", "mix": "e85ad0", "recipe": "f0b860", "list": "7ad0e8",
-    "gear": "5ad8e8", "worker": "e8c870", "guide": "5ad8f0", "admin": "e84a4a",
+    "gear": "5ad8e8", "worker": "e8c870", "guide": "5ad8f0", "admin": "e84a4a", "workers": "f0a84a",
 }
 
 
@@ -412,32 +412,39 @@ LAYOUTS = {}
 # ---------------------------------------------------------------------------
 # /kush tab pages (6 rows). MUST match dev.kushcraft.gui.TabMenu.Tab order.
 # ---------------------------------------------------------------------------
-TABS = ["SHOP", "DRUGS", "TRADE", "CARTEL", "AWARDS"]
+TABS = ["SHOP", "DRUGS", "TRADE", "WORKERS", "CARTEL", "AWARDS"]
 TITLES = {"SHOP": "SHOP", "DRUGS": "DRUGS", "TRADE": "TRADE", "CARTEL": "CARTEL", "AWARDS": "AWARDS",
-          "TOP": "TOP DEALERS", "GEAR": "GEAR & WORKERS"}
+          "TOP": "TOP DEALERS", "GEAR": "GEAR", "WORKERS": "WORKERS"}
 
 # items per row of the Drugs page (Catalog: weed, psych, uppers, downers, gear)
 DRUG_ROWS = [5, 8, 7, 8, 9]
 DRUG_COLORS = ["5aa83a", "a05ad8", "3aa8d8", "d8803a", "8a8a96"]
 SHOP_SEEDS = 36
-GEAR_SLOTS = 18
-HIRE_SLOTS = ((3, 1), (3, 3), (3, 5), (3, 7))
-HIRE_COLORS = ("4caa32", "e8a832", "3ac8e8", "c85ad8")
+GEAR_SLOTS = 36
+# Workers tab: five contracts on row 1 (WorkersMenu.HIRE), 27 of your workers on rows 2-4
+HIRE_SLOTS = ((1, 0), (1, 2), (1, 4), (1, 6), (1, 8))
+HIRE_COLORS = ("4caa32", "e8a832", "3ac8e8", "c85ad8", "e8c83a")
+WORKER_SLOTS = 27
 # shelf buttons of the Trade page: row 1 and row 5, 9 each (TradeMenu.SHELVES)
 TRADE_SHELVES = 18
 TRADE_SLOTS = 27
-AWARD_SLOTS = 45
+AWARD_SLOTS = 36
 DRY_RACKS = 5
 
 
 GUIDE_SLOT = 7
-EXTRA_SLOT = 5
 
 
-def tab_page(name, seed, tab=None, extra=False):
+def page_arrows(img, accent):
+    """Previous / next page buttons at (5,0) and (5,8)."""
+    cslot(img, 5, 0, "big", accent)
+    cslot(img, 5, 8, "big", accent)
+
+
+def tab_page(name, seed, tab=None):
     """name: the background (and accent); tab: which tab is lit (default: the same).
-    Row 0: tabs 0-4, the page's own button 5 (extra=True), the admin button 6
-    (admins only, no frame), the guide 7 and the wallet 8."""
+    Row 0: tabs 0-5, the admin button 6 (admins only, no frame), the guide 7
+    and the wallet 8."""
     rows = 6
     tab = (tab or name).upper()
     idx = TABS.index(tab)
@@ -448,8 +455,6 @@ def tab_page(name, seed, tab=None, extra=False):
     tabs(img, len(TABS), idx, accent, "wallet")
     joint_tab(img, idx, accent)
     guide_slot(img)
-    if extra:
-        cslot(img, 0, EXTRA_SLOT, "big", accent)
     return img, accent
 
 
@@ -463,7 +468,8 @@ def guide_slot(img):
 
 
 def shop():
-    """Seeds on four wooden shelves (rows 1-4); Gear & Workers (5,1), Sell all (5,4), market news (5,7)."""
+    """Seeds on four wooden shelves (rows 1-4, 36 a page); pages (5,0) (5,8), Gear (5,1), Sell all (5,4),
+    market news (5,7)."""
     img, a = tab_page("shop", 20)
     x0, y0 = 5, slot_xy(1, 0)[1] - 1
     x1, y1 = 170, slot_xy(5, 0)[1] - 3
@@ -480,17 +486,18 @@ def shop():
     coin_pile(img, sx - 14, sy + 13, 4, 7)
     coin_pile(img, sx + 32, sy + 13, 3, 8)
     cslot(img, 5, 7, "big", "f2e6c8")
+    page_arrows(img, "c8a050")
     player_inv(img, 6)
     return "shop", img, 6
 
 
 def gear():
-    """Shop > Gear & Workers: gear on two metal racks (rows 1-2), a hiring board with
-    four workers (3,1) (3,3) (3,5) (3,7), back to seeds (5,0) and your workers (5,4). The Shop tab is lit."""
+    """Shop > Gear: supplies and blocks on four metal racks (rows 1-4), back to the seeds (5,0)
+    and the Workers tab (5,4). The Shop tab is lit."""
     img, a = tab_page("gear", 26, tab="shop")
     d = ImageDraw.Draw(img)
     x0, x1 = 5, 170
-    for r in (1, 2):
+    for r in (1, 2, 3, 4):
         gy = slot_xy(r, 0)[1]
         d.rectangle((x0, gy - 2, x1, gy + 19), fill=rgba("2a3034"))
         for x in range(x0, x1 + 1, 4):
@@ -499,23 +506,45 @@ def gear():
         d.line((x0, gy - 2, x1, gy - 2), fill=rgba("7a8a94"))
         for c in range(9):
             cslot(img, r, c, tint="8ab4c8")
-    # the hiring board: cork with a sign and two posters
-    by0, by1 = slot_xy(3, 0)[1] - 8, slot_xy(4, 0)[1] + 17
-    cork(img, 8, by0, 167, by1, 61)
-    label_plate(img, 88, by1 - 8, "HIRING", plate="f8e8a8")
-    for (r, c), col in zip(HIRE_SLOTS, HIRE_COLORS):
-        x, y = slot_xy(r, c)
-        d.rectangle((x - 7, y - 3, x + 24, y + 26), fill=rgba("f4ecd4"), outline=rgba("8a7a5a"))
-        d.rectangle((x - 7, y + 22, x + 24, y + 26), fill=rgba(col))
-        pin(img, x + 8, y - 5)
-        cslot(img, r, c, "big", col)
-        # a wage line under the slot
-        for k in range(5):
-            d.point((x - 4 + k * 6, y + 20), fill=rgba("b8a880"))
     cslot(img, 5, 0, "big", "a8b0b8")
-    cslot(img, 5, 4, "glow", "6ae05a")
+    cslot(img, 5, 4, "glow", ACCENT["workers"])
     player_inv(img, 6)
     return "gear", img, 6
+
+
+def workers_page():
+    """Workers tab: five contracts on a hiring board (row 1), your workers on a cork board
+    (rows 2-4, 27 a page); pages (5,0) (5,8), collect everything (5,2), pause / restart
+    everyone (5,4), how it works (5,6)."""
+    img, a = tab_page("workers", 27)
+    d = ImageDraw.Draw(img)
+    # the hiring board: a wooden plank with five posters
+    y = slot_xy(1, 0)[1]
+    wood(img, 5, y - 1, 170, y + 18, "6a4a2a", 27)
+    for (r, c), col in zip(HIRE_SLOTS, HIRE_COLORS):
+        x, yy = slot_xy(r, c)
+        d.rectangle((x - 1, yy - 1, x + 18, yy + 18), fill=rgba("f4ecd4"), outline=rgba("8a7a5a"))
+        d.rectangle((x - 1, yy + 15, x + 18, yy + 18), fill=rgba(col))
+        cslot(img, r, c, "big", col)
+    for c in (1, 3, 5, 7):
+        x, yy = slot_xy(1, c)
+        label = {1: "H", 3: "I", 5: "R", 7: "E"}[c]
+        text(img, x + 6, yy + 5, label, rgba("f4ecd4"), shadow=rgba(DARK), scale=2)
+    # your crew pinned on a cork board
+    by0, by1 = slot_xy(2, 0)[1] - 2, slot_xy(4, 0)[1] + 19
+    cork(img, 5, by0, 170, by1, 71)
+    for r in (2, 3, 4):
+        for c in range(9):
+            cslot(img, r, c, tint="e8c870")
+            x, yy = slot_xy(r, c)
+            if (r + c) % 3 == 0:
+                pin(img, x + 8, yy - 1, ("e83a3a", "3a8ae8", "5ae85a")[(r + c) % 3 - 0])
+    page_arrows(img, a)
+    cslot(img, 5, 2, "glow", "6ae05a")
+    cslot(img, 5, 4, "big", "f0a03a")
+    cslot(img, 5, 6, "big", "5ad8f0")
+    player_inv(img, 6)
+    return "workers", img, 6
 
 
 def drugs():
@@ -663,10 +692,10 @@ def top():
 
 
 def awards():
-    """Rows 1-5: 45 awards in a trophy cabinet."""
-    img, a = tab_page("awards", 24, extra=True)
+    """Rows 1-4: 36 awards a page in a trophy cabinet; pages (5,0) (5,8), your count (5,4)."""
+    img, a = tab_page("awards", 24)
     d = ImageDraw.Draw(img)
-    y0, y1 = slot_xy(1, 0)[1] - 1, slot_xy(5, 0)[1] + 18
+    y0, y1 = slot_xy(1, 0)[1] - 1, slot_xy(4, 0)[1] + 18
     wood(img, 5, y0, 170, y1, "3a2418", 24)
     for i in range(AWARD_SLOTS):
         r, c = 1 + i // 9, i % 9
@@ -675,9 +704,11 @@ def awards():
         g = rgba("c8a040")
         for (px_, py_) in ((x, y), (x + 17, y), (x, y + 17), (x + 17, y + 17)):
             d.point((px_, py_), fill=g)
-    for r in range(1, 6):
+    for r in range(1, 5):
         y = slot_xy(r, 0)[1]
         d.line((5, y + 18, 170, y + 18), fill=rgba("6a4a2a"))
+    page_arrows(img, a)
+    cslot(img, 5, 4, "glow", "f2c23a")
     player_inv(img, 6)
     return "awards", img, 6
 
@@ -868,14 +899,15 @@ def plain_page(name, rows, seed, title):
 
 
 def worker():
-    """A worker's menu (5 rows): portrait (0,0), their job (0,4), rename / pause / train /
-    dismiss (0,5..8); the satchel (rows 1-3); take all (4,4)."""
+    """A worker's menu (5 rows): portrait (0,0), link chests / show area / chests around them
+    (0,1..3), their job (0,4), rename / pause / train / dismiss (0,5..8); the satchel
+    (rows 1-3); take all (4,4); back (4,0)."""
     rows = 5
     img, a = plain_page("worker", rows, 50, "WORKER")
     d = ImageDraw.Draw(img)
     cslot(img, 0, 0, "big", "f2c23a")
-    x, y = slot_xy(0, 1)
-    text(img, x + 4, y + 6, "YOUR HIRE", rgba(a), shadow=rgba(DARK))
+    for c, col in zip((1, 2, 3), ("6ae05a", "5ad8f0", "e8c870")):
+        cslot(img, 0, c, "big", col)
     cslot(img, 0, 4, "glow", "5ad8f0")
     for c, col in zip((5, 6, 7, 8), ("e8e0d0", "f0a03a", "f2c23a", "e84a4a")):
         cslot(img, 0, c, "big", col)
@@ -896,6 +928,7 @@ def worker():
         for c in range(9):
             cslot(img, r, c, tint="b8945a")
     cslot(img, 4, 4, "glow", "6ae05a")
+    cslot(img, 4, 0)
     player_inv(img, rows)
     return "worker", img, rows
 
@@ -967,7 +1000,7 @@ def generate(g):
     G = g
     out = []
     for fn in (shop, drugs, trade, cartel, top, awards, cook, roll, dry, mix_page, recipe, list_menu, gear, worker,
-               guide, admin):
+               guide, admin, workers_page):
         name, img, rows = fn()
         G.save_png(img, f"gui/{name}")
         LAYOUTS[name] = (img.width, img.height, rows)

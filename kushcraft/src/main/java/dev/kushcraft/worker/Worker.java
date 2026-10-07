@@ -21,9 +21,22 @@ public final class Worker {
     /** Satchel slots. */
     public static final int SATCHEL = 27;
 
-    /** One stop of a trip: walk to stand, look at look, then do act (false = stop the trip). */
-    record Step(Location stand, Location look, BooleanSupplier act) {
+    /**
+     * One stop of a trip: walk to stand, look at look, then do act (false = stop the trip).
+     * jump: Runners and Suppliers can't walk there - they take the back way (vanish and appear).
+     */
+    record Step(Location stand, Location look, BooleanSupplier act, boolean jump) {
+        Step(Location stand, Location look, BooleanSupplier act) {
+            this(stand, look, act, false);
+        }
     }
+
+    /** What a worker is missing right now (Runners bring it, the Supplier buys it). */
+    record Want(java.util.function.Predicate<ItemStack> match, String what, int amount) {
+    }
+
+    /** Most chests one worker can be linked to. */
+    public static final int MAX_LINKS = 8;
 
     private final UUID id;
     private final WorkerType type;
@@ -39,8 +52,16 @@ public final class Worker {
     boolean paused;
     int jobs;
     double wages;
-    /** Cook: the LabRecipe they make, or ROLL_JOINT / ROLL_BLUNT (null = not picked yet). */
+    /** Supplier: money spent on supplies since hired. */
+    double spent;
+    /** Cook: the LabRecipe they make, ROLL_JOINT / ROLL_BLUNT or AUTO (null = not picked yet). */
     String recipe;
+    /** Chests the owner linked to them: they take from and put in these first. */
+    final java.util.List<dev.kushcraft.util.BlockKey> links = new java.util.ArrayList<>();
+    /** They also use the owner's chests around them. */
+    boolean nearby = true;
+    /** Supplier: never spends the owner's wallet below this. */
+    double reserve = 1000;
 
     // live state
     transient UUID entityId;
@@ -50,6 +71,10 @@ public final class Worker {
     transient int workTicks;
     transient int restTicks;
     transient String status = "Starting work...";
+    transient Want want;
+    /** Cook on AUTO: what they decided to make this time. */
+    transient dev.kushcraft.lab.LabRecipe auto;
+    final transient Deque<Location> path = new ArrayDeque<>();
 
     Worker(UUID id, WorkerType type, UUID owner, Location home, String name) {
         this.id = id;
@@ -109,13 +134,44 @@ public final class Worker {
         return wages;
     }
 
-    /** Cook recipe ids for rolling instead of cooking. */
+    /** Supplier: what they spent on supplies since hired. */
+    public double spent() {
+        return spent;
+    }
+
+    /** Cook recipe ids for rolling instead of cooking, and for picking by themselves. */
     public static final String ROLL_JOINT = "ROLL_JOINT";
     public static final String ROLL_BLUNT = "ROLL_BLUNT";
+    public static final String AUTO = "AUTO";
 
-    /** Cook: the Drug Lab recipe they make, or null (nothing picked, or they roll). */
+    /** Cook: the Drug Lab recipe they make (on AUTO: what they picked), or null. */
     public dev.kushcraft.lab.LabRecipe recipe() {
+        if (AUTO.equals(recipe)) {
+            return auto;
+        }
         return recipe == null ? null : dev.kushcraft.lab.LabRecipe.parse(recipe);
+    }
+
+    /** Cook: they pick the best drug they have the ingredients for. */
+    public boolean autoPick() {
+        return AUTO.equals(recipe);
+    }
+
+    public java.util.List<dev.kushcraft.util.BlockKey> links() {
+        return links;
+    }
+
+    public boolean nearby() {
+        return nearby;
+    }
+
+    public double reserve() {
+        return reserve;
+    }
+
+    /** What they're missing right now (null = nothing). */
+    public String wants() {
+        return want == null ? null : want.what();
     }
 
     /** Cook: JOINT or BLUNT when they roll instead of cooking, else null. */

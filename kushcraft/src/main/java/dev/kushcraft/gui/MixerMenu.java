@@ -102,14 +102,28 @@ public final class MixerMenu extends LabTabMenu {
                 set(FIRST_CHANCE + i++, Items.icon(e.getKey().icon(), e.getKey().colored(),
                         "<white>" + Math.round(e.getValue() * 100) + "% <dark_gray>chance"));
             }
-            set(MUTATION, Items.icon("ui_dna", "<light_purple>Mutation",
-                    "<white>35% <dark_gray>new effect · <white>20% <dark_gray>new colour",
-                    Exotic.RAINBOW.wrap(String.format(java.util.Locale.ROOT, "%.1f%% Mythic",
-                            Breeding.mythicChance(sa, sb) * 100))));
+            List<String> odds = new ArrayList<>();
+            odds.add("<white>35% <dark_gray>new effect · <white>20% <dark_gray>new colour");
+            odds.add("<white>14% <dark_gray>new two-tone pattern");
+            odds.add(Exotic.RAINBOW.wrap(String.format(java.util.Locale.ROOT, "%.1f%% Mythic",
+                    Breeding.mythicChance(sa, sb) * 100)));
+            double exotic = Breeding.exoticChance(sa, sb);
+            if (exotic > 0) {
+                odds.add(Exotic.PRISM.wrap(String.format(java.util.Locale.ROOT, "%.0f%% Exotic", exotic * 100)));
+            } else {
+                odds.add("<dark_gray>Exotic: only from two Mythic seeds");
+            }
+            Strain recipe = Breeding.recipe(sa, sb, KushCraft.get().strains().all());
+            if (recipe != null) {
+                odds.add(Exotic.PRISM.wrap(String.format(java.util.Locale.ROOT, "%.0f%% ", Breeding.DISCOVERY * 100))
+                        + recipe.colored() + " <gray>!");
+            }
+            set(MUTATION, Items.icon("ui_dna", "<light_purple>Mutation", odds));
         }
         if (s.result != null) {
             set(RESULT, Items.glint(resultIcon(s.result), true));
-            set(KEEP, Items.icon("ui_confirm", "<green><bold>Keep it", "<dark_gray>Name it, get " + seedsGiven() + " seeds."));
+            set(KEEP, Items.icon("ui_confirm", "<green><bold>Keep it", s.result.discovered() != null
+                    ? "<dark_gray>Get " + seedsGiven() + " seeds." : "<dark_gray>Name it, get " + seedsGiven() + " seeds."));
             set(DISCARD, Items.icon("ui_cancel", "<red>Throw away"));
         } else if (!rolling) {
             set(RESULT, Items.icon("ui_info", "<gray>???"));
@@ -129,12 +143,18 @@ public final class MixerMenu extends LabTabMenu {
         for (EffectType e : r.effects()) {
             lore.add(" " + e.colored() + (r.mutations().contains(e) ? " <light_purple>✦ new!" : ""));
         }
-        if (r.look().exotic() != Exotic.NONE) {
+        if (r.look().pattern() != dev.kushcraft.strain.BudPattern.NONE) {
+            lore.add("<color:" + Text.hex(Strain.brighten(r.look().accent())) + ">" + r.look().pattern().display() + "</color>");
+        }
+        if (r.discovered() != null) {
+            lore.add(r.look().exotic().wrap("✦ You found " + Text.escape(r.discovered().name()) + "! ✦"));
+            lore.add("<gray>Keep it for its seeds.");
+        } else if (r.look().exotic() != Exotic.NONE) {
             lore.add(r.look().exotic().wrap("✦ " + r.look().exotic().display() + " look! ✦"));
         } else if (r.newLook()) {
             lore.add("<light_purple>✦ New colours!");
         }
-        String name = Text.escape(s.name == null ? "New strain" : s.name);
+        String name = Text.escape(r.discovered() != null ? r.discovered().name() : s.name == null ? "New strain" : s.name);
         ItemStack icon = Items.icon("bud_dried", r.look().exotic() != Exotic.NONE ? r.look().exotic().wrap(name)
                 : "<white>" + name, lore);
         icon.editMeta(m -> Items.look(m, r.look(), false));
@@ -234,7 +254,7 @@ public final class MixerMenu extends LabTabMenu {
         }
         removeSeed(s.a);
         removeSeed(s.b);
-        Breeding.Result result = Breeding.cross(sa, sb, RANDOM);
+        Breeding.Result result = Breeding.cross(sa, sb, RANDOM, plugin.strains().all());
         if (result.jackpot()) {
             plugin.awards().jackpot(player);
         }
@@ -280,6 +300,11 @@ public final class MixerMenu extends LabTabMenu {
         if (s.result == null) {
             return;
         }
+        if (s.result.discovered() != null) {
+            discover(s.result.discovered());
+            render();
+            return;
+        }
         ChatInput.ask(player, "<green>Name your new strain!</green> <gray>Type a name, or <white>ok</white> to keep <white>"
                 + Text.escape(s.name) + "</white>.", text -> {
             if (!text.equalsIgnoreCase("ok")) {
@@ -318,6 +343,20 @@ public final class MixerMenu extends LabTabMenu {
             for (Player o : Bukkit.getOnlinePlayers()) {
                 o.playSound(o.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.6f, 1.4f);
             }
+        }
+    }
+
+    /** Crossing the two Mythic parents of a built-in Exotic strain found it: its seeds, no name needed. */
+    private void discover(Strain st) {
+        KushCraft plugin = KushCraft.get();
+        InventoryUtil.give(player, Items.strainItem(ItemType.SEED_PACK, st, 3, seedsGiven()));
+        plugin.awards().bred(player, st.rarity());
+        s.result = null;
+        s.name = null;
+        Bukkit.broadcast(Text.msg("<white>" + Text.escape(player.getName()) + " <gray>discovered the "
+                + st.rarity().colored() + " <gray>strain " + st.colored() + "<gray>!"));
+        for (Player o : Bukkit.getOnlinePlayers()) {
+            o.playSound(o.getLocation(), "minecraft:ui.toast.challenge_complete", SoundCategory.MASTER, 0.6f, 1.4f);
         }
     }
 

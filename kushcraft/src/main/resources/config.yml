@@ -2,7 +2,7 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 9
+config-version: 10
 
 # Custom textures/models come in a server resource pack. Players get the
 # usual "this server uses a resource pack" prompt when they join.
@@ -117,13 +117,14 @@ economy:
 market:
   # Players can open the market from /kush. false = only at a Dealer Stand.
   anywhere: true
-  # Every item sold lowers that product's price by this much (0.01 = 1%),
-  # even inside one big sale, so dumping 200 of one thing pays less...
-  demand-drop: 0.006
-  # ...down to this fraction of the normal price...
-  min-price: 0.4
-  # ...and it recovers this much per minute. Sell a mix of products!
-  recovery-per-minute: 0.025
+  # Every item sold lowers that product's price by this much (0.0025 =
+  # 0.25%), even inside one big sale, so mass production pays a little
+  # less...
+  demand-drop: 0.0025
+  # ...but never below this fraction of the normal price...
+  min-price: 0.7
+  # ...and it recovers this much per minute.
+  recovery-per-minute: 0.05
   # A random "hot" product sells for extra for a while.
   hot-item-bonus: 1.5
   hot-item-minutes: 60
@@ -209,20 +210,25 @@ harvest:
   ripe-notice: true
 
 # =====================================================================
-#  WORKERS  (Shop > Gear & Workers)
+#  WORKERS  (/kush > Workers)
 #  Hire people who work for you. They're expensive, but they never stop:
-#   Farmhand - harvests your ripe plants and plants a seed from the harvest
-#              again (and plants / fertilizes from their satchel)
+#   Farmhand - harvests your ripe plants and plants them again (and plants
+#              / fertilizes from their satchel)
 #   Dryer    - dries fresh buds on your Drug Lab racks
-#   Cook     - cooks the drug you pick at your Drug Lab, or rolls joints
-#   Runner   - sells your workers' finished product for you
-#  The work chain: your workers within chain-radius of each other fetch
-#  what they need from each other by themselves - Farmhand > Dryer > Cook >
-#  Runner, or Cook > Cook (coca paste > cocaine) - and from chests or
-#  barrels right next to any of them. A worker with a chest next to them
-#  puts what they make in it. Nobody takes what another worker needs.
-#  They only touch the plants, labs and stands of the player who hired them.
-#  Right-click a worker for their satchel and buttons.
+#   Cook     - cooks the drug you pick at your Drug Lab, rolls joints, or
+#              on Auto makes the best drug they have everything for
+#   Runner   - sells your product and carries what a worker is missing
+#              from anywhere in the crew (through walls, the back way)
+#   Supplier - buys what your Cooks and Farmhands run low on (Trade items,
+#              Lab Solvent, papers, fertilizer, water) with your money
+#  Workers only use what they can walk to - nothing through walls: chests
+#  you link to them (their menu > Link), the chest right by their spot and
+#  (unless you switch it off) your own chests around them. Your workers
+#  within chain-radius of each other are a crew: they take what they need
+#  from each other's satchels when they can walk there; Runners bring the
+#  rest. Nobody takes what another worker needs for their own job.
+#  They only touch the plants, labs, stands and chests of the player who
+#  hired them. Right-click a worker for their satchel and buttons.
 # =====================================================================
 workers:
   enabled: true
@@ -248,6 +254,13 @@ workers:
   runner:
     # No wage: the Runner keeps this much of every sale (0.1 = 10%).
     cut: 0.1
+  supplier:
+    # Wage for every delivery (on top of what they buy for you).
+    wage: 6
+    # Water bottles cost this much each (Trade items cost what Trade asks).
+    water-price: 2
+    # New Suppliers never spend your wallet below this (change it in their menu).
+    reserve: 1000
 
 # Dying costs you this much of the cash in your wallet (0.2 = 20%).
 # The money is gone - nobody gets it, so killing players doesn't pay.
@@ -274,12 +287,12 @@ exchange:
   enabled: true
   # All prices below are multiplied by this.
   price-multiplier: 1.0
-  # Price change per "amount" bought, 0.01 = 1%...
-  price-step: 0.01
+  # Price change per "amount" bought, 0.005 = 0.5%...
+  price-step: 0.005
   # ...up to this much of the normal price...
   max-price: 1.25
   # ...and back towards normal this much per minute.
-  recovery-per-minute: 0.02
+  recovery-per-minute: 0.04
   categories:
     lab:
       name: Lab Ingredients
@@ -710,7 +723,7 @@ jobs:
 # =====================================================================
 shop:
   seed-price-multiplier: 1.25
-  # Workers (farmhand, dryer, cook, runner) are listed here too: they show on the hiring board.
+  # Workers (farmhand, dryer, cook, runner, supplier) are listed here too: they show in the Workers tab.
   buy:
     - {item: mushroom_spores, amount: 1, price: 30}
     - {item: coca_seeds, amount: 1, price: 50}
@@ -729,6 +742,7 @@ shop:
     - {item: dryer, amount: 1, price: 9000}
     - {item: cook, amount: 1, price: 15000}
     - {item: runner, amount: 1, price: 11000}
+    - {item: supplier, amount: 1, price: 13000}
   sell:
     # weed
     bud_fresh: 5

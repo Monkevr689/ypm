@@ -323,8 +323,10 @@ public final class PlantManager {
             int pods = Math.max(1, cond.fit().buds() + 2 + r.nextInt(2)
                     + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0));
             drops.add(Items.create(ItemType.POPPY_POD, pods));
-            drops.add(Items.create(ItemType.POPPY_SEEDS, 1 + (r.nextDouble() < 0.4 ? 1 : 0)));
-            msg = "<green>Picked " + pods + " Poppy Pods <gray>" + Text.stars(q);
+            // plenty of seeds: one to plant again, the rest crafts into morphine base
+            int seeds = 2 + (r.nextDouble() < 0.5 ? 1 : 0) + (q >= 5 ? 1 : 0);
+            drops.add(Items.create(ItemType.POPPY_SEEDS, seeds));
+            msg = "<green>Picked " + pods + " Poppy Pods <gray>and " + seeds + " seeds " + Text.stars(q);
         } else if (p.kind() == Plant.Kind.PEYOTE) {
             int buttons = Math.max(1, cond.fit().buds() + 2 + r.nextInt(2)
                     + (q >= 4 ? 1 : 0) + (q >= 5 ? 1 : 0) + (p.fertilized() ? 1 : 0));
@@ -676,8 +678,9 @@ public final class PlantManager {
             Look l = s.look();
             // young flowers have white hairs that turn the strain's colour when ripe
             int pistil = stage >= 4 ? l.pistil() : Look.mix(l.pistil(), 0xFFFFFF, 0.6);
-            Items.tint(meta, l.bud(), leafTint(s, p), pistil);
-            Items.strings(meta, l.shape().id(), stage >= 3 ? l.exotic().id() : Exotic.NONE.id());
+            Items.tint(meta, l.bud(), leafTint(s, p), pistil, l.accent());
+            Items.strings(meta, l.shape().id(), stage >= 3 ? l.exotic().id() : Exotic.NONE.id(),
+                    stage >= 3 ? l.pattern().id() : "");
         }
         it.setItemMeta(meta);
         return it;
@@ -712,11 +715,12 @@ public final class PlantManager {
                 continue;
             }
             Location at = c.add(0, hitboxHeight(p) * 0.55, 0);
-            if (ex == Exotic.RAINBOW) {
-                at.getWorld().spawnParticle(Particle.DUST, at, 3, 0.3, 0.4, 0.3, 0,
-                        new Particle.DustOptions(Exotic.rainbow(sparkleTick * 3), 0.9f));
+            if (ex.particle() == Particle.DUST) {
+                at.getWorld().spawnParticle(Particle.DUST, at, ex.exoticTier() ? 5 : 3, 0.3, 0.4, 0.3, 0,
+                        new Particle.DustOptions(ex.dust(sparkleTick * 3), 0.9f));
             } else {
-                at.getWorld().spawnParticle(ex.particle(), at, ex == Exotic.INFERNO ? 2 : 1, 0.3, 0.4, 0.3, 0.005);
+                at.getWorld().spawnParticle(ex.particle(), at, ex == Exotic.INFERNO || ex.exoticTier() ? 2 : 1,
+                        0.3, 0.4, 0.3, 0.005);
             }
         }
     }

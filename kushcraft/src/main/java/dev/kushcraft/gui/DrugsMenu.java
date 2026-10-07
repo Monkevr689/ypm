@@ -58,6 +58,10 @@ public final class DrugsMenu extends TabMenu {
         if (e.effects() != null) {
             lore.add("<gray>" + e.effects());
         }
+        dev.kushcraft.effect.EffectType sig = Catalog.signature(e.type());
+        if (sig != null) {
+            lore.add(sig.signatureLine());
+        }
         if (!RecipeBook.making(e.type()).isEmpty()) {
             lore.add("<dark_gray>Click: recipe");
         } else {

@@ -62,185 +62,191 @@
    "sig": "craft:kush:grower_guidex1:book,wheat_seeds"
   },
   {
-   "id": "cook_vape_pen",
+   "id": "craft_morphine",
    "char": "",
+   "title": "Morphine Base",
+   "sig": "craft:kush:morphinex1:kush:poppy_seeds,kush:poppy_seeds,kush:poppy_seeds,kush:poppy_seeds"
+  },
+  {
+   "id": "cook_vape_pen",
+   "char": "",
    "title": "Vape Pen",
    "sig": "cook:kush:vape_penx1:40s:kush:bud_dried*4,kush:lab_solvent*1,iron_nugget*2,glass_pane*1"
   },
   {
    "id": "cook_shroom_tea",
-   "char": "",
+   "char": "",
    "title": "Shroom Tea",
    "sig": "cook:kush:shroom_teax2:20s:kush:magic_mushroom*3,potion*1"
   },
   {
    "id": "cook_shroom_chocolate",
-   "char": "",
+   "char": "",
    "title": "Shroom Chocolate",
    "sig": "cook:kush:shroom_chocolatex3:35s:kush:magic_mushroom*2,cocoa_beans*2,sugar*1"
   },
   {
    "id": "cook_ergot",
-   "char": "",
+   "char": "",
    "title": "Ergot",
    "sig": "cook:kush:ergotx2:15s:wheat*4"
   },
   {
    "id": "cook_ergot_extract",
-   "char": "",
+   "char": "",
    "title": "Ergot Extract",
    "sig": "cook:kush:ergot_extractx2:45s:kush:ergot*3,kush:lab_solvent*1"
   },
   {
    "id": "cook_lucid_tab",
-   "char": "",
+   "char": "",
    "title": "LSD",
    "sig": "cook:kush:lucid_tabx6:30s:kush:ergot_extract*1,paper*2"
   },
   {
    "id": "cook_mescaline",
-   "char": "",
+   "char": "",
    "title": "Mescaline",
    "sig": "cook:kush:mescalinex3:40s:kush:peyote_button*4,kush:lab_solvent*1"
   },
   {
    "id": "cook_dmt",
-   "char": "",
+   "char": "",
    "title": "DMT",
    "sig": "cook:kush:dmtx3:50s:glow_berries*3,kush:lab_solvent*1"
   },
   {
    "id": "cook_ayahuasca",
-   "char": "",
+   "char": "",
    "title": "Ayahuasca",
    "sig": "cook:kush:ayahuascax2:50s:kush:dmt*1,vine*2,potion*1"
   },
   {
    "id": "cook_coca_paste",
-   "char": "",
+   "char": "",
    "title": "Coca Paste",
    "sig": "cook:kush:coca_pastex2:40s:kush:coca_leaves*6,kush:lab_solvent*1"
   },
   {
    "id": "cook_cocaine",
-   "char": "",
+   "char": "",
    "title": "Cocaine",
    "sig": "cook:kush:cocainex3:50s:kush:coca_paste*2,kush:lab_solvent*1"
   },
   {
    "id": "cook_crack",
-   "char": "",
+   "char": "",
    "title": "Crack Rock",
    "sig": "cook:kush:crackx2:30s:kush:cocaine*1,potion*1,bone_meal*1"
   },
   {
    "id": "cook_blue_crystal",
-   "char": "",
+   "char": "",
    "title": "Meth",
    "sig": "cook:kush:blue_crystalx4:60s:lapis_lazuli*3,kush:lab_solvent*2,redstone*1"
   },
   {
    "id": "cook_ecstasy",
-   "char": "",
+   "char": "",
    "title": "Ecstasy",
    "sig": "cook:kush:ecstasyx4:40s:pink_dye*2,sugar*2,kush:lab_solvent*1"
   },
   {
    "id": "cook_pixie_dust",
-   "char": "",
+   "char": "",
    "title": "Pixie Dust",
    "sig": "cook:kush:pixie_dustx4:40s:glowstone_dust*2,sugar*2"
   },
   {
    "id": "cook_angel_dust",
-   "char": "",
+   "char": "",
    "title": "Angel Dust",
    "sig": "cook:kush:angel_dustx3:50s:gunpowder*3,kush:lab_solvent*1"
   },
   {
    "id": "cook_speed",
-   "char": "",
+   "char": "",
    "title": "Speed",
    "sig": "cook:kush:speedx4:45s:redstone*2,sugar*2,kush:lab_solvent*1"
   },
   {
    "id": "cook_opium",
-   "char": "",
+   "char": "",
    "title": "Opium",
    "sig": "cook:kush:opiumx2:30s:kush:poppy_pod*3"
   },
   {
    "id": "cook_morphine",
-   "char": "",
+   "char": "",
    "title": "Morphine Base",
-   "sig": "cook:kush:morphinex2:45s:kush:opium*2,kush:lab_solvent*1"
+   "sig": "cook:kush:morphinex1:20s:kush:poppy_seeds*4"
   },
   {
    "id": "cook_heroin",
-   "char": "",
+   "char": "",
    "title": "Heroin",
    "sig": "cook:kush:heroinx2:60s:kush:morphine*2,kush:lab_solvent*1"
   },
   {
    "id": "cook_oxy",
-   "char": "",
+   "char": "",
    "title": "Oxy Pills",
    "sig": "cook:kush:oxyx3:45s:kush:morphine*1,sugar*1,kush:lab_solvent*1"
   },
   {
    "id": "cook_cough_syrup",
-   "char": "",
+   "char": "",
    "title": "Cough Syrup",
    "sig": "cook:kush:cough_syrupx2:30s:kush:opium*1,honey_bottle*1"
   },
   {
    "id": "cook_lean",
-   "char": "",
+   "char": "",
    "title": "Lean",
    "sig": "cook:kush:leanx2:30s:kush:cough_syrup*1,sugar*1,purple_dye*1"
   },
   {
    "id": "cook_ketamine",
-   "char": "",
+   "char": "",
    "title": "Ketamine",
    "sig": "cook:kush:ketaminex4:45s:nether_wart*3,kush:lab_solvent*1"
   },
   {
    "id": "cook_xanny_bars",
-   "char": "",
+   "char": "",
    "title": "Xanny Bars",
    "sig": "cook:kush:xanny_barsx6:40s:white_dye*2,sugar*1,kush:lab_solvent*1"
   },
   {
    "id": "cook_moonshine",
-   "char": "",
+   "char": "",
    "title": "Moonshine",
    "sig": "cook:kush:moonshinex3:50s:wheat*4,sugar*2,potion*1"
   },
   {
    "id": "cook_laughing_gas",
-   "char": "",
+   "char": "",
    "title": "Laughing Gas",
    "sig": "cook:kush:laughing_gasx4:30s:slime_ball*1,iron_nugget*2,kush:lab_solvent*1"
   },
   {
    "id": "roll_joint",
-   "char": "",
+   "char": "",
    "title": "Joint"
   },
   {
    "id": "roll_blunt",
-   "char": "",
+   "char": "",
    "title": "Blunt"
   },
   {
    "id": "dry_bud",
-   "char": "",
+   "char": "",
    "title": "Dried Bud"
   },
   {
    "id": "mix_strain",
-   "char": "",
+   "char": "",
    "title": "Your own strain"
   }
  ]

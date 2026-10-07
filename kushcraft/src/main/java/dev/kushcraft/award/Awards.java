@@ -57,6 +57,7 @@ public final class Awards implements Listener {
         final Set<String> tried = new HashSet<>();
         final Set<String> climates = new HashSet<>();
         final Set<String> grown = new HashSet<>();
+        final Set<String> signatures = new HashSet<>();
     }
 
     private final KushCraft plugin;
@@ -109,6 +110,7 @@ public final class Awards implements Listener {
             d.tried.addAll(sec.getStringList(k + ".tried"));
             d.climates.addAll(sec.getStringList(k + ".climates"));
             d.grown.addAll(sec.getStringList(k + ".grown"));
+            d.signatures.addAll(sec.getStringList(k + ".signatures"));
             data.put(id, d);
         }
     }
@@ -126,6 +128,9 @@ public final class Awards implements Listener {
             y.set(k + ".tried", new ArrayList<>(d.tried));
             y.set(k + ".climates", new ArrayList<>(d.climates));
             y.set(k + ".grown", new ArrayList<>(d.grown));
+            if (!d.signatures.isEmpty()) {
+                y.set(k + ".signatures", new ArrayList<>(d.signatures));
+            }
         }
         try {
             y.save(file);
@@ -204,6 +209,7 @@ public final class Awards implements Listener {
             case TRY_ALL -> triedKinds(p) + "/" + drugs().size();
             case ALL_CLIMATES -> Math.min(6, set(p, d -> d.climates)) + "/6";
             case COLLECTOR -> Math.min(10, set(p, d -> d.grown)) + "/10";
+            case SIGNATURES -> Math.min(10, set(p, d -> d.signatures)) + "/10";
             case SOLD_10K, SOLD_100K, SOLD_1M -> plugin.economy().format(plugin.economy().sales(p));
             default -> null;
         };
@@ -322,6 +328,26 @@ public final class Awards implements Listener {
         grant(p, Award.ASSEMBLY_LINE);
     }
 
+    public void hiredSupplier(Player p) {
+        grant(p, Award.SUPPLIER);
+    }
+
+    /** A chest was linked to a worker. */
+    public void linked(Player p) {
+        grant(p, Award.LOGISTICS);
+    }
+
+    /** A drug's signature effect started. */
+    public void signature(Player p, String id) {
+        Data d = of(p.getUniqueId());
+        if (d.signatures.add(id)) {
+            dirty = true;
+        }
+        if (d.signatures.size() >= 10) {
+            grant(p, Award.SIGNATURES);
+        }
+    }
+
     public void hired(Player p, int count) {
         grant(p, Award.HIRED);
         if (count >= 4) {
@@ -401,8 +427,11 @@ public final class Awards implements Listener {
         if (rarity.ordinal() >= Rarity.LEGENDARY.ordinal()) {
             grant(p, Award.LEGENDARY);
         }
-        if (rarity == Rarity.MYTHIC) {
+        if (rarity.animated()) {
             grant(p, Award.MYTHIC);
+        }
+        if (rarity == Rarity.EXOTIC) {
+            grant(p, Award.EXOTIC);
         }
     }
 

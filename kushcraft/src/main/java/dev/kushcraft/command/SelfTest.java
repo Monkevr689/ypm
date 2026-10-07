@@ -15,6 +15,7 @@ import dev.kushcraft.recipe.RecipeBook;
 import dev.kushcraft.strain.Strain;
 import dev.kushcraft.strain.StrainType;
 import dev.kushcraft.util.BlockKey;
+import dev.kushcraft.util.Text;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -108,9 +109,10 @@ final class SelfTest {
             }
             if (t.tinted()) {
                 var cmd = it.getItemMeta().getCustomModelDataComponent();
-                check(cmd.getColors().size() == 3, "bud, leaf and hair colours " + t);
-                check(cmd.getStrings().size() == 2 && cmd.getStrings().get(0).equals(s.look().shape().id())
-                        && cmd.getStrings().get(1).equals(s.exotic().id()), "bud shape + look strings " + t);
+                check(cmd.getColors().size() == 4, "bud, leaf, hair and accent colours " + t);
+                check(cmd.getStrings().size() == 3 && cmd.getStrings().get(0).equals(s.look().shape().id())
+                        && cmd.getStrings().get(1).equals(s.exotic().id())
+                        && cmd.getStrings().get(2).equals(s.look().pattern().id()), "bud shape, look + pattern strings " + t);
             }
         }
         check(Items.hits(Items.strainItem(ItemType.JOINT, s, 3, 1)) == Items.JOINT_HITS, "joint hits");
@@ -145,8 +147,30 @@ final class SelfTest {
                 "ergot comes from wheat");
         check(uses(LabRecipe.COCAINE, ItemType.COCA_PASTE) && uses(LabRecipe.COCA_PASTE, ItemType.COCA_LEAVES),
                 "cocaine: leaves > paste > cocaine");
-        check(uses(LabRecipe.HEROIN, ItemType.MORPHINE) && uses(LabRecipe.MORPHINE, ItemType.OPIUM),
-                "heroin: opium > morphine > heroin");
+        check(uses(LabRecipe.HEROIN, ItemType.MORPHINE) && uses(LabRecipe.MORPHINE, ItemType.POPPY_SEEDS)
+                && LabRecipe.MORPHINE.ingredients().size() == 1, "heroin: poppy seeds > morphine base > heroin");
+        boolean craft = false;
+        for (dev.kushcraft.recipe.Recipes.Info r : dev.kushcraft.recipe.Recipes.info()) {
+            if (r.result() == ItemType.MORPHINE) {
+                craft = java.util.Arrays.stream(r.grid()).filter(java.util.Objects::nonNull)
+                        .allMatch("kush:poppy_seeds"::equals);
+            }
+        }
+        check(craft, "morphine base crafts straight from poppy seeds");
+        var morphineKey = new NamespacedKey(plugin, ItemType.MORPHINE.id());
+        check(dev.kushcraft.recipe.Recipes.usesCustomItems(morphineKey) && Bukkit.getRecipe(morphineKey) != null,
+                "the morphine base recipe is registered and allowed past the custom-item guard");
+        // every drug has its own signature, all different
+        java.util.Set<dev.kushcraft.effect.EffectType> sigs = java.util.EnumSet.noneOf(dev.kushcraft.effect.EffectType.class);
+        for (ItemType t : dev.kushcraft.award.Awards.drugs()) {
+            var sig = dev.kushcraft.catalog.Catalog.signature(t);
+            check(sig != null && sig.signature() && sigs.add(sig), "a signature of its own: " + t);
+            if (!t.strainBound()) {
+                check(dev.kushcraft.catalog.Catalog.dose(t).effects().containsKey(sig), "the dose has the signature: " + t);
+            }
+            check(Items.create(t).getItemMeta().lore().stream().anyMatch(c -> Text.plain(c).contains(sig.display())),
+                    "the item shows its signature: " + t);
+        }
         check(uses(LabRecipe.VAPE_PEN, ItemType.BUD_DRIED) && uses(LabRecipe.LEAN, ItemType.COUGH_SYRUP),
                 "vape pens are made from dried buds, lean has its own step");
         check(uses(LabRecipe.AYAHUASCA, ItemType.DMT) && uses(LabRecipe.OXY, ItemType.MORPHINE)
@@ -207,8 +231,9 @@ final class SelfTest {
         check(!plugin.shop().buyEntries().isEmpty(), "shop has buy entries");
         var shopStrains = plugin.strains().shopStrains();
         check(shopStrains.size() >= 20, "20+ strains for sale, got " + shopStrains.size());
-        check(plugin.shop().seeds().size() <= 36 && plugin.shop().gear().size() <= 18
-                && plugin.shop().hires().size() == dev.kushcraft.worker.WorkerType.values().length, "shop fits its rows");
+        check(plugin.shop().seeds().size() > 36 && plugin.shop().gear().size() <= 36
+                && plugin.shop().hires().size() == dev.kushcraft.worker.WorkerType.values().length,
+                "shop pages: more than one page of seeds, gear fits, every worker for hire");
         for (Strain s : shopStrains) {
             check(plugin.shop().seeds().stream().anyMatch(e -> s.id().equals(e.strain())), "seeds for sale: " + s.id());
         }
@@ -247,8 +272,11 @@ final class SelfTest {
         // selling a big pile pays less per item than selling one
         double one = plugin.market().bulkFactor(ItemType.HEROIN, 0, 1);
         double pile = plugin.market().bulkFactor(ItemType.HEROIN, 0, 200);
-        check(one > 0.99 && pile < 0.8 && pile >= plugin.getConfig().getDouble("market.min-price", 0.4) - 1e-9,
-                "dumping 200 of one thing pays less (" + pile + ")");
+        check(one > 0.99 && pile < 0.95 && pile >= plugin.getConfig().getDouble("market.min-price", 0.7) - 1e-9,
+                "dumping 200 of one thing pays a bit less (" + pile + ")");
+        check(pile >= 0.7 && plugin.getConfig().getDouble("market.min-price", 0) >= 0.7,
+                "mass production never drops a drug below 70% (" + pile + ")");
+        check(plugin.getConfig().getDouble("market.recovery-per-minute", 0) >= 0.05, "prices recover fast");
         check(plugin.market().bulkFactor(ItemType.HEROIN, 100, 100) < plugin.market().bulkFactor(ItemType.HEROIN, 0, 100),
                 "the second hundred pays less than the first");
         double base = plugin.shop().sellPrice(Items.create(ItemType.HEROIN));
@@ -512,6 +540,7 @@ final class SelfTest {
         chestBlock.setType(Material.CHEST);
         var chest = ((org.bukkit.block.Container) chestBlock.getState(false)).getInventory();
         chest.addItem(Items.create(ItemType.ROLLING_PAPERS, 8));
+        ws.refreshAreas();
         check(ws.chests(cook).size() == 1, "a chest next to the cook is their work chest");
         check(ws.workNow(cook) && count(cook.satchel(), ItemType.ROLLING_PAPERS) == 8, "the cook takes papers from the chest");
         check(ws.workNow(cook) && cook.jobs() == 1, "the cook rolls");
@@ -544,6 +573,88 @@ final class SelfTest {
                 "an idle cook puts their work in the chest");
         check(ws.workNow(runner) && count(runner.satchel(), ItemType.VAPE_PEN) == 1, "the runner takes it from the chest");
         check(ws.maxPerPlayer() == 0, "no limit on workers");
+        // no working through walls: a chest of the owner's in a stone box is not used, one in the open is
+        for (int dx = 5; dx <= 7; dx++) {
+            for (int dy = 1; dy <= 3; dy++) {
+                for (int dz = 3; dz <= 5; dz++) {
+                    w.getBlockAt(x + dx, y + dy, z + dz).setType(Material.STONE);
+                }
+            }
+        }
+        Block walled = w.getBlockAt(x + 6, y + 2, z + 4);
+        walled.setType(Material.CHEST);
+        Block open = w.getBlockAt(x + 1, y + 1, z + 4);
+        open.setType(Material.CHEST);
+        Block stranger = w.getBlockAt(x + 3, y + 1, z - 1);
+        stranger.setType(Material.CHEST);
+        for (Block b : List.of(walled, open)) {
+            var st = (org.bukkit.block.Container) b.getState(false);
+            st.getPersistentDataContainer().set(dev.kushcraft.Keys.PLACER, org.bukkit.persistence.PersistentDataType.STRING,
+                    boss.toString());
+        }
+        ((org.bukkit.block.Container) stranger.getState(false)).getPersistentDataContainer().set(dev.kushcraft.Keys.PLACER,
+                org.bukkit.persistence.PersistentDataType.STRING, UUID.randomUUID().toString());
+        ws.refreshAreas();
+        var cookChests = ws.chests(cook).stream().map(c -> c.block()).toList();
+        check(cookChests.contains(open), "the cook uses the owner's chest around them");
+        check(!cookChests.contains(walled), "but not one behind walls");
+        check(!cookChests.contains(stranger), "and not someone else's chest");
+        check(!ws.reaches(cook, BlockKey.of(walled), false) && ws.reaches(cook, BlockKey.of(open), false),
+                "walk areas: the walled chest can't be reached");
+        ws.setNearby(cook, false);
+        check(!ws.chests(cook).stream().map(c -> c.block()).toList().contains(open), "chests around them can be switched off");
+        ws.setNearby(cook, true);
+        // a linked chest behind walls: the runner carries what the cook is missing from it
+        check(ws.linkChest(cook, BlockKey.of(walled)) && ws.blocked(cook).size() == 1, "a chest behind walls can be linked");
+        var walledInv = ((org.bukkit.block.Container) walled.getState(false)).getInventory();
+        walledInv.addItem(Items.create(ItemType.COCAINE, 3));
+        ws.setRecipe(cook, LabRecipe.CRACK);
+        check(!ws.workNow(cook) && "Cocaine".equals(cook.wants()), "the cook says it needs cocaine");
+        check(ws.workNow(runner) && count(cook.satchel(), ItemType.COCAINE) == 3 && count(walledInv, ItemType.COCAINE) == 0,
+                "the runner brings it from behind the walls");
+        // the supplier buys what the cook and farmhand run low on, with the owner's money
+        eco.set(owner, 50_000);
+        var supplier = ws.hireAt(new Location(w, x + 1.5, y + 1, z + 1.5), dev.kushcraft.worker.WorkerType.SUPPLIER, boss, 1);
+        check(supplier.reserve() > 0 && !ws.needs(cook).isEmpty(), "the cook needs bone meal and water");
+        double cash = eco.balance(owner);
+        for (int i = 0; i < 4; i++) {
+            ws.workNow(supplier);
+        }
+        int bone = 0;
+        for (ItemStack it : cook.satchel().getStorageContents()) {
+            if (it != null && it.getType() == Material.BONE_MEAL && !Items.isCustom(it)) {
+                bone += it.getAmount();
+            }
+        }
+        check(bone >= 2 && count(farm.satchel(), ItemType.FERTILIZER) >= 4, "the supplier stocks the cook and the farmhand ("
+                + bone + " bone meal)");
+        check(eco.balance(owner) < cash && supplier.spent() > 0 && supplier.jobs() > 0, "the supplier pays with your money");
+        check(ws.needs(cook).isEmpty() && !ws.workNow(supplier), "nothing more to buy once everyone is stocked");
+        cook.satchel().clear();
+        eco.set(owner, 900);
+        check(!ws.workNow(supplier) && supplier.status().contains("reserve"), "the supplier keeps your reserve");
+        eco.set(owner, 50_000);
+        // a cook on AUTO picks the best drug they have everything for
+        ws.setJob(cook, dev.kushcraft.worker.Worker.AUTO);
+        ItemStack waterBottle = new ItemStack(Material.POTION);
+        waterBottle.editMeta(org.bukkit.inventory.meta.PotionMeta.class,
+                m -> m.setBasePotionType(org.bukkit.potion.PotionType.WATER));
+        ws.stash(cook, List.of(Items.create(ItemType.COCAINE, 2), waterBottle, new ItemStack(Material.BONE_MEAL, 2),
+                Items.create(ItemType.COCA_LEAVES, 6), Items.create(ItemType.LAB_SOLVENT, 1)));
+        check(ws.workNow(cook) && "CRACK".equals(lab.job()) && cook.recipe() == LabRecipe.CRACK,
+                "an Auto cook picks crack (worth the most) and cooks it");
+        lab.finishNow();
+        check(ws.workNow(cook) && count(cook.satchel(), ItemType.CRACK) >= 2, "and collects it");
+        // a farmhand hands on spare poppy seeds past 16; a cook crafts morphine base from them
+        cook.satchel().clear();
+        farm.satchel().clear();
+        ws.stash(farm, List.of(Items.create(ItemType.POPPY_SEEDS, 40)));
+        ws.setRecipe(cook, LabRecipe.MORPHINE);
+        open.setType(Material.AIR);
+        walled.setType(Material.AIR);
+        ws.refreshAreas();
+        check(ws.workNow(cook) && count(cook.satchel(), ItemType.POPPY_SEEDS) == 24
+                && count(farm.satchel(), ItemType.POPPY_SEEDS) == 16, "the farmhand keeps 16 seeds and hands on the rest");
         // spare seeds become fertilizer when the satchel gets full
         List<ItemStack> seeds = new ArrayList<>();
         for (int i = 0; i < 20; i++) {
@@ -569,9 +680,12 @@ final class SelfTest {
         var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 new File(plugin.getDataFolder(), "workers.yml"));
         check(saved.isConfigurationSection("workers." + runner.id()) && saved.isConfigurationSection(
-                "workers." + farm.id() + ".satchel") && "VAPE_PEN".equals(saved.getString("workers." + cook.id() + ".recipe")),
+                "workers." + farm.id() + ".satchel") && "MORPHINE".equals(saved.getString("workers." + cook.id() + ".recipe")),
                 "workers, their satchels and a cook's recipe are saved");
+        check(saved.getStringList("workers." + cook.id() + ".links").contains(BlockKey.of(walled).serialize())
+                && saved.getDouble("workers." + supplier.id() + ".spent") > 0, "linked chests and supplier spending are saved");
         chestBlock.setType(Material.AIR);
+        stranger.setType(Material.AIR);
         check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
                 dev.kushcraft.worker.WorkerType.FARMHAND, boss, 3)), "trained workers reach further");
         check(Items.level(Items.machine(ItemType.FARMHAND, 2)) == 2, "a dismissed worker keeps their level");
@@ -677,7 +791,7 @@ final class SelfTest {
             newLooks += res.newLook() ? 1 : 0;
             climatesSeen.add(res.climate());
         }
-        check(mythic > 100 && mythic < 600, "Mythic is very rare (" + mythic + " in 20,000)");
+        check(mythic > 900 && mythic < 1700, "about 1 in 15 is Mythic (" + mythic + " in 20,000)");
         check(newLooks > 3000, "new colours mutate in");
         check(climatesSeen.size() == dev.kushcraft.strain.Climate.values().length, "climates can mutate");
         Strain aurora = plugin.strains().get("aurora_kush");
@@ -688,15 +802,55 @@ final class SelfTest {
                     kept++;
                 }
             }
-            check(kept > 800 && kept < 1400, "a Mythic parent passes its look on about 1 in 5 (" + kept + ")");
+            check(kept > 1100 && kept < 1550, "a Mythic parent passes its look on (" + kept + " of 5,000)");
         }
+        // Exotic: only from two Mythic parents (or better), and some pairs find a built-in Exotic strain
+        Strain blood = plugin.strains().get("blood_moon_kush");
+        Strain horizon = plugin.strains().get("event_horizon");
+        if (aurora != null && blood != null && horizon != null) {
+            int exotic = 0, found = 0, fromOne = 0;
+            for (int i = 0; i < 20_000; i++) {
+                var res = dev.kushcraft.strain.Breeding.cross(aurora, blood, r, plugin.strains().all());
+                if (res.rarity() == dev.kushcraft.strain.Rarity.EXOTIC) {
+                    exotic++;
+                    check(res.look().exotic().exoticTier(), "an Exotic child has an Exotic look");
+                }
+                if (res.discovered() == horizon) {
+                    found++;
+                }
+                var one = dev.kushcraft.strain.Breeding.cross(aurora, a, r, plugin.strains().all());
+                fromOne += one.look().exotic().exoticTier() || one.discovered() != null ? 1 : 0;
+                var fromExotic = dev.kushcraft.strain.Breeding.cross(horizon, a, r, plugin.strains().all());
+                fromOne += fromExotic.look().exotic().exoticTier() ? 1 : 0;
+            }
+            check(fromOne == 0, "one Mythic (or Exotic) parent never gives an Exotic child");
+            check(exotic > 1200 && exotic < 2400, "two Mythic parents: Exotic now and then (" + exotic + " in 20,000)");
+            check(found > 800 && found < 1700, "Aurora Kush x Blood Moon finds Event Horizon (" + found + ")");
+            check(horizon.rarity() == dev.kushcraft.strain.Rarity.EXOTIC && !horizon.inShop()
+                    && horizon.wildBiomes().isEmpty() && horizon.wildWeight() == 0, "Exotic strains: never sold or wild");
+            check(dev.kushcraft.strain.Breeding.exoticChance(aurora, a) == 0
+                    && dev.kushcraft.strain.Breeding.exoticChance(aurora, blood) > 0, "Exotic odds need two Mythics");
+        } else {
+            check(false, "Aurora Kush, Blood Moon and Event Horizon exist");
+        }
+        // two-tone strains: patterns are passed on and mutate in
+        int patterns = 0;
+        Strain tiger = plugin.strains().get("tiger_kush");
+        for (int i = 0; i < 2000; i++) {
+            var res = dev.kushcraft.strain.Breeding.cross(a, tiger != null ? tiger : b, r);
+            patterns += res.look().pattern() != dev.kushcraft.strain.BudPattern.NONE ? 1 : 0;
+        }
+        check(patterns > 300 && patterns < 1800, "two-tone patterns are passed on (" + patterns + " in 2,000)");
         check(seen.size() > 3, "breeding is random (" + seen.size() + " different results)");
         check(dev.kushcraft.strain.Rarity.of(35, 4) == dev.kushcraft.strain.Rarity.LEGENDARY
                 && dev.kushcraft.strain.Rarity.of(5, 1) == dev.kushcraft.strain.Rarity.COMMON, "rarity tiers");
         check(dev.kushcraft.strain.Rarity.of(5, 1, dev.kushcraft.strain.Exotic.NEON) == dev.kushcraft.strain.Rarity.MYTHIC,
                 "exotic = Mythic");
-        check(dev.kushcraft.strain.Rarity.MYTHIC.priceFactor() > dev.kushcraft.strain.Rarity.LEGENDARY.priceFactor(),
-                "Mythic sells for the most");
+        check(dev.kushcraft.strain.Rarity.of(5, 1, dev.kushcraft.strain.Exotic.VOID) == dev.kushcraft.strain.Rarity.EXOTIC,
+                "an Exotic look = Exotic");
+        check(dev.kushcraft.strain.Rarity.EXOTIC.priceFactor() >= 1.5 * dev.kushcraft.strain.Rarity.MYTHIC.priceFactor()
+                && dev.kushcraft.strain.Rarity.MYTHIC.priceFactor() >= 2 * dev.kushcraft.strain.Rarity.LEGENDARY.priceFactor(),
+                "Mythic sells for much more, Exotic for even more");
         check(dev.kushcraft.effect.EffectType.values().length >= 34, "34 effects");
         check(!plugin.effects().greenThumbNear(Bukkit.getWorlds().get(0).getSpawnLocation()), "no Green Thumb nearby");
     }
@@ -813,16 +967,17 @@ final class SelfTest {
             check(GuiFont.GUIS.contains(g), "background for " + g);
         }
         check(LabRecipe.values().length <= 27, "cook page fits 3 rows");
-        check(dev.kushcraft.gui.TabMenu.Tab.values().length == 5, "5 main panels");
+        check(dev.kushcraft.gui.TabMenu.Tab.values().length == 6 && dev.kushcraft.gui.TabMenu.Tab.parse("workers")
+                == dev.kushcraft.gui.TabMenu.Tab.WORKERS, "6 main panels, a Workers tab and /kush <tab>");
     }
 
     private void strains() {
         var all = new ArrayList<>(plugin.strains().all());
-        check(all.size() >= 34, "34+ strains, got " + all.size());
+        check(all.size() >= 80, "80+ strains, got " + all.size());
         java.util.Set<String> names = new java.util.HashSet<>(), looks = new java.util.HashSet<>();
         java.util.Set<dev.kushcraft.strain.Climate> climates = java.util.EnumSet.noneOf(dev.kushcraft.strain.Climate.class);
         java.util.Set<dev.kushcraft.strain.BudShape> shapes = java.util.EnumSet.noneOf(dev.kushcraft.strain.BudShape.class);
-        int mythic = 0;
+        int mythic = 0, exotic = 0, patterned = 0;
         for (Strain s : all) {
             if (s.isCustom()) {
                 continue;
@@ -830,16 +985,34 @@ final class SelfTest {
             check(names.add(s.name().toLowerCase(java.util.Locale.ROOT)), "unique strain name " + s.name());
             check(looks.add(s.look().bud() + "/" + s.look().leaf() + "/" + s.look().pistil() + "/" + s.look().shape()),
                     "unique look " + s.name());
+            if (s.look().pattern() != dev.kushcraft.strain.BudPattern.NONE) {
+                patterned++;
+            }
+            for (String p : s.parents()) {
+                check(plugin.strains().get(p) != null && plugin.strains().get(p).exotic() != dev.kushcraft.strain.Exotic.NONE
+                        && !plugin.strains().get(p).exotic().exoticTier(), "an Exotic strain's parents are Mythic: " + s.name());
+            }
             check(!s.flavor().isEmpty(), "flavour for " + s.name());
             check(!s.effects().isEmpty() && s.effects().size() <= 4, "1-4 effects " + s.name());
             climates.add(s.climate());
             shapes.add(s.look().shape());
             if (s.exotic() != dev.kushcraft.strain.Exotic.NONE) {
-                mythic++;
                 check(!s.inShop() && s.wildWeight() < 0.1, "Mythic strains are not sold and very rare: " + s.name());
-                check(s.rarity() == dev.kushcraft.strain.Rarity.MYTHIC, "Mythic rarity " + s.name());
+                check(s.rarity() == s.exotic().rarity(), "Mythic / Exotic rarity " + s.name());
+                if (s.exotic().exoticTier()) {
+                    exotic++;
+                    check(s.parents().size() == 2 && s.wildWeight() == 0, "an Exotic strain comes from two parents: "
+                            + s.name());
+                } else {
+                    mythic++;
+                }
             }
         }
+        check(mythic >= 12 && exotic >= 8, "plenty of Mythic (" + mythic + ") and Exotic (" + exotic + ") strains");
+        check(patterned >= 40, "plenty of two-tone strains (" + patterned + ")");
+        java.util.Set<dev.kushcraft.strain.Exotic> usedLooks = java.util.EnumSet.noneOf(dev.kushcraft.strain.Exotic.class);
+        all.forEach(s -> usedLooks.add(s.exotic()));
+        check(usedLooks.size() >= 18, "most animated looks are used by a strain (" + usedLooks.size() + ")");
         check(climates.size() == dev.kushcraft.strain.Climate.values().length, "a strain for every climate");
         check(shapes.size() == dev.kushcraft.strain.BudShape.values().length, "every bud shape is used");
         check(mythic >= 3, "Mythic strains exist");

@@ -5,4 +5,4 @@
 A server-side grow / lab / dealer plugin with custom textures, plants, machines,
 strains and effects. Everything is in one jar. See [`kushcraft/README.md`](kushcraft/README.md).
 
-Download: [`kushcraft/release/KushCraft-6.0.0.jar`](kushcraft/release/KushCraft-6.0.0.jar)
+Download: [`kushcraft/release/KushCraft-7.0.0.jar`](kushcraft/release/KushCraft-7.0.0.jar)

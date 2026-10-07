@@ -43,6 +43,10 @@ public final class Items {
         meta.setItemModel(Keys.model(type.model()));
         meta.itemName(Text.mm("<white>" + type.display()));
         List<String> lore = new ArrayList<>(type.lore());
+        dev.kushcraft.effect.EffectType sig = dev.kushcraft.catalog.Catalog.signature(type);
+        if (sig != null) {
+            lore.add(sig.signatureLine());
+        }
         if (type.machine() != null) {
             lore.add("<dark_gray>Place it. Punch it to pick it up.");
         }
@@ -123,6 +127,10 @@ public final class Items {
             lore.add("<dark_gray>Bred by " + Text.escape(strain.creatorName()));
         }
         lore.addAll(type.lore());
+        dev.kushcraft.effect.EffectType sig = dev.kushcraft.catalog.Catalog.signature(type);
+        if (sig != null) {
+            lore.add(sig.signatureLine());
+        }
         meta.lore(Text.lines(lore));
         meta.setMaxStackSize(type.maxStack());
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
@@ -142,19 +150,22 @@ public final class Items {
         return item;
     }
 
-    /** "Cold climate · Mint" */
+    /** "Cold climate · Mint · Tiger stripes" */
     public static String climateLine(Strain s) {
+        Look l = s.look();
         return s.climate().colored() + " <gray>climate" + (s.flavor().isEmpty() ? ""
-                : " <dark_gray>·</dark_gray> <gray>" + Text.escape(s.flavor()));
+                : " <dark_gray>·</dark_gray> <gray>" + Text.escape(s.flavor()))
+                + (l.pattern() == dev.kushcraft.strain.BudPattern.NONE ? ""
+                : " <dark_gray>·</dark_gray> <color:" + Text.hex(Strain.brighten(l.accent())) + ">" + l.pattern().display() + "</color>");
     }
 
     /**
-     * Colours (bud, leaf, hairs) and strings (bud shape, Mythic look) read by
-     * the resource pack: tools/gen_assets.py strain item definitions.
+     * Colours (bud, leaf, hairs, accent) and strings (bud shape, Mythic look,
+     * accent pattern) read by the resource pack: tools/buds.py.
      */
     public static void look(ItemMeta meta, Look l, boolean dried) {
-        tint(meta, l.bud(), dried ? l.driedLeaf() : l.leaf(), dried ? l.driedPistil() : l.pistil());
-        strings(meta, l.shape().id(), l.exotic().id());
+        tint(meta, l.bud(), dried ? l.driedLeaf() : l.leaf(), dried ? l.driedPistil() : l.pistil(), l.accent());
+        strings(meta, l.shape().id(), l.exotic().id(), l.pattern().id());
     }
 
     public static void strings(ItemMeta meta, String... values) {

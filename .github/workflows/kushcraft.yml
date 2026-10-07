@@ -190,8 +190,8 @@ jobs:
           exec 3>&-
           grep -iE "kushcraft|resource pack" server2.log || true
           fail() { echo "::error::$1"; exit 1; }
-          grep -q "Updated config.yml to version 9" server2.log || fail "config was not upgraded"
-          grep -q "Updated strains.yml: 32 new strains" server2.log || fail "strains.yml was not upgraded"
+          grep -q "Updated config.yml to version 10" server2.log || fail "config was not upgraded"
+          grep -q "Updated strains.yml: 84 new strains" server2.log || fail "strains.yml was not upgraded"
           grep -q "^  url: auto" plugins/KushCraft/config.yml || fail "the old pack link was not switched to auto"
           grep -q "(same as this plugin's pack)" server2.log || fail "the upgraded server does not get the matching pack"
           for section in workers new-players harvest death animals cartel jobs awards; do
@@ -200,6 +200,8 @@ jobs:
           grep -q "^  plants: true" plugins/KushCraft/config.yml || fail "wild plants not added"
           grep -q "item: cook" plugins/KushCraft/config.yml || fail "the Cook is not in the shop"
           grep -q "item: runner" plugins/KushCraft/config.yml || fail "the Runner is not in the shop"
+          grep -q "item: supplier" plugins/KushCraft/config.yml || fail "the Supplier is not in the shop"
+          grep -q "^    water-price: 2" plugins/KushCraft/config.yml || fail "Supplier settings missing"
           # 6.0: money only from drugs, Trade only sells, no OP PvP / End items, no worker limit
           awk '/^jobs:/{f=1} f && /^  enabled:/{print; exit}' plugins/KushCraft/config.yml | grep -q "false" \
             || fail "jobs still pay"
@@ -221,11 +223,15 @@ jobs:
           grep -A3 "item: diamond$" plugins/KushCraft/config.yml | grep -q "price: 1950" || fail "ores did not get pricier"
           grep -A4 "name: Gang" plugins/KushCraft/config.yml | grep -q "sell-bonus: 0.04" || fail "cartel levels not simplified"
           if grep -q "grow-bonus: 0.05" plugins/KushCraft/config.yml; then fail "old cartel bonuses kept"; fi
-          grep -q "^  demand-drop: 0.006" plugins/KushCraft/config.yml || fail "market not updated"
+          grep -q "^  demand-drop: 0.0025" plugins/KushCraft/config.yml || fail "market not updated"
+          grep -q "^  min-price: 0.7" plugins/KushCraft/config.yml || fail "drug prices still crash from mass production"
+          grep -q "^  price-step: 0.005" plugins/KushCraft/config.yml || fail "Trade prices not softened"
           grep -q "^  categories:" plugins/KushCraft/config.yml || fail "Trade shelves lost"
           grep -q "^  seconds: 30" plugins/KushCraft/config.yml || fail "drying seconds lost"
           grep -q "^  titles:" plugins/KushCraft/config.yml || fail "leaderboard ranks lost"
-          grep -q "^version: 4" plugins/KushCraft/strains.yml || fail "strains.yml version not set"
+          grep -q "^version: 5" plugins/KushCraft/strains.yml || fail "strains.yml version not set"
+          grep -q "^  event_horizon:" plugins/KushCraft/strains.yml || fail "Exotic strains not added"
+          grep -A10 "^  tiger_kush:" plugins/KushCraft/strains.yml | grep -q "pattern: stripes" || fail "two-tone strains not added"
           grep -q "creator-name: Tester" plugins/KushCraft/strains.yml || fail "bred strain lost"
           grep -q "^  solar_flare:" plugins/KushCraft/strains.yml || fail "new strains not added"
           awk '/^  og_kush:$/{f=1;next} /^  [a-z0-9_]+:$/{f=0} f' plugins/KushCraft/strains.yml > og.txt
@@ -256,6 +262,10 @@ jobs:
           unzip -l pack.zip | grep -q "assets/kush/items/worker_cook.json"
           unzip -l pack.zip | grep -q "assets/kush/items/worker_runner.json"
           unzip -l pack.zip | grep -q "assets/kush/items/xanny_bars.json"
+          unzip -l pack.zip | grep -q "assets/kush/items/worker_supplier.json"
+          unzip -l pack.zip | grep -q "assets/kush/textures/item/pattern/stripes_bud_dried_classic.png"
+          unzip -l pack.zip | grep -q "assets/kush/textures/item/exotic/void_bud_dried_classic.png"
+          unzip -l pack.zip | grep -q "assets/kush/textures/gui/workers.png"
           cmp -s pack.zip plugins/KushCraft/KushCraft-pack.zip || { echo "::error::served zip differs"; exit 1; }
           echo "Built-in pack server test passed"
 

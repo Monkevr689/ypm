@@ -277,6 +277,17 @@ def exotic_model(name, ex, tall):
     return {"ambientocclusion": False, "textures": tex, "elements": el}
 
 
+def pattern_model(name, pat, tall):
+    """The accent pattern over the buds (tint 0 = colours[3]), just in front of the buds."""
+    base = f"{G.NS}:block/plant/pattern/{pat}_{name}"
+    tex = {"particle": base, "pat": base}
+    el = cross(0, 16, "#pat", 0.15, tint=0, planes=3)
+    if tall:
+        tex["pat_top"] = base + "_top"
+        el += cross(16, 32, "#pat_top", 0.15, tint=0, planes=3)
+    return {"ambientocclusion": False, "textures": tex, "elements": el}
+
+
 def split_save(img, rel):
     """Saves a W x H image as rel (bottom block) and rel_top (the block above)."""
     if img.height == img.width:
@@ -326,7 +337,23 @@ def cannabis():
                         budart.save_animated(frames, f"block/plant/exotic/{ex}_{name}")
                     G.save_json(exotic_model(name, ex, tall), f"models/plant/exotic/{ex}_{name}.json")
                     refs[ex] = f"{G.NS}:plant/exotic/{ex}_{name}"
-                definition = {"type": "minecraft:composite", "models": [base, budart.exotic_select(lambda ex: refs[ex])]}
+                # two-tone strains: the accent pattern over the buds (not where hairs or frost are)
+                bp, pp, fp = buds.load(), pist.load(), frost.load()
+                body, shading = set(), {}
+                for yy in range(H):
+                    for xx in range(W):
+                        if bp[xx, yy][3] > 0 and pp[xx, yy][3] == 0 and fp[xx, yy][3] == 0:
+                            body.add((xx, yy))
+                            shading[(xx, yy)] = bp[xx, yy][0]
+                prefs = {}
+                for pat in budart.PATTERNS:
+                    img = budart.pattern_image(pat, body, shading, W, H, name)
+                    split_save(img, f"block/plant/pattern/{pat}_{name}")
+                    G.save_json(pattern_model(name, pat, tall), f"models/plant/pattern/{pat}_{name}.json")
+                    prefs[pat] = f"{G.NS}:plant/pattern/{pat}_{name}"
+                definition = {"type": "minecraft:composite",
+                              "models": [base, budart.pattern_select(lambda pat: prefs[pat]),
+                                         budart.exotic_select(lambda ex: refs[ex])]}
             else:
                 definition = base
             G.save_json({"model": definition}, f"items/plant_{name}.json")

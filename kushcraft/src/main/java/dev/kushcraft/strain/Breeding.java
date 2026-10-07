@@ -3,6 +3,7 @@ package dev.kushcraft.strain;
 import dev.kushcraft.effect.EffectType;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,10 +13,11 @@ import java.util.Random;
 /**
  * Crossing two strains gives a random child: each parent effect may or may
  * not be passed on, a new effect can mutate in, potency drifts around the
- * parents' average and the type, climate, colours and bud shape come from
- * one parent or the other - or mutate into something new. Very rarely the
- * child is Mythic (an animated rainbow, galaxy, gold... look). Same parents,
- * different results - breed again for a better roll.
+ * parents' average and the type, climate, colours, accent pattern and bud
+ * shape come from one parent or the other - or mutate into something new.
+ * Sometimes the child is Mythic (an animated rainbow, galaxy, gold... look);
+ * crossing two Mythic strains can, rarely, give an Exotic one - the only way
+ * to get them. Same parents, different results - breed again for a better roll.
  */
 public final class Breeding {
 
@@ -28,24 +30,43 @@ public final class Breeding {
     static final double SECOND_MUTATION = 0.08;
     /** Chance of a big potency jump. */
     static final double JACKPOT = 0.04;
-    /** Chance of a new bud / leaf / hair colour, shape or climate. */
+    /** Chance of a new bud / leaf / hair colour, accent pattern, shape or climate. */
     static final double COLOR_MUTATION = 0.2;
     static final double LEAF_MUTATION = 0.12;
     static final double PISTIL_MUTATION = 0.15;
+    static final double PATTERN_MUTATION = 0.14;
     static final double SHAPE_MUTATION = 0.1;
     static final double CLIMATE_MUTATION = 0.1;
     /** Chance of a Mythic look out of nowhere, and of keeping a Mythic parent's look. */
-    public static final double MYTHIC = 0.015;
+    public static final double MYTHIC = 0.065;
     public static final double MYTHIC_INHERIT = 0.2;
+    /** Chance of an Exotic look when both parents are Mythic (or better), and extra per Exotic parent. */
+    public static final double EXOTIC = 0.03;
+    public static final double EXOTIC_PER_PARENT = 0.02;
+    /** Crossing the two parents of a built-in Exotic strain: chance of getting it. */
+    public static final double DISCOVERY = 0.06;
 
-    /** Unusual leaf colours: purple, black, blue, gold, red, ghost white, lime. */
-    static final int[] LEAVES = {0x5A3A82, 0x24332A, 0x2E5A7A, 0xA8A03A, 0x8A3A3A, 0x9AB8A8, 0x6AD83A};
+    /** Unusual leaf colours: purple, black, blue, gold, red, ghost white, lime, pink, orange, teal. */
+    static final int[] LEAVES = {0x5A3A82, 0x24332A, 0x2E5A7A, 0xA8A03A, 0x8A3A3A, 0x9AB8A8, 0x6AD83A, 0xC85A9A,
+            0xD8782A, 0x2A9A8A};
+    /** Weird bud colours a mutation can land on (besides any bright colour). */
+    static final int[] WEIRD = {0x16141E, 0xF4F4FF, 0xFF2AD8, 0x2AFFE8, 0xFF6A00, 0x7A2AFF, 0xC8FF2A, 0x2A3AFF,
+            0xFF2A4A, 0xFFD82A, 0x6A3A1E, 0x5AE8A8, 0xE8A8FF, 0x2A8A8A, 0xB0B8C0, 0x3A0A2A};
 
+    /**
+     * discovered: a built-in Exotic strain this cross found (keep it to get its seeds), else null.
+     */
     public record Result(StrainType type, Look look, Climate climate, int potency, List<EffectType> effects,
-                         List<EffectType> mutations, boolean jackpot, String flavor, boolean newLook) {
+                         List<EffectType> mutations, boolean jackpot, String flavor, boolean newLook,
+                         Strain discovered) {
+
+        public Result(StrainType type, Look look, Climate climate, int potency, List<EffectType> effects,
+                      List<EffectType> mutations, boolean jackpot, String flavor, boolean newLook) {
+            this(type, look, climate, potency, effects, mutations, jackpot, flavor, newLook, null);
+        }
 
         public Rarity rarity() {
-            return Rarity.of(potency, effects.size(), look.exotic());
+            return discovered != null ? discovered.rarity() : Rarity.of(potency, effects.size(), look.exotic());
         }
 
         public int color() {
@@ -75,7 +96,34 @@ public final class Breeding {
         return parent ? MYTHIC_INHERIT + MYTHIC : MYTHIC;
     }
 
+    /** Chance the child is Exotic: only when both parents are Mythic or Exotic. */
+    public static double exoticChance(Strain a, Strain b) {
+        if (a.exotic() == Exotic.NONE || b.exotic() == Exotic.NONE) {
+            return 0;
+        }
+        int exoticParents = (a.exotic().exoticTier() ? 1 : 0) + (b.exotic().exoticTier() ? 1 : 0);
+        return EXOTIC + EXOTIC_PER_PARENT * exoticParents;
+    }
+
+    /** A built-in Exotic strain that crossing a and b can give (null if none). */
+    public static Strain recipe(Strain a, Strain b, Collection<Strain> known) {
+        if (known == null || a.exotic() == Exotic.NONE || b.exotic() == Exotic.NONE) {
+            return null;
+        }
+        for (Strain s : known) {
+            if (s.bredFrom(a, b)) {
+                return s;
+            }
+        }
+        return null;
+    }
+
     public static Result cross(Strain a, Strain b, Random r) {
+        return cross(a, b, r, null);
+    }
+
+    /** known: every strain (for the built-in Exotic strains two Mythic parents can give). */
+    public static Result cross(Strain a, Strain b, Random r, Collection<Strain> known) {
         List<EffectType> effects = new ArrayList<>();
         Map<EffectType, Double> odds = odds(a, b);
         for (Map.Entry<EffectType, Double> e : odds.entrySet()) {
@@ -121,7 +169,7 @@ public final class Breeding {
         boolean newLook = false;
         int bud;
         if (r.nextDouble() < COLOR_MUTATION) {
-            bud = vivid(r);
+            bud = mutantColor(r);
             newLook = true;
         } else {
             bud = color(la.bud(), lb.bud(), r);
@@ -140,6 +188,22 @@ public final class Breeding {
         } else {
             pistil = r.nextBoolean() ? la.pistil() : lb.pistil();
         }
+        BudPattern pattern;
+        int accent;
+        if (r.nextDouble() < PATTERN_MUTATION) {
+            BudPattern[] all = BudPattern.values();
+            pattern = all[1 + r.nextInt(all.length - 1)];
+            accent = r.nextBoolean() ? vivid(r) : WEIRD[r.nextInt(WEIRD.length)];
+            newLook = true;
+        } else {
+            Look from = r.nextBoolean() ? la : lb;
+            Look other = from == la ? lb : la;
+            pattern = from.pattern();
+            accent = other.pattern() != BudPattern.NONE ? Look.mix(from.accent(), other.accent(), 0.25) : from.accent();
+            if (pattern == BudPattern.NONE) {
+                accent = bud;
+            }
+        }
         BudShape shape;
         if (r.nextDouble() < SHAPE_MUTATION) {
             shape = BudShape.values()[r.nextInt(BudShape.values().length)];
@@ -152,28 +216,55 @@ public final class Breeding {
         } else {
             climate = r.nextBoolean() ? a.climate() : b.climate();
         }
+        StrainType type = type(a.type(), b.type(), r);
+        String flavor = flavor(a.flavor(), b.flavor(), r);
+        // two Mythic parents: a small chance of an Exotic child (or a built-in Exotic strain)
+        double exoticChance = exoticChance(a, b);
+        Strain found = recipe(a, b, known);
+        if (found != null && r.nextDouble() < DISCOVERY) {
+            Look fl = found.look();
+            return new Result(found.type(), fl, found.climate(), found.potency(), found.effects(), List.of(), false,
+                    found.flavor(), true, found);
+        }
         Exotic exotic = Exotic.NONE;
-        double roll = r.nextDouble();
-        if (roll < MYTHIC) {
-            exotic = randomExotic(r);
-        } else if (roll < mythicChance(a, b)) {
-            // a Mythic parent passes its look on (if both are Mythic, either one)
+        if (exoticChance > 0 && r.nextDouble() < exoticChance) {
+            // an Exotic parent may pass its look on, else a new Exotic look
             List<Exotic> from = new ArrayList<>();
             for (Exotic e : List.of(la.exotic(), lb.exotic())) {
-                if (e != Exotic.NONE) {
+                if (e.exoticTier()) {
                     from.add(e);
                 }
             }
-            exotic = from.get(r.nextInt(from.size()));
+            exotic = !from.isEmpty() && r.nextBoolean() ? from.get(r.nextInt(from.size())) : randomExotic(r);
+        } else {
+            double roll = r.nextDouble();
+            if (roll < MYTHIC) {
+                exotic = randomMythic(r);
+            } else if (roll < mythicChance(a, b)) {
+                // a Mythic parent passes its look on (if both are Mythic, either one); an Exotic
+                // look only passes on through two Mythic parents, so here it fades to a Mythic one
+                List<Exotic> from = new ArrayList<>();
+                for (Exotic e : List.of(la.exotic(), lb.exotic())) {
+                    if (e != Exotic.NONE) {
+                        from.add(e.exoticTier() ? randomMythic(r) : e);
+                    }
+                }
+                exotic = from.get(r.nextInt(from.size()));
+            }
         }
-        Look look = new Look(bud, leaf, pistil, shape, exotic);
-        return new Result(type(a.type(), b.type(), r), look, climate, potency, List.copyOf(effects),
-                List.copyOf(mutations), jackpot, flavor(a.flavor(), b.flavor(), r), newLook);
+        Look look = new Look(bud, leaf, pistil, shape, exotic, accent, pattern);
+        return new Result(type, look, climate, potency, List.copyOf(effects), List.copyOf(mutations), jackpot, flavor,
+                newLook);
+    }
+
+    static Exotic randomMythic(Random r) {
+        List<Exotic> all = Exotic.mythics();
+        return all.get(r.nextInt(all.size()));
     }
 
     static Exotic randomExotic(Random r) {
-        Exotic[] all = Exotic.values();
-        return all[1 + r.nextInt(all.length - 1)];
+        List<Exotic> all = Exotic.exotics();
+        return all.get(r.nextInt(all.size()));
     }
 
     private static void mutate(List<EffectType> effects, List<EffectType> mutations, Random r) {
@@ -209,6 +300,11 @@ public final class Breeding {
     /** A bright new bud colour. */
     static int vivid(Random r) {
         return Look.hsv(r.nextDouble(), 0.55 + r.nextDouble() * 0.4, 0.75 + r.nextDouble() * 0.25);
+    }
+
+    /** A new bud colour: any bright colour, or one of the weird ones (jet black, ghost white, acid lime...). */
+    static int mutantColor(Random r) {
+        return r.nextDouble() < 0.4 ? WEIRD[r.nextInt(WEIRD.length)] : vivid(r);
     }
 
     /** "Grape & Mint" from the parents' first flavour words. */

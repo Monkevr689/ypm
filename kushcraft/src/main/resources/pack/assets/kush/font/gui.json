@@ -166,6 +166,15 @@
    "chars": [
     "\ue00f"
    ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/workers.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue010"
+   ]
   }
  ]
 }

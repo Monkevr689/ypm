@@ -26,7 +26,7 @@ import java.util.logging.Level;
 public final class StrainRegistry {
 
     /** strains.yml files older than this get the new built-in strains and looks added. */
-    static final int FILE_VERSION = 4;
+    static final int FILE_VERSION = 5;
 
     private final KushCraft plugin;
     private final File file;
@@ -114,7 +114,7 @@ public final class StrainRegistry {
         }
         yaml.set("version", FILE_VERSION);
         save();
-        plugin.getLogger().info("Updated strains.yml: " + added + " new strains, new looks and climates."
+        plugin.getLogger().info("Updated strains.yml: " + added + " new strains, new looks, colours and patterns."
                 + " Your own strains were kept.");
     }
 
@@ -143,14 +143,20 @@ public final class StrainRegistry {
             }
         }
         Look legacy = Look.legacy(color, type, id);
+        BudPattern pattern = BudPattern.parse(s.getString("pattern"));
         Look look = new Look(color,
                 s.isString("leaf") ? parseColor(s.getString("leaf")) : legacy.leaf(),
                 s.isString("pistil") ? parseColor(s.getString("pistil")) : legacy.pistil(),
                 BudShape.parse(s.getString("shape"), legacy.shape()),
-                Exotic.parse(s.getString("exotic")));
+                Exotic.parse(s.getString("exotic")),
+                s.isString("accent") ? parseColor(s.getString("accent")) : color, pattern);
+        List<String> parents = s.getStringList("parents");
+        boolean exoticTier = look.exotic().exoticTier();
+        // Exotic strains only come from breeding two Mythic strains: never wild, never in the Shop
         return new Strain(id, name, type, look, Climate.parse(s.getString("climate"), type.defaultClimate()), potency,
-                effects, biomes, s.getDouble("wild-weight", 1.0), s.getString("flavor", ""), s.getDouble("price", 0),
-                s.getBoolean("shop", true), creator, s.getString("creator-name"));
+                effects, exoticTier ? List.of() : biomes, exoticTier ? 0 : s.getDouble("wild-weight", 1.0),
+                s.getString("flavor", ""), s.getDouble("price", 0), s.getBoolean("shop", true) && !exoticTier, creator,
+                s.getString("creator-name"), parents.size() == 2 ? parents : List.of());
     }
 
     public static int parseColor(String s) {
@@ -290,6 +296,10 @@ public final class StrainRegistry {
         out.set("leaf", hex(r.look().leaf()));
         out.set("pistil", hex(r.look().pistil()));
         out.set("shape", r.look().shape().id());
+        if (r.look().pattern() != BudPattern.NONE) {
+            out.set("pattern", r.look().pattern().id());
+            out.set("accent", hex(r.look().accent()));
+        }
         if (r.look().exotic() != Exotic.NONE) {
             out.set("exotic", r.look().exotic().id());
         }

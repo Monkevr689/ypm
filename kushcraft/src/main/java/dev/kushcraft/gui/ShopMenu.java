@@ -18,8 +18,8 @@ import java.util.List;
 
 /**
  * Shop: seeds of every strain (cheapest first) and the other seeds in rows
- * 1-4; the bottom row has Gear &amp; Workers, Sell all (or click product
- * below to sell it) and the market news. Layout: tools/gui.py shop().
+ * 1-4, 36 a page; the bottom row has the page arrows, Gear, Sell all (or
+ * click product below to sell it) and the market news. Layout: tools/gui.py shop().
  */
 public final class ShopMenu extends TabMenu {
 
@@ -31,6 +31,7 @@ public final class ShopMenu extends TabMenu {
 
     private final boolean atDealer;
     private int ticks;
+    private int page;
 
     public ShopMenu(Player player) {
         this(player, false);
@@ -61,11 +62,13 @@ public final class ShopMenu extends TabMenu {
         }
         double bal = plugin.economy().balance(player);
         List<Shop.BuyEntry> seeds = shop().seeds();
-        for (int i = 0; i < SEEDS && i < seeds.size(); i++) {
-            set(FIRST_SEED + i, entryIcon(seeds.get(i), bal));
+        page = Math.min(page, Math.max(0, pages() - 1));
+        for (int i = 0; i < SEEDS && page * SEEDS + i < seeds.size(); i++) {
+            set(FIRST_SEED + i, entryIcon(seeds.get(page * SEEDS + i), bal));
         }
-        set(GEAR, Items.icon("ui_gear", "<aqua><bold>Gear & Workers",
-                "<gray>Papers, solvent, lamps, the Drug Lab...", "<gray>and workers who farm for you."));
+        arrows(page, pages());
+        set(GEAR, Items.icon("ui_gear", "<aqua><bold>Gear",
+                "<gray>Papers, solvent, lamps, the Drug Lab...", "<dark_gray>Workers have their own tab."));
         set(MARKET, marketIcon());
         double value = Selling.allValue(player);
         List<String> sell = new ArrayList<>();
@@ -120,9 +123,20 @@ public final class ShopMenu extends TabMenu {
         return show;
     }
 
+    private static int pages() {
+        return Math.max(1, (shop().seeds().size() + SEEDS - 1) / SEEDS);
+    }
+
     @Override
     protected void clickPage(int slot, ClickType click) {
         if (!allowed()) {
+            return;
+        }
+        int next = turn(slot, page, pages());
+        if (next != page) {
+            page = next;
+            clickSound();
+            render();
             return;
         }
         if (slot == SELL_ALL) {
@@ -143,8 +157,8 @@ public final class ShopMenu extends TabMenu {
             return;
         }
         int idx = slot - FIRST_SEED;
-        if (idx >= 0 && idx < SEEDS && idx < shop().seeds().size()) {
-            buy(player, shop().seeds().get(idx), click.isShiftClick() ? 5 : 1);
+        if (idx >= 0 && idx < SEEDS && page * SEEDS + idx < shop().seeds().size()) {
+            buy(player, shop().seeds().get(page * SEEDS + idx), click.isShiftClick() ? 5 : 1);
             render();
         }
     }

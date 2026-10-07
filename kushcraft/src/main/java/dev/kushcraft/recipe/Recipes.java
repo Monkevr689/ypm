@@ -16,7 +16,11 @@ import org.bukkit.inventory.recipe.CraftingBookCategory;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Crafting table recipes for machines and supplies (all vanilla ingredients). */
+/**
+ * Crafting table recipes for machines and supplies (vanilla ingredients),
+ * and Morphine Base straight from poppy seeds (KushCraft ingredients:
+ * matched exactly, see {@link #usesCustomItems}).
+ */
 public final class Recipes {
 
     /**
@@ -44,6 +48,7 @@ public final class Recipes {
     }
 
     private static final List<NamespacedKey> KEYS = new ArrayList<>();
+    private static final List<NamespacedKey> CUSTOM = new ArrayList<>();
     private static final List<Info> INFO = new ArrayList<>();
 
     private Recipes() {
@@ -55,6 +60,11 @@ public final class Recipes {
 
     public static List<Info> info() {
         return INFO;
+    }
+
+    /** Recipes made from KushCraft items (the "no KushCraft items in vanilla recipes" guard lets these through). */
+    public static boolean usesCustomItems(NamespacedKey key) {
+        return CUSTOM.contains(key);
     }
 
     public static void register(KushCraft plugin) {
@@ -83,6 +93,9 @@ public final class Recipes {
                 Material.GLASS_BOTTLE, Material.SUGAR);
         shapeless(plugin, ItemType.GROWER_GUIDE, 1, "Book + Wheat Seeds",
                 Material.BOOK, Material.WHEAT_SEEDS);
+        // the opium chain starts at the crafting table: poppy seeds straight into morphine base
+        shapeless(plugin, ItemType.MORPHINE, 1, "4 Poppy Seeds",
+                ItemType.POPPY_SEEDS, ItemType.POPPY_SEEDS, ItemType.POPPY_SEEDS, ItemType.POPPY_SEEDS);
     }
 
     public static void unregister() {
@@ -90,6 +103,7 @@ public final class Recipes {
             Bukkit.removeRecipe(k);
         }
         KEYS.clear();
+        CUSTOM.clear();
         INFO.clear();
     }
 
@@ -124,15 +138,20 @@ public final class Recipes {
         }
     }
 
-    /** in: Materials, or a RecipeChoice for "any planks". */
+    /** in: Materials, KushCraft items (matched exactly), or a RecipeChoice for "any planks". */
     private static void shapeless(KushCraft plugin, ItemType type, int amount, String legend, Object... in) {
         NamespacedKey key = new NamespacedKey(plugin, type.id());
         ShapelessRecipe r = new ShapelessRecipe(key, Items.create(type, amount));
         String[] grid = new String[9];
+        boolean custom = false;
         for (int i = 0; i < in.length; i++) {
             if (in[i] instanceof Material m) {
                 r.addIngredient(m);
                 grid[i] = m.name().toLowerCase(java.util.Locale.ROOT);
+            } else if (in[i] instanceof ItemType t) {
+                r.addIngredient(new RecipeChoice.ExactChoice(Items.create(t)));
+                grid[i] = "kush:" + t.id();
+                custom = true;
             } else {
                 r.addIngredient((RecipeChoice) in[i]);
                 grid[i] = "planks";
@@ -142,6 +161,9 @@ public final class Recipes {
         r.setGroup("kushcraft");
         if (Bukkit.addRecipe(r)) {
             KEYS.add(key);
+            if (custom) {
+                CUSTOM.add(key);
+            }
             INFO.add(new Info(type, amount, null, legend, grid));
         }
     }

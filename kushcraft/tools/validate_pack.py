@@ -115,14 +115,26 @@ def check_animations():
 
 
 def check_strain_looks():
-    """Bud items pick a shape for every BudShape and an overlay for every Mythic look."""
+    """Bud items pick a shape for every BudShape, an overlay for every Mythic / Exotic look
+    and (buds and plants) an accent pattern for every BudPattern."""
     strain_dir = os.path.join(JAVA, "dev", "kushcraft", "strain")
-    shapes = [s.lower() for s in re.findall(r"^    ([A-Z]+)\(", open(os.path.join(strain_dir, "BudShape.java")).read(), re.M)]
-    exotics = [s.lower() for s in re.findall(r"^    ([A-Z]+)\(", open(os.path.join(strain_dir, "Exotic.java")).read(), re.M)]
-    exotics = [e for e in exotics if e != "none"]
+
+    def enum(name):
+        found = re.findall(r"^    ([A-Z_]+)\(", open(os.path.join(strain_dir, name + ".java")).read(), re.M)
+        return [s.lower() for s in found if s != "NONE"]
+
+    shapes = enum("BudShape")
+    exotics = enum("Exotic")
+    patterns = enum("BudPattern")
 
     def cases(node):
         return sorted(c["when"] for c in node.get("cases", []))
+
+    def select(root, index):
+        for m in root.get("models", []):
+            if m.get("type") == "minecraft:select" and m.get("index") == index:
+                return m
+        return None
 
     for item in ("bud_fresh", "bud_dried", "seed_pack", "plant_sativa_4", "plant_indica_3", "plant_hybrid_4"):
         path = os.path.join(ASSETS, "kush", "items", item + ".json")
@@ -133,9 +145,13 @@ def check_strain_looks():
         if root.get("type") != "minecraft:composite":
             errors.append(f"items/{item}.json has no Mythic overlay")
             continue
-        overlay = root["models"][1]
-        if overlay.get("index") != 1 or cases(overlay) != sorted(exotics):
-            errors.append(f"items/{item}.json Mythic looks {cases(overlay)} != Exotic {exotics}")
+        overlay = select(root, 1)
+        if overlay is None or cases(overlay) != sorted(exotics):
+            errors.append(f"items/{item}.json Mythic looks {cases(overlay or {})} != Exotic {exotics}")
+        if item != "seed_pack":
+            pattern = select(root, 2)
+            if pattern is None or cases(pattern) != sorted(patterns):
+                errors.append(f"items/{item}.json patterns {cases(pattern or {})} != BudPattern {patterns}")
         if item.startswith("bud_"):
             shape = root["models"][0]
             if shape.get("index") != 0 or sorted(cases(shape) + ["classic"]) != sorted(shapes):
@@ -204,11 +220,18 @@ def check_menus():
         if java_int(fn, const) != expect:
             errors.append(f"{fn} {const} = {java_int(fn, const)} but tools/gui.py draws {expect}")
     # framed slots that Java and the backgrounds must agree on
-    gear_src = open(os.path.join(gui_dir, "GearMenu.java"), encoding="utf-8").read()
-    hire = re.search(r"static final int\[\] HIRE = \{([^}]*)\};", gear_src)
+    workers_src = open(os.path.join(gui_dir, "WorkersMenu.java"), encoding="utf-8").read()
+    hire = re.search(r"static final int\[\] HIRE = \{([^}]*)\};", workers_src)
     hire_slots = tuple((int(a), int(b)) for a, b in re.findall(r"at\((\d+), (\d+)\)", hire.group(1))) if hire else ()
     if hire_slots != tuple(gui.HIRE_SLOTS):
-        errors.append(f"GearMenu HIRE {hire_slots} but tools/gui.py draws {gui.HIRE_SLOTS}")
+        errors.append(f"WorkersMenu HIRE {hire_slots} but tools/gui.py draws {gui.HIRE_SLOTS}")
+    if java_int("WorkersMenu.java", "SLOTS") != gui.WORKER_SLOTS:
+        errors.append(f"WorkersMenu SLOTS = {java_int('WorkersMenu.java', 'SLOTS')} but tools/gui.py draws "
+                      f"{gui.WORKER_SLOTS}")
+    tab_src = open(os.path.join(gui_dir, "TabMenu.java"), encoding="utf-8").read()
+    tabs = [t.upper() for t in re.findall(r'^        ([A-Z]+)\("', tab_src, re.M)]
+    if tabs != gui.TABS:
+        errors.append(f"TabMenu tabs {tabs} but tools/gui.py draws {gui.TABS}")
     worker_types = len(re.findall(r'^    [A-Z]+\("', open(os.path.join(JAVA, "dev", "kushcraft", "worker", "WorkerType.java"),
                                                         encoding="utf-8").read(), re.M))
     if worker_types != len(gui.HIRE_SLOTS):

@@ -5,6 +5,7 @@ in game) is drawn in greys. Register with @item("name").
 """
 import colorsys
 import math
+import random
 
 from art import (Sprite, c, mix, scale, alpha, grey, ramp, grey_ramp, poly, ellipse, rect, rounded,
                  thick_line, line_px, shift, edge, inside)
@@ -1963,6 +1964,12 @@ def worker_face(s, kind, x0, y0, k=2):
             s.line(xx, y0 - 6, xx, y0 - 2, c("d0d0c8"))
         for (x, y) in edge(top | rect(x0, y0 - 1, x0 + w - 1, y0 + 1)):
             s.put(x, y, c("8a8a84"))
+    elif kind == "supplier":
+        # a brown delivery cap with a gold badge
+        cap = rect(x0 - 1, y0 - max(2, k * 2), x0 + w, y0 - 1)
+        s.shade(cap, ramp("5a3e22", 4, spread=0.2), dither=0.2)
+        s.fill(rect(x0 - 2, y0, x0 + w + 1, y0), c("3a2814"))
+        s.put(x0 + w // 2, y0 - k, c("f0c83a"))
     elif kind == "runner":
         # a snapback worn backwards: crown on top, the visor sticking out at the back
         s.shade(rect(x0, y0 - 4, x0 + w - 1, y0 + 1), ramp("f0c83a", 4, spread=0.3), dither=0.3)
@@ -1980,7 +1987,7 @@ def worker_face(s, kind, x0, y0, k=2):
 
 
 def contract(kind, ribbon):
-    s = Sprite(seed={"farmhand": 701, "dryer": 702, "cook": 708, "runner": 709}[kind])
+    s = Sprite(seed={"farmhand": 701, "dryer": 702, "cook": 708, "runner": 709, "supplier": 710}[kind])
     card = rounded(4, 5, 27, 29, 2)
     s.shade(card, ramp("f0e6c8", 4, spread=0.2), dither=0.3, rim=False)
     s.fill(rect(4, 25, 27, 29), c(ribbon))
@@ -2339,5 +2346,180 @@ def award_chain():
         s.put(x, y, c("f0f0f0"))
         s.put(x + 1, y + 1, c("f0f0f0"))
         s.put(x, y + 2, c("f0f0f0"))
+    s.outline(0.4)
+    return s
+
+
+# ---------------------------------------------------------------------------
+# 7.0: the Supplier, the Workers tab, chest links, Exotic strains, signatures
+# ---------------------------------------------------------------------------
+@item("worker_supplier")
+def worker_supplier():
+    return contract("supplier", "c8843a")
+
+
+@icon("tab_workers")
+def tab_workers():
+    """Three of your workers: a Farmhand, a Cook and a Supplier."""
+    s = Sprite(seed=730)
+    worker_face(s, "farmhand", 2, 13, 2)
+    worker_face(s, "supplier", 15, 15, 2)
+    worker_face(s, "cook", 9, 8, 1)
+    s.outline(0.4)
+    return s
+
+
+def small_chest(s, x0, y0, x1, y1):
+    box = rect(x0, y0, x1, y1)
+    s.shade(box, ramp("a8743a", 4, spread=0.35), dither=0.3)
+    mid = y0 + (y1 - y0) // 3
+    s.line(x0, mid, x1, mid, c("5a3a1a"))
+    s.fill(rect((x0 + x1) // 2 - 1, mid - 1, (x0 + x1) // 2 + 1, mid + 2), c("c8c8d0"))
+    for x in (x0, x1):
+        s.line(x, y0, x, y1, c("6a4420"))
+
+
+@icon("ui_link")
+def ui_link():
+    """A chest with a chain link: link chests to this worker."""
+    s = Sprite(seed=731)
+    small_chest(s, 3, 14, 19, 28)
+    for (cx, cy) in ((21, 10), (26, 5)):
+        ring = ellipse(cx, cy, 4, 3) - ellipse(cx, cy, 2.2, 1.4)
+        s.shade(ring, ramp("c8ccd4", 4, spread=0.4), dither=0.2)
+    s.outline(0.42)
+    return s
+
+
+@icon("ui_nearby")
+def ui_nearby():
+    """A chest with radar rings: they use chests around them."""
+    s = Sprite(seed=732)
+    small_chest(s, 9, 17, 23, 29)
+    for r, a in ((7, 220), (11, 160), (15, 110)):
+        arc = {(x, y) for (x, y) in ellipse(16, 18, r, r * 0.8) - ellipse(16, 18, r - 1.4, r * 0.8 - 1.4) if y < 16}
+        s.fill(arc, mix(c("5ae8e0"), c("2a3a3a"), (220 - a) / 300))
+    s.outline(0.42)
+    return s
+
+
+@icon("ui_show")
+def ui_show():
+    """An eye: show where they work."""
+    s = Sprite(seed=733)
+    eye = ellipse(16, 16, 13, 7)
+    s.fill(eye, c("f4f4f0"))
+    s.shade(ellipse(16, 16, 5.5, 5.5), ramp("3a8ad8", 4, spread=0.4), dither=0.2)
+    s.fill(ellipse(16, 16, 2.4, 2.4), c("101418"))
+    s.put(14, 13, c("ffffff"), 2)
+    s.outline(0.42)
+    return s
+
+
+@icon("ui_reserve")
+def ui_reserve():
+    """A wallet with a padlock: money the Supplier must leave alone."""
+    s = Sprite(seed=734)
+    wallet = rounded(3, 10, 24, 27, 3)
+    s.shade(wallet, ramp("8a5a2a", 4, spread=0.35), dither=0.3)
+    s.fill(rect(16, 15, 24, 21), c("6a4420"))
+    coin(s, 12, 9, 3.6)
+    lock = rounded(19, 19, 29, 29, 1)
+    s.shade(lock, ramp("f2c23a", 4, spread=0.35))
+    shackle = ellipse(24, 18, 3.6, 3.6) - ellipse(24, 18, 2, 2)
+    s.fill({(x, y) for (x, y) in shackle if y <= 19}, c("c8ccd4"))
+    s.put(24, 23, c("3a2a10"))
+    s.put(24, 24, c("3a2a10"))
+    s.outline(0.42)
+    return s
+
+
+@icon("ui_auto")
+def ui_auto():
+    """Two circling arrows around a flask: the Cook picks what to make."""
+    s = Sprite(seed=735)
+    flask = poly([(13, 8), (19, 8), (19, 14), (24, 25), (8, 25), (13, 14)])
+    s.fill(flask, c("e8f0f4"))
+    s.fill(poly([(10, 20), (22, 20), (24, 25), (8, 25)]), c("5ad8a8"))
+    arrow(s, 4, 18, 8, 6, "f2c23a", 1.8, 3.2)
+    arrow(s, 28, 14, 24, 26, "f2c23a", 1.8, 3.2)
+    s.outline(0.42)
+    return s
+
+
+@icon("ui_supply")
+def ui_supply():
+    """A crate with a green plus: what the Supplier buys."""
+    s = Sprite(seed=736)
+    crate = rect(4, 10, 25, 28)
+    s.shade(crate, ramp("c8944a", 4, spread=0.3), dither=0.3)
+    for y in (16, 22):
+        s.line(4, y, 25, y, c("8a5a2a"))
+    s.fill(thick_line(5, 27, 24, 11, 1.6), c("a87436"))
+    s.fill(rect(20, 2, 22, 12), c("5ae85a"))
+    s.fill(rect(16, 6, 26, 8), c("5ae85a"))
+    s.outline(0.42)
+    return s
+
+
+@icon("award_supplier")
+def award_supplier():
+    s = Sprite(seed=737)
+    medal(s, 16, 20, 10, "e8c870", ribbon=("c8843a", "5ae85a"))
+    worker_face(s, "supplier", 12, 17, 1)
+    s.outline(0.4)
+    return s
+
+
+@icon("award_logistics")
+def award_logistics():
+    """Two chests joined by a dotted route."""
+    s = Sprite(seed=738)
+    small_chest(s, 2, 18, 13, 28)
+    small_chest(s, 18, 4, 29, 14)
+    for k in range(6):
+        x, y = 12 + k * 2, 18 - k * 2
+        s.put(x, y, c("f2c23a"))
+    arrow(s, 20, 20, 27, 20, "5ae85a", 1.6, 3)
+    s.outline(0.42)
+    return s
+
+
+@icon("award_signature")
+def award_signature():
+    """A glowing capsule with a star: every drug has its own move."""
+    s = Sprite(seed=739)
+    left = rounded(4, 12, 16, 22, 5)
+    right = rounded(15, 12, 28, 22, 5)
+    s.shade(left, ramp("e84a8a", 4, spread=0.35), dither=0.2)
+    s.shade(right, ramp("5ac8f0", 4, spread=0.35), dither=0.2)
+    for (x, y) in ((16, 2), (16, 3), (16, 4), (15, 5), (16, 5), (17, 5), (16, 6), (16, 7), (16, 8), (12, 5), (13, 5),
+                   (14, 5), (18, 5), (19, 5), (20, 5), (15, 4), (17, 4), (15, 6), (17, 6)):
+        s.put(x, y, c("fff0a0"))
+    for (x, y) in ((5, 26), (26, 27), (28, 8), (4, 8)):
+        s.glint(x, y, c("fff0a0"), big=True, layer=0)
+    s.outline(0.42)
+    return s
+
+
+@icon("award_exotic")
+def award_exotic():
+    """A prism gem over a dark starfield: an Exotic strain."""
+    s = Sprite(seed=740)
+    sky = ellipse(16, 16, 14, 14)
+    s.shade(sky, ramp("2a1a4a", 4, spread=0.3), dither=0.4, rim=False)
+    rng = random.Random(740)
+    for _ in range(18):
+        x, y = rng.randint(4, 27), rng.randint(4, 27)
+        if (x, y) in sky:
+            s.put(x, y, c("ffffff"), 2)
+    gem = poly([(16, 5), (26, 14), (16, 28), (6, 14)])
+    for k, (pts) in enumerate(([(16, 5), (21, 14), (16, 28)], [(16, 5), (11, 14), (16, 28)],
+                               [(16, 5), (26, 14), (21, 14)], [(16, 5), (6, 14), (11, 14)],
+                               [(21, 14), (26, 14), (16, 28)], [(11, 14), (6, 14), (16, 28)])):
+        hx = "%02x%02x%02x" % tuple(int(v * 255) for v in colorsys.hsv_to_rgb(k / 6, 0.6, 1.0))
+        s.fill(poly(pts), c(hx))
+    s.glint(13, 10, big=True)
+    s.glint(22, 20, c("fff0a0"))
     s.outline(0.4)
     return s

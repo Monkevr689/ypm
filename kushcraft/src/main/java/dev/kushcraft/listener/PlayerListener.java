@@ -166,9 +166,12 @@ public final class PlayerListener implements Listener {
         });
     }
 
-    /** KushCraft items are paper underneath - keep them out of vanilla recipes. */
+    /** KushCraft items are paper underneath - keep them out of vanilla recipes (ours are fine). */
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPrepareCraft(PrepareItemCraftEvent e) {
+        if (e.getRecipe() instanceof org.bukkit.Keyed k && dev.kushcraft.recipe.Recipes.usesCustomItems(k.getKey())) {
+            return;
+        }
         for (ItemStack it : e.getInventory().getMatrix()) {
             if (Items.isCustom(it)) {
                 e.getInventory().setResult(null);

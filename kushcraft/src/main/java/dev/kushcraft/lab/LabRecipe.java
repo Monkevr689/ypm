@@ -61,8 +61,9 @@ public enum LabRecipe {
     // downers
     OPIUM(ItemType.OPIUM, 2, 30,
             Ingredient.of(ItemType.POPPY_POD, 3)),
-    MORPHINE(ItemType.MORPHINE, 2, 45,
-            Ingredient.of(ItemType.OPIUM, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    // morphine base: 4 poppy seeds, also at the crafting table (dev.kushcraft.recipe.Recipes)
+    MORPHINE(ItemType.MORPHINE, 1, 20,
+            Ingredient.of(ItemType.POPPY_SEEDS, 4)),
     HEROIN(ItemType.HEROIN, 2, 60,
             Ingredient.of(ItemType.MORPHINE, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
     OXY(ItemType.OXY, 3, 45,
@@ -123,6 +124,18 @@ public enum LabRecipe {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** True when some recipe uses this item. */
+    public static boolean anyNeeds(ItemStack it) {
+        for (LabRecipe r : values()) {
+            for (Ingredient ing : r.ingredients) {
+                if (ing.matches(it)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** The recipe that makes this item (null if none). */
@@ -194,6 +207,9 @@ public enum LabRecipe {
         /** Where a new player finds this (shown under the recipe). */
         public String where() {
             if (custom != null) {
+                if (custom == ItemType.MORPHINE) {
+                    return "craft: 4 poppy seeds";
+                }
                 LabRecipe r = making(custom);
                 if (r != null) {
                     return "cook it here first";
@@ -204,6 +220,7 @@ public enum LabRecipe {
                     case MAGIC_MUSHROOM -> "grow mushroom spores";
                     case COCA_LEAVES -> "grow coca (warm biomes)";
                     case POPPY_POD -> "grow poppies";
+                    case POPPY_SEEDS -> "grow poppies (2-3 a harvest)";
                     case PEYOTE_BUTTON -> "grow peyote on sand";
                     default -> "Shop";
                 };

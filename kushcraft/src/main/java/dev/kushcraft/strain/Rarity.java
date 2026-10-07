@@ -1,9 +1,10 @@
 package dev.kushcraft.strain;
 
 /**
- * How special a strain is: from its potency and number of effects, and
- * Mythic for the rare animated looks. Rarer strains sell for more and their
- * seeds cost more.
+ * How special a strain is: from its potency and number of effects, Mythic
+ * for the rare animated looks and Exotic for the rarest looks (only bred
+ * from two Mythic parents). Rarer strains sell for more and their seeds
+ * cost more.
  */
 public enum Rarity {
     COMMON("Common", "<gray>", 1.0, 15),
@@ -11,7 +12,8 @@ public enum Rarity {
     RARE("Rare", "<aqua>", 1.25, 55),
     EPIC("Epic", "<light_purple>", 1.45, 100),
     LEGENDARY("Legendary", "<gold>", 1.7, 180),
-    MYTHIC("Mythic", "<gradient:#FF6AE8:#8A6AFF:#6AE8FF>", 2.5, 600);
+    MYTHIC("Mythic", "<gradient:#FF6AE8:#8A6AFF:#6AE8FF>", 4.0, 600),
+    EXOTIC("Exotic", "<gradient:#FFF08A:#FF5AD8:#5AFFFF:#B85AFF>", 7.0, 1500);
 
     private final String display;
     private final String open;
@@ -62,6 +64,11 @@ public enum Rarity {
     }
 
     public static Rarity of(int potency, int effects, Exotic exotic) {
-        return exotic != null && exotic != Exotic.NONE ? MYTHIC : of(potency, effects);
+        return exotic != null && exotic != Exotic.NONE ? exotic.rarity() : of(potency, effects);
+    }
+
+    /** Mythic or Exotic: the animated looks. */
+    public boolean animated() {
+        return this == MYTHIC || this == EXOTIC;
     }
 }

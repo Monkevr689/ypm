@@ -70,7 +70,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             }
             case "top", "ranks", "leaderboard" -> open(sender, TopMenu::new);
             case "gear" -> open(sender, dev.kushcraft.gui.GearMenu::new);
-            case "workers", "worker" -> open(sender, dev.kushcraft.gui.MyWorkersMenu::new);
+            case "workers", "worker", "crew" -> open(sender, dev.kushcraft.gui.WorkersMenu::new);
             case "start", "steps", "help-me", "tutorial" -> open(sender, dev.kushcraft.gui.StarterMenu::new);
             case "sell" -> {
                 if (!(sender instanceof Player p)) {

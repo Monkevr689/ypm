@@ -26,6 +26,114 @@
    {
     "type": "minecraft:select",
     "property": "minecraft:custom_model_data",
+    "index": 2,
+    "cases": [
+     {
+      "when": "tips",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/pattern/tips_indica_4",
+       "tints": [
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 3,
+         "default": 6995514
+        }
+       ]
+      }
+     },
+     {
+      "when": "stripes",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/pattern/stripes_indica_4",
+       "tints": [
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 3,
+         "default": 6995514
+        }
+       ]
+      }
+     },
+     {
+      "when": "spots",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/pattern/spots_indica_4",
+       "tints": [
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 3,
+         "default": 6995514
+        }
+       ]
+      }
+     },
+     {
+      "when": "marble",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/pattern/marble_indica_4",
+       "tints": [
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 3,
+         "default": 6995514
+        }
+       ]
+      }
+     },
+     {
+      "when": "speckles",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/pattern/speckles_indica_4",
+       "tints": [
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 3,
+         "default": 6995514
+        }
+       ]
+      }
+     },
+     {
+      "when": "halo",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/pattern/halo_indica_4",
+       "tints": [
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 3,
+         "default": 6995514
+        }
+       ]
+      }
+     },
+     {
+      "when": "split",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/pattern/split_indica_4",
+       "tints": [
+        {
+         "type": "minecraft:custom_model_data",
+         "index": 3,
+         "default": 6995514
+        }
+       ]
+      }
+     }
+    ],
+    "fallback": {
+     "type": "minecraft:empty"
+    }
+   },
+   {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
     "index": 1,
     "cases": [
      {
@@ -68,6 +176,97 @@
       "model": {
        "type": "minecraft:model",
        "model": "kush:plant/exotic/inferno_indica_4"
+      }
+     },
+     {
+      "when": "aurora",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/aurora_indica_4"
+      }
+     },
+     {
+      "when": "toxic",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/toxic_indica_4"
+      }
+     },
+     {
+      "when": "sakura",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/sakura_indica_4"
+      }
+     },
+     {
+      "when": "plasma",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/plasma_indica_4"
+      }
+     },
+     {
+      "when": "blood_moon",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/blood_moon_indica_4"
+      }
+     },
+     {
+      "when": "ocean",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/ocean_indica_4"
+      }
+     },
+     {
+      "when": "candy",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/candy_indica_4"
+      }
+     },
+     {
+      "when": "void",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/void_indica_4"
+      }
+     },
+     {
+      "when": "prism",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/prism_indica_4"
+      }
+     },
+     {
+      "when": "celestial",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/celestial_indica_4"
+      }
+     },
+     {
+      "when": "phoenix",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/phoenix_indica_4"
+      }
+     },
+     {
+      "when": "quantum",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/quantum_indica_4"
+      }
+     },
+     {
+      "when": "eclipse",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:plant/exotic/eclipse_indica_4"
       }
      }
     ],

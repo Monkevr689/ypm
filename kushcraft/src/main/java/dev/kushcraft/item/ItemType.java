@@ -67,7 +67,7 @@ public enum ItemType {
     POPPY_POD("Poppy Pod", "poppy_pod", false, false,
             "<gray>Cook into Opium."),
     MORPHINE("Morphine Base", "morphine", false, false,
-            "<gray>Cook into Heroin."),
+            "<gray>Crafted from 4 Poppy Seeds.", "<gray>Cook into Heroin or Oxy."),
     HEROIN("Heroin", "heroin", false, false,
             "<gray>Right-click to use."),
     CRACK("Crack Rock", "crack", false, false,
@@ -130,7 +130,9 @@ public enum ItemType {
     COOK("Cook", "worker_cook", false, false,
             "<gray>Cooks or rolls the drug you pick.", "<gray>Right-click the ground near a lab to hire them."),
     RUNNER("Runner", "worker_runner", false, false,
-            "<gray>Sells your workers' finished product.", "<gray>Right-click the ground to hire them."),
+            "<gray>Sells product, carries things around.", "<gray>Right-click the ground to hire them."),
+    SUPPLIER("Supplier", "worker_supplier", false, false,
+            "<gray>Buys ingredients for your workers.", "<gray>Right-click the ground to hire them."),
     // --- blocks (placed like a block, punch to pick up) ------------------
     LAB_STATION("Drug Lab", "machine_lab_station", MachineType.LAB_STATION,
             "<gray>Cook, roll, dry and breed."),
@@ -209,7 +211,7 @@ public enum ItemType {
         if (this == BONG || this == GROWER_GUIDE || this == VAPE_PEN) {
             return 1;
         }
-        return machine != null || this == FARMHAND || this == DRYER || this == COOK || this == RUNNER ? 16 : 64;
+        return machine != null || dev.kushcraft.worker.WorkerType.of(this) != null ? 16 : 64;
     }
 
     /** Old stations replaced by the Drug Lab: still work, but not sold or crafted any more. */

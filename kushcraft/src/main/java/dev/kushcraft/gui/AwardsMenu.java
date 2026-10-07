@@ -10,15 +10,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Awards: every achievement, grey until you unlock it, 45 to a page (the
- * page button sits in the top bar). They're also in the KushCraft tab of
- * the advancements screen. Layout matches tools/gui.py awards().
+ * Awards: every achievement, grey until you unlock it, 36 to a page (rows
+ * 1-4; the page arrows and your count on row 5). They're also in the
+ * KushCraft tab of the advancements screen. Layout matches tools/gui.py awards().
  */
 public final class AwardsMenu extends TabMenu {
 
     static final int FIRST = 9;
-    /** Rows 1-5: up to 45 awards. */
-    static final int SLOTS = 45;
+    /** Rows 1-4: up to 36 awards. */
+    static final int SLOTS = 36;
+    static final int COUNT = at(5, 4);
 
     private int page;
 
@@ -60,22 +61,18 @@ public final class AwardsMenu extends TabMenu {
                     : "<gray>" + (a.secret() ? "???" : a.title());
             set(FIRST + i, Items.icon(done ? a.icon() : a.icon() + "_locked", name, lore));
         }
-        // the summary sits on this page's own tab
         int count = awards.count(player);
-        set(Tab.AWARDS.ordinal(), Items.icon("tab_awards", "<green>Awards <gold>" + count + "/" + all.length,
+        set(COUNT, Items.icon("tab_awards", "<green>Awards <gold>" + count + "/" + all.length,
                 earned > 0 ? "<gold>" + money(earned) + " <dark_gray>earned" : "<gray>Achievements for bragging rights.",
                 "<dark_gray>Also in the advancements screen (L)."));
-        if (pages() > 1) {
-            set(EXTRA, Items.amount(Items.icon(page + 1 < pages() ? "ui_arrow" : "ui_back",
-                    "<gray>Page " + (page + 1) + "/" + pages(), "<dark_gray>Click: " + (page + 1 < pages() ? "next" : "first")
-                            + " page"), page + 1));
-        }
+        arrows(page, pages());
     }
 
     @Override
     protected void clickPage(int slot, org.bukkit.event.inventory.ClickType click) {
-        if (slot == EXTRA && pages() > 1) {
-            page = (page + 1) % pages();
+        int next = turn(slot, page, pages());
+        if (next != page) {
+            page = next;
             clickSound();
             render();
         }

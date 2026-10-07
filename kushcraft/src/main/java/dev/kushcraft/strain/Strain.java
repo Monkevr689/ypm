@@ -23,10 +23,19 @@ public final class Strain {
     private final boolean inShop;
     private final UUID creator;
     private final String creatorName;
+    private final List<String> parents;
 
     public Strain(String id, String name, StrainType type, Look look, Climate climate, int potency,
                   List<EffectType> effects, List<String> wildBiomes, double wildWeight, String flavor, double price,
                   boolean inShop, UUID creator, String creatorName) {
+        this(id, name, type, look, climate, potency, effects, wildBiomes, wildWeight, flavor, price, inShop, creator,
+                creatorName, List.of());
+    }
+
+    /** parents: the two strain ids that can be crossed into this one (built-in Exotic strains). */
+    public Strain(String id, String name, StrainType type, Look look, Climate climate, int potency,
+                  List<EffectType> effects, List<String> wildBiomes, double wildWeight, String flavor, double price,
+                  boolean inShop, UUID creator, String creatorName, List<String> parents) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -41,12 +50,27 @@ public final class Strain {
         this.inShop = inShop;
         this.creator = creator;
         this.creatorName = creatorName;
+        this.parents = parents == null ? List.of() : List.copyOf(parents);
     }
 
     /** A copy with another name (id stays the same). */
     public Strain renamed(String newName) {
         return new Strain(id, newName, type, look, climate, potency, effects, wildBiomes, wildWeight, flavor, price,
-                inShop, creator, creatorName);
+                inShop, creator, creatorName, parents);
+    }
+
+    /**
+     * Built-in Exotic strains: the two Mythic strains (ids) that can be
+     * crossed into this one. Empty for everything else.
+     */
+    public List<String> parents() {
+        return parents;
+    }
+
+    /** True when crossing a and b (either order) can give this strain. */
+    public boolean bredFrom(Strain a, Strain b) {
+        return parents.size() == 2 && ((parents.get(0).equals(a.id()) && parents.get(1).equals(b.id()))
+                || (parents.get(0).equals(b.id()) && parents.get(1).equals(a.id())));
     }
 
     public String id() {
@@ -126,7 +150,7 @@ public final class Strain {
         return Math.max(5, Math.round(rarity().seedPrice() * (0.6 + potency / 50.0) / 5.0) * 5.0);
     }
 
-    /** Coloured, escaped strain name in MiniMessage (Mythic strains in their own colours). */
+    /** Coloured, escaped strain name in MiniMessage (Mythic and Exotic strains in their own colours). */
     public String colored() {
         if (look.exotic() != Exotic.NONE) {
             return look.exotic().wrap(Text.escape(name));
@@ -144,7 +168,7 @@ public final class Strain {
     }
 
     /** Darker colours are unreadable in chat, lift them a bit. */
-    private static int brighten(int rgb) {
+    public static int brighten(int rgb) {
         int r = (rgb >> 16) & 255, g = (rgb >> 8) & 255, b = rgb & 255;
         int max = Math.max(r, Math.max(g, b));
         if (max >= 140) {

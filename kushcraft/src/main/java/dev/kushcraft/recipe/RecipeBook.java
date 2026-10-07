@@ -168,6 +168,10 @@ public final class RecipeBook {
         if (name == null) {
             return null;
         }
+        if (name.startsWith("kush:")) {
+            ItemType t = ItemType.parse(name.substring(5));
+            return t == null ? null : sample(t, amount);
+        }
         if (name.equals("planks")) {
             ItemStack it = new ItemStack(Material.OAK_PLANKS, amount);
             it.editMeta(m -> m.itemName(Text.mm("<white>Any Planks")));

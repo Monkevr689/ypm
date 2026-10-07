@@ -179,24 +179,28 @@ public final class Guide {
                 + " breed strains\n<bold>Upgrade</bold>: faster + bonus\n\n<dark_gray>Glowing = you have it all."
                 + " Shift-click cooks up to 4 batches.",
                 "<dark_green><bold>Step by step</bold>\n\n<black>Many drugs take 2-3 cooks:\n<dark_gray>"
-                        + "coca > paste > cocaine\nopium > morphine > heroin\nmorphine > oxy\n"
+                        + "coca > paste > cocaine\npoppy seeds > morphine\nmorphine > heroin / oxy\n"
                         + "ergot > extract > LSD\nDMT > ayahuasca\n<black>Red = missing (it says where to get"
                         + " it).");
     }
 
     private static List<String> workers() {
         int chain = KushCraft.get() == null ? 32 : KushCraft.get().workers().chainRadius();
-        return List.of("<dark_green><bold>Workers</bold>\n\n<black>Shop > <dark_aqua>Gear & Workers</dark_aqua>."
-                        + " Right-click the ground to put them there.\n\n<dark_green>Farmhand</dark_green>:"
-                        + " harvests, replants\n<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>:"
-                        + " cooks or rolls\n<light_purple>Runner</light_purple>: sells it all",
-                "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks of each other"
-                        + " pass things along by themselves:\n<dark_gray>Farmhand > Dryer > Cook > Runner\n\n"
-                        + "<black>A <gold>chest</gold> next to a worker: they put their work in it and take"
-                        + " supplies from it.",
+        return List.of("<dark_green><bold>Workers</bold>\n\n<black>The <dark_aqua>Workers</dark_aqua> tab:"
+                        + " hire, then right-click the ground.\n<dark_green>Farmhand</dark_green>: harvests\n"
+                        + "<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>: cooks, rolls, or Auto\n"
+                        + "<light_purple>Runner</light_purple>: carries, sells\n<gold>Supplier</gold>: buys"
+                        + " ingredients",
+                "<dark_green><bold>Chests</bold>\n\n<black>Workers only use what they can <u>walk to</u>,"
+                        + " never through walls:\n<dark_gray>- chests you <black>link</black> to them\n"
+                        + "- the chest by their spot\n- your chests around them\n<black>Link: their menu >"
+                        + " Link, click chests.",
+                "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks are a crew."
+                        + " A <light_purple>Runner</light_purple> brings what one is missing from anywhere in"
+                        + " the crew, through walls the back way. A <gold>Supplier</gold> buys it with your money.",
                 "<dark_green><bold>Your workers</bold>\n\n<black>Hire as many as you like. Right-click one for"
-                        + " their satchel.\n\nThey get a <gold>wage</gold> per job (Runners keep a cut)."
-                        + " <dark_gray>No money, no work!</dark_gray>\nTrain them: further, faster.\n"
+                        + " their satchel.\n\nThey get a <gold>wage</gold> per job.\n<dark_gray>No money, no"
+                        + " work!</dark_gray>\nTrain them: further, faster.\n"
                         + run("/kush workers", "> Your workers"));
     }
 
@@ -259,9 +263,9 @@ public final class Guide {
 
     private static List<String> money() {
         return List.of(
-                "<dark_green><bold>Shop</bold>\n\n<black>Seeds, gear and workers.\n\n<gold>Selling drugs is"
-                        + " the only way to make money.</gold> Click product to sell it, or Sell all. The more of"
-                        + " one thing you sell, the less it pays.\n" + run("/kush shop", "> Shop"),
+                "<dark_green><bold>Shop</bold>\n\n<black>Seeds and gear.\n\n<gold>Selling drugs is"
+                        + " the only way to make money.</gold> Click product to sell it, or Sell all. Lots of"
+                        + " one thing pays a little less.\n" + run("/kush shop", "> Shop"),
                 "<dark_green><bold>Trade</bold>\n\n<black>Spend it: lab ingredients, ores, food, wood,"
                         + " blocks, colours, decor, redstone, tools, mob drops, Nether.\n\n<dark_gray>Trade only"
                         + " sells - nothing can be sold back.\n" + run("/kush trade", "> Trade"),
@@ -285,20 +289,46 @@ public final class Guide {
     private static List<String> strain() {
         return List.of("<dark_green><bold>Breeding</bold>\n\n<black>Drug Lab > <dark_green>Mix</dark_green>."
                         + " Click two seeds and press MIX.\n\nThe child is <bold>random</bold>: effects, potency,"
-                        + " climate, colours and bud shape from the parents - or a <dark_purple>mutation</dark_purple>.",
-                "<dark_green><bold>Mythic</bold>\n\n<black>Very rarely a child is <dark_purple><bold>Mythic"
-                        + "</bold></dark_purple>: rainbow, galaxy, golden, crystal, neon or inferno buds that"
-                        + " sparkle and sell for <gold>2.5x</gold>.\n\nA Mythic parent passes it on 1 in 5.");
+                        + " climate, colours, two-tone pattern and bud shape from the parents - or a"
+                        + " <dark_purple>mutation</dark_purple>.",
+                "<dark_green><bold>Mythic</bold>\n\n<black>About 1 in 15 children is <dark_purple><bold>Mythic"
+                        + "</bold></dark_purple>: rainbow, galaxy, aurora, toxic, sakura, plasma... buds that"
+                        + " sparkle and sell for <gold>4x</gold>.\n\nA Mythic parent passes it on 1 in 5.",
+                "<dark_green><bold>Exotic</bold>\n\n<black>Only <bold>two Mythic</bold> seeds can make an"
+                        + " <light_purple><bold>Exotic</bold></light_purple> one (3%): void, prism, celestial,"
+                        + " phoenix, quantum or eclipse. They sell for <gold>7x</gold>.\n\n<dark_gray>Some Mythic"
+                        + " pairs give a famous Exotic strain.");
     }
 
     private static List<String> effects() {
         List<String> out = new ArrayList<>();
-        List<EffectType> effects = List.of(EffectType.values());
+        List<EffectType> effects = new ArrayList<>();
+        List<EffectType> signatures = new ArrayList<>();
+        for (EffectType e : EffectType.values()) {
+            (e.signature() ? signatures : effects).add(e);
+        }
         for (int i = 0; i < effects.size(); i += 3) {
             StringBuilder b = new StringBuilder("<dark_green><bold>Effects</bold>\n");
             for (int j = i; j < Math.min(effects.size(), i + 3); j++) {
                 EffectType e = effects.get(j);
                 b.append("\n<black><bold>").append(e.display()).append("</bold>\n<dark_gray>").append(e.description());
+            }
+            out.add(b.toString());
+        }
+        // every drug has its own one-of-a-kind effect
+        Map<EffectType, String> drug = new java.util.EnumMap<>(EffectType.class);
+        for (dev.kushcraft.item.ItemType t : dev.kushcraft.item.ItemType.values()) {
+            EffectType sig = dev.kushcraft.catalog.Catalog.signature(t);
+            if (sig != null) {
+                drug.put(sig, t.display());
+            }
+        }
+        for (int i = 0; i < signatures.size(); i += 3) {
+            StringBuilder b = new StringBuilder("<dark_purple><bold>Signatures</bold>\n");
+            for (int j = i; j < Math.min(signatures.size(), i + 3); j++) {
+                EffectType e = signatures.get(j);
+                b.append("\n<black><bold>").append(drug.getOrDefault(e, "?")).append("</bold>: ").append(e.display())
+                        .append("\n<dark_gray>").append(e.description());
             }
             out.add(b.toString());
         }
@@ -309,7 +339,7 @@ public final class Guide {
         List<String> out = new ArrayList<>();
         List<Strain> strains = new ArrayList<>(KushCraft.get().strains().all());
         // 3 per page: long names wrap onto a second line
-        for (int i = 0; i < strains.size() && i < 60; i += 3) {
+        for (int i = 0; i < strains.size() && i < 36; i += 3) {
             StringBuilder b = new StringBuilder("<dark_green><bold>Strains</bold>\n");
             for (int j = i; j < Math.min(strains.size(), i + 3); j++) {
                 Strain s = strains.get(j);

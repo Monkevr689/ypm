@@ -38,6 +38,7 @@ CRAFTING = [
     ("fertilizer", 4, None, ["bone_meal", "bone_meal", "rotten_flesh"]),
     ("lab_solvent", 3, None, ["glass_bottle", "sugar"]),
     ("grower_guide", 1, None, ["book", "wheat_seeds"]),
+    ("morphine", 1, None, ["kush:poppy_seeds", "kush:poppy_seeds", "kush:poppy_seeds", "kush:poppy_seeds"]),
 ]
 
 # cook: (enum name, result id, amount, seconds, [(ingredient, count)]); "kush:" = KushCraft item.
@@ -62,7 +63,7 @@ COOK = [
     ("ANGEL_DUST", "angel_dust", 3, 50, [("gunpowder", 3), ("kush:lab_solvent", 1)]),
     ("SPEED", "speed", 4, 45, [("redstone", 2), ("sugar", 2), ("kush:lab_solvent", 1)]),
     ("OPIUM", "opium", 2, 30, [("kush:poppy_pod", 3)]),
-    ("MORPHINE", "morphine", 2, 45, [("kush:opium", 2), ("kush:lab_solvent", 1)]),
+    ("MORPHINE", "morphine", 1, 20, [("kush:poppy_seeds", 4)]),
     ("HEROIN", "heroin", 2, 60, [("kush:morphine", 2), ("kush:lab_solvent", 1)]),
     ("OXY", "oxy", 3, 45, [("kush:morphine", 1), ("sugar", 1), ("kush:lab_solvent", 1)]),
     ("COUGH_SYRUP", "cough_syrup", 2, 30, [("kush:opium", 1), ("honey_bottle", 1)]),

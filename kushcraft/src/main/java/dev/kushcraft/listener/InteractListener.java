@@ -110,6 +110,9 @@ public final class InteractListener implements Listener {
                     return;
                 }
                 plant(p, item, type, b);
+            } else if (a == Action.RIGHT_CLICK_AIR && type == ItemType.POPPY_SEEDS) {
+                p.sendActionBar(Text.mm("<gray>Plant them, or put <white>4</white> in a <green>crafting table</green>"
+                        + " for Morphine Base."));
             }
             return;
         }
@@ -280,6 +283,7 @@ public final class InteractListener implements Listener {
             case VAPE_PEN -> Dose.strain(s, q, 35, 7);
             default -> Dose.strain(s, q, 55, 11);
         };
+        d.add(Catalog.signature(type), Catalog.signatureSeconds(type));
         plugin.effects().apply(p, d);
         plugin.awards().used(p, type);
         if (type == ItemType.VAPE_PEN) {

@@ -13,11 +13,12 @@ import java.util.UUID;
 import java.util.function.Function;
 
 /**
- * The /kush menu: five tabs along the top (Shop, Drugs, Trade, Cartel,
- * Awards), then a free slot for the page (5), the admin panel (6, admins
- * only), the guide button (7: your next step) and your money (8). Rows 1-5
- * belong to the page. The active tab is drawn into each page's background
- * (tools/gui.py tab_page()). Top Dealers is a page inside the Cartel tab.
+ * The /kush menu: six tabs along the top (Shop, Drugs, Trade, Workers,
+ * Cartel, Awards), then the admin panel (6, admins only), the guide button
+ * (7: your next step) and your money (8). Rows 1-5 belong to the page.
+ * The active tab is drawn into each page's background (tools/gui.py
+ * tab_page()). Top Dealers is a page inside the Cartel tab, Gear one inside
+ * the Shop tab. /kush &lt;tab&gt; opens a tab straight away.
  */
 public abstract class TabMenu extends Menu {
 
@@ -25,6 +26,7 @@ public abstract class TabMenu extends Menu {
         SHOP("Shop", "tab_shop", ShopMenu::new),
         DRUGS("Drugs", "tab_drugs", DrugsMenu::new),
         TRADE("Trade", "tab_trade", TradeMenu::new),
+        WORKERS("Workers", "tab_workers", WorkersMenu::new),
         CARTEL("Cartel", "tab_cartel", CartelMenu::new),
         AWARDS("Awards", "tab_awards", AwardsMenu::new);
 
@@ -49,10 +51,18 @@ public abstract class TabMenu extends Menu {
         public void open(Player p) {
             page.apply(p).open();
         }
+
+        /** "shop", "workers"... (for /kush &lt;tab&gt;), or null. */
+        public static Tab parse(String s) {
+            for (Tab t : values()) {
+                if (t.name().equalsIgnoreCase(s) || t.display.equalsIgnoreCase(s)) {
+                    return t;
+                }
+            }
+            return null;
+        }
     }
 
-    /** A button of the page itself (e.g. Awards: next page). */
-    static final int EXTRA = 5;
     static final int ADMIN = 6;
     static final int GUIDE = 7;
     static final int WALLET = 8;
@@ -120,7 +130,7 @@ public abstract class TabMenu extends Menu {
             openChild(new AdminMenu(player));
             return;
         }
-        if (slot >= 9 || slot == EXTRA) {
+        if (slot >= 9) {
             clickPage(slot, click);
         }
     }
@@ -131,6 +141,32 @@ public abstract class TabMenu extends Menu {
     /** Slot of a page cell. */
     protected static int at(int row, int col) {
         return row * 9 + col;
+    }
+
+    /** Previous / next page buttons (bottom corners of the page, drawn by tools/gui.py page_arrows()). */
+    static final int PREV = 45;
+    static final int NEXT = 53;
+
+    /** Draws the page arrows for page (0-based) of pages; nothing when there is only one page. */
+    protected void arrows(int page, int pages) {
+        if (pages <= 1) {
+            return;
+        }
+        set(PREV, Items.amount(Items.icon("ui_back", page > 0 ? "<gray>Previous page" : "<dark_gray>First page",
+                "<dark_gray>Page " + (page + 1) + " of " + pages), Math.max(1, page)));
+        set(NEXT, Items.amount(Items.icon("ui_arrow", page + 1 < pages ? "<gray>Next page" : "<dark_gray>Last page",
+                "<dark_gray>Page " + (page + 1) + " of " + pages), page + 2 <= pages ? page + 2 : pages));
+    }
+
+    /** The new page after a click on PREV / NEXT (or the same one). */
+    protected static int turn(int slot, int page, int pages) {
+        if (slot == PREV && page > 0) {
+            return page - 1;
+        }
+        if (slot == NEXT && page + 1 < pages) {
+            return page + 1;
+        }
+        return page;
     }
 
     /** Money shown with the configured symbol. */

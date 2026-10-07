@@ -1,10 +1,11 @@
 package dev.kushcraft.strain;
 
 /**
- * How a strain looks: bud, leaf and pistil (hair) colours, the bud shape and
- * an optional Mythic look. Seeds, buds and plants are tinted with these.
+ * How a strain looks: bud, leaf and pistil (hair) colours, the bud shape, an
+ * optional second bud colour in a pattern (two-tone buds) and an optional
+ * Mythic / Exotic look. Seeds, buds and plants are tinted with these.
  */
-public record Look(int bud, int leaf, int pistil, BudShape shape, Exotic exotic) {
+public record Look(int bud, int leaf, int pistil, BudShape shape, Exotic exotic, int accent, BudPattern pattern) {
 
     public static final int DEFAULT_LEAF = 0x4E9E34;
     public static final int DEFAULT_PISTIL = 0xE8862E;
@@ -13,8 +14,15 @@ public record Look(int bud, int leaf, int pistil, BudShape shape, Exotic exotic)
         bud &= 0xFFFFFF;
         leaf &= 0xFFFFFF;
         pistil &= 0xFFFFFF;
+        accent &= 0xFFFFFF;
         shape = shape == null ? BudShape.CLASSIC : shape;
         exotic = exotic == null ? Exotic.NONE : exotic;
+        pattern = pattern == null ? BudPattern.NONE : pattern;
+    }
+
+    /** One-colour buds. */
+    public Look(int bud, int leaf, int pistil, BudShape shape, Exotic exotic) {
+        this(bud, leaf, pistil, shape, exotic, bud, BudPattern.NONE);
     }
 
     /** Defaults for strains made before 3.0: leaves with a touch of the bud colour, orange hairs. */

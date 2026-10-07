@@ -20,8 +20,11 @@ public enum WorkerType {
             "Cooks the drug you pick at your Drug Lab, or rolls joints.",
             "Fetches what they need from your other workers."),
     RUNNER("Runner", "<light_purple>", ItemType.RUNNER, Material.BUNDLE,
-            "Sells your workers' finished product for you.",
-            "Keeps a small cut. The money goes to your wallet.");
+            "Sells your product and carries things between workers.",
+            "Keeps a small cut. Gets through walls the back way."),
+    SUPPLIER("Supplier", "<yellow>", ItemType.SUPPLIER, Material.WRITABLE_BOOK,
+            "Buys ingredients with your money and stocks your workers.",
+            "Never spends below the reserve you set.");
 
     private final String display;
     private final String color;
