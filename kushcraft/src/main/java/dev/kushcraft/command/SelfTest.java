@@ -618,7 +618,7 @@ final class SelfTest {
         // what a runner carries that nobody uses and nobody buys goes in the nearest chest
         var openInv = ((org.bukkit.block.Container) open.getState(false)).getInventory();
         ws.stash(runner, List.of(new ItemStack(Material.DIRT, 5)));
-        check(ws.workNow(runner) && runner.carried() == 0 && openInv.contains(Material.DIRT, 5),
+        check(ws.workNow(runner) && !runner.satchel().contains(Material.DIRT) && openInv.contains(Material.DIRT, 5),
                 "the runner puts things nobody needs in the nearest chest");
         openInv.clear();
         // an old chest nobody placed, far from the workers, is left alone - unless an old save had it linked
