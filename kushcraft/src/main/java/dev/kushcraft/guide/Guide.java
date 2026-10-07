@@ -68,7 +68,7 @@ public final class Guide {
                 + " any drug: its <red>eyes go red</red> and it gets high for a while.\n\n<dark_gray>Uppers give it"
                 + " the zoomies, downers slow it right down.");
         sections.add(new Section("Effects & animals", effects));
-        sections.add(new Section("Strains", strains()));
+        sections.add(new Section("Mythic strains", strains()));
 
         // page numbers: 1 = cover, 2 = contents
         int page = 3;
@@ -336,22 +336,27 @@ public final class Guide {
     }
 
     private static List<String> strains() {
+        // the Mythic ones (the Shop lists the rest; Exotic strains are for breeders to find)
         List<String> out = new ArrayList<>();
-        List<Strain> strains = new ArrayList<>(KushCraft.get().strains().all());
-        // 3 per page: long names wrap onto a second line
-        for (int i = 0; i < strains.size() && i < 36; i += 3) {
-            StringBuilder b = new StringBuilder("<dark_green><bold>Strains</bold>\n");
+        List<Strain> strains = new ArrayList<>();
+        for (Strain s : KushCraft.get().strains().all()) {
+            if (!s.isCustom() && s.rarity() == dev.kushcraft.strain.Rarity.MYTHIC) {
+                strains.add(s);
+            }
+        }
+        for (int i = 0; i < strains.size() && i < 18; i += 3) {
+            StringBuilder b = new StringBuilder("<dark_purple><bold>Mythic strains</bold>\n");
             for (int j = i; j < Math.min(strains.size(), i + 3); j++) {
                 Strain s = strains.get(j);
                 b.append("\n<black><bold>").append(Text.escape(s.name())).append("</bold>\n<dark_gray>")
-                        .append(s.rarity().display()).append(", ").append(s.potency()).append("%, ")
+                        .append(s.exotic().display()).append(", ").append(s.potency()).append("%, ")
                         .append(s.climate().display()).append("\n");
             }
             out.add(b.toString());
         }
-        if (out.isEmpty()) {
-            out.add("<dark_green><bold>Strains</bold>\n\n<black>No strains yet.");
-        }
+        out.add("<dark_purple><bold>Exotic strains</bold>\n\n<black>Ten famous Exotic strains exist.\n\nEach one comes"
+                + " from crossing <bold>two particular Mythic strains</bold>. Put two Mythic seeds in the mixer: if they"
+                + " are a pair, it tells you.");
         return out;
     }
 }
