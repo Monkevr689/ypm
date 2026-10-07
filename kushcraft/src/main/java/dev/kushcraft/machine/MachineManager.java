@@ -33,6 +33,7 @@ import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -232,6 +233,26 @@ public final class MachineManager {
 
     public Collection<Machine> all() {
         return machines.values();
+    }
+
+    /** Machines in the chunks within r blocks of x, z (a quick look-up by chunk; check the distance yourself). */
+    public List<Machine> near(String world, int x, int z, int r) {
+        List<Machine> out = new ArrayList<>();
+        for (int cx = (x - r) >> 4; cx <= (x + r) >> 4; cx++) {
+            for (int cz = (z - r) >> 4; cz <= (z + r) >> 4; cz++) {
+                Set<BlockKey> keys = byChunk.get(BlockKey.chunkId(world, cx, cz));
+                if (keys == null) {
+                    continue;
+                }
+                for (BlockKey k : keys) {
+                    Machine m = machines.get(k);
+                    if (m != null) {
+                        out.add(m);
+                    }
+                }
+            }
+        }
+        return out;
     }
 
     public boolean lampNear(BlockKey key, int radius) {

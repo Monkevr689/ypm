@@ -188,15 +188,19 @@ public final class Guide {
         int chain = KushCraft.get() == null ? 32 : KushCraft.get().workers().chainRadius();
         return List.of("<dark_green><bold>Workers</bold>\n\n<black>Shop > <dark_aqua>Gear & Workers</dark_aqua>."
                         + " Right-click the ground to put them there.\n\n<dark_green>Farmhand</dark_green>:"
-                        + " harvests, replants\n<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>:"
+                        + " harvests, plants\n<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>:"
                         + " cooks or rolls\n<light_purple>Runner</light_purple>: sells it all",
-                "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks of each other"
-                        + " pass things along by themselves:\n<dark_gray>Farmhand > Dryer > Cook > Runner\n\n"
-                        + "<black>A <gold>chest</gold> next to a worker: they put their work in it and take"
-                        + " supplies from it.",
+                "<dark_green><bold>Chests</bold>\n\n<black>Workers use <gold>any of your chests</gold>"
+                        + " near them: they take what they need and put their work in them.\n\nWorkers"
+                        + " within " + chain + " blocks pass things along:\n<dark_gray>Farmhand > Dryer >"
+                        + " Cook > Runner",
+                "<dark_green><bold>Auto-buy</bold>\n\n<black>Out of seeds, fertilizer or an ingredient?"
+                        + " They <gold>buy it</gold> with your money.\n\n<dark_gray>Switch it off in Shop >"
+                        + " Gear & Workers. Never Mythic seeds.\n\n<black>The <light_purple>Runner</light_purple>"
+                        + " sells what your workers make right away.",
                 "<dark_green><bold>Your workers</bold>\n\n<black>Hire as many as you like. Right-click one for"
-                        + " their satchel.\n\nThey get a <gold>wage</gold> per job (Runners keep a cut)."
-                        + " <dark_gray>No money, no work!</dark_gray>\nTrain them: further, faster.\n"
+                        + " their satchel (54 slots).\n\nThey get a <gold>wage</gold> per job (Runners keep a"
+                        + " cut). <dark_gray>No money, no work!</dark_gray>\nTrain them: further, faster.\n"
                         + run("/kush workers", "> Your workers"));
     }
 

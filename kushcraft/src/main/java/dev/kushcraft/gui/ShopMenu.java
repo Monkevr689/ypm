@@ -17,8 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Shop: seeds of every strain (cheapest first, Mythic ones last) and the
- * other seeds in rows 1-4, 36 a page; the bottom row has the page arrows,
+ * Shop: seeds of every strain (cheapest first) and the other seeds in rows
+ * 1-4, 36 a page, the Mythic seeds on pages of their own at the end; the
+ * bottom row has the page arrows,
  * Gear &amp; Workers, Sell all (or click product below to sell it) and the
  * market news. Layout: tools/gui.py shop().
  */
@@ -64,17 +65,23 @@ public final class ShopMenu extends TabMenu {
             return;
         }
         double bal = plugin.economy().balance(player);
-        List<Shop.BuyEntry> seeds = shop().seeds();
+        List<Shop.BuyEntry> seeds = laidOut();
         page = Math.min(page, pages() - 1);
         for (int i = 0; i < SEEDS && page * SEEDS + i < seeds.size(); i++) {
-            set(FIRST_SEED + i, entryIcon(seeds.get(page * SEEDS + i), bal));
+            Shop.BuyEntry e = seeds.get(page * SEEDS + i);
+            if (e != null) {
+                set(FIRST_SEED + i, entryIcon(e, bal));
+            }
         }
         if (page > 0) {
             set(PREV, Items.icon("ui_arrow", "<gray>Page " + page + "/" + pages()));
         }
         if (page < pages() - 1) {
-            set(NEXT, Items.icon("ui_arrow", "<white>More seeds <gray>(page " + (page + 2) + "/" + pages() + ")",
-                    page == pages() - 2 ? "<light_purple>Mythic seeds are on the last page." : "<dark_gray>Click"));
+            boolean mythicNext = (page + 1) * SEEDS < seeds.size() && isMythic(seeds.get((page + 1) * SEEDS));
+            set(NEXT, Items.icon("ui_arrow", mythicNext
+                            ? "<light_purple><bold>Mythic seeds</bold> <gray>(page " + (page + 2) + "/" + pages() + ")"
+                            : "<white>More seeds <gray>(page " + (page + 2) + "/" + pages() + ")",
+                    mythicNext ? "<gray>Glowing, sparkling plants that sell for 4x." : "<dark_gray>Click"));
         }
         set(GEAR, Items.icon("ui_gear", "<aqua><bold>Gear & Workers",
                 "<gray>Papers, solvent, lamps, the Drug Lab...", "<gray>and workers who farm for you."));
@@ -132,8 +139,27 @@ public final class ShopMenu extends TabMenu {
         return show;
     }
 
+    private static boolean isMythic(Shop.BuyEntry e) {
+        Strain s = e == null || e.strain() == null ? null : KushCraft.get().strains().get(e.strain());
+        return s != null && s.rarity().animated();
+    }
+
+    /** The seeds page by page: the Mythic ones (last in the list) start on a page of their own (gaps are null). */
+    private static List<Shop.BuyEntry> laidOut() {
+        List<Shop.BuyEntry> out = new ArrayList<>();
+        for (Shop.BuyEntry e : shop().seeds()) {
+            if (isMythic(e) && !out.isEmpty() && !isMythic(out.get(out.size() - 1))) {
+                while (out.size() % SEEDS != 0) {
+                    out.add(null);
+                }
+            }
+            out.add(e);
+        }
+        return out;
+    }
+
     private static int pages() {
-        return Math.max(1, (shop().seeds().size() + SEEDS - 1) / SEEDS);
+        return Math.max(1, (laidOut().size() + SEEDS - 1) / SEEDS);
     }
 
     @Override
@@ -165,8 +191,9 @@ public final class ShopMenu extends TabMenu {
             return;
         }
         int idx = slot - FIRST_SEED;
-        if (idx >= 0 && idx < SEEDS && page * SEEDS + idx < shop().seeds().size()) {
-            buy(player, shop().seeds().get(page * SEEDS + idx), click.isShiftClick() ? 5 : 1);
+        List<Shop.BuyEntry> seeds = laidOut();
+        if (idx >= 0 && idx < SEEDS && page * SEEDS + idx < seeds.size() && seeds.get(page * SEEDS + idx) != null) {
+            buy(player, seeds.get(page * SEEDS + idx), click.isShiftClick() ? 5 : 1);
             render();
         }
     }

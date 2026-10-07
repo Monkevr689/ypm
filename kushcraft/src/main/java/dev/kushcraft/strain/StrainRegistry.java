@@ -26,7 +26,7 @@ import java.util.logging.Level;
 public final class StrainRegistry {
 
     /** strains.yml files older than this get the new built-in strains and looks added. */
-    static final int FILE_VERSION = 5;
+    static final int FILE_VERSION = 6;
 
     private final KushCraft plugin;
     private final File file;
@@ -109,6 +109,10 @@ public final class StrainRegistry {
                     if (!m.isSet(key) || key.equals("wild-biomes")) {
                         m.set(key, d.get(key));
                     }
+                }
+                Exotic look = Exotic.parse(d.getString("exotic"));
+                if (version < 6 && look != Exotic.NONE && !look.exoticTier()) {
+                    m.set("shop", null); // 8.0: Mythic seeds are sold in the Shop
                 }
             }
         }

@@ -19,9 +19,11 @@ import java.util.List;
 
 /**
  * A worker's menu (right-click them): who they are and what they're doing,
- * their job (a Cook's drug), their satchel (click an item to take it, click
- * your own seeds / buds / ingredients to give them), and buttons to rename,
- * pause, train and dismiss them. Layout: tools/gui.py worker().
+ * their job (a Cook's drug), their satchel in two pages (click an item to
+ * take it, click your own seeds / buds / ingredients to give them), buttons
+ * to rename, pause, train and dismiss them, and the bottom bar: satchel
+ * pages, auto-buy (a Runner: sell now), take all and the chests they use.
+ * Layout: tools/gui.py worker().
  */
 public final class WorkerMenu extends Menu {
 
@@ -33,10 +35,17 @@ public final class WorkerMenu extends Menu {
     static final int UPGRADE = 7;
     static final int DISMISS = 8;
     static final int FIRST = 9;
+    /** Satchel slots on one page (the satchel has two). */
+    static final int PAGE = 27;
+    static final int PREV = 36;
+    static final int OPTION = 38;
     static final int TAKE_ALL = 40;
+    static final int CHESTS = 42;
+    static final int NEXT = 44;
 
     private final Worker worker;
     private boolean confirmDismiss;
+    private int page;
 
     public WorkerMenu(Player player, Worker worker) {
         super(player, ROWS, "worker", worker.type().display() + " " + worker.name(), false);
@@ -83,14 +92,74 @@ public final class WorkerMenu extends Menu {
         set(DISMISS, Items.icon("ui_dismiss", confirmDismiss ? "<red><bold>Click again to dismiss" : "<red>Dismiss",
                 "<gray>You get their contract and satchel back."));
         ItemStack[] items = worker.satchel().getStorageContents();
-        for (int i = 0; i < Worker.SATCHEL; i++) {
-            if (items[i] != null && !items[i].getType().isAir()) {
-                set(FIRST + i, items[i].clone());
+        for (int i = 0; i < PAGE && page * PAGE + i < items.length; i++) {
+            ItemStack it = items[page * PAGE + i];
+            if (it != null && !it.getType().isAir()) {
+                set(FIRST + i, it.clone());
             }
+        }
+        int pages = (Worker.SATCHEL + PAGE - 1) / PAGE;
+        int used = Worker.SATCHEL - worker.freeSlots();
+        if (page > 0) {
+            set(PREV, Items.icon("ui_arrow", "<white>Satchel page " + page + "/" + pages));
+        }
+        if (page < pages - 1) {
+            set(NEXT, Items.icon("ui_arrow", "<white>Satchel page " + (page + 2) + "/" + pages,
+                    "<gray>" + used + "/" + Worker.SATCHEL + " slots used"));
         }
         int carried = worker.carried();
         set(TAKE_ALL, Items.glint(Items.icon("ui_take", carried > 0 ? "<green><bold>Take all</bold> <gray>(" + carried + ")"
-                : "<gray>Satchel is empty", "<dark_gray>Click an item to take just that."), carried > 0));
+                : "<gray>Satchel is empty", "<gray>" + used + "/" + Worker.SATCHEL + " slots used",
+                "<dark_gray>Click an item to take just that."), carried > 0));
+        set(OPTION, optionIcon());
+        set(CHESTS, chestsIcon());
+    }
+
+    /** A Runner: sell now. Everyone else: auto-buy (your setting for all your workers). */
+    private ItemStack optionIcon() {
+        Workers ws = workers();
+        if (worker.type() == WorkerType.RUNNER) {
+            double value = ws.carriedValue(worker);
+            return Items.glint(Items.icon("ui_sell", value > 0 ? "<gold><bold>Sell now</bold> <gray>(" + money(value) + ")"
+                            : "<gray>Nothing to sell",
+                    "<gray>They sell whatever they get right away;",
+                    "<gray>this sells what they carry this second.",
+                    "<dark_gray>Keeps " + Math.round(ws.runnerCut() * 100) + "% of every sale."), value > 0);
+        }
+        boolean on = ws.autoBuy(worker.owner());
+        List<String> lore = new ArrayList<>();
+        lore.add(on ? "<gray>When they can't find seeds, fertilizer or" : "<gray>Switched off: they only use what's in");
+        lore.add(on ? "<gray>an ingredient, they buy it with your money." : "<gray>your chests and satchels.");
+        var next = on ? ws.nextBuy(worker) : null;
+        if (next != null) {
+            lore.add("<yellow>Next: <white>" + next.amount() + " " + next.name() + " <gold>" + money(next.cost()));
+        }
+        if (!ws.autoBuyAllowed()) {
+            lore.add("<red>Turned off on this server.");
+        }
+        lore.add("<dark_gray>Click to switch (all your workers)");
+        return Items.glint(Items.icon("ui_wallet", on ? "<green>Auto-buy: ON" : "<yellow>Auto-buy: OFF", lore), on);
+    }
+
+    private ItemStack chestsIcon() {
+        Workers ws = workers();
+        int n = ws.chests(worker).size();
+        List<String> lore = new ArrayList<>();
+        lore.add("<gray>" + n + " of your chests within " + ws.chestRadius(worker) + " blocks of them.");
+        lore.add(switch (worker.type()) {
+            case FARMHAND -> "<gray>They put the harvest in them and take seeds";
+            case DRYER -> "<gray>They take fresh buds from them and put";
+            case COOK -> "<gray>They take ingredients from any of them";
+            case RUNNER -> "<gray>They sell the product in them, bring";
+        });
+        lore.add(switch (worker.type()) {
+            case FARMHAND -> "<gray>and fertilizer from them.";
+            case DRYER -> "<gray>the dried ones in them.";
+            case COOK -> "<gray>(several in one trip) and put drugs in them.";
+            case RUNNER -> "<gray>workers what they're missing and store the rest.";
+        });
+        lore.add("<dark_gray>Chests other players placed are left alone.");
+        return Items.icon("ui_nearby", n > 0 ? "<aqua>Chests: " + n : "<yellow>No chests near them", lore);
     }
 
     private org.bukkit.inventory.ItemStack jobIcon() {
@@ -110,8 +179,8 @@ public final class WorkerMenu extends Menu {
                 } else {
                     lore.add("<white>" + (made == ItemType.JOINT ? "1 Dried Bud + 1 Rolling Papers" : "2 Dried Bud + 1 Blunt Wrap"));
                 }
-                lore.add("<gray>They fetch it from your other workers");
-                lore.add("<gray>and chests, or click yours below.");
+                lore.add("<gray>They take it from any of your chests");
+                lore.add("<gray>around them (or buy it), or click yours.");
                 lore.add("<dark_gray>Click: make something else");
             }
             lore.addAll(crewLines());
@@ -128,26 +197,27 @@ public final class WorkerMenu extends Menu {
         switch (t) {
             case FARMHAND -> lore.addAll(List.of(
                     "<gray>Picks your ripe plants near them and",
-                    "<gray>plants a seed from the harvest again.",
-                    "<gray>Give them seeds and fertilizer to plant",
-                    "<gray>empty farmland. Spare seeds become",
-                    "<gray>fertilizer. Dryers and Cooks take the",
-                    "<gray>harvest from them."));
+                    "<gray>plants them again, plants seeds on empty",
+                    "<gray>farmland (" + workers().emptyFarmland(worker) + " near them) and fertilizes.",
+                    "<gray>The harvest goes in your chests; seeds",
+                    "<gray>and fertilizer come from them (or they",
+                    "<gray>buy some, with auto-buy on)."));
             case DRYER -> lore.addAll(List.of(
                     "<gray>Put them near your Drug Lab. They take",
-                    "<gray>fresh buds from your Farmhands, hang",
-                    "<gray>them on the racks and take them off dry.",
-                    "<gray>Your Cooks and Runners take the dry buds."));
+                    "<gray>fresh buds from your Farmhands and chests,",
+                    "<gray>hang them on the racks and take them off",
+                    "<gray>dry. The dried buds go in a chest; your",
+                    "<gray>Cooks use them, your Runners sell them."));
             case RUNNER -> lore.addAll(List.of(
-                    "<gray>Picks up finished product from your",
-                    "<gray>workers (what nobody else needs) and",
-                    "<gray>sells it - at your Dealer Stand if one",
-                    "<gray>is near. Anything in a chest next to",
-                    "<gray>them gets sold too. Money goes to you."));
+                    "<gray>Sells everything your workers make the",
+                    "<gray>moment they get it: from their satchels",
+                    "<gray>and from any of your chests around (what",
+                    "<gray>nobody uses). Brings workers what they're",
+                    "<gray>missing from your chests and puts what",
+                    "<gray>doesn't sell in a chest. Money goes to you."));
             default -> {
             }
         }
-        lore.add("<white>Chest next to them: <gray>they put their work in it.");
         lore.addAll(crewLines());
         return Items.icon("ui_guide", "<aqua>How they work", lore);
     }
@@ -166,10 +236,6 @@ public final class WorkerMenu extends Menu {
             List<String> parts = new ArrayList<>();
             count.forEach((type, n) -> parts.add(n + " " + type.display() + (n > 1 ? "s" : "")));
             out.add("<green>Works with: <white>" + String.join(", ", parts));
-        }
-        int chests = ws.chests(worker).size();
-        if (chests > 0) {
-            out.add("<green>" + chests + " chest" + (chests > 1 ? "s" : "") + " next to them");
         }
         return out;
     }
@@ -231,10 +297,33 @@ public final class WorkerMenu extends Menu {
                 return;
             }
             case TAKE_ALL -> takeAll();
+            case PREV, NEXT -> {
+                int pages = (Worker.SATCHEL + PAGE - 1) / PAGE;
+                int next = Math.max(0, Math.min(pages - 1, page + (slot == NEXT ? 1 : -1)));
+                if (next != page) {
+                    page = next;
+                    clickSound();
+                }
+            }
+            case OPTION -> {
+                if (worker.type() == WorkerType.RUNNER) {
+                    if (ws.sellAll(worker) > 0) {
+                        successSound();
+                    } else {
+                        failSound();
+                    }
+                } else if (ws.autoBuyAllowed()) {
+                    ws.setAutoBuy(worker.owner(), !ws.autoBuy(worker.owner()));
+                    clickSound();
+                } else {
+                    failSound();
+                }
+            }
+            case CHESTS -> clickSound();
             default -> {
                 int i = slot - FIRST;
-                if (i >= 0 && i < Worker.SATCHEL) {
-                    take(i);
+                if (i >= 0 && i < PAGE) {
+                    take(page * PAGE + i);
                 }
             }
         }
@@ -295,6 +384,11 @@ public final class WorkerMenu extends Menu {
             return;
         }
         player.playSound(player.getLocation(), "minecraft:item.bundle.insert", SoundCategory.PLAYERS, 0.8f, 1f);
+        if (worker.type() == WorkerType.RUNNER) {
+            workers().sellAll(worker); // a Runner sells what they get right away
+        } else {
+            workers().hurry(worker);
+        }
         render();
     }
 

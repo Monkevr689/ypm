@@ -23,6 +23,8 @@ public final class Keys {
     public static NamespacedKey LEVEL;
     public static NamespacedKey WORKER;
     public static NamespacedKey HIGH;
+    /** Chests and barrels: who placed them (workers only use their owner's chests, and old unmarked ones). */
+    public static NamespacedKey PLACER;
 
     private Keys() {
     }
@@ -42,6 +44,7 @@ public final class Keys {
         LEVEL = new NamespacedKey(plugin, "level");
         WORKER = new NamespacedKey(plugin, "worker");
         HIGH = new NamespacedKey(plugin, "high");
+        PLACER = new NamespacedKey(plugin, "placer");
     }
 
     /** kush:&lt;path&gt; - a model / item definition from our resource pack. */

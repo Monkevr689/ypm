@@ -2,7 +2,7 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 9
+config-version: 11
 
 # Custom textures/models come in a server resource pack. Players get the
 # usual "this server uses a resource pack" prompt when they join.
@@ -211,23 +211,35 @@ harvest:
 # =====================================================================
 #  WORKERS  (Shop > Gear & Workers)
 #  Hire people who work for you. They're expensive, but they never stop:
-#   Farmhand - harvests your ripe plants and plants a seed from the harvest
-#              again (and plants / fertilizes from their satchel)
+#   Farmhand - harvests your ripe plants and plants them again, plants
+#              seeds on empty farmland / Planters and fertilizes
 #   Dryer    - dries fresh buds on your Drug Lab racks
 #   Cook     - cooks the drug you pick at your Drug Lab, or rolls joints
-#   Runner   - sells your workers' finished product for you
-#  The work chain: your workers within chain-radius of each other fetch
-#  what they need from each other by themselves - Farmhand > Dryer > Cook >
-#  Runner, or Cook > Cook (coca paste > cocaine) - and from chests or
-#  barrels right next to any of them. A worker with a chest next to them
-#  puts what they make in it. Nobody takes what another worker needs.
-#  They only touch the plants, labs and stands of the player who hired them.
-#  Right-click a worker for their satchel and buttons.
+#   Runner   - sells everything your workers make (the moment they get
+#              it), carries things to and from your chests
+#  Chests: workers use ANY of your chests, trapped chests and barrels
+#  within their work radius (a Runner: the whole crew's area) - they take
+#  what they need (a Cook takes ingredients from several chests in one
+#  trip) and put what they make in them. Chests other players placed are
+#  never touched. Your workers within chain-radius of each other are a
+#  crew: Farmhand > Dryer > Cook > Runner hand work along by themselves.
+#  Auto-buy: what a worker can't find (seeds, fertilizer, ingredients,
+#  papers, water) they buy with their owner's money. Each player can
+#  switch it off in Shop > Gear & Workers; auto-buy: false turns it off
+#  for everyone. Mythic seeds are never bought for you.
+#  Satchels hold 54 stacks. They only touch the plants, labs and chests of
+#  the player who hired them. Right-click a worker for their satchel.
 # =====================================================================
 workers:
   enabled: true
   # Most workers one player can have. 0 = no limit.
   max-per-player: 0
+  # Workers buy the seeds, fertilizer and ingredients they can't find in
+  # your chests (with your money). false = never, for everyone.
+  auto-buy: true
+  # Water bottles a worker buys cost this much each (Trade items cost what
+  # Trade asks, KushCraft supplies what the Shop asks).
+  water-price: 2
   # How far apart (blocks) your workers can be and still work together.
   chain-radius: 32
   # Per level (1, 2, 3): how far from where they stand they work, and the
@@ -704,12 +716,16 @@ jobs:
 #  SHOP  (/kush > Shop or a Dealer Stand)
 #  Cannabis seeds: every strain in strains.yml is sold at its own price
 #  (rarer, stronger strains cost more). seed-price-multiplier scales them.
+#  Mythic seeds come last and cost mythic-seed-multiplier times more on
+#  top (mythic-seeds: false = not sold, only bred or found wild).
 #  buy  -> everything else the dealer sells (price per click)
 #  sell -> what the dealer pays players. Strain items are multiplied by
 #          quality (1-5 stars), potency and rarity, so better weed = more money.
 # =====================================================================
 shop:
   seed-price-multiplier: 1.25
+  mythic-seeds: true
+  mythic-seed-multiplier: 3.0
   # Workers (farmhand, dryer, cook, runner) are listed here too: they show on the hiring board.
   buy:
     - {item: mushroom_spores, amount: 1, price: 30}

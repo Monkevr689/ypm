@@ -144,7 +144,8 @@ public final class PlantManager {
 
     public void start() {
         int tickSeconds = Math.max(1, plugin.getConfig().getInt("growth.tick-seconds", 10));
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> growAll(tickSeconds), 20L * tickSeconds, 20L * tickSeconds);
+        // every plant grows once every tick-seconds, a few each tick (no lag spike every 10 seconds)
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> growSlice(tickSeconds), 20L, 1L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::sparkle, 20L, 10L);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (dirty) {
@@ -189,6 +190,26 @@ public final class PlantManager {
 
     public Collection<Plant> all() {
         return plants.values();
+    }
+
+    /** Plants in the chunks within r blocks of x, z (a quick look-up by chunk; check the distance yourself). */
+    public List<Plant> near(String world, int x, int z, int r) {
+        List<Plant> out = new ArrayList<>();
+        for (int cx = (x - r) >> 4; cx <= (x + r) >> 4; cx++) {
+            for (int cz = (z - r) >> 4; cz <= (z + r) >> 4; cz++) {
+                Set<BlockKey> keys = byChunk.get(BlockKey.chunkId(world, cx, cz));
+                if (keys == null) {
+                    continue;
+                }
+                for (BlockKey k : keys) {
+                    Plant p = plants.get(k);
+                    if (p != null) {
+                        out.add(p);
+                    }
+                }
+            }
+        }
+        return out;
     }
 
     public Plant fromEntity(Entity e) {
@@ -597,59 +618,90 @@ public final class PlantManager {
         return new Conditions(mult, quality, lightText, soilText, climateText, problem, fit);
     }
 
-    private void growAll(int tickSeconds) {
-        double cannabisMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.cannabis-minutes", 20));
-        double mushroomMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.mushroom-minutes", 12));
-        double cocaMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.coca-minutes", 16));
-        double poppyMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.poppy-minutes", 14));
-        double peyoteMinutes = Math.max(0.1, plugin.getConfig().getDouble("growth.peyote-minutes", 18));
-        Map<UUID, Integer> ripened = new HashMap<>();
+    /** This round's plants (every tick-seconds a new round starts), how far it got, who got a ripe plant. */
+    private List<Plant> growRound = new ArrayList<>();
+    private int growIndex;
+    private long growTicks;
+    private final Map<UUID, Integer> ripened = new HashMap<>();
+
+    /**
+     * Grows a share of the plants this tick, so all of them have grown once by the end of each
+     * round of tick-seconds. Spreading it out keeps big farms from lagging the server.
+     */
+    private void growSlice(int tickSeconds) {
+        int roundTicks = 20 * tickSeconds;
+        if (growTicks++ % roundTicks == 0) {
+            // the rest of the last round (if any), then a new one
+            while (growIndex < growRound.size()) {
+                grow(growRound.get(growIndex++), tickSeconds);
+            }
+            notifyRipe();
+            growRound = new ArrayList<>(plants.values());
+            growIndex = 0;
+        }
+        int per = Math.max(1, (int) Math.ceil(growRound.size() / (double) roundTicks));
+        for (int i = 0; i < per && growIndex < growRound.size(); i++) {
+            grow(growRound.get(growIndex++), tickSeconds);
+        }
+    }
+
+    private void grow(Plant p, int tickSeconds) {
+        if (plants.get(p.key()) != p) {
+            return; // harvested or removed since the round started
+        }
         long now = System.currentTimeMillis();
-        for (Plant p : new ArrayList<>(plants.values())) {
-            if (p.wild() && now > p.wildUntil()) {
-                // nobody picked it: it withers away
-                if (p.key().isLoaded()) {
-                    breakEffect(p);
-                }
-                remove(p);
-                continue;
+        if (p.wild() && now > p.wildUntil()) {
+            // nobody picked it: it withers away
+            if (p.key().isLoaded()) {
+                breakEffect(p);
             }
-            if (p.mature() || !p.key().isLoaded()) {
-                continue;
-            }
-            Block at = p.key().block();
-            Block soil = at.getRelative(0, -1, 0);
-            if (!isSoil(soil, p.kind())) {
-                // the soil got removed in a way we did not catch
-                destroy(p, null);
-                continue;
-            }
-            Conditions c = conditions(p);
-            double minutes = switch (p.kind()) {
-                case CANNABIS -> cannabisMinutes;
-                case MUSHROOM -> mushroomMinutes;
-                case COCA -> cocaMinutes;
-                case POPPY -> poppyMinutes;
-                case PEYOTE -> peyoteMinutes;
-            };
-            double perTick = 100.0 / (minutes * 60.0 / tickSeconds);
-            p.status = c.problem() == null ? "" : c.problem();
-            if (c.multiplier() <= 0) {
-                continue;
-            }
-            p.growth(p.growth() + perTick * c.multiplier());
-            markDirty();
-            if (p.stage() != p.shownStage) {
-                refresh(p);
-                if (p.mature()) {
-                    Location l = p.key().center();
-                    l.getWorld().spawnParticle(Particle.WAX_ON, l.add(0, 0.4, 0), 10, 0.3, 0.4, 0.3, 0);
-                    if (p.owner() != null) {
-                        ripened.merge(p.owner(), 1, Integer::sum);
-                    }
+            remove(p);
+            return;
+        }
+        if (p.mature() || !p.key().isLoaded()) {
+            return;
+        }
+        Block at = p.key().block();
+        Block soil = at.getRelative(0, -1, 0);
+        if (!isSoil(soil, p.kind())) {
+            // the soil got removed in a way we did not catch
+            destroy(p, null);
+            return;
+        }
+        Conditions c = conditions(p);
+        double minutes = Math.max(0.1, plugin.getConfig().getDouble(switch (p.kind()) {
+            case CANNABIS -> "growth.cannabis-minutes";
+            case MUSHROOM -> "growth.mushroom-minutes";
+            case COCA -> "growth.coca-minutes";
+            case POPPY -> "growth.poppy-minutes";
+            case PEYOTE -> "growth.peyote-minutes";
+        }, switch (p.kind()) {
+            case CANNABIS -> 20;
+            case MUSHROOM -> 12;
+            case COCA -> 16;
+            case POPPY -> 14;
+            case PEYOTE -> 18;
+        }));
+        double perTick = 100.0 / (minutes * 60.0 / tickSeconds);
+        p.status = c.problem() == null ? "" : c.problem();
+        if (c.multiplier() <= 0) {
+            return;
+        }
+        p.growth(p.growth() + perTick * c.multiplier());
+        markDirty();
+        if (p.stage() != p.shownStage) {
+            refresh(p);
+            if (p.mature()) {
+                Location l = p.key().center();
+                l.getWorld().spawnParticle(Particle.WAX_ON, l.add(0, 0.4, 0), 10, 0.3, 0.4, 0.3, 0);
+                if (p.owner() != null) {
+                    ripened.merge(p.owner(), 1, Integer::sum);
                 }
             }
         }
+    }
+
+    private void notifyRipe() {
         if (plugin.getConfig().getBoolean("harvest.ripe-notice", true)) {
             ripened.forEach((id, n) -> {
                 Player o = Bukkit.getPlayer(id);
@@ -660,6 +712,7 @@ public final class PlantManager {
                 }
             });
         }
+        ripened.clear();
     }
 
     // ------------------------------------------------------------------
@@ -699,10 +752,15 @@ public final class PlantManager {
 
     private long sparkleTick;
 
-    /** Mythic plants sparkle in their colours once they flower. */
+    /** Mythic plants sparkle - only the ones near a player (nobody sees the rest: no work for big farms). */
     private void sparkle() {
         sparkleTick++;
-        for (Plant p : plants.values()) {
+        Set<Plant> seen = new HashSet<>();
+        for (Player pl : Bukkit.getOnlinePlayers()) {
+            Location l = pl.getLocation();
+            seen.addAll(near(pl.getWorld().getName(), l.getBlockX(), l.getBlockZ(), 40));
+        }
+        for (Plant p : seen) {
             if (p.kind() != Plant.Kind.CANNABIS || p.stage() < 3 || p.displayId == null) {
                 continue;
             }

@@ -37,12 +37,20 @@ public final class Shop {
         gear.clear();
         hires.clear();
         sell.clear();
-        // cannabis seeds: every built-in strain at its own price (strains.yml)
+        // cannabis seeds: every built-in strain at its own price (strains.yml), Mythic ones last
         double mult = Math.max(0, plugin.getConfig().getDouble("shop.seed-price-multiplier", 1.0));
+        double mythicMult = Math.max(0, plugin.getConfig().getDouble("shop.mythic-seed-multiplier", 3.0));
+        boolean mythicSeeds = plugin.getConfig().getBoolean("shop.mythic-seeds", true);
+        List<BuyEntry> mythic = new ArrayList<>();
         for (Strain s : plugin.strains().shopStrains()) {
+            boolean isMythic = s.rarity().animated();
+            if (isMythic && !mythicSeeds) {
+                continue;
+            }
+            double m = mult * (isMythic ? mythicMult : 1.0);
             // scaled prices are rounded to $5 so they stay easy to read
-            double price = mult == 1.0 ? s.seedPrice() : Math.max(5, Math.round(s.seedPrice() * mult / 5.0) * 5.0);
-            seeds.add(new BuyEntry(ItemType.SEED_PACK, s.id(), 1, price));
+            double price = m == 1.0 ? s.seedPrice() : Math.max(5, Math.round(s.seedPrice() * m / 5.0) * 5.0);
+            (isMythic ? mythic : seeds).add(new BuyEntry(ItemType.SEED_PACK, s.id(), 1, price));
         }
         for (Map<?, ?> m : plugin.getConfig().getMapList("shop.buy")) {
             ItemType t = ItemType.parse(String.valueOf(m.get("item")));
@@ -63,6 +71,7 @@ public final class Shop {
             BuyEntry e = new BuyEntry(t, strain == null ? null : String.valueOf(strain), Math.max(1, amount), Math.max(0, price));
             (isSeed(t) ? seeds : dev.kushcraft.worker.WorkerType.of(t) != null ? hires : gear).add(e);
         }
+        seeds.addAll(mythic);
         buy.addAll(seeds);
         buy.addAll(gear);
         buy.addAll(hires);
@@ -81,7 +90,7 @@ public final class Shop {
         return Collections.unmodifiableList(buy);
     }
 
-    /** Strain seeds (cheapest first), then spores and the other seeds. */
+    /** Strain seeds (cheapest first), then spores and the other seeds, then the Mythic seeds. */
     public List<BuyEntry> seeds() {
         return Collections.unmodifiableList(seeds);
     }

@@ -104,7 +104,8 @@ public final class PlantListener implements Listener {
             return 0;
         }
         int n = 0;
-        for (Plant other : new java.util.ArrayList<>(plugin.plants().all())) {
+        // only the plants in the chunks around it (not every plant on the server)
+        for (Plant other : plugin.plants().near(clicked.key().world(), clicked.key().x(), clicked.key().z(), r)) {
             if (other == clicked || !other.mature() || !p.getUniqueId().equals(other.owner())
                     || !other.key().world().equals(clicked.key().world()) || other.key().distanceSq(clicked.key()) > r * r
                     || !Protection.canBuild(p, other.key().block())) {

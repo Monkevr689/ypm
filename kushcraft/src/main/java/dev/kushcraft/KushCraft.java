@@ -273,7 +273,7 @@ public final class KushCraft extends JavaPlugin {
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 9) {
+        if (version >= 11) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -310,16 +310,35 @@ public final class KushCraft extends JavaPlugin {
                 getConfig().set(key, def.get(key));
             }
         }
-        // 6.0: money only from drugs (Trade only sells, no jobs pay, no award cash), the new drugs'
-        // prices, the Runner in the shop, the new Trade shelves (no OP PvP or End items), workers
-        // with no limit that work further and faster
-        // (removed keys come back from the defaults when saving, in their usual place)
-        for (String key : List.of("shop.buy", "shop.sell", "exchange.categories", "exchange.items", "exchange.sell-ratio",
-                "exchange.min-price")) {
-            getConfig().set(key, null);
+        if (version < 9) {
+            // 6.0: money only from drugs (Trade only sells, no jobs pay, no award cash), the new drugs'
+            // prices, the Runner in the shop, the new Trade shelves (no OP PvP or End items), workers
+            // with no limit that work further and faster
+            // (removed keys come back from the defaults when saving, in their usual place)
+            for (String key : List.of("shop.buy", "shop.sell", "exchange.categories", "exchange.items",
+                    "exchange.sell-ratio", "exchange.min-price")) {
+                getConfig().set(key, null);
+            }
+            for (String key : List.of("jobs.enabled", "workers.max-per-player", "workers.radius",
+                    "workers.rest-seconds")) {
+                getConfig().set(key, def.get(key));
+            }
         }
-        for (String key : List.of("jobs.enabled", "workers.max-per-player", "workers.radius", "workers.rest-seconds")) {
-            getConfig().set(key, def.get(key));
+        if (version == 10) {
+            // 7.x back to the 6.0 market, no more Suppliers (workers buy for themselves now)
+            for (String key : List.of("market.demand-drop", "market.min-price", "market.recovery-per-minute",
+                    "exchange.price-step", "exchange.recovery-per-minute")) {
+                getConfig().set(key, def.get(key));
+            }
+            double water = getConfig().getDouble("workers.supplier.water-price", def.getDouble("workers.water-price"));
+            for (String key : List.of("workers.supplier", "workers.work-offline", "workers.work-offline-max-chunks")) {
+                getConfig().set(key, null);
+            }
+            getConfig().set("workers.water-price", water);
+            List<java.util.Map<?, ?>> buy = new java.util.ArrayList<>(getConfig().getMapList("shop.buy"));
+            if (buy.removeIf(m -> "supplier".equals(String.valueOf(m.get("item"))))) {
+                getConfig().set("shop.buy", buy);
+            }
         }
         // players on most hosts can't reach the built-in pack server: use the hosted copy
         String url = getConfig().getString("resource-pack.url", "");
@@ -328,10 +347,10 @@ public final class KushCraft extends JavaPlugin {
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 9);
+        getConfig().set("config-version", 11);
         saveConfig();
-        getLogger().info("Updated config.yml to version 9 (6.0: money only from drugs, Trade only sells, new drugs,"
-                + " the Runner, workers without a limit). Your other settings were kept.");
+        getLogger().info("Updated config.yml to version 11 (8.0: workers use any of your chests and buy what they"
+                + " need, Mythic seeds in the Shop, no Suppliers). Your other settings were kept.");
     }
 
     public ResourcePackManager pack() {

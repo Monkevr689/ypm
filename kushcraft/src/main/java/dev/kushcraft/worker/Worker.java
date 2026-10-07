@@ -18,8 +18,8 @@ import java.util.function.BooleanSupplier;
  */
 public final class Worker {
 
-    /** Satchel slots. */
-    public static final int SATCHEL = 27;
+    /** Satchel slots (as big as a double chest; their menu shows it in two pages). */
+    public static final int SATCHEL = 54;
 
     /** One stop of a trip: walk to stand, look at look, then do act (false = stop the trip). */
     record Step(Location stand, Location look, BooleanSupplier act) {
@@ -50,6 +50,18 @@ public final class Worker {
     transient int workTicks;
     transient int restTicks;
     transient String status = "Starting work...";
+    /** What they're missing right now (a Runner brings it from a chest; null = nothing). */
+    transient Want want;
+    /** A player can see them (the mannequin moves every tick; else only now and then: less lag). */
+    transient boolean watched = true;
+    /** Since when they've had nothing to do (0 = busy): they walk home after a while. */
+    transient long idleSince;
+    /** When they last bought something themselves (no buying sprees). */
+    transient long boughtAt;
+
+    /** Something a worker is missing: what matches, a name for it and how many they want. */
+    record Want(java.util.function.Predicate<ItemStack> match, String what, int amount) {
+    }
 
     Worker(UUID id, WorkerType type, UUID owner, Location home, String name) {
         this.id = id;

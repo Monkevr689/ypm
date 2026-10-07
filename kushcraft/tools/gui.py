@@ -489,7 +489,8 @@ def shop():
 
 def gear():
     """Shop > Gear & Workers: gear on two metal racks (rows 1-2), a hiring board with
-    four workers (3,1) (3,3) (3,5) (3,7), back to seeds (5,0) and your workers (5,4). The Shop tab is lit."""
+    four workers (3,1) (3,3) (3,5) (3,7), back to seeds (5,0), your workers (5,4) and the
+    workers' auto-buy switch (5,8). The Shop tab is lit."""
     img, a = tab_page("gear", 26, tab="shop")
     d = ImageDraw.Draw(img)
     x0, x1 = 5, 170
@@ -517,6 +518,7 @@ def gear():
             d.point((x - 4 + k * 6, y + 20), fill=rgba("b8a880"))
     cslot(img, 5, 0, "big", "a8b0b8")
     cslot(img, 5, 4, "glow", "6ae05a")
+    cslot(img, 5, 8, "big", "f2c23a")
     player_inv(img, 6)
     return "gear", img, 6
 
@@ -872,7 +874,8 @@ def plain_page(name, rows, seed, title):
 
 def worker():
     """A worker's menu (5 rows): portrait (0,0), their job (0,4), rename / pause / train /
-    dismiss (0,5..8); the satchel (rows 1-3); take all (4,4)."""
+    dismiss (0,5..8); the satchel (rows 1-3, 27 a page of 54); satchel pages (4,0) (4,8),
+    auto-buy / sell now (4,2), take all (4,4), their chests (4,6)."""
     rows = 5
     img, a = plain_page("worker", rows, 50, "WORKER")
     d = ImageDraw.Draw(img)
@@ -899,6 +902,10 @@ def worker():
         for c in range(9):
             cslot(img, r, c, tint="b8945a")
     cslot(img, 4, 4, "glow", "6ae05a")
+    cslot(img, 4, 0, "big", "b8945a")
+    cslot(img, 4, 8, "big", "b8945a")
+    cslot(img, 4, 2, "big", "f2c23a")
+    cslot(img, 4, 6, "big", "5ad8f0")
     player_inv(img, rows)
     return "worker", img, rows
 

@@ -41,12 +41,23 @@ public final class CookRecipeMenu extends ListMenu {
             ItemType made = r != null ? r.output() : job.equals(Worker.ROLL_JOINT) ? ItemType.JOINT : ItemType.BLUNT;
             ItemStack it = CatalogIcons.sample(made);
             List<String> lore = new ArrayList<>();
+            boolean ready = false;
             if (r != null) {
                 it.setAmount(r.amount());
+                var ws = KushCraft.get().workers();
+                ready = true;
                 for (LabRecipe.Ingredient ing : r.ingredients()) {
-                    lore.add("<white>" + ing.amount() + " " + ing.name() + " <dark_gray>(" + ing.where() + ")");
+                    int have = ws.stock(worker, ing);
+                    boolean buys = have < ing.amount() && ws.wouldBuy(worker, ing);
+                    ready &= have >= ing.amount() || buys;
+                    lore.add((have >= ing.amount() ? "<green>✔ " : buys ? "<gold>$ " : "<red>✘ ") + "<white>" + ing.amount()
+                            + " " + ing.name() + " <dark_gray>" + (have > 0 ? "(" + have + " in your chests and satchels)"
+                            : buys ? "(they buy it)" : "(" + ing.where() + ")"));
                 }
                 lore.add("<dark_gray>" + r.seconds() + "s a batch at your Drug Lab, up to 4 at once");
+                if (ready) {
+                    lore.add("<green>Ready: they can start right away.");
+                }
             } else {
                 lore.add("<white>" + (made == ItemType.JOINT ? "1 Dried Bud + 1 Rolling Papers" : "2 Dried Bud + 1 Blunt Wrap")
                         + " <dark_gray>each");
@@ -58,7 +69,7 @@ public final class CookRecipeMenu extends ListMenu {
                 m.itemName(Text.mm((now ? "<green>" : "<white>") + verb + made.display() + (r != null ? " <gray>x" + r.amount() : "s")));
                 m.lore(Text.lines(lore));
             });
-            out.add(Items.glint(it, now));
+            out.add(Items.glint(it, now || ready));
         }
         return out;
     }
@@ -76,8 +87,10 @@ public final class CookRecipeMenu extends ListMenu {
     protected ItemStack header() {
         return Items.icon("tab_cook", "<aqua>Pick a drug",
                 "<gray>" + Text.escape(worker.name()) + " makes it batch after batch,",
-                "<gray>fetching the ingredients from your other",
-                "<gray>workers and the chests next to them.");
+                "<gray>taking the ingredients from any of your",
+                "<gray>chests around them (several in one trip)",
+                "<gray>and your other workers - or buying them.",
+                "<green>Glowing<gray> = everything is there: ready to go.");
     }
 
     @Override

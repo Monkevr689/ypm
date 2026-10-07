@@ -82,18 +82,19 @@ public final class WildPlants {
         if (!w.isChunkLoaded(x >> 4, z >> 4)) {
             return null;
         }
-        int near = 0;
         int maxNear = plugin.getConfig().getInt("wild.max-near-player", 6);
-        for (Plant p : plugin.plants().all()) {
-            Location c = p.key().center();
-            if (c == null || !c.getWorld().equals(w)) {
-                continue;
+        // only the plants in the chunks around (not every plant on the server)
+        for (Plant p : plugin.plants().near(w.getName(), x, z, 16)) {
+            double dx = p.key().x() + 0.5 - x, dz = p.key().z() + 0.5 - z;
+            double d2 = dx * dx + dz * dz;
+            if ((!p.wild() && d2 < 16 * 16) || (p.wild() && d2 < 8 * 8)) {
+                return null; // somebody's farm, or another wild plant right there
             }
-            double d2 = (c.getX() - x) * (c.getX() - x) + (c.getZ() - z) * (c.getZ() - z);
-            if (!p.wild() && d2 < 16 * 16) {
-                return null; // somebody's farm
-            }
-            if (p.wild() && (d2 < 8 * 8 || (c.distanceSquared(around) < 56 * 56 && ++near >= maxNear))) {
+        }
+        int near = 0;
+        for (Plant p : plugin.plants().near(w.getName(), around.getBlockX(), around.getBlockZ(), 56)) {
+            double dx = p.key().x() + 0.5 - around.getX(), dz = p.key().z() + 0.5 - around.getZ();
+            if (p.wild() && dx * dx + dz * dz < 56 * 56 && ++near >= maxNear) {
                 return null;
             }
         }
