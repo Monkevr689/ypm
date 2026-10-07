@@ -215,21 +215,20 @@ harvest:
 #   Farmhand - harvests your ripe plants and plants them again (and plants
 #              / fertilizes from their satchel)
 #   Dryer    - dries fresh buds on your Drug Lab racks
-#   Cook     - cooks the drug you pick at your Drug Lab, rolls joints, or
-#              on Auto makes the best drug they have everything for
-#   Runner   - sells your product and carries what a worker is missing
-#              from anywhere in the crew (through walls, the back way)
-#   Supplier - buys what your Cooks and Farmhands run low on (Trade items,
-#              Lab Solvent, papers, fertilizer, water) with your money
-#  Workers only use what they can walk to - nothing through walls: the
-#  nearest chest of yours they can walk up to (nothing to link; chests
-#  remember who placed them). Your workers within chain-radius of each
-#  other are a crew: they take what they need from each other's satchels
-#  when they can walk there; Runners bring the rest (chests behind walls
-#  too) and empty satchels that fill up. Nobody takes what another worker
-#  needs for their own job.
-#  They only touch the plants, labs, stands and chests of the player who
-#  hired them. Right-click a worker for their satchel and buttons.
+#   Cook     - cooks the drug you pick at your Drug Lab, rolls joints,
+#              mixes new strains, or on Auto makes the best drug they
+#              have everything for
+#   Runner   - carries work from worker to worker and sells it on the
+#              spot (never seeds); gets through walls the back way
+#   Supplier - buys whatever your workers are short of (Trade items, Lab
+#              Solvent, papers, fertilizer, seeds, water) with your money:
+#              no budget, they stop only when you can't pay
+#  No chests: work goes hand to hand. Your workers within chain-radius of
+#  each other are a crew - Farmhand > Runner > Dryer > Cook or Runner,
+#  who sells it. Nobody works through walls and nobody takes what another
+#  worker needs for their own job. A stuck worker tells their owner.
+#  They only touch the plants and labs of the player who hired them.
+#  Right-click a worker for their satchel and buttons.
 # =====================================================================
 workers:
   enabled: true
@@ -240,7 +239,7 @@ workers:
   # drying). Switch off to let them sleep when nobody is near.
   work-offline: true
   # The most chunks kept loaded for workers (protects the server).
-  work-offline-max-chunks: 300
+  work-offline-max-chunks: 100
   # How far apart (blocks) your workers can be and still work together.
   chain-radius: 32
   # Per level (1, 2, 3): how far from where they stand they work, and the
@@ -266,8 +265,6 @@ workers:
     wage: 6
     # Water bottles cost this much each (Trade items cost what Trade asks).
     water-price: 2
-    # New Suppliers never spend your wallet below this (change it in their menu).
-    reserve: 1000
 
 # Dying costs you this much of the cash in your wallet (0.2 = 20%).
 # The money is gone - nobody gets it, so killing players doesn't pay.

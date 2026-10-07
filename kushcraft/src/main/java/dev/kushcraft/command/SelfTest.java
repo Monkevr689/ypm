@@ -469,15 +469,17 @@ final class SelfTest {
         eco.set(owner, 1000);
         check(ws.enabled(), "workers are on");
         // a ripe plant on farmland, an empty farmland next to it, the farmhand standing beside them
-        for (int dx = -1; dx <= 6; dx++) {
-            for (int dz = -1; dz <= 4; dz++) {
+        for (int dx = -1; dx <= 7; dx++) {
+            for (int dz = -1; dz <= 5; dz++) {
                 w.getBlockAt(x + dx, y, z + dz).setType(Material.STONE);
-                w.getBlockAt(x + dx, y + 1, z + dz).setType(Material.AIR);
-                w.getBlockAt(x + dx, y + 2, z + dz).setType(Material.AIR);
+                for (int dy = 1; dy <= 4; dy++) {
+                    w.getBlockAt(x + dx, y + dy, z + dz).setType(Material.AIR);
+                }
             }
         }
         w.getBlockAt(x, y, z).setType(Material.FARMLAND);
         w.getBlockAt(x, y, z + 2).setType(Material.FARMLAND);
+        ws.refreshAreas();
         Strain s = plugin.strains().get("og_kush");
         if (s == null) {
             s = plugin.strains().all().iterator().next();
@@ -496,12 +498,7 @@ final class SelfTest {
         Plant again = plugin.plants().at(key);
         check(again != null && again != ripe && !again.mature() && s.id().equals(again.strainId())
                 && boss.equals(again.owner()), "and plants it again");
-        int fresh = 0;
-        for (ItemStack it : farm.satchel().getStorageContents()) {
-            if (Items.type(it) == ItemType.BUD_FRESH) {
-                fresh += it.getAmount();
-            }
-        }
+        int fresh = count(farm.satchel(), ItemType.BUD_FRESH);
         check(fresh > 0, "the harvest is in the satchel (" + fresh + " buds)");
         check(eco.balance(owner) < 1000 && farm.jobs() == 1, "the farmhand was paid");
         // seeds in the satchel go on the empty farmland
@@ -516,60 +513,63 @@ final class SelfTest {
         // the dryer next to a Drug Lab fetches the buds, hangs them and collects them dry
         Block labBlock = w.getBlockAt(x + 5, y + 1, z);
         Machine lab = plugin.machines().placeAt(labBlock, MachineType.LAB_STATION, 0f, boss);
+        ws.refreshAreas();
         var dryer = ws.hireAt(new Location(w, x + 5.5, y + 1, z + 2.5), dev.kushcraft.worker.WorkerType.DRYER, boss, 1);
         check(ws.workNow(dryer), "the dryer fetches fresh buds from the farmhand");
-        check(dryer.carried() > 0, "the dryer carries the buds");
+        check(dryer.carried() > 0 && count(farm.satchel(), ItemType.BUD_FRESH) == 0, "the dryer carries the buds");
         check(ws.workNow(dryer) && lab.racksInUse() > 0, "the dryer hangs them on the racks");
         lab.finishNow();
         check(lab.racksDry() > 0, "admin finish dries the racks");
         check(ws.workNow(dryer) && lab.racksInUse() == 0, "the dryer takes them off dry");
-        boolean dried = false;
-        for (ItemStack it : dryer.satchel().getStorageContents()) {
-            dried |= Items.type(it) == ItemType.BUD_DRIED;
-        }
-        check(dried, "dried buds in the dryer's satchel");
-        // the cook: rolls joints from the dryer's buds and papers from a chest next to them
+        check(count(dryer.satchel(), ItemType.BUD_DRIED) > 0, "dried buds in the dryer's satchel");
+        // the cook rolls joints from the dryer's buds; what they're missing they say
         var cook = ws.hireAt(new Location(w, x + 4.5, y + 1, z + 2.5), dev.kushcraft.worker.WorkerType.COOK, boss, 1);
         check(!ws.workNow(cook) && cook.status().contains("Pick"), "a new cook waits for a drug to make");
         ws.setJob(cook, dev.kushcraft.worker.Worker.ROLL_JOINT);
         check(cook.rolls() == ItemType.JOINT && cook.product() == ItemType.JOINT, "the cook rolls joints");
         ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
-        check(ws.workNow(cook) && cook.carried() >= 4, "the cook fetches dried buds from the dryer (work chain)");
-        check(!ws.workNow(cook) && cook.status().contains("Rolling Papers"), "the cook says what's missing");
-        Block chestBlock = w.getBlockAt(x + 3, y + 1, z + 3);
-        chestBlock.setType(Material.CHEST);
-        var chest = ((org.bukkit.block.Container) chestBlock.getState(false)).getInventory();
-        chest.addItem(Items.create(ItemType.ROLLING_PAPERS, 8));
-        ws.refreshAreas();
-        check(ws.chests(cook).size() == 1, "a chest next to the cook is their work chest");
-        check(ws.workNow(cook) && count(cook.satchel(), ItemType.ROLLING_PAPERS) == 8, "the cook takes papers from the chest");
+        check(ws.workNow(cook) && count(cook.satchel(), ItemType.BUD_DRIED) >= 4
+                && count(dryer.satchel(), ItemType.BUD_DRIED) == 0, "the cook takes dried buds from the dryer (work chain)");
+        check(!ws.workNow(cook) && cook.status().contains("Rolling Papers") && "Rolling Papers".equals(cook.wants()),
+                "the cook says what's missing");
+        ws.stash(cook, List.of(Items.create(ItemType.ROLLING_PAPERS, 8)));
         check(ws.workNow(cook) && cook.jobs() == 1, "the cook rolls");
         int joints = count(cook.satchel(), ItemType.JOINT);
         check(joints > 0 && joints + count(cook.satchel(), ItemType.ROLLING_PAPERS) == 8,
                 "the cook rolls joints, one paper each (" + joints + ")");
-        // the runner picks up the joints and sells them; the money goes to the owner, minus their cut
+        // the runner picks up the joints and sells them on the spot; the owner gets the money, minus their cut
         var runner = ws.hireAt(new Location(w, x + 0.5, y + 1, z + 4.5), dev.kushcraft.worker.WorkerType.RUNNER, boss, 1);
         check(ws.crew(runner).size() == 3 && ws.crew(cook).contains(runner),
                 "the runner works with the farmhand, dryer and cook");
-        check(ws.workNow(runner) && count(runner.satchel(), ItemType.JOINT) == joints
-                && count(cook.satchel(), ItemType.JOINT) == 0, "the runner picks up the cook's joints");
         double before = eco.balance(owner);
-        check(ws.workNow(runner) && eco.balance(owner) > before && runner.carried() == 0 && runner.wages() > 0,
-                "the runner sells them for the owner and keeps a cut");
+        check(ws.workNow(runner) && count(cook.satchel(), ItemType.JOINT) == 0 && runner.carried() == 0
+                && eco.balance(owner) > before && runner.wages() > 0, "the runner picks up the joints and sells them right away");
         check(eco.sales(owner) > 0, "runner sales count for the leaderboard");
-        // nobody takes what another worker needs: the dryer needs fresh buds, so the runner leaves them
+        // no chests: the runner takes the farmhand's harvest straight to the dryer
+        int dryerFresh = count(dryer.satchel(), ItemType.BUD_FRESH);
         ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 5)));
-        check(ws.uses(dryer, Items.strainItem(ItemType.BUD_FRESH, s, 3, 1)) && !ws.workNow(runner)
-                && count(farm.satchel(), ItemType.BUD_FRESH) >= 5, "the runner leaves what the dryer needs");
-        // ...but once the buds pile up in the farmhand's satchel the runner empties it and takes them to the dryer
-        ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 5)));
-        int pile = count(farm.satchel(), ItemType.BUD_FRESH);
-        int dryerBuds = count(dryer.satchel(), ItemType.BUD_FRESH);
-        check(ws.workNow(runner) && count(runner.satchel(), ItemType.BUD_FRESH) == pile
-                && count(farm.satchel(), ItemType.BUD_FRESH) == 0, "the runner takes the buds out of the farmhand's satchel");
-        check(ws.workNow(runner) && runner.carried() == 0 && count(dryer.satchel(), ItemType.BUD_FRESH) == dryerBuds + pile,
-                "and brings them to the dryer");
-        // the cook cooks a vape pen at the lab, collects it and puts it in their chest
+        check(ws.workNow(runner) && count(farm.satchel(), ItemType.BUD_FRESH) == 0
+                && count(dryer.satchel(), ItemType.BUD_FRESH) == dryerFresh + 5 && runner.carried() == 0,
+                "the runner takes the farmhand's harvest to the dryer");
+        // a couple of buds wait for more (less running around), four make a trip
+        ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 2)));
+        check(!ws.workNow(runner) && count(farm.satchel(), ItemType.BUD_FRESH) == 2, "two buds wait for a few more");
+        ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 2)));
+        check(ws.workNow(runner) && count(farm.satchel(), ItemType.BUD_FRESH) == 0, "four buds make the trip");
+        // dryer -> cook: the runner brings the dried buds to the cook who rolls them
+        int cookBuds = count(cook.satchel(), ItemType.BUD_DRIED);
+        ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
+        check(ws.workNow(runner) && count(dryer.satchel(), ItemType.BUD_DRIED) == 0
+                && count(cook.satchel(), ItemType.BUD_DRIED) == cookBuds + 4, "the runner takes the dryer's buds to the cook");
+        // seeds never get sold
+        ws.stash(runner, List.of(Items.strainItem(ItemType.SEED_PACK, s, 3, 3)));
+        before = eco.balance(owner);
+        ws.workNow(runner);
+        check(eco.balance(owner) == before, "the runner never sells seeds");
+        check(count(runner.satchel(), ItemType.SEED_PACK) + count(farm.satchel(), ItemType.SEED_PACK) >= 3,
+                "seeds go to the farmhand (or stay with the runner)");
+        runner.satchel().clear();
+        // the cook cooks a vape pen at the lab and collects it; the runner sells it from their satchel
         ws.setRecipe(cook, LabRecipe.VAPE_PEN);
         ws.stash(cook, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4), Items.create(ItemType.LAB_SOLVENT, 1),
                 new ItemStack(Material.IRON_NUGGET, 2), new ItemStack(Material.GLASS_PANE, 1)));
@@ -577,86 +577,54 @@ final class SelfTest {
         check(cook.jobs() == 2, "the cook is paid per batch");
         lab.finishNow();
         check(ws.workNow(cook) && !lab.busy() && count(cook.satchel(), ItemType.VAPE_PEN) == 1, "the cook collects the batch");
-        check(ws.workNow(cook) && count(chest, ItemType.VAPE_PEN) == 1 && count(cook.satchel(), ItemType.VAPE_PEN) == 0,
-                "an idle cook puts their work in the chest");
-        check(ws.workNow(runner) && count(runner.satchel(), ItemType.VAPE_PEN) == 1, "the runner takes it from the chest");
-        check(ws.maxPerPlayer() == 0, "no limit on workers");
-        // no working through walls: a chest of the owner's in a stone box is not used, one in the open is
-        for (int dx = 5; dx <= 7; dx++) {
-            for (int dy = 1; dy <= 3; dy++) {
-                for (int dz = 3; dz <= 5; dz++) {
-                    w.getBlockAt(x + dx, y + dy, z + dz).setType(Material.STONE);
-                }
-            }
-        }
-        Block walled = w.getBlockAt(x + 6, y + 2, z + 4);
-        walled.setType(Material.CHEST);
-        Block open = w.getBlockAt(x + 1, y + 1, z + 4);
-        open.setType(Material.CHEST);
-        Block stranger = w.getBlockAt(x + 3, y + 1, z - 1);
-        stranger.setType(Material.CHEST);
-        for (Block b : List.of(walled, open)) {
-            var st = (org.bukkit.block.Container) b.getState(false);
-            st.getPersistentDataContainer().set(dev.kushcraft.Keys.PLACER, org.bukkit.persistence.PersistentDataType.STRING,
-                    boss.toString());
-        }
-        ((org.bukkit.block.Container) stranger.getState(false)).getPersistentDataContainer().set(dev.kushcraft.Keys.PLACER,
-                org.bukkit.persistence.PersistentDataType.STRING, UUID.randomUUID().toString());
-        ws.refreshAreas();
-        var cookChests = ws.chests(cook).stream().map(c -> c.block()).toList();
-        check(cookChests.contains(open), "the cook uses the owner's chest around them");
-        check(!cookChests.contains(walled), "but not one behind walls");
-        check(!cookChests.contains(stranger), "and not someone else's chest");
-        check(!ws.reaches(cook, BlockKey.of(walled), false) && ws.reaches(cook, BlockKey.of(open), false),
-                "walk areas: the walled chest can't be reached");
-        check(cookChests.indexOf(chestBlock) >= 0 && cookChests.indexOf(chestBlock) < cookChests.indexOf(open),
-                "the nearest chest comes first");
-        // nothing to link: the runner finds the owner's chests in the crew's reach, walls or not
-        var runnerChests = ws.chests(runner).stream().map(c -> c.block()).toList();
-        check(runnerChests.contains(walled) && runnerChests.contains(open) && !runnerChests.contains(stranger),
-                "the runner finds the owner's chests behind walls (not a stranger's)");
-        // what a runner carries that nobody uses and nobody buys goes in the nearest chest
-        var openInv = ((org.bukkit.block.Container) open.getState(false)).getInventory();
-        ws.stash(runner, List.of(new ItemStack(Material.DIRT, 5)));
-        check(ws.workNow(runner) && !runner.satchel().contains(Material.DIRT) && openInv.contains(Material.DIRT, 5),
-                "the runner puts things nobody needs in the nearest chest");
-        openInv.clear();
-        // an old chest nobody placed, far from the workers, is left alone - unless an old save had it linked
-        Block legacy = w.getBlockAt(x + 6, y + 1, z - 1);
-        legacy.setType(Material.CHEST);
-        ws.refreshAreas();
-        check(!ws.chests(cook).stream().map(c -> c.block()).toList().contains(legacy),
-                "an old chest nobody placed is left alone");
-        check(ws.linkChest(cook, BlockKey.of(legacy)) && ws.chests(cook).stream().map(c -> c.block()).toList().contains(legacy),
-                "but one an old save had linked to them still counts");
-        legacy.setType(Material.AIR);
-        ws.refreshAreas();
-        // the runner brings what the cook is missing from a chest behind the walls
-        var walledInv = ((org.bukkit.block.Container) walled.getState(false)).getInventory();
-        walledInv.addItem(Items.create(ItemType.COCAINE, 3));
+        before = eco.balance(owner);
+        check(ws.workNow(runner) && count(cook.satchel(), ItemType.VAPE_PEN) == 0 && eco.balance(owner) > before,
+                "the runner sells the cook's vape pen");
+        // dried buds nobody uses: the runner sells them; a Dryer set to sell gives them all, Cook or not
         ws.setRecipe(cook, LabRecipe.CRACK);
-        check(!ws.workNow(cook) && "Cocaine".equals(cook.wants()), "the cook says it needs cocaine");
-        check(ws.workNow(runner) && count(cook.satchel(), ItemType.COCAINE) == 3 && count(walledInv, ItemType.COCAINE) == 0,
-                "the runner brings it from behind the walls");
-        // workers keep their chunks loaded so they work while you're away
-        ws.syncChunks();
-        check(ws.workOffline() && ws.keptChunks() > 0, "workers keep the chunks around them loaded");
-        // a Dryer set to sell gives the Runner every dried bud, even ones a Cook could use
-        ws.setJob(cook, dev.kushcraft.worker.Worker.ROLL_JOINT);
+        cook.satchel().clear();
         dryer.satchel().clear();
-        runner.satchel().clear();
+        ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
+        before = eco.balance(owner);
+        check(ws.workNow(runner) && count(dryer.satchel(), ItemType.BUD_DRIED) == 0 && eco.balance(owner) > before,
+                "the runner sells the dryer's buds when no cook uses them");
+        ws.setJob(cook, dev.kushcraft.worker.Worker.ROLL_JOINT);
         ws.stash(dryer, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4)));
         check(ws.uses(cook, Items.strainItem(ItemType.BUD_DRIED, s, 3, 1)), "the cook uses dried buds");
         ws.setSell(dryer, true);
-        check(ws.workNow(runner) && count(runner.satchel(), ItemType.BUD_DRIED) == 4
-                && count(dryer.satchel(), ItemType.BUD_DRIED) == 0, "a Dryer set to sell gives the Runner every dried bud");
+        before = eco.balance(owner);
+        check(ws.workNow(runner) && count(dryer.satchel(), ItemType.BUD_DRIED) == 0 && count(cook.satchel(),
+                ItemType.BUD_DRIED) == 0 && eco.balance(owner) > before, "a Dryer set to sell gives the Runner every dried bud");
         ws.setSell(dryer, false);
         runner.satchel().clear();
         ws.setRecipe(cook, LabRecipe.CRACK);
-        // the supplier buys what the cook and farmhand run low on, with the owner's money
+        // workers keep their chunks loaded so they work while you're away
+        ws.syncChunks();
+        check(ws.workOffline() && ws.keptChunks() > 0, "workers keep the chunks around them loaded");
+        // no working through walls: a cook walled into a stone box can't be reached on foot - a Runner gets there
+        for (int dx = 5; dx <= 7; dx++) {
+            for (int dy = 1; dy <= 4; dy++) {
+                for (int dz = 3; dz <= 5; dz++) {
+                    w.getBlockAt(x + dx, y + dy, z + dz).setType(dx == 6 && dz == 4 && (dy == 2 || dy == 3)
+                            ? Material.AIR : Material.STONE);
+                }
+            }
+        }
+        ws.refreshAreas();
+        BlockKey inside = BlockKey.of(w.getBlockAt(x + 6, y + 2, z + 4));
+        check(!ws.reaches(cook, inside, false) && ws.reaches(cook, BlockKey.of(w.getBlockAt(x + 1, y + 1, z + 4)), false),
+                "walk areas: nobody walks through walls");
+        var hidden = ws.hireAt(new Location(w, x + 6.5, y + 2, z + 4.5), dev.kushcraft.worker.WorkerType.COOK, boss, 1);
+        ws.setRecipe(hidden, LabRecipe.COCAINE);
+        ws.stash(hidden, List.of(Items.create(ItemType.COCAINE, 3)));
+        check(!ws.workNow(cook) && "Cocaine".equals(cook.wants()), "the cook says it needs cocaine");
+        check(ws.workNow(runner) && count(cook.satchel(), ItemType.COCAINE) == 3 && count(hidden.satchel(), ItemType.COCAINE) == 0,
+                "the runner brings it from the cook behind the walls");
+        ws.dismiss(hidden, null);
+        // the supplier buys what the cook and farmhand are short of, with the owner's money - no budget
         eco.set(owner, 50_000);
         var supplier = ws.hireAt(new Location(w, x + 1.5, y + 1, z + 1.5), dev.kushcraft.worker.WorkerType.SUPPLIER, boss, 1);
-        check(supplier.reserve() > 0 && !ws.needs(cook).isEmpty(), "the cook needs bone meal and water");
+        check(!ws.needs(cook).isEmpty(), "the cook needs bone meal and water");
         double cash = eco.balance(owner);
         for (int i = 0; i < 4; i++) {
             ws.workNow(supplier);
@@ -672,8 +640,8 @@ final class SelfTest {
         check(eco.balance(owner) < cash && supplier.spent() > 0 && supplier.jobs() > 0, "the supplier pays with your money");
         check(ws.needs(cook).isEmpty() && !ws.workNow(supplier), "nothing more to buy once everyone is stocked");
         cook.satchel().clear();
-        eco.set(owner, 900);
-        check(!ws.workNow(supplier) && supplier.status().contains("reserve"), "the supplier keeps your reserve");
+        eco.set(owner, 0);
+        check(!ws.workNow(supplier) && supplier.status().contains("Not enough money"), "the supplier only stops when you're broke");
         eco.set(owner, 50_000);
         // a cook on AUTO picks the best drug they have everything for
         ws.setJob(cook, dev.kushcraft.worker.Worker.AUTO);
@@ -686,49 +654,82 @@ final class SelfTest {
                 "an Auto cook picks crack (worth the most) and cooks it");
         lab.finishNow();
         check(ws.workNow(cook) && count(cook.satchel(), ItemType.CRACK) >= 2, "and collects it");
+        // a cook mixing strains: the supplier buys seeds, the cook crosses the two best strains at the lab
+        ws.setJob(cook, dev.kushcraft.worker.Worker.MIX);
+        cook.satchel().clear();
+        check(ws.uses(cook, Items.strainItem(ItemType.SEED_PACK, s, 3, 1)) && !ws.needs(cook).isEmpty(),
+                "a mixing cook wants seeds of two strains (the supplier buys them)");
+        Strain s2 = null;
+        for (Strain o : plugin.strains().all()) {
+            if (!o.id().equals(s.id()) && o.creator() == null) {
+                s2 = o;
+                break;
+            }
+        }
+        ws.stash(cook, List.of(Items.strainItem(ItemType.SEED_PACK, s, 3, 2), Items.strainItem(ItemType.SEED_PACK, s2, 3, 2)));
+        check(ws.mixPair(cook) != null, "two strains to mix");
+        int bredBefore = plugin.strains().countCreatedBy(boss);
+        cash = eco.balance(owner);
+        check(ws.workNow(cook) && eco.balance(owner) <= cash - plugin.getConfig().getDouble("strain-maker.cost", 1500)
+                && count(cook.satchel(), ItemType.SEED_PACK) >= 2, "the cook mixes them at the lab with your money");
+        check(cook.status().startsWith("Mixed") || cook.status().startsWith("Bred"), "and keeps the child if it's rare enough ("
+                + dev.kushcraft.util.Text.plain(dev.kushcraft.util.Text.mm(cook.status())) + ")");
+        check(plugin.strains().countCreatedBy(boss) >= bredBefore, "bred strains are the owner's");
+        for (Strain made : new ArrayList<>(plugin.strains().all())) {
+            if (boss.equals(made.creator())) {
+                plugin.strains().remove(made.id());
+            }
+        }
         // a farmhand hands on spare poppy seeds past 16; a cook crafts morphine base from them
         cook.satchel().clear();
         farm.satchel().clear();
         ws.stash(farm, List.of(Items.create(ItemType.POPPY_SEEDS, 40)));
         ws.setRecipe(cook, LabRecipe.MORPHINE);
-        open.setType(Material.AIR);
-        walled.setType(Material.AIR);
-        ws.refreshAreas();
-        check(ws.workNow(cook) && count(cook.satchel(), ItemType.POPPY_SEEDS) == 24
+        runner.satchel().clear();
+        check(!ws.workNow(cook) && cook.wants() != null, "with a Runner around the cook stays put and waits for poppy seeds");
+        check(ws.workNow(runner) && count(cook.satchel(), ItemType.POPPY_SEEDS) == 16
+                && count(farm.satchel(), ItemType.POPPY_SEEDS) == 24, "the runner brings the farmhand's spare poppy seeds");
+        check(ws.workNow(runner) && count(cook.satchel(), ItemType.POPPY_SEEDS) == 24
                 && count(farm.satchel(), ItemType.POPPY_SEEDS) == 16, "the farmhand keeps 16 seeds and hands on the rest");
-        // a full satchel never stops a farmhand: the spare goes in the nearest chest with room (no linking)...
-        farm.satchel().clear();
-        ws.stash(farm, fullSatchel());
-        check(ws.workNow(farm) && count(farm.satchel(), ItemType.COCA_SEEDS) == 16 && count(chest, ItemType.COCA_SEEDS) == 400,
-                "a farmhand with a full satchel puts the spare in the nearest chest");
-        // ...and with every chest full, spare seeds become fertilizer
-        chest.clear();
-        for (int i = 0; i < chest.getSize(); i++) {
-            chest.addItem(new ItemStack(Material.DIRT, 64));
-        }
+        // a full satchel never stops a farmhand for good: spare seeds become fertilizer...
         farm.satchel().clear();
         ws.stash(farm, fullSatchel());
         ws.compost(farm);
-        check(count(farm.satchel(), ItemType.COCA_SEEDS) == 16 && count(farm.satchel(), ItemType.FERTILIZER) == 100,
-                "spare seeds become fertilizer");
+        check(count(farm.satchel(), ItemType.COCA_SEEDS) == 4 && count(farm.satchel(), ItemType.FERTILIZER) == 103,
+                "spare seeds become fertilizer when the satchel is full");
+        // ...and the runner takes the harvest off them, so they go on harvesting
+        farm.satchel().clear();
+        List<ItemStack> papers = new ArrayList<>();
+        for (int i = 0; i < 25; i++) {
+            papers.add(Items.create(ItemType.ROLLING_PAPERS, 64));
+        }
+        ws.stash(farm, papers);
+        ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 10)));
+        Plant grown = plugin.plants().at(key);
+        if (grown != null) {
+            grown.growth(100);
+        }
+        check(!ws.workNow(farm) && farm.status().contains("Runner"), "a full farmhand waits for the runner");
+        runner.satchel().clear();
+        check(ws.workNow(runner) && count(farm.satchel(), ItemType.BUD_FRESH) == 0, "the runner empties the farmhand");
+        int jobs = farm.jobs();
+        check(ws.workNow(farm) && farm.jobs() > jobs, "and the farmhand goes on harvesting");
         // nobody to pay: no work
+        farm.satchel().clear();
         eco.set(owner, 0);
-        ripe = plugin.plants().at(key);
-        if (ripe != null) {
-            ripe.growth(100);
+        grown = plugin.plants().at(key);
+        if (grown != null) {
+            grown.growth(100);
         }
         check(!ws.workNow(farm) && farm.status().contains("Not paid"), "unpaid workers stop");
-        // level up, save, dismiss
+        // save, level up, dismiss
         ws.save();
         var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 new File(plugin.getDataFolder(), "workers.yml"));
         check(saved.isConfigurationSection("workers." + runner.id()) && saved.isConfigurationSection(
-                "workers." + farm.id() + ".satchel") && "MORPHINE".equals(saved.getString("workers." + cook.id() + ".recipe")),
+                "workers." + cook.id() + ".satchel") && "MORPHINE".equals(saved.getString("workers." + cook.id() + ".recipe")),
                 "workers, their satchels and a cook's recipe are saved");
-        check(saved.getStringList("workers." + cook.id() + ".links").contains(BlockKey.of(legacy).serialize())
-                && saved.getDouble("workers." + supplier.id() + ".spent") > 0, "old links and supplier spending are saved");
-        chestBlock.setType(Material.AIR);
-        stranger.setType(Material.AIR);
+        check(saved.getDouble("workers." + supplier.id() + ".spent") > 0, "supplier spending is saved");
         check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
                 dev.kushcraft.worker.WorkerType.FARMHAND, boss, 3)), "trained workers reach further");
         check(Items.level(Items.machine(ItemType.FARMHAND, 2)) == 2, "a dismissed worker keeps their level");
@@ -747,7 +748,14 @@ final class SelfTest {
                 plugin.plants().remove(p);
             }
         }
-        for (Entity e : w.getNearbyEntities(new Location(w, x + 2, y + 1, z + 1), 6, 3, 6)) {
+        for (int dx = 5; dx <= 7; dx++) {
+            for (int dy = 1; dy <= 4; dy++) {
+                for (int dz = 3; dz <= 5; dz++) {
+                    w.getBlockAt(x + dx, y + dy, z + dz).setType(Material.AIR);
+                }
+            }
+        }
+        for (Entity e : w.getNearbyEntities(new Location(w, x + 3, y + 1, z + 2), 7, 4, 7)) {
             if (e instanceof Item) {
                 e.remove();
             }

@@ -1,9 +1,9 @@
-# KushCraft 7.0 – grow, cook & deal (Paper 26.3)
+# KushCraft 7.1 – grow, cook & deal (Paper 26.3)
 
 A **server-side only** Paper plugin with **86 strains** in weird colours and two-tone patterns, climates, custom plants that also **grow wild**, 26 drugs made **step by step**, each with **its own signature effect**, strain breeding with **Mythic** and even rarer **Exotic** strains, **as many workers as you like** (Farmhand, Dryer, Cook, Runner and Supplier) that **run the whole chain by themselves**, simple cartels, a sales leaderboard, 55 achievements, an admin panel and a living market where **money only comes from selling drugs**. It all comes in **one jar**.
 Players don't install any mods. The plugin builds its own resource pack (32px art, 3D plants and blocks, worker skins and hats, animated Mythic and Exotic buds, menu art and recipe pictures) and every player gets it when they join.
 
-**Download:** [`release/KushCraft-7.0.2.jar`](release/KushCraft-7.0.2.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
+**Download:** [`release/KushCraft-7.1.0.jar`](release/KushCraft-7.1.0.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
 
 | Items | Plants | Blocks |
 |---|---|---|
@@ -50,23 +50,23 @@ By default (`resource-pack.url: auto`) players download the pack of **this exact
 
 ## Workers
 
-The **Workers** tab has a hiring board. Buy a worker, then right-click the ground where they should work. They walk to the job (around walls, through open and wooden doors), work and walk back. **Hire as many as you like** (`workers.max-per-player: 0`). Workers are an investment:
+The **Workers** tab has a hiring board. Buy a worker, then right-click the ground where they should work. They walk to the job (around walls, through open and wooden doors) and plan the next one right where they are – they only walk home when there's nothing to do (idle Farmhands stroll among the plants). **Hire as many as you like** (`workers.max-per-player: 0`). Workers are an investment:
 
 | Worker | Price | Pay | What they do |
 |---|---|---|---|
-| **Farmhand** | $12,000 | $5 a job | harvests your ripe plants around them, 3–5 per round, and replants; plants seeds and uses fertilizer; keeps 16 seeds of each kind and hands on the rest |
-| **Dryer** | $9,000 | $4 a job | stands near your Drug Lab: hangs fresh buds on its racks and takes them off dry |
-| **Cook** | $15,000 | $8 a batch | **you pick what they make**: any Drug Lab recipe (up to 4 batches at a time), **rolling joints or blunts**, or **Auto**: the most valuable drug they have everything for. They fill empty bottles at water nearby |
-| **Runner** | $11,000 | 10% of sales | sells the finished product for you (at your Dealer Stand if one is near), and **carries what a worker is missing** from anywhere in the crew, **through walls the back way** |
-| **Supplier** | $13,000 | $6 a delivery | **buys what your Cooks and Farmhands run low on** with your money (Trade items, Lab Solvent, papers, wraps, fertilizer, water) and brings it to them. Never spends below the reserve you set (default $1,000) |
+| **Farmhand** | $12,000 | $5 a job | harvests your ripe plants around them, 3–5 per round (only as many as their satchel has room for), and replants; plants seeds and uses fertilizer; keeps 16 seeds of each kind and hands on the rest |
+| **Dryer** | $9,000 | $4 a job | stands near your Drug Lab: hangs fresh buds on its racks and takes them off dry. **Sell what I dry** switch: every dried bud goes to the Runner to sell |
+| **Cook** | $15,000 | $8 a batch | **you pick what they make**: any Drug Lab recipe (up to 4 batches at a time), **rolling joints or blunts**, **mixing strains** (they cross the two best strains they have seeds of and keep the ones rare enough – you pick how rare), or **Auto**: the most valuable drug they have everything for. They fill empty bottles at water nearby |
+| **Runner** | $11,000 | 10% of sales | **carries the work from worker to worker** – the Farmhand's harvest to the Dryer, the Dryer's buds to a Cook – and **sells everything else the moment they pick it up** (never seeds). Through walls the back way |
+| **Supplier** | $13,000 | $6 a delivery | **buys whatever your workers are short of** with your money (Trade items, Lab Solvent, papers, wraps, fertilizer, seeds, water) and brings it to them. **No budget**: they only stop when you can't pay |
 
-**No working through walls, nothing to link.** A worker only uses what they can walk up to: **the nearest chest or barrel of yours** they can reach, for ingredients out and their work in (Cooks find their ingredients in any of your chests they can walk to). Chests remember who placed them; workers never touch someone else's. **A full satchel never stops a Farmhand**: they put the harvest in the nearest chest with room, and a **Runner** empties satchels that pile up (to whoever needs it – fresh buds to a Dryer – or into a chest).
+**No chests – hand to hand.** Farmhand → **Runner** → Dryer → Cook, or the Runner, who sells it on the spot. With a Runner in the crew the others stay put and the Runner brings them what they need. **A full satchel never stops a Farmhand for good**: they only harvest as much as fits, the Runner empties full satchels first, and spare seeds become fertilizer (Rare and better strains never). **Stuck workers tell you**: a chat message with what's wrong and where (a ⚠ in the Workers tab), and a list when you join.
 
-**The work chain runs by itself.** Your workers within 32 blocks of each other (`workers.chain-radius`) are a crew: each one takes what they need from the others they can walk to (Farmhand → Dryer → Cook → Runner, or Cook → Cook). When something is behind a wall or too far, the worker says what's missing and a **Runner** brings it – from another worker or any chest of yours in the crew's reach, **walls or not**. Runners sell only what's in chests within 4 blocks of one of your workers. A **Supplier** buys it if it can be bought. Nobody takes what another worker needs for their own job.
+**The work chain runs by itself.** Your workers within 32 blocks of each other (`workers.chain-radius`) are a crew: each one takes what they need from the others they can walk to (Farmhand → Dryer → Cook → Runner, or Cook → Cook). When something is behind a wall or too far, the worker says what's missing and a **Runner** brings it from another worker, **walls or not**. A **Supplier** buys it if it can be bought. Nobody takes what another worker needs for their own job.
 
 More:
 * No money, no work: wages come out of your wallet.
-* **Right-click** a worker for their menu: what they do and what they're missing, the chests they use (click: green sparks on them), **Show where they work** (a ring around their area), how full their satchel is (a Supplier: the money they leave you), the satchel (click an item to take it, click your own items to give them), rename, pause, **train** (levels 2 and 3 cost $10,000 and $25,000: reach 8 → 12 → 16 blocks, rest less, walk faster) and dismiss (you get their contract and satchel back).
+* **Right-click** a worker for their menu: what they do and what they're missing, who they work with, **Show where they work** (a ring around their area, sparks over their crew), an option (a Dryer: sell what it dries; a Cook mixing strains: how rare a new strain must be to keep; a Supplier: what they spent; the others: how full their satchel is), the satchel (click an item to take it, click your own items to give them), rename, pause, **train** (levels 2 and 3 cost $10,000 and $25,000: reach 8 → 12 → 16 blocks, rest less, walk faster) and dismiss (you get their contract and satchel back).
 * The **Workers** tab lists all of yours from anywhere (shift-click to pause one). **Collect everything** takes what they all made into your inventory.
 
 ## Wild plants
@@ -96,7 +96,7 @@ In its own climate a plant grows **50% faster**, gets **+1 ★** and **+1 bud**.
 
 ### Breeding, Mythic & Exotic strains
 
-**Drug Lab > Mix:** cross two seeds. The child is random: effects, potency, climate, colours, two-tone pattern and bud shape come from the parents, or mutate into something new (weird colours included).
+**Drug Lab > Mix:** your seeds lie on a tray – click one strain, then another, check the chances and press **MIX**. Keep the child (it names itself; **Rename** if you like) or throw it away. A **Cook** can mix for you. The child is random: effects, potency, climate, colours, two-tone pattern and bud shape come from the parents, or mutate into something new (weird colours included).
 
 * **Mythic** (about **1 in 15** crosses, more with a Mythic parent): animated buds and plants – **rainbow**, **galaxy**, **golden**, **crystal**, **neon**, **inferno**, **aurora**, **toxic**, **sakura**, **plasma**, **blood moon**, **ocean** or **candy**. They sparkle, some glow at night, and they sell for **4×**. 13 Mythic strains also grow wild, once in a blue moon.
 * **Exotic** – rarer still, and **the only way to get one is crossing two Mythic strains** (3%, more with Exotic parents): **void**, **prism**, **celestial**, **phoenix**, **quantum** or **eclipse** buds that sell for **7×**. Ten famous Exotic strains (Event Horizon, Prismatic Runtz, Phoenix Tears…) can only be found by crossing the right two Mythic strains. Exotic strains are never sold and never wild.
@@ -211,7 +211,7 @@ Titles and cartels show in the tab list.
 
 ## Achievements
 
-There are 55 awards: grow in every climate, pick a wild plant, cook every recipe, hire a Cook and a Supplier, have a worker use your chest, run a full **Assembly Line** (Farmhand, Dryer, Cook and Runner together), feel 10 drug signatures, give an animal red eyes, deliver a cartel shipment, build an Empire, breed a Mythic and an **Exotic** strain, sell $1,000,000 and more. They're also real **advancements** with their own *KushCraft* tab (press L).
+There are 55 awards: grow in every climate, pick a wild plant, cook every recipe, hire a Cook and a Supplier, have a Runner take a harvest to a Dryer, run a full **Assembly Line** (Farmhand, Dryer, Cook and Runner together), feel 10 drug signatures, give an animal red eyes, deliver a cartel shipment, build an Empire, breed a Mythic and an **Exotic** strain, sell $1,000,000 and more. They're also real **advancements** with their own *KushCraft* tab (press L).
 
 ## Installing
 
@@ -221,9 +221,9 @@ There are 55 awards: grow in every climate, pick a wild plant, cook every recipe
 **Updating from 3.x – 6.x:** replace the jar and restart.
 * `config.yml` upgrades itself to version 10. From 6.0: the market (`demand-drop`, `min-price`, `recovery-per-minute`) and Trade price climb (`price-step`, `recovery-per-minute`) are **replaced** with the 7.0 ones, the **Supplier** is added to your `shop.buy` list and the new `workers.supplier` settings are added. From 3.x–5.x also everything 6.0 replaced (shop prices, Trade shelves, jobs off, no worker limit…). Missing settings are added. **`resource-pack.url` is set to `auto`** if it was empty or the old GitHub link. Your cartels, strains, workers and other settings are kept.
 * `strains.yml` gets the 52 new strains (Mythic and Exotic ones too) and the two-tone patterns of the built-in ones; strains your players bred are kept.
-* Workers stop reaching through walls: if one says they can't reach their Drug Lab or chest, open a way, link the chest, or hire a Runner.
-* **7.0.2:** workers **keep working while you're offline or far away** (`workers.work-offline: true` keeps the chunks around them loaded, up to `work-offline-max-chunks: 300`; set it to `false` to let them sleep). A **Dryer** has a **Sell what I dry** switch in its menu: ON, every dried bud goes to your Runners to sell (Cooks don't get any from that Dryer).
-* **7.0.1:** no more linking – workers use the nearest chest of yours they can walk to (old links are kept as yours). Chests placed before 7.0 don't know who placed them: workers use them only when they're right by one of your workers (or an old save had them linked).
+* Workers stop reaching through walls: if one says they can't reach their Drug Lab, open a way or hire a Runner.
+* **7.1:** **no chests** – work goes hand to hand (Farmhand → Runner → Dryer → Cook or sold). Runners sell what they pick up right away (never seeds), workers walk much less (no trip home between jobs), Cooks can **mix strains**, a new **mixer** (seed tray, chances card, keep without typing), Suppliers have **no budget** and buy seeds too, stuck workers tell you, and far less lag (walk areas are worked out once and refreshed when you build). Chests you used before keep their items – take them out yourself.
+* **7.0.2:** workers **keep working while you're offline or far away** (`workers.work-offline: true` keeps the chunks around them loaded, up to `work-offline-max-chunks: 100`; set it to `false` to let them sleep). A **Dryer** has a **Sell what I dry** switch in its menu: ON, every dried bud goes to your Runners to sell (Cooks don't get any from that Dryer).
 
 ## Admin panel
 

@@ -35,9 +35,6 @@ public final class Worker {
     record Want(java.util.function.Predicate<ItemStack> match, String what, int amount) {
     }
 
-    /** Most chests an old save (before 7.0.1, when you linked chests by hand) can keep for a worker. */
-    public static final int MAX_LINKS = 8;
-
     private final UUID id;
     private final WorkerType type;
     private final UUID owner;
@@ -56,12 +53,10 @@ public final class Worker {
     double spent;
     /** Cook: the LabRecipe they make, ROLL_JOINT / ROLL_BLUNT or AUTO (null = not picked yet). */
     String recipe;
-    /** Chests linked by hand in old saves: they still count as the owner's (nothing new is linked). */
-    final java.util.List<dev.kushcraft.util.BlockKey> links = new java.util.ArrayList<>();
-    /** Supplier: never spends the owner's wallet below this. */
-    double reserve = 1000;
     /** Dryer: every dried bud goes to the Runners to sell (Cooks don't get them from this Dryer). */
     boolean sell;
+    /** Cook mixing strains: the rarity a new strain needs to be kept (Rarity ordinal; RARE by default). */
+    int keep = 2;
 
     // live state
     transient UUID entityId;
@@ -72,6 +67,9 @@ public final class Worker {
     transient int restTicks;
     transient String status = "Starting work...";
     transient Want want;
+    /** When their status turned into a problem (0 = none), and when the owner was last told. */
+    transient long problemSince;
+    transient long notifiedAt;
     /** Cook on AUTO: what they decided to make this time. */
     transient dev.kushcraft.lab.LabRecipe auto;
     final transient Deque<Location> path = new ArrayDeque<>();
@@ -143,6 +141,8 @@ public final class Worker {
     public static final String ROLL_JOINT = "ROLL_JOINT";
     public static final String ROLL_BLUNT = "ROLL_BLUNT";
     public static final String AUTO = "AUTO";
+    /** Cook job: breed new strains from the seeds they get at a Drug Lab. */
+    public static final String MIX = "MIX";
 
     /** Cook: the Drug Lab recipe they make (on AUTO: what they picked), or null. */
     public dev.kushcraft.lab.LabRecipe recipe() {
@@ -157,8 +157,20 @@ public final class Worker {
         return AUTO.equals(recipe);
     }
 
-    public double reserve() {
-        return reserve;
+    /** Cook: they breed new strains instead of cooking. */
+    public boolean mixes() {
+        return MIX.equals(recipe);
+    }
+
+    /** Cook mixing strains: the lowest rarity they keep. */
+    public dev.kushcraft.strain.Rarity keepRarity() {
+        dev.kushcraft.strain.Rarity[] all = dev.kushcraft.strain.Rarity.values();
+        return all[Math.max(0, Math.min(all.length - 1, keep))];
+    }
+
+    /** What's wrong when they've been stuck for a while (shown to the owner), else null. */
+    public String problem() {
+        return problemSince > 0 && System.currentTimeMillis() - problemSince > 15_000L ? status : null;
     }
 
     /** Dryer: hands everything they dry to the Runners to sell. */

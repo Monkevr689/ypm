@@ -332,8 +332,8 @@ public final class Awards implements Listener {
         grant(p, Award.SUPPLIER);
     }
 
-    /** A worker used one of your chests. */
-    public void usedChest(Player p) {
+    /** A Runner passed a Farmhand's harvest to a Dryer. */
+    public void logistics(Player p) {
         grant(p, Award.LOGISTICS);
     }
 

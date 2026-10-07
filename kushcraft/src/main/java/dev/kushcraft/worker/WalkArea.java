@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,15 +22,14 @@ import java.util.Set;
  * (two blocks of room, something solid underneath, steps of one block up
  * or down, through open or wooden doors and gates), within a radius. A
  * worker only works on things right next to a spot they can walk to - so
- * nothing through walls. The chests and barrels they can reach are found
- * on the way. Paths go along the walk tree (home is the root).
+ * nothing through walls. Paths go along the walk tree (home is the root).
+ * Every block is looked at once while the area is worked out (no lag).
  */
 final class WalkArea {
 
     static final int UP = 6;
     static final int DOWN = 6;
     private static final int[][] DIRS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
-    private static final int[][] SIDES = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     final World world;
     final int hx;
@@ -41,8 +39,9 @@ final class WalkArea {
     final long made;
     /** cell -> the cell you came from (home -> itself). */
     private final Map<Long, Long> parent = new HashMap<>();
-    /** Chests / barrels next to a walkable spot, with that spot (first found = closest to home). */
-    private final Map<Long, Long> chests = new LinkedHashMap<>();
+    /** While building: blocks already looked at (passable / something to stand on). */
+    private Map<Long, Boolean> passMemo = new HashMap<>();
+    private Map<Long, Boolean> groundMemo = new HashMap<>();
 
     private WalkArea(World world, int hx, int hy, int hz, int radius, long made) {
         this.world = world;
@@ -77,7 +76,6 @@ final class WalkArea {
         a.parent.put(root, root);
         ArrayDeque<Long> queue = new ArrayDeque<>();
         queue.add(root);
-        a.scanChests(root);
         while (!queue.isEmpty() && a.parent.size() < maxCells) {
             long c = queue.poll();
             int cx = x(c), cy = y(c), cz = z(c);
@@ -98,45 +96,43 @@ final class WalkArea {
                     if (a.parent.containsKey(n)) {
                         break;
                     }
-                    if (!walkable(w.getBlockAt(nx, ny, nz))) {
+                    if (!a.walkableAt(nx, ny, nz)) {
                         continue;
                     }
                     // a step up needs head room above where you stand, a step down above where you land
-                    if (dy == 1 && !passable(w.getBlockAt(cx, cy + 2, cz))) {
+                    if (dy == 1 && !a.passableAt(cx, cy + 2, cz)) {
                         continue;
                     }
-                    if (dy == -1 && !passable(w.getBlockAt(nx, cy + 1, nz))) {
+                    if (dy == -1 && !a.passableAt(nx, cy + 1, nz)) {
                         continue;
                     }
                     // no cutting corners through walls
-                    if (diagonal && (dy != 0 || !walkable(w.getBlockAt(cx + d[0], cy, cz))
-                            || !walkable(w.getBlockAt(cx, cy, cz + d[1])))) {
+                    if (diagonal && (dy != 0 || !a.walkableAt(cx + d[0], cy, cz)
+                            || !a.walkableAt(cx, cy, cz + d[1]))) {
                         continue;
                     }
                     a.parent.put(n, c);
                     queue.add(n);
-                    a.scanChests(n);
                     break;
                 }
             }
         }
+        a.passMemo = null;
+        a.groundMemo = null;
         return a;
     }
 
-    private void scanChests(long cell) {
-        int cx = x(cell), cy = y(cell), cz = z(cell);
-        for (int[] d : SIDES) {
-            for (int dy = -1; dy <= 1; dy++) {
-                Block b = world.getBlockAt(cx + d[0], cy + dy, cz + d[1]);
-                if (Workers.isChest(b.getType())) {
-                    chests.putIfAbsent(key(b.getX(), b.getY(), b.getZ()), cell);
-                }
-            }
-        }
-        Block below = world.getBlockAt(cx, cy - 1, cz);
-        if (Workers.isChest(below.getType())) {
-            chests.putIfAbsent(key(below.getX(), below.getY(), below.getZ()), cell);
-        }
+    private boolean passableAt(int x, int y, int z) {
+        return passMemo.computeIfAbsent(key(x, y, z), k -> passable(world.getBlockAt(x, y, z)));
+    }
+
+    /** Something to stand on (not a fence, wall or machine hitbox). */
+    private boolean groundAt(int x, int y, int z) {
+        return groundMemo.computeIfAbsent(key(x, y, z), k -> ground(world.getBlockAt(x, y, z)));
+    }
+
+    private boolean walkableAt(int x, int y, int z) {
+        return passableAt(x, y, z) && passableAt(x, y + 1, z) && groundAt(x, y - 1, z);
     }
 
     static boolean passable(Block b) {
@@ -157,10 +153,10 @@ final class WalkArea {
 
     /** Two blocks of room and something to stand on (not on top of a fence, wall or machine). */
     static boolean walkable(Block feet) {
-        if (!passable(feet) || !passable(feet.getRelative(0, 1, 0))) {
-            return false;
-        }
-        Block below = feet.getRelative(0, -1, 0);
+        return passable(feet) && passable(feet.getRelative(0, 1, 0)) && ground(feet.getRelative(0, -1, 0));
+    }
+
+    private static boolean ground(Block below) {
         Material m = below.getType();
         if (below.isPassable() || below.isLiquid()) {
             return false;
@@ -177,19 +173,6 @@ final class WalkArea {
         return parent.size();
     }
 
-    /** Chest / barrel positions they can reach, closest to home first. */
-    List<BlockKey> chests() {
-        List<BlockKey> out = new ArrayList<>();
-        for (long k : chests.keySet()) {
-            out.add(new BlockKey(world.getName(), x(k), y(k), z(k)));
-        }
-        return out;
-    }
-
-    boolean reachesChest(BlockKey k) {
-        return k.world().equals(world.getName()) && chests.containsKey(key(k.x(), k.y(), k.z()));
-    }
-
     /**
      * A spot to stand on to work on the target: a walkable spot right next
      * to it (same level, one up or one down), or on it when self is true
@@ -199,10 +182,6 @@ final class WalkArea {
     Location standFor(BlockKey t, boolean self, Location from) {
         if (!t.world().equals(world.getName())) {
             return null;
-        }
-        Long chest = chests.get(key(t.x(), t.y(), t.z()));
-        if (chest != null) {
-            return centre(chest);
         }
         Location best = null;
         double bestD = Double.MAX_VALUE;

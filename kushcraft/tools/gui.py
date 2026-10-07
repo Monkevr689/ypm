@@ -83,6 +83,12 @@ def shade(col, f):
     return G.shade(col, f)
 
 
+def shade_hex(h, f):
+    """shade() for a hex colour, back as hex."""
+    c = shade(rgba(h), f)
+    return "%02x%02x%02x" % (c[0], c[1], c[2])
+
+
 def mix(a, b, t):
     return G.mix(a, b, t)
 
@@ -818,35 +824,51 @@ def dry():
 
 
 def mix_page():
-    """Seed A (1,1) + seed B (1,3) -> result (1,7); chances (3,0..7) + mutation (3,8);
-    discard (4,3), mix (4,4), keep (4,5)."""
+    """The mixer: seed A (1,0) + seed B (1,2) -> MIX (1,4) -> result (1,6), chances (1,8) on a
+    bench; your seeds on a seed tray (rows 2-3, 18 a page); prev (4,0), how it works (4,1),
+    throw away (4,3), keep (4,4), rename (4,5), next (4,8)."""
     img, a = lab_page("mix", 33)
-    cslot(img, 1, 1, "big", "7ad04a")
-    x, y = slot_xy(1, 2)
-    plus(img, x + 9, y + 9, TEXT)
-    cslot(img, 1, 3, "big", "7ad04a")
-    for c in (4, 5):
-        x, y = slot_xy(1, c)
-        arrow(img, x + 2, y + 5, a, 16)
-    x, y = slot_xy(1, 6)
-    arrow(img, x + 2, y + 5, a, 14)
-    cslot(img, 1, 7, "glow", a)
     d = ImageDraw.Draw(img)
-    x0, y0 = slot_xy(3, 0)
-    area(img, 5, y0 - 1, 170, y0 + 18, a, 0.12)
-    for c in range(8):
-        cslot(img, 3, c)
-    cslot(img, 3, 8, "big", "b45af0")
+    # the bench
+    x0, y0 = slot_xy(1, 0)
+    area(img, 4, y0, 171, y0 + 17, a, 0.14)
+    cslot(img, 1, 0, "big", "7ad04a")
+    x, y = slot_xy(1, 1)
+    plus(img, x + 9, y + 9, TEXT)
+    cslot(img, 1, 2, "big", "7ad04a")
+    for c in (3, 5):
+        x, y = slot_xy(1, c)
+        arrow(img, x + 3, y + 5, a, 13)
+    cslot(img, 1, 4, "glow", a)
+    cslot(img, 1, 6, "glow", "f2c23a")
+    x, y = slot_xy(1, 7)
+    for k in range(3):
+        d.rectangle((x + 4 + k * 4, y + 8, x + 5 + k * 4, y + 9), fill=rgba(shade_hex(a, 0.8)))
+    cslot(img, 1, 8, "big", "b45af0")
+    # the seed tray: dark soil with furrows behind rows 2-3
+    tx0, ty0 = 4, slot_xy(2, 0)[1] - 1
+    tx1, ty1 = 171, slot_xy(3, 0)[1] + 18
+    rng = random.Random(34)
+    for yy in range(ty0, ty1 + 1):
+        for xx in range(tx0, tx1 + 1):
+            f = 1 + rng.uniform(-0.09, 0.09) + (0.12 if (yy - ty0) % 5 == 0 else 0)
+            img.putpixel((xx, yy), shade(rgba("3c2c1e"), f))
+    d.rectangle((tx0, ty0, tx1, ty1), outline=rgba("1a120a"))
+    d.line((tx0 + 1, ty0 + 1, tx1 - 1, ty0 + 1), fill=rgba("5a4430"))
+    for r in (2, 3):
+        for c in range(9):
+            cslot(img, r, c, tint="7ad04a")
+    # the buttons
+    cslot(img, 4, 0, "big", a)
+    cslot(img, 4, 1, "big", "5ad8f0")
     cslot(img, 4, 3, "big", "e84a4a")
-    cslot(img, 4, 4, "glow", a)
-    cslot(img, 4, 5, "big", "6ae05a")
+    cslot(img, 4, 4, "glow", "6ae05a")
+    cslot(img, 4, 5, "big", "e8e0d0")
+    cslot(img, 4, 8, "big", a)
     player_inv(img, 5)
     return "mix", img, 5
 
 
-# ---------------------------------------------------------------------------
-# other menus
-# ---------------------------------------------------------------------------
 def recipe():
     """Recipe viewer: station (0,8); 3x3 grid rows 1-3 cols 1-3; result (2,6);
     back (4,0), prev (4,3), next (4,5)."""

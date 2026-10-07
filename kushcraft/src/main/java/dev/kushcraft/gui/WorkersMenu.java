@@ -98,12 +98,11 @@ public final class WorkersMenu extends TabMenu {
                 "<gray>Pauses all " + list.size() + " of your workers.")
                 : Items.icon("ui_play", "<green>Everyone: back to work", "<gray>Starts all your workers again."));
         set(HELP, Items.icon("ui_guide", "<aqua>How the work chain works",
-                "<gray>Workers use what they can walk to: the",
-                "<gray>nearest chest of yours (nothing to link)",
-                "<gray>and each other's satchels.",
-                "<light_purple>Runners<gray> empty satchels, carry things from",
-                "<gray>anywhere in the crew (through walls) and sell.",
-                "<yellow>Suppliers<gray> buy missing ingredients.",
+                "<gray>No chests: work goes hand to hand.",
+                "<green>Farmhand<gray> > <light_purple>Runner<gray> > <gold>Dryer<gray> > <aqua>Cook",
+                "<gray>or the <light_purple>Runner<gray>, who sells it on the spot.",
+                "<yellow>Suppliers<gray> buy whatever anyone is missing.",
+                "<gold>⚠<gray> = stuck: they tell you what they need.",
                 "<dark_gray>Click: open the handbook"));
     }
 
@@ -113,6 +112,9 @@ public final class WorkersMenu extends TabMenu {
         lore.add("<gold>Level " + w.level() + " <dark_gray>· <gray>" + (Worker.SATCHEL - w.freeSlots()) + "/" + Worker.SATCHEL
                 + " satchel slots");
         lore.add("<white>" + (w.paused() ? "<red>Paused" : w.isLoaded() ? w.status() : "<dark_gray>Asleep (nobody nearby)"));
+        if (w.problem() != null && !w.paused()) {
+            lore.add("<gold>⚠ Stuck - they need you");
+        }
         if (w.wants() != null) {
             lore.add("<yellow>Missing: " + w.wants());
         }
@@ -120,9 +122,10 @@ public final class WorkersMenu extends TabMenu {
             lore.add("<dark_gray>" + w.worldName() + " " + h.getBlockX() + ", " + h.getBlockY() + ", " + h.getBlockZ());
         }
         lore.add("<dark_gray>Click: their menu · Shift-click: pause / go");
-        ItemStack it = Items.icon(w.type().item().model(), w.type().color() + Text.escape(w.name())
-                + " <gray>the " + w.type().display(), lore);
-        return Items.glint(it, w.wants() != null && !w.paused());
+        boolean stuck = w.problem() != null && !w.paused();
+        ItemStack it = Items.icon(w.type().item().model(), (stuck ? "<gold>⚠ " : "") + w.type().color()
+                + Text.escape(w.name()) + " <gray>the " + w.type().display(), lore);
+        return Items.glint(it, stuck || (w.wants() != null && !w.paused()));
     }
 
     @Override

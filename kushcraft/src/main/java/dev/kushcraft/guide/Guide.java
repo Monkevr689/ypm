@@ -188,16 +188,17 @@ public final class Guide {
         int chain = KushCraft.get() == null ? 32 : KushCraft.get().workers().chainRadius();
         return List.of("<dark_green><bold>Workers</bold>\n\n<black>The <dark_aqua>Workers</dark_aqua> tab:"
                         + " hire, then right-click the ground.\n<dark_green>Farmhand</dark_green>: harvests\n"
-                        + "<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>: cooks, rolls, or Auto\n"
+                        + "<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>: cooks, rolls, mixes\n"
                         + "<light_purple>Runner</light_purple>: carries, sells\n<gold>Supplier</gold>: buys"
-                        + " ingredients",
-                "<dark_green><bold>Chests</bold>\n\n<black>Nothing to link: workers use the"
-                        + " <u>nearest</u> chest you placed that they can walk to (no walls).\n<dark_gray>"
-                        + "Ingredients out, work in.\n<black>Satchel full? A Runner empties it.",
+                        + " what's missing",
+                "<dark_green><bold>Hand to hand</bold>\n\n<black>No chests: <dark_green>Farmhand</dark_green> >"
+                        + " <light_purple>Runner</light_purple> > <gold>Dryer</gold> > <dark_aqua>Cook</dark_aqua>"
+                        + " or the Runner, who <gold>sells</gold> it on the spot (never seeds).\n<dark_gray>"
+                        + "Full satchels get emptied - nobody stops.",
                 "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks are a crew."
-                        + " A <light_purple>Runner</light_purple> brings what one is missing from anywhere in"
-                        + " the crew, through walls the back way, and empties full satchels. A <gold>Supplier"
-                        + "</gold> buys it with your money.",
+                        + " A <light_purple>Runner</light_purple> brings what one is missing, through walls the"
+                        + " back way. A <gold>Supplier</gold> buys it with your money.\n<gold>⚠</gold> = stuck:"
+                        + " they tell you why.",
                 "<dark_green><bold>Your workers</bold>\n\n<black>Hire as many as you like. Right-click one for"
                         + " their satchel.\n\nThey get a <gold>wage</gold> per job.\n<dark_gray>No money, no"
                         + " work!</dark_gray>\nTrain them: further, faster.\n"
@@ -288,9 +289,9 @@ public final class Guide {
 
     private static List<String> strain() {
         return List.of("<dark_green><bold>Breeding</bold>\n\n<black>Drug Lab > <dark_green>Mix</dark_green>."
-                        + " Click two seeds and press MIX.\n\nThe child is <bold>random</bold>: effects, potency,"
-                        + " climate, colours, two-tone pattern and bud shape from the parents - or a"
-                        + " <dark_purple>mutation</dark_purple>.",
+                        + " Pick two strains on the seed tray, press MIX.\nThe child is <bold>random</bold>:"
+                        + " effects, potency, colours, pattern - or a <dark_purple>mutation</dark_purple>.\n"
+                        + "<dark_gray>A Cook can mix for you.",
                 "<dark_green><bold>Mythic</bold>\n\n<black>About 1 in 15 children is <dark_purple><bold>Mythic"
                         + "</bold></dark_purple>: rainbow, galaxy, aurora, toxic, sakura, plasma... buds that"
                         + " sparkle and sell for <gold>4x</gold>.\n\nA Mythic parent passes it on 1 in 5.",

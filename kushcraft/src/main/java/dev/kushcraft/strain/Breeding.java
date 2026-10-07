@@ -77,6 +77,22 @@ public final class Breeding {
     private Breeding() {
     }
 
+    private static final String[] SUFFIX = {"Dream", "Haze", "Kush", "Diesel", "Glue", "Cookies", "Cake", "Breath",
+            "Fire", "Frost", "Punch", "Runtz", "Gelato", "Zkittlez", "Widow", "Express"};
+
+    /** A free name for a cross: the first word of one parent and the last word of the other (or a classic ending). */
+    public static String childName(Strain a, Strain b, java.util.function.Predicate<String> taken) {
+        String first = a.name().split(" ")[0];
+        String[] bw = b.name().split(" ");
+        String n = first + " " + bw[bw.length - 1];
+        java.util.concurrent.ThreadLocalRandom r = java.util.concurrent.ThreadLocalRandom.current();
+        int tries = 0;
+        while ((taken.test(n) || n.equalsIgnoreCase(a.name()) || n.equalsIgnoreCase(b.name())) && tries++ < 60) {
+            n = first + " " + SUFFIX[r.nextInt(SUFFIX.length)] + (tries > 16 ? " " + (tries - 15) : "");
+        }
+        return n.length() > 24 ? n.substring(0, 24).trim() : n;
+    }
+
     /** Effects either parent can pass on, with the chance of each. */
     public static Map<EffectType, Double> odds(Strain a, Strain b) {
         Map<EffectType, Double> out = new LinkedHashMap<>();

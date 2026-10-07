@@ -43,7 +43,7 @@ public enum Award {
             Frame.CHALLENGE, HIRED, false),
     SUPPLIER("Fully Stocked", "Hire a Supplier to buy your ingredients.", "award_supplier", 1000, Frame.GOAL, HIRED,
             false),
-    LOGISTICS("Logistics", "Have a worker use a chest of yours.", "award_logistics", 300, Frame.TASK, HIRED, false),
+    LOGISTICS("Logistics", "Have a Runner take a Farmhand's harvest to a Dryer.", "award_logistics", 300, Frame.TASK, HIRED, false),
     // money
     FIRST_SALE("First Deal", "Sell some product.", "cash", 100, Frame.TASK, null, false),
     SOLD_10K("Hustler", "Sell $10,000 of product.", "award_cash_stack", 500, Frame.TASK, FIRST_SALE, false),
