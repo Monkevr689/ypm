@@ -3,7 +3,7 @@
 A **server-side only** Paper plugin with **86 strains** in weird colours and two-tone patterns, climates, custom plants that also **grow wild**, 26 drugs made **step by step**, each with **its own signature effect**, strain breeding with **Mythic** and even rarer **Exotic** strains, **as many workers as you like** (Farmhand, Dryer, Cook, Runner and Supplier) that **run the whole chain by themselves**, simple cartels, a sales leaderboard, 55 achievements, an admin panel and a living market where **money only comes from selling drugs**. It all comes in **one jar**.
 Players don't install any mods. The plugin builds its own resource pack (32px art, 3D plants and blocks, worker skins and hats, animated Mythic and Exotic buds, menu art and recipe pictures) and every player gets it when they join.
 
-**Download:** [`release/KushCraft-7.0.0.jar`](release/KushCraft-7.0.0.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
+**Download:** [`release/KushCraft-7.0.1.jar`](release/KushCraft-7.0.1.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
 
 | Items | Plants | Blocks |
 |---|---|---|
@@ -60,16 +60,13 @@ The **Workers** tab has a hiring board. Buy a worker, then right-click the groun
 | **Runner** | $11,000 | 10% of sales | sells the finished product for you (at your Dealer Stand if one is near), and **carries what a worker is missing** from anywhere in the crew, **through walls the back way** |
 | **Supplier** | $13,000 | $6 a delivery | **buys what your Cooks and Farmhands run low on** with your money (Trade items, Lab Solvent, papers, wraps, fertilizer, water) and brings it to them. Never spends below the reserve you set (default $1,000) |
 
-**No working through walls.** A worker only uses what they can walk up to:
-* **chests you link to them**: their menu > **Link chests**, then right-click chests or barrels (up to 8, within 32 blocks). They take ingredients from them and put their work in them.
-* the chest right by their spot (their work chest),
-* and (you can switch it off per worker) **your own chests around them** – Cooks find their ingredients in any of your chests they can walk to. Chests remember who placed them; workers never touch someone else's.
+**No working through walls, nothing to link.** A worker only uses what they can walk up to: **the nearest chest or barrel of yours** they can reach, for ingredients out and their work in (Cooks find their ingredients in any of your chests they can walk to). Chests remember who placed them; workers never touch someone else's. **A full satchel never stops a Farmhand**: they put the harvest in the nearest chest with room, and a **Runner** empties satchels that pile up (to whoever needs it – fresh buds to a Dryer – or into a chest).
 
-**The work chain runs by itself.** Your workers within 32 blocks of each other (`workers.chain-radius`) are a crew: each one takes what they need from the others they can walk to (Farmhand → Dryer → Cook → Runner, or Cook → Cook). When something is behind a wall or too far, the worker says what's missing and a **Runner** brings it – from another worker, their chests, or a linked chest behind walls. A **Supplier** buys it if it can be bought. Nobody takes what another worker needs for their own job.
+**The work chain runs by itself.** Your workers within 32 blocks of each other (`workers.chain-radius`) are a crew: each one takes what they need from the others they can walk to (Farmhand → Dryer → Cook → Runner, or Cook → Cook). When something is behind a wall or too far, the worker says what's missing and a **Runner** brings it – from another worker or any chest of yours in the crew's reach, **walls or not**. Runners sell only what's in chests within 4 blocks of one of your workers. A **Supplier** buys it if it can be bought. Nobody takes what another worker needs for their own job.
 
 More:
 * No money, no work: wages come out of your wallet.
-* **Right-click** a worker for their menu: what they do and what they're missing, **Link chests**, **Show where they work** (a ring around their area, green sparks on chests they use, red on linked chests behind walls), chests around them on/off (a Supplier: the money they leave you), the satchel (click an item to take it, click your own items to give them), rename, pause, **train** (levels 2 and 3 cost $10,000 and $25,000: reach 8 → 12 → 16 blocks, rest less, walk faster) and dismiss (you get their contract and satchel back).
+* **Right-click** a worker for their menu: what they do and what they're missing, the chests they use (click: green sparks on them), **Show where they work** (a ring around their area), how full their satchel is (a Supplier: the money they leave you), the satchel (click an item to take it, click your own items to give them), rename, pause, **train** (levels 2 and 3 cost $10,000 and $25,000: reach 8 → 12 → 16 blocks, rest less, walk faster) and dismiss (you get their contract and satchel back).
 * The **Workers** tab lists all of yours from anywhere (shift-click to pause one). **Collect everything** takes what they all made into your inventory.
 
 ## Wild plants
@@ -214,7 +211,7 @@ Titles and cartels show in the tab list.
 
 ## Achievements
 
-There are 55 awards: grow in every climate, pick a wild plant, cook every recipe, hire a Cook and a Supplier, link a chest, run a full **Assembly Line** (Farmhand, Dryer, Cook and Runner together), feel 10 drug signatures, give an animal red eyes, deliver a cartel shipment, build an Empire, breed a Mythic and an **Exotic** strain, sell $1,000,000 and more. They're also real **advancements** with their own *KushCraft* tab (press L).
+There are 55 awards: grow in every climate, pick a wild plant, cook every recipe, hire a Cook and a Supplier, have a worker use your chest, run a full **Assembly Line** (Farmhand, Dryer, Cook and Runner together), feel 10 drug signatures, give an animal red eyes, deliver a cartel shipment, build an Empire, breed a Mythic and an **Exotic** strain, sell $1,000,000 and more. They're also real **advancements** with their own *KushCraft* tab (press L).
 
 ## Installing
 
@@ -225,7 +222,7 @@ There are 55 awards: grow in every climate, pick a wild plant, cook every recipe
 * `config.yml` upgrades itself to version 10. From 6.0: the market (`demand-drop`, `min-price`, `recovery-per-minute`) and Trade price climb (`price-step`, `recovery-per-minute`) are **replaced** with the 7.0 ones, the **Supplier** is added to your `shop.buy` list and the new `workers.supplier` settings are added. From 3.x–5.x also everything 6.0 replaced (shop prices, Trade shelves, jobs off, no worker limit…). Missing settings are added. **`resource-pack.url` is set to `auto`** if it was empty or the old GitHub link. Your cartels, strains, workers and other settings are kept.
 * `strains.yml` gets the 52 new strains (Mythic and Exotic ones too) and the two-tone patterns of the built-in ones; strains your players bred are kept.
 * Workers stop reaching through walls: if one says they can't reach their Drug Lab or chest, open a way, link the chest, or hire a Runner.
-* Chests placed before 7.0 don't know who placed them: workers use them only when they're right by one of your workers, or linked.
+* **7.0.1:** no more linking – workers use the nearest chest of yours they can walk to (old links are kept as yours). Chests placed before 7.0 don't know who placed them: workers use them only when they're right by one of your workers (or an old save had them linked).
 
 ## Admin panel
 

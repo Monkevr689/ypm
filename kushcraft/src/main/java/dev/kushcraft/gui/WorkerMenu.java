@@ -19,8 +19,9 @@ import java.util.List;
 
 /**
  * A worker's menu (right-click them): who they are and what they're doing,
- * linked chests, where they work, chests around them (a Supplier: the money
- * they leave you), their job (a Cook's drug), their satchel (click an item
+ * the chests they use (nothing to link: the nearest ones), where they work,
+ * how full their satchel is (a Supplier: the money they leave you), their
+ * job (a Cook's drug), their satchel (click an item
  * to take it, click your own seeds / buds / ingredients to give them), and
  * buttons to rename, pause, train and dismiss them. Layout: tools/gui.py worker().
  */
@@ -28,7 +29,7 @@ public final class WorkerMenu extends Menu {
 
     static final int ROWS = 5;
     static final int INFO = 0;
-    static final int LINK = 1;
+    static final int CHESTS = 1;
     static final int SHOW = 2;
     static final int OPTION = 3;
     static final int JOB = 4;
@@ -78,11 +79,10 @@ public final class WorkerMenu extends Menu {
             info.add("<yellow>Missing: " + worker.wants());
         }
         set(INFO, Items.icon(t.item().model(), t.color() + Text.escape(worker.name()) + " <gray>the " + t.display(), info));
-        set(LINK, linkIcon());
+        set(CHESTS, chestsIcon());
         set(SHOW, Items.icon("ui_show", "<aqua>Show where they work",
-                "<gray>For 10 seconds: a ring around their area,",
-                "<green>green<gray> on chests they use, <red>red<gray> on",
-                "<gray>linked chests behind walls."));
+                "<gray>For 10 seconds: a ring around their area",
+                "<gray>and <green>green<gray> sparks on the chests they use."));
         set(OPTION, optionIcon());
         set(JOB, jobIcon());
         set(RENAME, Items.icon("ui_rename", "<white>Rename", "<dark_gray>Type a new name in chat."));
@@ -111,42 +111,41 @@ public final class WorkerMenu extends Menu {
                 : "<gray>Satchel is empty", "<dark_gray>Click an item to take just that."), carried > 0));
     }
 
-    private ItemStack linkIcon() {
+    private ItemStack chestsIcon() {
         Workers ws = workers();
         List<String> lore = new ArrayList<>();
-        int linked = worker.links().size();
-        int blocked = ws.blocked(worker).size();
-        lore.add("<white>" + linked + "/" + Worker.MAX_LINKS + " linked" + (blocked > 0 && worker.type() != WorkerType.RUNNER
-                && worker.type() != WorkerType.SUPPLIER ? " <red>(" + blocked + " behind walls)" : ""));
-        lore.add(switch (worker.type()) {
-            case RUNNER -> "<gray>They sell everything in them.";
-            case SUPPLIER -> "<gray>Nothing to link: they buy what's missing.";
-            default -> "<gray>They take ingredients from them and";
-        });
-        if (worker.type() != WorkerType.RUNNER && worker.type() != WorkerType.SUPPLIER) {
-            lore.add("<gray>put their work in them.");
-            lore.add("<dark_gray>Behind a wall? A Runner carries it.");
+        int n = ws.chests(worker).size();
+        switch (worker.type()) {
+            case SUPPLIER -> lore.add("<gray>Nothing to set up: they buy what's missing.");
+            case RUNNER -> {
+                lore.add("<gray>Every chest of yours within " + ws.chainRadius() + " blocks,");
+                lore.add("<gray>walls or not (they take the back way).");
+                lore.add("<gray>They sell from the ones by your workers.");
+            }
+            default -> {
+                lore.add("<gray>No linking: they use the nearest chest of");
+                lore.add("<gray>yours they can walk to - ingredients out,");
+                lore.add("<gray>their work in. Walls block them; a Runner");
+                lore.add("<gray>carries from chests behind walls.");
+            }
         }
-        lore.add("<dark_gray>Click, then right-click chests.");
-        return Items.amount(Items.icon("ui_link", "<green>Link chests", lore), Math.max(1, linked));
+        lore.add("<dark_gray>Only chests you placed. Click: show them.");
+        return Items.amount(Items.icon("ui_nearby", (n > 0 ? "<green>" : "<yellow>") + "Chests they use: " + n, lore),
+                Math.max(1, Math.min(n, 64)));
     }
 
     private ItemStack optionIcon() {
-        Workers ws = workers();
         if (worker.type() == WorkerType.SUPPLIER) {
             return Items.icon("ui_reserve", "<gold>Keep in your wallet: " + money(worker.reserve()),
                     "<gray>They never spend below this.", "<dark_gray>Click: more · Right-click: less");
         }
-        if (worker.type() == WorkerType.RUNNER) {
-            return Items.icon("ui_nearby", "<gray>Chests around them", "<dark_gray>Runners only use linked chests",
-                    "<dark_gray>and the one by their spot.");
-        }
-        int around = ws.chests(worker).size();
-        return Items.glint(Items.icon("ui_nearby", worker.nearby() ? "<green>Chests around them: ON"
-                        : "<red>Chests around them: OFF",
-                "<gray>ON: they also use your chests they", "<gray>can walk to (" + around + " now).",
-                "<gray>OFF: only linked chests and the one", "<gray>right by their spot.",
-                "<dark_gray>Click to switch"), worker.nearby());
+        int free = worker.freeSlots();
+        boolean tight = free < 6;
+        return Items.glint(Items.icon("ui_take", (tight ? "<red>" : "<white>") + "Satchel: " + (Worker.SATCHEL - free) + "/"
+                        + Worker.SATCHEL + " slots",
+                tight ? "<gray>Nearly full: they put their work in the" : "<gray>They put their finished work in the",
+                tight ? "<gray>nearest chest (a Runner empties them too)." : "<gray>nearest chest, or a Runner takes it.",
+                "<dark_gray>Take things out below."), tight);
     }
 
     private org.bukkit.inventory.ItemStack jobIcon() {
@@ -195,8 +194,8 @@ public final class WorkerMenu extends Menu {
                     "<gray>plants a seed from the harvest again.",
                     "<gray>Give them seeds and fertilizer to plant",
                     "<gray>empty farmland. Spare seeds become",
-                    "<gray>fertilizer. Dryers and Cooks take the",
-                    "<gray>harvest from them."));
+                    "<gray>fertilizer. Dryers, Cooks and Runners",
+                    "<gray>take the harvest from them."));
             case DRYER -> lore.addAll(List.of(
                     "<gray>Put them near your Drug Lab. They take",
                     "<gray>fresh buds from your Farmhands, hang",
@@ -232,7 +231,7 @@ public final class WorkerMenu extends Menu {
             }
         }
         if (t != WorkerType.SUPPLIER) {
-            lore.add("<white>Chest by their spot: <gray>they put their work in it.");
+            lore.add("<white>Nearest chest: <gray>they put their work in it.");
         }
         lore.addAll(crewLines());
         return Items.icon("ui_guide", "<aqua>How they work", lore);
@@ -276,19 +275,10 @@ public final class WorkerMenu extends Menu {
             confirmDismiss = false;
         }
         switch (slot) {
-            case LINK -> {
-                if (worker.type() == WorkerType.SUPPLIER) {
-                    failSound();
-                    return;
-                }
-                player.closeInventory();
-                ws.startLinking(player, worker);
-                return;
-            }
-            case SHOW -> {
+            case CHESTS, SHOW -> {
                 player.closeInventory();
                 ws.show(player, worker);
-                player.sendActionBar(Text.mm("<aqua>Look around: green = chests they use, red = behind walls."));
+                player.sendActionBar(Text.mm("<aqua>Look around: green sparks = chests they use."));
                 return;
             }
             case OPTION -> {
@@ -301,9 +291,6 @@ public final class WorkerMenu extends Menu {
                     i = click.isRightClick() ? Math.max(0, i - 1) : Math.min(r.length - 1, i + (i < r.length
                             && Math.abs(r[i] - worker.reserve()) < 0.01 ? 1 : 0));
                     ws.setReserve(worker, r[i]);
-                    clickSound();
-                } else if (worker.type() != WorkerType.RUNNER) {
-                    ws.setNearby(worker, !worker.nearby());
                     clickSound();
                 }
             }

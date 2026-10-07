@@ -98,11 +98,11 @@ public final class WorkersMenu extends TabMenu {
                 "<gray>Pauses all " + list.size() + " of your workers.")
                 : Items.icon("ui_play", "<green>Everyone: back to work", "<gray>Starts all your workers again."));
         set(HELP, Items.icon("ui_guide", "<aqua>How the work chain works",
-                "<gray>Workers only use what they can walk to:",
-                "<gray>chests you link to them, the chest by",
-                "<gray>their spot and your chests around them.",
-                "<light_purple>Runners<gray> carry things from anywhere in the",
-                "<gray>crew (through walls, the back way) and sell.",
+                "<gray>Workers use what they can walk to: the",
+                "<gray>nearest chest of yours (nothing to link)",
+                "<gray>and each other's satchels.",
+                "<light_purple>Runners<gray> empty satchels, carry things from",
+                "<gray>anywhere in the crew (through walls) and sell.",
                 "<yellow>Suppliers<gray> buy missing ingredients.",
                 "<dark_gray>Click: open the handbook"));
     }
@@ -110,13 +110,11 @@ public final class WorkersMenu extends TabMenu {
     private ItemStack icon(Worker w) {
         Location h = w.home();
         List<String> lore = new ArrayList<>();
-        lore.add("<gold>Level " + w.level() + " <dark_gray>· <gray>" + w.carried() + " items in the satchel");
+        lore.add("<gold>Level " + w.level() + " <dark_gray>· <gray>" + (Worker.SATCHEL - w.freeSlots()) + "/" + Worker.SATCHEL
+                + " satchel slots");
         lore.add("<white>" + (w.paused() ? "<red>Paused" : w.isLoaded() ? w.status() : "<dark_gray>Asleep (nobody nearby)"));
         if (w.wants() != null) {
             lore.add("<yellow>Missing: " + w.wants());
-        }
-        if (!w.links().isEmpty()) {
-            lore.add("<green>" + w.links().size() + " chest" + (w.links().size() > 1 ? "s" : "") + " linked");
         }
         if (h != null) {
             lore.add("<dark_gray>" + w.worldName() + " " + h.getBlockX() + ", " + h.getBlockY() + ", " + h.getBlockZ());

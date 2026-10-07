@@ -35,7 +35,7 @@ public final class Worker {
     record Want(java.util.function.Predicate<ItemStack> match, String what, int amount) {
     }
 
-    /** Most chests one worker can be linked to. */
+    /** Most chests an old save (before 7.0.1, when you linked chests by hand) can keep for a worker. */
     public static final int MAX_LINKS = 8;
 
     private final UUID id;
@@ -56,10 +56,8 @@ public final class Worker {
     double spent;
     /** Cook: the LabRecipe they make, ROLL_JOINT / ROLL_BLUNT or AUTO (null = not picked yet). */
     String recipe;
-    /** Chests the owner linked to them: they take from and put in these first. */
+    /** Chests linked by hand in old saves: they still count as the owner's (nothing new is linked). */
     final java.util.List<dev.kushcraft.util.BlockKey> links = new java.util.ArrayList<>();
-    /** They also use the owner's chests around them. */
-    boolean nearby = true;
     /** Supplier: never spends the owner's wallet below this. */
     double reserve = 1000;
 
@@ -155,14 +153,6 @@ public final class Worker {
     /** Cook: they pick the best drug they have the ingredients for. */
     public boolean autoPick() {
         return AUTO.equals(recipe);
-    }
-
-    public java.util.List<dev.kushcraft.util.BlockKey> links() {
-        return links;
-    }
-
-    public boolean nearby() {
-        return nearby;
     }
 
     public double reserve() {

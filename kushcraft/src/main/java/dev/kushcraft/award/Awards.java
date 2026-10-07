@@ -332,8 +332,8 @@ public final class Awards implements Listener {
         grant(p, Award.SUPPLIER);
     }
 
-    /** A chest was linked to a worker. */
-    public void linked(Player p) {
+    /** A worker used one of your chests. */
+    public void usedChest(Player p) {
         grant(p, Award.LOGISTICS);
     }
 

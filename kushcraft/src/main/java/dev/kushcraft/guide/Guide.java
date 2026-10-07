@@ -191,13 +191,13 @@ public final class Guide {
                         + "<gold>Dryer</gold>: dries buds\n<dark_aqua>Cook</dark_aqua>: cooks, rolls, or Auto\n"
                         + "<light_purple>Runner</light_purple>: carries, sells\n<gold>Supplier</gold>: buys"
                         + " ingredients",
-                "<dark_green><bold>Chests</bold>\n\n<black>Workers only use what they can <u>walk to</u>,"
-                        + " never through walls:\n<dark_gray>- chests you <black>link</black> to them\n"
-                        + "- the chest by their spot\n- your chests around them\n<black>Link: their menu >"
-                        + " Link, click chests.",
+                "<dark_green><bold>Chests</bold>\n\n<black>Nothing to link: workers use the"
+                        + " <u>nearest</u> chest you placed that they can walk to (no walls).\n<dark_gray>"
+                        + "Ingredients out, work in.\n<black>Satchel full? A Runner empties it.",
                 "<dark_green><bold>Work chain</bold>\n\n<black>Workers within " + chain + " blocks are a crew."
                         + " A <light_purple>Runner</light_purple> brings what one is missing from anywhere in"
-                        + " the crew, through walls the back way. A <gold>Supplier</gold> buys it with your money.",
+                        + " the crew, through walls the back way, and empties full satchels. A <gold>Supplier"
+                        + "</gold> buys it with your money.",
                 "<dark_green><bold>Your workers</bold>\n\n<black>Hire as many as you like. Right-click one for"
                         + " their satchel.\n\nThey get a <gold>wage</gold> per job.\n<dark_gray>No money, no"
                         + " work!</dark_gray>\nTrain them: further, faster.\n"

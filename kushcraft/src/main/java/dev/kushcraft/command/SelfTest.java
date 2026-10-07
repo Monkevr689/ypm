@@ -549,7 +549,7 @@ final class SelfTest {
                 "the cook rolls joints, one paper each (" + joints + ")");
         // the runner picks up the joints and sells them; the money goes to the owner, minus their cut
         var runner = ws.hireAt(new Location(w, x + 0.5, y + 1, z + 4.5), dev.kushcraft.worker.WorkerType.RUNNER, boss, 1);
-        check(ws.chests(runner).isEmpty() && ws.crew(runner).size() == 3 && ws.crew(cook).contains(runner),
+        check(ws.crew(runner).size() == 3 && ws.crew(cook).contains(runner),
                 "the runner works with the farmhand, dryer and cook");
         check(ws.workNow(runner) && count(runner.satchel(), ItemType.JOINT) == joints
                 && count(cook.satchel(), ItemType.JOINT) == 0, "the runner picks up the cook's joints");
@@ -561,6 +561,14 @@ final class SelfTest {
         ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 5)));
         check(ws.uses(dryer, Items.strainItem(ItemType.BUD_FRESH, s, 3, 1)) && !ws.workNow(runner)
                 && count(farm.satchel(), ItemType.BUD_FRESH) >= 5, "the runner leaves what the dryer needs");
+        // ...but once the buds pile up in the farmhand's satchel the runner empties it and takes them to the dryer
+        ws.stash(farm, List.of(Items.strainItem(ItemType.BUD_FRESH, s, 3, 5)));
+        int pile = count(farm.satchel(), ItemType.BUD_FRESH);
+        int dryerBuds = count(dryer.satchel(), ItemType.BUD_FRESH);
+        check(ws.workNow(runner) && count(runner.satchel(), ItemType.BUD_FRESH) == pile
+                && count(farm.satchel(), ItemType.BUD_FRESH) == 0, "the runner takes the buds out of the farmhand's satchel");
+        check(ws.workNow(runner) && runner.carried() == 0 && count(dryer.satchel(), ItemType.BUD_FRESH) == dryerBuds + pile,
+                "and brings them to the dryer");
         // the cook cooks a vape pen at the lab, collects it and puts it in their chest
         ws.setRecipe(cook, LabRecipe.VAPE_PEN);
         ws.stash(cook, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4), Items.create(ItemType.LAB_SOLVENT, 1),
@@ -601,11 +609,29 @@ final class SelfTest {
         check(!cookChests.contains(stranger), "and not someone else's chest");
         check(!ws.reaches(cook, BlockKey.of(walled), false) && ws.reaches(cook, BlockKey.of(open), false),
                 "walk areas: the walled chest can't be reached");
-        ws.setNearby(cook, false);
-        check(!ws.chests(cook).stream().map(c -> c.block()).toList().contains(open), "chests around them can be switched off");
-        ws.setNearby(cook, true);
-        // a linked chest behind walls: the runner carries what the cook is missing from it
-        check(ws.linkChest(cook, BlockKey.of(walled)) && ws.blocked(cook).size() == 1, "a chest behind walls can be linked");
+        check(cookChests.indexOf(chestBlock) >= 0 && cookChests.indexOf(chestBlock) < cookChests.indexOf(open),
+                "the nearest chest comes first");
+        // nothing to link: the runner finds the owner's chests in the crew's reach, walls or not
+        var runnerChests = ws.chests(runner).stream().map(c -> c.block()).toList();
+        check(runnerChests.contains(walled) && runnerChests.contains(open) && !runnerChests.contains(stranger),
+                "the runner finds the owner's chests behind walls (not a stranger's)");
+        // what a runner carries that nobody uses and nobody buys goes in the nearest chest
+        var openInv = ((org.bukkit.block.Container) open.getState(false)).getInventory();
+        ws.stash(runner, List.of(new ItemStack(Material.DIRT, 5)));
+        check(ws.workNow(runner) && runner.carried() == 0 && openInv.contains(Material.DIRT, 5),
+                "the runner puts things nobody needs in the nearest chest");
+        openInv.clear();
+        // an old chest nobody placed, far from the workers, is left alone - unless an old save had it linked
+        Block legacy = w.getBlockAt(x + 6, y + 1, z - 1);
+        legacy.setType(Material.CHEST);
+        ws.refreshAreas();
+        check(!ws.chests(cook).stream().map(c -> c.block()).toList().contains(legacy),
+                "an old chest nobody placed is left alone");
+        check(ws.linkChest(cook, BlockKey.of(legacy)) && ws.chests(cook).stream().map(c -> c.block()).toList().contains(legacy),
+                "but one an old save had linked to them still counts");
+        legacy.setType(Material.AIR);
+        ws.refreshAreas();
+        // the runner brings what the cook is missing from a chest behind the walls
         var walledInv = ((org.bukkit.block.Container) walled.getState(false)).getInventory();
         walledInv.addItem(Items.create(ItemType.COCAINE, 3));
         ws.setRecipe(cook, LabRecipe.CRACK);
@@ -655,16 +681,18 @@ final class SelfTest {
         ws.refreshAreas();
         check(ws.workNow(cook) && count(cook.satchel(), ItemType.POPPY_SEEDS) == 24
                 && count(farm.satchel(), ItemType.POPPY_SEEDS) == 16, "the farmhand keeps 16 seeds and hands on the rest");
-        // spare seeds become fertilizer when the satchel gets full
-        List<ItemStack> seeds = new ArrayList<>();
-        for (int i = 0; i < 20; i++) {
-            seeds.add(Items.create(ItemType.ROLLING_PAPERS, 64));
-        }
-        for (int i = 0; i < 26; i++) {
-            seeds.add(Items.create(ItemType.COCA_SEEDS, 16));
+        // a full satchel never stops a farmhand: the spare goes in the nearest chest with room (no linking)...
+        farm.satchel().clear();
+        ws.stash(farm, fullSatchel());
+        check(ws.workNow(farm) && count(farm.satchel(), ItemType.COCA_SEEDS) == 16 && count(chest, ItemType.COCA_SEEDS) == 400,
+                "a farmhand with a full satchel puts the spare in the nearest chest");
+        // ...and with every chest full, spare seeds become fertilizer
+        chest.clear();
+        for (int i = 0; i < chest.getSize(); i++) {
+            chest.addItem(new ItemStack(Material.DIRT, 64));
         }
         farm.satchel().clear();
-        ws.stash(farm, seeds);
+        ws.stash(farm, fullSatchel());
         ws.compost(farm);
         check(count(farm.satchel(), ItemType.COCA_SEEDS) == 16 && count(farm.satchel(), ItemType.FERTILIZER) == 100,
                 "spare seeds become fertilizer");
@@ -682,8 +710,8 @@ final class SelfTest {
         check(saved.isConfigurationSection("workers." + runner.id()) && saved.isConfigurationSection(
                 "workers." + farm.id() + ".satchel") && "MORPHINE".equals(saved.getString("workers." + cook.id() + ".recipe")),
                 "workers, their satchels and a cook's recipe are saved");
-        check(saved.getStringList("workers." + cook.id() + ".links").contains(BlockKey.of(walled).serialize())
-                && saved.getDouble("workers." + supplier.id() + ".spent") > 0, "linked chests and supplier spending are saved");
+        check(saved.getStringList("workers." + cook.id() + ".links").contains(BlockKey.of(legacy).serialize())
+                && saved.getDouble("workers." + supplier.id() + ".spent") > 0, "old links and supplier spending are saved");
         chestBlock.setType(Material.AIR);
         stranger.setType(Material.AIR);
         check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
@@ -707,6 +735,18 @@ final class SelfTest {
                 e.remove();
             }
         }
+    }
+
+    /** 20 stacks of papers and 416 coca seeds: fills a 27 slot satchel. */
+    private static List<ItemStack> fullSatchel() {
+        List<ItemStack> items = new ArrayList<>();
+        for (int i = 0; i < 20; i++) {
+            items.add(Items.create(ItemType.ROLLING_PAPERS, 64));
+        }
+        for (int i = 0; i < 26; i++) {
+            items.add(Items.create(ItemType.COCA_SEEDS, 16));
+        }
+        return items;
     }
 
     private void guide() {

@@ -221,12 +221,13 @@ harvest:
 #              from anywhere in the crew (through walls, the back way)
 #   Supplier - buys what your Cooks and Farmhands run low on (Trade items,
 #              Lab Solvent, papers, fertilizer, water) with your money
-#  Workers only use what they can walk to - nothing through walls: chests
-#  you link to them (their menu > Link), the chest right by their spot and
-#  (unless you switch it off) your own chests around them. Your workers
-#  within chain-radius of each other are a crew: they take what they need
-#  from each other's satchels when they can walk there; Runners bring the
-#  rest. Nobody takes what another worker needs for their own job.
+#  Workers only use what they can walk to - nothing through walls: the
+#  nearest chest of yours they can walk up to (nothing to link; chests
+#  remember who placed them). Your workers within chain-radius of each
+#  other are a crew: they take what they need from each other's satchels
+#  when they can walk there; Runners bring the rest (chests behind walls
+#  too) and empty satchels that fill up. Nobody takes what another worker
+#  needs for their own job.
 #  They only touch the plants, labs, stands and chests of the player who
 #  hired them. Right-click a worker for their satchel and buttons.
 # =====================================================================

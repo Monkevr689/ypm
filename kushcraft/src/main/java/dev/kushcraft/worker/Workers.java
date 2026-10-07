@@ -38,10 +38,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -79,12 +77,13 @@ import java.util.logging.Level;
  * a small wage for every job (the Runner takes a cut).
  *
  * Nothing through walls: a worker only uses what they can walk up to (see
- * WalkArea) - the chests linked to them, the chest by their home, the
- * owner's chests around them and the satchels of other workers they can
- * reach. One player's workers within chain-radius of each other are a crew:
- * what a worker is missing, a Runner brings from anywhere in the crew (they
- * take the back way) and a Supplier buys. Nobody takes what another worker
- * needs for their own job.
+ * WalkArea) - the owner's chests (nearest one first, nothing to link) and
+ * the satchels of other workers they can reach. One player's workers within
+ * chain-radius of each other are a crew: what a worker is missing, a Runner
+ * brings from anywhere in the crew (they take the back way, chests behind
+ * walls included), a Runner also clears the finished work out of the
+ * satchels, and a Supplier buys. Nobody takes what another worker needs for
+ * their own job.
  */
 public final class Workers implements Listener {
 
@@ -98,6 +97,9 @@ public final class Workers implements Listener {
     private final Map<UUID, Worker> byEntity = new HashMap<>();
     private final Map<String, Set<UUID>> byChunk = new HashMap<>();
     private final Map<UUID, WalkArea> areas = new HashMap<>();
+    /** The chests a worker uses, worked out at most every {@link #CHEST_MILLIS}. */
+    private final Map<UUID, ChestList> chestLists = new HashMap<>();
+    private static final long CHEST_MILLIS = 1_500L;
     /** How long a worker's walk area is trusted before it is worked out again. */
     private static final long AREA_MILLIS = 10_000L;
     private boolean dirty;
@@ -203,7 +205,6 @@ public final class Workers implements Listener {
                 w.jobs = s.getInt("jobs");
                 w.wages = s.getDouble("wages");
                 w.recipe = s.getString("recipe");
-                w.nearby = s.getBoolean("nearby", true);
                 w.reserve = s.getDouble("reserve", plugin.getConfig().getDouble("workers.supplier.reserve", 1000));
                 w.spent = s.getDouble("spent");
                 for (String l : s.getStringList("links")) {
@@ -254,9 +255,6 @@ public final class Workers implements Listener {
             s.set("wages", Math.round(w.wages * 100) / 100.0);
             if (w.recipe != null) {
                 s.set("recipe", w.recipe);
-            }
-            if (!w.nearby) {
-                s.set("nearby", false);
             }
             if (w.type() == WorkerType.SUPPLIER) {
                 s.set("reserve", w.reserve);
@@ -460,6 +458,7 @@ public final class Workers implements Listener {
         despawn(w);
         forget(w);
         areas.remove(w.id());
+        chestLists.remove(w.id());
         List<ItemStack> back = new ArrayList<>();
         back.add(Items.machine(w.type().item(), w.level()));
         for (ItemStack it : w.satchel.getStorageContents()) {
@@ -689,9 +688,6 @@ public final class Workers implements Listener {
                 think(w);
             }
         }
-        if (think) {
-            linkTimeouts();
-        }
     }
 
     private boolean atHome(Worker w) {
@@ -833,6 +829,7 @@ public final class Workers implements Listener {
     /** Forget the cached walk areas (blocks changed a lot, the self test). */
     public void refreshAreas() {
         areas.clear();
+        chestLists.clear();
     }
 
     /** A spot next to target this worker can walk to (self: they may stand on it), or null. */
@@ -922,124 +919,133 @@ public final class Workers implements Listener {
         return l == null ? b.toString() : l.getBlockX() + "," + l.getBlockY() + "," + l.getBlockZ();
     }
 
-    /** Linked chests that still exist (reachable or not). */
-    public List<Chest> linked(Worker w) {
-        List<Chest> out = new ArrayList<>();
-        Set<String> seen = new HashSet<>();
-        for (BlockKey k : w.links) {
-            if (!k.isLoaded()) {
-                continue;
-            }
-            Block b = k.block();
-            if (b != null && isChest(b.getType()) && seen.add(invKey(b))) {
-                out.add(new Chest(b));
-            }
-        }
-        return out;
-    }
-
     /** Right next to their home (within 2 blocks). */
     private boolean byHome(Worker w, BlockKey k) {
         Location h = w.home();
-        return h != null && Math.abs(k.x() - h.getBlockX()) <= 2 && Math.abs(k.z() - h.getBlockZ()) <= 2
-                && Math.abs(k.y() - h.getBlockY()) <= 1;
+        return h != null && k.world().equals(w.worldName()) && Math.abs(k.x() - h.getBlockX()) <= 2
+                && Math.abs(k.z() - h.getBlockZ()) <= 2 && Math.abs(k.y() - h.getBlockY()) <= 1;
     }
 
-    /** Their work chest: right by their home and not placed by somebody else. */
-    private boolean workChest(Worker w, Block b) {
-        if (!byHome(w, BlockKey.of(b)) || inventoryOf(b) == null) {
-            return false;
-        }
-        UUID placer = placer(b);
-        return placer == null || placer.equals(w.owner());
+    /** Blocks around a worker's spot where a Runner picks finished product out of chests. */
+    private static final int SPOT = 4;
+
+    private boolean nearSpot(Worker w, BlockKey k) {
+        Location h = w.home();
+        return h != null && k.world().equals(w.worldName()) && Math.abs(k.x() - h.getBlockX()) <= SPOT
+                && Math.abs(k.z() - h.getBlockZ()) <= SPOT && Math.abs(k.y() - h.getBlockY()) <= 3;
     }
 
-    /** One of the owner's chests: placed by them, or an old untagged one right by one of their workers. */
-    private boolean ownersChest(Worker w, Block b) {
+    /**
+     * One of the owner's chests: placed by them, or an old untagged one that is right by one of
+     * their workers (or that an old save had linked to one).
+     */
+    private boolean ownersChest(Worker w, Block b, List<Worker> crew) {
         UUID placer = placer(b);
         if (placer != null) {
             return placer.equals(w.owner());
         }
         BlockKey k = BlockKey.of(b);
-        if (byHome(w, k)) {
+        if (byHome(w, k) || w.links.contains(k)) {
             return true;
         }
-        for (Worker o : crew(w)) {
-            if (byHome(o, k)) {
+        for (Worker o : crew) {
+            if (byHome(o, k) || o.links.contains(k)) {
                 return true;
             }
         }
         return false;
     }
 
+    private record ChestList(long made, WalkArea area, List<Chest> chests) {
+    }
+
     /**
-     * Chests a worker uses, in order: linked chests they can walk to, the chest by their home,
-     * then (when "chests around them" is on) the owner's chests they can walk to. A Runner or
-     * Supplier uses every linked chest (they get there the back way) and the one by their home.
+     * The chests a worker uses - nothing to link: every chest or barrel of the owner's they can
+     * walk up to, the nearest one first (to where they stand). A Runner or Supplier uses every
+     * chest of the owner's within the crew's reach, walls or not (they take the back way).
      */
     public List<Chest> chests(Worker w) {
-        List<Chest> out = new ArrayList<>();
         WalkArea a = area(w);
         if (a == null) {
-            return out;
+            return new ArrayList<>();
         }
+        long now = System.currentTimeMillis();
+        ChestList cl = chestLists.get(w.id());
+        if (cl != null && cl.area() == a && now - cl.made() < CHEST_MILLIS) {
+            return cl.chests();
+        }
+        List<Worker> crew = crew(w);
+        Location from = w.pos != null ? w.pos : w.home();
+        List<Block> found = new ArrayList<>();
         Set<String> seen = new HashSet<>();
-        for (Chest c : linked(w)) {
-            if ((courier(w) || a.reachesChest(c.key())) && seen.add(invKey(c.block()))) {
-                out.add(c);
+        for (BlockKey k : courier(w) ? scanChests(w) : a.chests()) {
+            Block b = k.isLoaded() ? k.block() : null;
+            if (b != null && inventoryOf(b) != null && ownersChest(w, b, crew) && seen.add(invKey(b))) {
+                found.add(b);
             }
         }
-        List<BlockKey> around = a.chests();
-        for (BlockKey k : around) {
-            Block b = k.block();
-            if (b != null && workChest(w, b) && seen.add(invKey(b))) {
-                out.add(new Chest(b));
-            }
-        }
-        if (w.nearby && !courier(w)) {
-            for (BlockKey k : around) {
-                Block b = k.block();
-                if (b != null && inventoryOf(b) != null && !seen.contains(invKey(b)) && ownersChest(w, b)) {
-                    seen.add(invKey(b));
-                    out.add(new Chest(b));
+        found.sort(java.util.Comparator.comparingDouble(b -> dist2(BlockKey.of(b), from)));
+        List<Chest> out = new ArrayList<>();
+        found.forEach(b -> out.add(new Chest(b)));
+        chestLists.put(w.id(), new ChestList(now, a, out));
+        return out;
+    }
+
+    /** Every chest or barrel within chain-radius of a courier's home, found on the map. */
+    private List<BlockKey> scanChests(Worker w) {
+        List<BlockKey> out = new ArrayList<>();
+        Location h = w.home();
+        World world = h.getWorld();
+        int r = chainRadius();
+        for (int cx = (h.getBlockX() - r) >> 4; cx <= (h.getBlockX() + r) >> 4; cx++) {
+            for (int cz = (h.getBlockZ() - r) >> 4; cz <= (h.getBlockZ() + r) >> 4; cz++) {
+                if (!world.isChunkLoaded(cx, cz)) {
+                    continue;
+                }
+                for (org.bukkit.block.BlockState st : world.getChunkAt(cx, cz).getTileEntities(
+                        b -> isChest(b.getType()), false)) {
+                    double dx = st.getX() + 0.5 - h.getX(), dz = st.getZ() + 0.5 - h.getZ();
+                    if (dx * dx + dz * dz <= (double) r * r && Math.abs(st.getY() - h.getY()) <= 24) {
+                        out.add(new BlockKey(world.getName(), st.getX(), st.getY(), st.getZ()));
+                    }
                 }
             }
         }
         return out;
     }
 
-    /** Where finished work goes: linked chests they can reach, then the chest by their home. */
-    private List<Chest> outputs(Worker w) {
+    /** The chests a Runner collects finished product from: the ones close to any worker's spot. */
+    private List<Chest> workChests(Worker w) {
+        List<Worker> group = new ArrayList<>(crew(w));
+        group.add(w);
         List<Chest> out = new ArrayList<>();
-        WalkArea a = area(w);
-        if (a == null) {
-            return out;
-        }
-        Set<String> seen = new HashSet<>();
-        for (Chest c : linked(w)) {
-            if (a.reachesChest(c.key()) && seen.add(invKey(c.block()))) {
-                out.add(c);
-            }
-        }
-        for (BlockKey k : a.chests()) {
-            Block b = k.block();
-            if (b != null && workChest(w, b) && seen.add(invKey(b))) {
-                out.add(new Chest(b));
+        for (Chest c : chests(w)) {
+            for (Worker o : group) {
+                if (nearSpot(o, c.key())) {
+                    out.add(c);
+                    break;
+                }
             }
         }
         return out;
     }
 
-    /** Linked chests a worker can't walk to (walls in the way): a Runner brings things from them. */
-    public List<Chest> blocked(Worker w) {
-        List<Chest> out = new ArrayList<>();
-        WalkArea a = area(w);
-        for (Chest c : linked(w)) {
-            if (a == null || !a.reachesChest(c.key())) {
-                out.add(c);
+    /** True when something of this stack still fits in the inventory. */
+    private static boolean fits(Inventory inv, ItemStack it) {
+        for (ItemStack s : inv.getStorageContents()) {
+            if (s == null || s.getType().isAir() || (s.isSimilar(it) && s.getAmount() < s.getMaxStackSize())) {
+                return true;
             }
         }
-        return out;
+        return false;
+    }
+
+    /** The first time a worker uses a chest of theirs, the owner earns an award. */
+    private void usedChest(Worker w) {
+        Player p = Bukkit.getPlayer(w.owner());
+        if (p != null) {
+            plugin.awards().usedChest(p);
+        }
     }
 
     /** Somewhere to take things from: another worker's satchel, or a chest. stand = where to go. */
@@ -1243,9 +1249,7 @@ public final class Workers implements Listener {
                 out.add(new Source(o, null, standOrJump(courier, BlockKey.of(o.home())), BlockKey.of(o.home()),
                         standByWorker(courier, o) == null));
             }
-            List<Chest> cs = new ArrayList<>(linked(o));
-            cs.addAll(outputs(o));
-            for (Chest c : cs) {
+            for (Chest c : chests(o)) {
                 if (seen.add(invKey(c.block()))) {
                     Location st = stand(courier, c.key(), false);
                     out.add(new Source(null, c, st != null ? st : jumpSpot(c.key()), c.key(), st == null));
@@ -1272,6 +1276,9 @@ public final class Workers implements Listener {
                 int n = take(src, w.satchel, want, Integer.MAX_VALUE);
                 if (n > 0) {
                     w.status = "Got " + n + " " + what + " from " + src.name();
+                    if (src.chest() != null) {
+                        usedChest(w);
+                    }
                 }
                 return n > 0;
             });
@@ -1290,32 +1297,57 @@ public final class Workers implements Listener {
         return false;
     }
 
-    /** Puts what a worker made (spare seeds, empty bottles) in a chest they can walk to. */
+    /**
+     * What a worker puts away, per satchel slot: what they made, empty bottles they don't need and
+     * a Farmhand's seeds past {@link #SEED_KEEP} of a kind.
+     */
+    private int[] depositable(Worker w) {
+        ItemStack[] items = w.satchel.getStorageContents();
+        int[] seeds = w.type() == WorkerType.FARMHAND ? spare(w, Workers::isSeed) : new int[items.length];
+        int[] out = new int[items.length];
+        for (int i = 0; i < items.length; i++) {
+            ItemStack it = items[i];
+            if (it != null && !it.getType().isAir()) {
+                out[i] = (produces(w, it) && !uses(w, it)) || junk(w, it) ? it.getAmount() : seeds[i];
+            }
+        }
+        return out;
+    }
+
+    /** True when the chest has room for at least one of the satchel's items with a positive limit. */
+    private static boolean roomFor(Inventory chest, Inventory satchel, int[] limit) {
+        ItemStack[] items = satchel.getStorageContents();
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] != null && !items[i].getType().isAir() && limit[i] > 0 && fits(chest, items[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Puts what a worker made (and spare seeds, empty bottles) in the nearest chest with room that they can walk to. */
     private boolean planDeposit(Worker w) {
-        Predicate<ItemStack> out = it -> (produces(w, it) && !uses(w, it)) || junk(w, it);
-        boolean seeds = w.type() == WorkerType.FARMHAND && spareCount(w, Workers::isSeed) > 0;
-        if (first(w, out) == null && !seeds) {
+        int[] limit = depositable(w);
+        if (java.util.Arrays.stream(limit).sum() == 0) {
             return false;
         }
-        for (Chest c : outputs(w)) {
-            if (c.inv().firstEmpty() < 0) {
+        for (Chest c : chests(w)) {
+            if (!roomFor(c.inv(), w.satchel, limit)) {
                 continue;
             }
             Location st = stand(w, c.key(), false);
             if (st == null) {
                 continue;
             }
-            w.status = "Putting their work in the chest";
+            w.status = "Putting their work in the nearest chest";
             go(w, c.key(), st, false, () -> {
                 if (inventoryOf(c.block()) == null) {
                     return false; // the chest is gone
                 }
-                int n = move(w.satchel, c.inv(), out, Integer.MAX_VALUE);
-                if (w.type() == WorkerType.FARMHAND) {
-                    n += move(w.satchel, c.inv(), Workers::isSeed, Integer.MAX_VALUE, spare(w, Workers::isSeed));
-                }
+                int n = move(w.satchel, c.inv(), it -> true, Integer.MAX_VALUE, depositable(w));
                 if (n > 0) {
                     w.status = "Put " + n + " items in the chest";
+                    usedChest(w);
                 }
                 return n > 0;
             });
@@ -1349,7 +1381,7 @@ public final class Workers implements Listener {
         }
         if (!ripe.isEmpty()) {
             if (w.freeSlots() < 2) {
-                w.status = "<red>Satchel full! Empty it, or link a chest to them.";
+                w.status = "<red>Satchel full: needs a chest with room or a Runner.";
                 return false;
             }
             if (!canPay(w)) {
@@ -1482,12 +1514,12 @@ public final class Workers implements Listener {
     }
 
     /**
-     * Spare seeds become fertilizer: when the satchel gets full and there's no chest, every seed
+     * Spare seeds become fertilizer: when the satchel gets full and no chest has room, every seed
      * past 16 of a kind is composted (4 seeds = 1 fertilizer) - unless another worker of the crew
      * uses them (a Cook making morphine base from poppy seeds).
      */
     public void compost(Worker w) {
-        if (w.freeSlots() >= 6 || !outputs(w).isEmpty()) {
+        if (w.freeSlots() >= 6 || chests(w).stream().anyMatch(c -> c.inv().firstEmpty() >= 0)) {
             return;
         }
         List<Worker> crew = crew(w);
@@ -1599,7 +1631,7 @@ public final class Workers implements Listener {
         for (Machine lab : labs) {
             if (lab.racksDry() > 0) {
                 if (w.freeSlots() < lab.racksDry()) {
-                    w.status = "<red>Satchel full! Empty it, or link a chest to them.";
+                    w.status = "<red>Satchel full: needs a chest with room or a Runner.";
                     return false;
                 }
                 if (!canPay(w)) {
@@ -1725,7 +1757,7 @@ public final class Workers implements Listener {
                     && lab.job().equals(o.recipe)) : recipe != null && recipe.name().equals(lab.job()));
             if (lab.busy() && lab.jobDone() && lab.output() != null && mine) {
                 if (w.freeSlots() < 1) {
-                    w.status = "<red>Satchel full! Empty it, or link a chest to them.";
+                    w.status = "<red>Satchel full: needs a chest with room or a Runner.";
                     return false;
                 }
                 w.status = "Collecting a batch";
@@ -1937,12 +1969,19 @@ public final class Workers implements Listener {
         return target.bottomCenter();
     }
 
+    /** A Runner clears a worker's satchel of finished work once this many spare items pile up (or it gets full). */
+    private static final int UNLOAD_AT = 8;
+
     private boolean planRunner(Worker w) {
         // 1. bring workers what they're missing: from anywhere in the crew, through walls the back way
         if (w.freeSlots() > 2 && planDelivery(w)) {
             return true;
         }
-        // 2. sell what they carry (at a Dealer Stand of yours nearby, else where they stand)
+        // 2. put away what they carry: to a worker who uses it, else in the nearest chest
+        if (planUnload(w)) {
+            return true;
+        }
+        // 3. sell what they carry (at a Dealer Stand of yours nearby, else where they stand)
         if (first(w, this::sellable) != null) {
             Machine stand = null;
             double best = Double.MAX_VALUE;
@@ -1962,36 +2001,119 @@ public final class Workers implements Listener {
             }
             return true;
         }
-        // 3. collect finished product nobody in the crew needs
         List<Worker> crew = crew(w);
-        Predicate<ItemStack> spare = it -> sellable(it) && crew.stream().noneMatch(o -> uses(o, it));
-        for (Chest c : chests(w)) {
-            // their own chests: anything that sells
-            if (first(c.inv(), spare) != null) {
-                return takeForSale(w, new Source(null, c, standOrJump(w, c.key()), c.key(),
-                        stand(w, c.key(), false) == null), spare);
-            }
-        }
-        for (Worker o : crew) {
-            if (courier(o)) {
-                continue;
-            }
-            Predicate<ItemStack> theirs = it -> spare.test(it) && produces(o, it);
-            if (first(o.satchel, theirs) != null) {
-                BlockKey at = BlockKey.of(o.home());
-                return takeForSale(w, new Source(o, null, standOrJump(w, at), at, standByWorker(w, o) == null), theirs);
-            }
-            List<Chest> cs = new ArrayList<>(linked(o));
-            cs.addAll(outputs(o));
-            for (Chest c : cs) {
-                if (first(c.inv(), theirs) != null) {
+        if (w.freeSlots() > 1) {
+            // 4. collect finished product nobody in the crew needs: from the chests by your workers, then satchels
+            Predicate<ItemStack> spare = it -> sellable(it) && crew.stream().noneMatch(o -> uses(o, it));
+            for (Chest c : workChests(w)) {
+                if (first(c.inv(), spare) != null) {
                     return takeForSale(w, new Source(null, c, standOrJump(w, c.key()), c.key(),
-                            stand(w, c.key(), false) == null), theirs);
+                            stand(w, c.key(), false) == null), spare);
+                }
+            }
+            for (Worker o : crew) {
+                Predicate<ItemStack> theirs = it -> spare.test(it) && produces(o, it);
+                if (!courier(o) && first(o.satchel, theirs) != null) {
+                    BlockKey at = BlockKey.of(o.home());
+                    return takeForSale(w, new Source(o, null, standOrJump(w, at), at, standByWorker(w, o) == null), theirs);
+                }
+            }
+            // 5. empty the finished work out of satchels that are filling up, so nobody has to stop
+            for (Worker o : crew) {
+                if (courier(o)) {
+                    continue;
+                }
+                Predicate<ItemStack> done = it -> produces(o, it) || (o.type() == WorkerType.FARMHAND && isSeed(it));
+                int n = spareCount(o, done);
+                if (n >= UNLOAD_AT || (n > 0 && o.freeSlots() <= 12)) {
+                    BlockKey at = BlockKey.of(o.home());
+                    Source src = new Source(o, null, standOrJump(w, at), at, standByWorker(w, o) == null);
+                    w.status = "Emptying " + o.name() + "'s satchel";
+                    go(w, src.where(), src.stand(), src.jump(), () -> take(src, w.satchel, done, Integer.MAX_VALUE) > 0);
+                    return true;
                 }
             }
         }
-        w.status = crew.isEmpty() ? "<yellow>Link a chest of product to them, or hire workers nearby."
+        w.status = crew.isEmpty() ? "<yellow>Hire workers near them, or put product in a chest by one."
                 : "Waiting for product to sell";
+        return false;
+    }
+
+    /** True when handing this to o helps: they use it, it fits and (a Farmhand's seeds) they're short of it. */
+    private boolean takesFrom(Worker o, ItemStack it) {
+        if (courier(o) || !uses(o, it) || !fits(o.satchel, it)) {
+            return false;
+        }
+        if (o.type() == WorkerType.FARMHAND && isSeed(it)) {
+            int have = dev.kushcraft.util.InventoryUtil.count(o.satchel, x -> isSeed(x) && seedKey(x).equals(seedKey(it)));
+            return have < SEED_KEEP;
+        }
+        return true;
+    }
+
+    /** What a Runner carries goes to the worker who uses it (the nearest), else into the nearest chest (unless it sells). */
+    private boolean planUnload(Worker w) {
+        List<Worker> crew = crew(w);
+        Location from = w.pos != null ? w.pos : w.home();
+        for (ItemStack it : w.satchel.getStorageContents()) {
+            if (it == null || it.getType().isAir()) {
+                continue;
+            }
+            Worker to = null;
+            double best = Double.MAX_VALUE;
+            for (Worker o : crew) {
+                double d = o.home() == null ? Double.MAX_VALUE : dist2(BlockKey.of(o.home()), from);
+                if (d < best && takesFrom(o, it)) {
+                    best = d;
+                    to = o;
+                }
+            }
+            if (to != null) {
+                Worker target = to;
+                BlockKey at = BlockKey.of(target.home());
+                w.status = "Bringing " + Text.plain(it.effectiveName()) + " to " + target.name();
+                go(w, at, standOrJump(w, at), standByWorker(w, target) == null, () -> {
+                    int n = move(w.satchel, target.satchel, x -> uses(target, x), Integer.MAX_VALUE);
+                    if (n > 0) {
+                        target.want = null;
+                        target.restTicks = 1;
+                        w.jobs++;
+                        w.status = "Brought " + n + " items to " + target.name();
+                    }
+                    return n > 0;
+                });
+                return true;
+            }
+        }
+        // unsellable things - and what a full worker can't take yet (a Dryer's fresh buds) - wait in a chest
+        Predicate<ItemStack> park = it -> !sellable(it) || crew.stream().anyMatch(o -> uses(o, it));
+        if (first(w, park) == null) {
+            return false;
+        }
+        for (Chest c : chests(w)) {
+            boolean room = false;
+            for (ItemStack it : w.satchel.getStorageContents()) {
+                if (it != null && !it.getType().isAir() && park.test(it) && fits(c.inv(), it)) {
+                    room = true;
+                    break;
+                }
+            }
+            if (!room) {
+                continue;
+            }
+            w.status = "Putting things nobody needs in a chest";
+            go(w, c.key(), standOrJump(w, c.key()), stand(w, c.key(), false) == null, () -> {
+                if (inventoryOf(c.block()) == null) {
+                    return false;
+                }
+                int n = move(w.satchel, c.inv(), park, Integer.MAX_VALUE);
+                if (n > 0) {
+                    usedChest(w);
+                }
+                return n > 0;
+            });
+            return true;
+        }
         return false;
     }
 
@@ -2318,13 +2440,13 @@ public final class Workers implements Listener {
         return hung;
     }
 
-    /** Whatever didn't fit in the satchel goes in their output chest, else falls on the ground. */
+    /** Whatever didn't fit in the satchel goes in the nearest chests they use, else falls on the ground. */
     private void drop(Worker w, List<ItemStack> left, BlockKey at) {
         if (left.isEmpty()) {
             return;
         }
         List<ItemStack> rest = new ArrayList<>(left);
-        for (Chest c : outputs(w)) {
+        for (Chest c : chests(w)) {
             List<ItemStack> still = new ArrayList<>();
             for (ItemStack it : rest) {
                 still.addAll(c.inv().addItem(it).values());
@@ -2465,79 +2587,10 @@ public final class Workers implements Listener {
     }
 
     // ------------------------------------------------------------------
-    // linking chests, showing where they work
+    // showing where they work
     // ------------------------------------------------------------------
 
-    private record Linking(UUID worker, long until) {
-    }
-
-    private final Map<UUID, Linking> linking = new HashMap<>();
-
-    /** Right-clicking chests now links / unlinks them to this worker (for a minute). */
-    public void startLinking(Player p, Worker w) {
-        linking.put(p.getUniqueId(), new Linking(w.id(), System.currentTimeMillis() + 60_000L));
-        p.sendMessage(Text.msg("<green>Right-click chests or barrels</green> <gray>to link (or unlink) them to "
-                + w.type().colored() + " " + Text.escape(w.name) + "<gray>. They take ingredients from them and put"
-                + " their work in them. <dark_gray>(Up to " + Worker.MAX_LINKS + ", within " + chainRadius()
-                + " blocks. Sneak + right-click the air when you're done.)"));
-        show(p, w);
-    }
-
-    public boolean isLinking(Player p) {
-        return linking.containsKey(p.getUniqueId());
-    }
-
-    private void linkTimeouts() {
-        long now = System.currentTimeMillis();
-        linking.entrySet().removeIf(en -> {
-            if (now < en.getValue().until()) {
-                return false;
-            }
-            Player p = Bukkit.getPlayer(en.getKey());
-            if (p != null) {
-                p.sendActionBar(Text.mm("<gray>Done linking chests."));
-            }
-            return true;
-        });
-    }
-
-    /** Links (or unlinks) a chest. Returns a message for the player. */
-    public String toggleLink(Player p, Worker w, Block chest) {
-        if (!isChest(chest.getType())) {
-            return "<red>That's not a chest or barrel.";
-        }
-        Location h = w.home();
-        if (h == null || !h.getWorld().equals(chest.getWorld())
-                || h.distanceSquared(chest.getLocation().add(0.5, 0, 0.5)) > (double) chainRadius() * chainRadius()) {
-            return "<red>Too far from " + Text.escape(w.name) + " (" + chainRadius() + " blocks max).";
-        }
-        BlockKey k = BlockKey.of(chest);
-        // both halves of a double chest count as one
-        for (BlockKey l : new ArrayList<>(w.links)) {
-            Block b = l.block();
-            if (l.equals(k) || (b != null && isChest(b.getType()) && invKey(b).equals(invKey(chest)))) {
-                w.links.remove(l);
-                dirty = true;
-                areas.remove(w.id());
-                return "<yellow>Unlinked that chest from " + Text.escape(w.name) + ". <gray>(" + w.links.size() + " linked)";
-            }
-        }
-        if (!Protection.canBuild(p, chest)) {
-            return "<red>You can't use that chest.";
-        }
-        if (w.links.size() >= Worker.MAX_LINKS) {
-            return "<red>" + Text.escape(w.name) + " already has " + Worker.MAX_LINKS + " chests linked.";
-        }
-        w.links.add(k);
-        dirty = true;
-        plugin.awards().linked(p);
-        WalkArea a = area(w);
-        boolean walk = a != null && a.reachesChest(k);
-        return "<green>Linked to " + Text.escape(w.name) + "! <gray>(" + w.links.size() + " linked)"
-                + (walk || courier(w) ? "" : " <yellow>Walls in the way: a Runner will carry things to and from it.");
-    }
-
-    /** For 10 seconds: green sparks on chests they use, red on linked ones they can't walk to. */
+    /** For 10 seconds: a ring around their area and green sparks on the chests they use. */
     public void show(Player p, Worker w) {
         new org.bukkit.scheduler.BukkitRunnable() {
             int n;
@@ -2550,9 +2603,6 @@ public final class Workers implements Listener {
                 }
                 for (Chest c : chests(w)) {
                     spark(p, c.block(), 0x5AE85A);
-                }
-                for (Chest c : blocked(w)) {
-                    spark(p, c.block(), 0xE84A4A);
                 }
                 Location h = w.home();
                 if (h != null && h.getWorld().equals(p.getWorld())) {
@@ -2574,7 +2624,7 @@ public final class Workers implements Listener {
         }
     }
 
-    /** Links a chest without any checks (the self test). False when they already have the most. */
+    /** Remembers a chest as linked the old way (what a pre-7.0.1 save holds; the self test). False when they have the most. */
     public boolean linkChest(Worker w, BlockKey k) {
         if (w.links.contains(k)) {
             return true;
@@ -2584,13 +2634,8 @@ public final class Workers implements Listener {
         }
         w.links.add(k);
         dirty = true;
+        chestLists.remove(w.id());
         return true;
-    }
-
-    /** Turns "chests around them" on or off. */
-    public void setNearby(Worker w, boolean on) {
-        w.nearby = on;
-        dirty = true;
     }
 
     /** Supplier: the money they leave in your wallet. */
@@ -2634,36 +2679,6 @@ public final class Workers implements Listener {
         if (fromEntity(e.getEntity()) != null) {
             e.setCancelled(true);
         }
-    }
-    /** Linking mode: right-clicking a chest links it; sneak + right-click the air ends it. */
-    @EventHandler(priority = EventPriority.LOW)
-    public void onLinkClick(PlayerInteractEvent e) {
-        Linking l = linking.get(e.getPlayer().getUniqueId());
-        if (l == null || e.getHand() != EquipmentSlot.HAND) {
-            return;
-        }
-        Player p = e.getPlayer();
-        Worker w = workers.get(l.worker());
-        if (w == null) {
-            linking.remove(p.getUniqueId());
-            return;
-        }
-        if (e.getAction() == Action.RIGHT_CLICK_AIR && p.isSneaking()) {
-            linking.remove(p.getUniqueId());
-            p.sendActionBar(Text.mm("<gray>Done linking chests to " + Text.escape(w.name) + "."));
-            return;
-        }
-        Block b = e.getClickedBlock();
-        if (e.getAction() != Action.RIGHT_CLICK_BLOCK || b == null || !isChest(b.getType())) {
-            return;
-        }
-        e.setCancelled(true);
-        linking.put(p.getUniqueId(), new Linking(w.id(), System.currentTimeMillis() + 60_000L));
-        String msg = toggleLink(p, w, b);
-        p.sendActionBar(Text.mm(msg));
-        p.playSound(b.getLocation(), msg.startsWith("<green>") ? "minecraft:block.chain.place"
-                : "minecraft:block.chain.break", SoundCategory.PLAYERS, 1f, 1.2f);
-        spark(p, b, msg.startsWith("<green>") ? 0x5AE85A : 0xE8C84A);
     }
 
     /** Chests and barrels remember who placed them: workers only use their owner's chests around them. */
