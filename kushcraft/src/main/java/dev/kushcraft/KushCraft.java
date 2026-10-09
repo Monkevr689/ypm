@@ -54,6 +54,7 @@ public final class KushCraft extends JavaPlugin {
     private Awards awards;
     private Cartels cartels;
     private Workers workers;
+    private Access access;
     private dev.kushcraft.plant.WildPlants wild;
     private dev.kushcraft.effect.HighAnimals animals;
     private ResourcePackManager pack;
@@ -93,6 +94,8 @@ public final class KushCraft extends JavaPlugin {
         plants.load();
         workers = new Workers(this);
         workers.load();
+        access = new Access(this);
+        access.load();
         effects = new EffectManager(this);
         wild = new dev.kushcraft.plant.WildPlants(this);
         animals = new dev.kushcraft.effect.HighAnimals(this);
@@ -273,7 +276,7 @@ public final class KushCraft extends JavaPlugin {
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 11) {
+        if (version >= 12) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -340,6 +343,18 @@ public final class KushCraft extends JavaPlugin {
                 getConfig().set("shop.buy", buy);
             }
         }
+        if (version < 12) {
+            // 8.1 add-on mode: a side activity players unlock, away from spawn, paying a fraction
+            // (access.* and market.income-multiplier come from the defaults below)
+            for (String key : List.of("market.anywhere", "ranks.tab-list", "give-guide-on-first-join", "menu.shift-f")) {
+                getConfig().set(key, def.get(key));
+            }
+            List<java.util.Map<?, ?>> kit = new java.util.ArrayList<>(getConfig().getMapList("new-players.starter-kit"));
+            if (kit.stream().noneMatch(m -> "dealer".equals(String.valueOf(m.get("item"))))) {
+                kit.add(java.util.Map.of("item", "dealer", "amount", 1));
+                getConfig().set("new-players.starter-kit", kit);
+            }
+        }
         // players on most hosts can't reach the built-in pack server: use the hosted copy
         String url = getConfig().getString("resource-pack.url", "");
         if (url == null || url.isBlank() || url.contains("raw.githubusercontent.com/Monkevr689/ypm/")) {
@@ -347,10 +362,15 @@ public final class KushCraft extends JavaPlugin {
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 11);
+        getConfig().set("config-version", 12);
         saveConfig();
-        getLogger().info("Updated config.yml to version 11 (8.0: workers use any of your chests and buy what they"
-                + " need, Mythic seeds in the Shop, no Suppliers). Your other settings were kept.");
+        getLogger().info("Updated config.yml to version 12 (8.1 add-on mode: players unlock KushCraft, not near spawn,"
+                + " the Shop at Dealer Stands, drug prices x" + getConfig().getDouble("market.income-multiplier")
+                + "). Your other settings were kept.");
+    }
+
+    public Access access() {
+        return access;
     }
 
     public ResourcePackManager pack() {

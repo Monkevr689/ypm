@@ -63,6 +63,10 @@ public final class PlantListener implements Listener {
             return;
         }
         Player p = e.getPlayer();
+        if (!plugin.access().allowed(p)) {
+            plugin.access().denied(p);
+            return;
+        }
         ItemStack hand = p.getInventory().getItemInMainHand();
         ItemType t = Items.type(hand);
         if (t == ItemType.FERTILIZER) {

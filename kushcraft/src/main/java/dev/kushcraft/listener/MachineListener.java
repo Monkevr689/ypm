@@ -36,6 +36,15 @@ public final class MachineListener implements Listener {
             e.setCancelled(true);
             return;
         }
+        if (!plugin.access().allowed(e.getPlayer())) {
+            e.setCancelled(true);
+            plugin.access().denied(e.getPlayer());
+            return;
+        }
+        if (!plugin.access().farEnough(e.getPlayer(), e.getBlockPlaced().getLocation())) {
+            e.setCancelled(true);
+            return;
+        }
         plugin.machines().place(e.getPlayer(), e.getBlockPlaced(), t.machine(), Items.level(e.getItemInHand()));
         if (t == ItemType.LAB_STATION) {
             plugin.awards().labPlaced(e.getPlayer());

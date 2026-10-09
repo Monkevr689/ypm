@@ -47,6 +47,12 @@ public abstract class TabMenu extends Menu {
         }
 
         public void open(Player p) {
+            // add-on mode: only Trade and Awards are open before KushCraft is unlocked
+            if (this != TRADE && this != AWARDS && !KushCraft.get().access().allowed(p)) {
+                p.closeInventory();
+                KushCraft.get().access().explain(p);
+                return;
+            }
             page.apply(p).open();
         }
     }

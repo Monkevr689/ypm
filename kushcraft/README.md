@@ -1,9 +1,11 @@
-# KushCraft 8.0 – grow, cook & deal (Paper 26.3)
+# KushCraft 8.1 – grow, cook & deal (Paper 26.3)
 
-A **server-side only** Paper plugin with **102 strains** in weird colours and two-tone patterns, climates, custom plants that also **grow wild**, 26 drugs made **step by step**, 34 effects, strain breeding with **Mythic** and even rarer **Exotic** strains (Mythic seeds are in the Shop too), **as many workers as you like** (Farmhand, Dryer, Cook and Runner) that **use any of your chests, buy what they need and run the whole chain by themselves**, simple cartels, a sales leaderboard, 52 achievements, an admin panel and a living market where **money only comes from selling drugs**. It all comes in **one jar**.
+A **server-side only** Paper plugin with **102 strains** in weird colours and two-tone patterns, climates, custom plants that also **grow wild**, 26 drugs made **step by step**, 34 effects, strain breeding with **Mythic** and even rarer **Exotic** strains (Mythic seeds are in the Shop too), **as many workers as you like** (Farmhand, Dryer, Cook and Runner) that **use any of your chests, buy what they need and run the whole chain by themselves**, simple cartels, a sales leaderboard, 52 achievements, an admin panel and a living market. It all comes in **one jar**.
+
+> **8.1: add-on mode (on by default).** KushCraft is a **side activity**, not the server's main loop: players **unlock it on purpose** (`/kush unlock` – Farming 10 in [SMPSuite](../smpsuite) and $2,500), it **can't be set up within 300 blocks of spawn**, the Shop only opens at a **Dealer Stand** players place out in the world, and every drug price is **×0.35** so it never out-earns normal survival work (SMPSuite's skills and jobs pay). Everything is in `config.yml` (`access`, `market.income-multiplier`, `market.anywhere`) – set `access.unlock: false` and `income-multiplier: 1.0` for the old behaviour.
 Players don't install any mods. The plugin builds its own resource pack (32px art, 3D plants and blocks, worker skins and hats, animated Mythic and Exotic buds, menu art and recipe pictures) and every player gets it when they join.
 
-**Download:** [`release/KushCraft-8.0.0.jar`](release/KushCraft-8.0.0.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
+**Download:** [`release/KushCraft-8.1.0.jar`](release/KushCraft-8.1.0.jar). Drop it in `plugins/` and restart. Players get the textures automatically.
 
 | Items | Plants | Blocks |
 |---|---|---|
@@ -31,7 +33,7 @@ The **Drug Lab** block opens on **Cook**, with **Roll**, **Dry** and **Mix** tab
 
 ## Getting started
 
-New players get the menu book and a small starter kit (2 OG Kush seeds and fertilizer). The glowing **Next** button always shows the next step:
+KushCraft is locked until a player unlocks it: `/kush` explains what's needed (Farming 10 with SMPSuite, $2,500) and has a clickable **[Unlock]**. Players who already grew, cooked or sold before 8.1 keep access. Unlocking gives the menu book and a small starter kit (2 OG Kush seeds, fertilizer and a **Dealer Stand** – place it 300+ blocks from spawn; the Shop opens there). Until then only Trade and Awards are open, and nobody finds KushCraft seeds in the grass. The glowing **Next** button always shows the next step:
 
 1. **Plant a seed**: buy one in the Shop, or break grass (the biome decides the strain).
 2. **Harvest it**: right-click the plant when it's fully grown. Sneak + right-click harvests all your ripe plants around it.
@@ -181,9 +183,9 @@ Titles and cartels show in the tab list.
 
 ## Economy
 
-* **Money only comes from selling drugs:** the Shop, contracts, cartel shipments and your Runners. Seeds, gear and vanilla items don't sell; jobs and awards pay nothing (both can be turned back on: `jobs.enabled`, `awards.cash-rewards`).
+* **Add-on mode:** drug money (the Shop, contracts, cartel shipments, your Runners) is **×0.35** (`market.income-multiplier`), so mining, farming, fishing and the other SMPSuite jobs pay at least as well. KushCraft's own jobs and awards pay nothing (`jobs.enabled`, `awards.cash-rewards`).
 * **Getting started:** seeds about $20–300 by strain, papers 8 for $8, solvent 8 for $18, a Drug Lab $650 (or craft one: crafting table, furnace, 3 iron, 2 bottles).
-* **Product pays well:** dried bud $20, a joint $32, a vape pen $150, cocaine $110, heroin $150, DMT $160. Rarer and stronger strains sell for more (Mythic 4×, Exotic 7×).
+* **Product prices** (before the ×0.35): dried bud $20, a joint $32, a vape pen $150, cocaine $110, heroin $150, DMT $160. Rarer and stronger strains sell for more (Mythic 4×, Exotic 7×).
 * **The market fights back:** every item you sell lowers the price of the next one, and prices climb back over time. Sell a mix. Shop > **Market** shows the contracts (big batches for bonus cash) and what's flooded.
 * **Trade only sells** and it's expensive: a diamond costs $1,950, an iron ingot $105. 260+ items on 11 shelves, including a **Lab Ingredients** shelf with everything the recipes need. **No OP PvP gear and nothing from the End**: no netherite, totems, golden apples, ender pearls, elytra, shulkers or End blocks.
 * **Dying costs 20% of the cash in your wallet.** Nobody gets it, so killing other players doesn't pay (`death.cash-lost`).
@@ -198,10 +200,12 @@ There are 52 awards: grow in every climate, pick a wild plant, cook every recipe
 1. **Paper 26.3** (Java 25). Put the jar in `plugins/` and start the server.
 2. That's it: players get the textures from GitHub when they join (`resource-pack.url: auto`). To host the pack yourself instead, set `url: ''` and open port 8163, or paste a direct link to your own copy.
 
-**Updating from 7.x:** replace the jar and restart. `config.yml` upgrades itself to version 11: the Supplier leaves the shop and its settings go (its water price becomes `workers.water-price`), the market goes back to the 6.0 settings and `workers.auto-buy` is added. Suppliers are refunded to their owners. `strains.yml` gets the new strains and the Mythic ones go on sale; strains your players bred are kept.
+**Updating from 8.0:** replace the jar and restart. `config.yml` upgrades itself to version 12 and switches on **add-on mode**: the `access` section (unlock cost $2,500, Farming 10 with SMPSuite, no KushCraft within 300 blocks of spawn), `market.income-multiplier: 0.35`, `market.anywhere: false` (the Shop at Dealer Stands), no menu book or Shift+F menu for new players, no dealer titles in the tab list, and a Dealer Stand in the starter kit. Everyone who already grew, cooked or sold keeps access (`access.yml`). The resource pack is now *added* next to other packs instead of replacing them (so SMPSuite's gem textures show too).
+
+**Updating from 7.x:** replace the jar and restart. `config.yml` upgrades itself to version 12 (and add-on mode, above): the Supplier leaves the shop and its settings go (its water price becomes `workers.water-price`), the market goes back to the 6.0 settings and `workers.auto-buy` is added. Suppliers are refunded to their owners. `strains.yml` gets the new strains and the Mythic ones go on sale; strains your players bred are kept.
 
 **Updating from 3.x, 4.x, 5.x or 6.x:** replace the jar and restart.
-* `config.yml` upgrades itself to version 11. These are **replaced** with the 6.0 ones: **shop prices** (the new drugs, the Runner, no selling seeds), **all Trade shelves**, `jobs.enabled` (off), and the worker limit (none), reach and rest times. From 3.x/4.x also the worker prices, the cartel levels and the market recovery. Missing settings are added. **`resource-pack.url` is set to `auto`** if it was empty or the old GitHub link. Your cartels, strains, workers and other settings are kept.
+* `config.yml` upgrades itself to version 12. These are **replaced** with the 6.0 ones: **shop prices** (the new drugs, the Runner, no selling seeds), **all Trade shelves**, `jobs.enabled` (off), and the worker limit (none), reach and rest times. From 3.x/4.x also the worker prices, the cartel levels and the market recovery. Missing settings are added. **`resource-pack.url` is set to `auto`** if it was empty or the old GitHub link. Your cartels, strains, workers and other settings are kept.
 * Cooks that made kief, hash, wax, moon rock, butter, brownies or gummies ask you to pick a new drug.
 * `strains.yml` gets any strains you're missing; strains your players bred are kept.
 
@@ -231,6 +235,8 @@ Admins (op or `kushcraft.admin`) get a red **Admin** button in the menu's top ba
 | `/kush give <player> <item> [amount] [strain] [quality]` | `kushcraft.admin` | |
 | `/kush money <player> <amount>` / `sales <player> <amount>` | `kushcraft.admin` | set a balance / lifetime sales |
 | `/kush reload` | `kushcraft.admin` | reload the config |
+| `/kush unlock` | `kushcraft.use` | unlock KushCraft (add-on mode) |
+| `/kush unlock <player>` / `lock <player>` | `kushcraft.admin` | unlock for free / lock again |
 | `/kush selftest` | console | runs the built-in tests |
 | `/kush selftest live` | console | a minute or two of real worker work on a test world (logs LIVETEST PASS / FAIL) |
 

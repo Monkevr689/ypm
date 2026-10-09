@@ -67,6 +67,7 @@ final class SelfTest {
             recipes();
             exchange();
             money();
+            addon();
             awards();
             menus();
             World w = Bukkit.getWorlds().get(0);
@@ -89,6 +90,32 @@ final class SelfTest {
             plugin.getLogger().warning("  selftest failure: " + f);
         }
         return fails;
+    }
+
+    /** 8.1 add-on mode: unlocked on purpose, away from spawn, paying a fraction. */
+    private void addon() {
+        var a = plugin.access();
+        check(a.gated() && a.cost() > 0 && a.spawnDistance() >= 100, "KushCraft has to be unlocked, away from spawn");
+        check(plugin.shop().incomeMultiplier() <= 0.5, "drugs pay a fraction of the old prices ("
+                + plugin.shop().incomeMultiplier() + ")");
+        check(!plugin.getConfig().getBoolean("market.anywhere", true), "the Shop opens at Dealer Stands");
+        check(!plugin.getConfig().getBoolean("give-guide-on-first-join", true)
+                && !plugin.getConfig().getBoolean("menu.shift-f", true)
+                && !plugin.getConfig().getBoolean("ranks.tab-list", true), "not in everyone's face");
+        check(plugin.getConfig().getMapList("new-players.starter-kit").stream()
+                .anyMatch(m -> "dealer".equals(String.valueOf(m.get("item")))), "unlocking gives a Dealer Stand");
+        World w = Bukkit.getWorlds().get(0);
+        Location spawn = w.getSpawnLocation();
+        check(a.nearSpawn(spawn.clone().add(10, 0, 10)), "spawn is off limits");
+        check(!a.nearSpawn(spawn.clone().add(a.spawnDistance() + 5, 0, 0)), "far from spawn is fine");
+        java.util.UUID u = java.util.UUID.randomUUID();
+        check(!a.unlocked(u), "new players start locked");
+        a.grant(u);
+        check(a.unlocked(u), "unlocking sticks");
+        a.revoke(u);
+        check(!a.unlocked(u), "admins can lock again");
+        double full = plugin.shop().basePrice(ItemType.COCAINE) / Math.max(0.01, plugin.shop().incomeMultiplier());
+        check(full > plugin.shop().basePrice(ItemType.COCAINE), "the multiplier lowers prices");
     }
 
     private void items() {

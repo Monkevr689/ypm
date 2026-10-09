@@ -316,8 +316,10 @@ public final class ResourcePackManager implements Listener {
         String prompt = plugin.getConfig().getString("resource-pack.prompt", "KushCraft textures");
         // external and not checked: no hash, so the client never rejects the file for a wrong one
         byte[] hash = external ? externalSha1 : sha1;
-        p.setResourcePack(PACK_ID, url(p), hash, Text.mm(prompt),
-                plugin.getConfig().getBoolean("resource-pack.required", false));
+        // added, not set: setResourcePack would remove every other pack (e.g. SMPSuite's gem textures)
+        p.addResourcePack(PACK_ID, url(p), hash,
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection()
+                        .serialize(Text.mm(prompt)), plugin.getConfig().getBoolean("resource-pack.required", false));
     }
 
     /** /kush pack and the admin panel: check the link again, then send it. */

@@ -62,7 +62,8 @@ public final class WildPlants {
             if (total >= max) {
                 return;
             }
-            if (p.getGameMode() == GameMode.SPECTATOR || p.getWorld().getEnvironment() != World.Environment.NORMAL) {
+            if (p.getGameMode() == GameMode.SPECTATOR || p.getWorld().getEnvironment() != World.Environment.NORMAL
+                    || !plugin.access().allowed(p)) {
                 continue;
             }
             if (tryNear(p.getLocation()) != null) {
@@ -79,7 +80,7 @@ public final class WildPlants {
         int x = (int) Math.floor(around.getX() + Math.cos(ang) * dist);
         int z = (int) Math.floor(around.getZ() + Math.sin(ang) * dist);
         World w = around.getWorld();
-        if (!w.isChunkLoaded(x >> 4, z >> 4)) {
+        if (!w.isChunkLoaded(x >> 4, z >> 4) || plugin.access().nearSpawn(new Location(w, x, around.getY(), z))) {
             return null;
         }
         int maxNear = plugin.getConfig().getInt("wild.max-near-player", 6);

@@ -121,7 +121,12 @@ public final class Shop {
     /** Config sell price of one plain item (no quality / strain / market adjustments). */
     public double basePrice(ItemType t) {
         Double base = sell.get(t);
-        return base == null ? 0 : Math.max(0, base);
+        return base == null ? 0 : Math.max(0, base) * incomeMultiplier();
+    }
+
+    /** Add-on mode: every drug price (Shop, Runners, contracts, shipments) times this. */
+    public double incomeMultiplier() {
+        return Math.max(0, plugin.getConfig().getDouble("market.income-multiplier", 1.0));
     }
 
     /** Price the dealer pays for ONE of this item right now, 0 if he doesn't want it. */

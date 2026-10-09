@@ -2,7 +2,31 @@
 #  KushCraft - grow, cook, roll and deal. 100% server side.
 #  Players just type /kush (or right-click the KushCraft Menu item).
 # =====================================================================
-config-version: 11
+config-version: 12
+
+# =====================================================================
+#  ADD-ON MODE - KushCraft is a side activity on this server, not the
+#  main way to progress (skills, building and exploring are). Players
+#  unlock it on purpose with /kush unlock, it can't be set up near spawn,
+#  the Shop only opens at a Dealer Stand, and it pays a fraction of the
+#  full prices (market.income-multiplier). Admins: /kush unlock <player>,
+#  /kush lock <player>.
+# =====================================================================
+access:
+  # true = players must unlock KushCraft first. false = open to everyone.
+  unlock: true
+  # Unlocking costs this much...
+  unlock-cost: 2500
+  # ...and needs this SMPSuite skill level (only when SMPSuite is
+  # installed). skill: '' = no skill needed.
+  skill: farming
+  skill-level: 10
+  # Players who already grew, cooked or sold before add-on mode keep access.
+  grandfather: true
+  # No KushCraft plants, Drug Labs, Dealer Stands or workers - and no wild
+  # plants or wild seeds - within this many blocks of the main world's
+  # spawn. 0 = anywhere.
+  spawn-distance: 300
 
 # Custom textures/models come in a server resource pack. Players get the
 # usual "this server uses a resource pack" prompt when they join.
@@ -115,8 +139,13 @@ economy:
   symbol: '$'
 
 market:
-  # Players can open the market from /kush. false = only at a Dealer Stand.
-  anywhere: true
+  # Players can open the Shop from /kush. false = only at a Dealer Stand
+  # (craft one: a chest + 2 gold ingots, and place it out in the world).
+  anywhere: false
+  # Every drug price - Shop, Runners, contracts, cartel shipments - is
+  # multiplied by this. 1.0 = full KushCraft prices. Add-on mode: 0.35, so
+  # it never out-earns normal survival work.
+  income-multiplier: 0.35
   # Every item sold lowers that product's price by this much (0.01 = 1%),
   # even inside one big sale, so dumping 200 of one thing pays less...
   demand-drop: 0.006
@@ -148,7 +177,8 @@ ranks:
     - {top: 25, name: Dealer, color: green, bonus: 0.02}
   everyone: {name: Street Seller, color: gray, bonus: 0}
   # Show the title in front of the player's name in the tab list.
-  tab-list: true
+  # Off in add-on mode: dealing isn't a status symbol here.
+  tab-list: false
 
 awards:
   # Achievements are also real advancements (their own tab, with the usual
@@ -190,13 +220,16 @@ cartel:
     - {name: Empire, cost: 350000, members: 16, sell-bonus: 0.16}
 
 # Give new players the KushCraft Menu book on their first join.
-give-guide-on-first-join: true
+# Off in add-on mode: they get it when they unlock KushCraft.
+give-guide-on-first-join: false
 
 new-players:
-  # Given once on the first join, together with the menu book.
+  # Given with the menu book when a player unlocks KushCraft (and on the
+  # first join when give-guide-on-first-join is true).
   starter-kit:
     - {item: seed_pack, strain: og_kush, amount: 2}
     - {item: fertilizer, amount: 2}
+    - {item: dealer, amount: 1}
 
 harvest:
   # Harvested buds, seeds and leaves go straight into your inventory
@@ -268,7 +301,8 @@ death:
 
 menu:
   # Shift + F (sneak + swap hands) opens the /kush menu from anywhere.
-  shift-f: true
+  # Off by default: Shift + F uses SMPSuite's Bliss gems.
+  shift-f: false
   # /kush also gives the KushCraft Menu book if the player doesn't have one.
   give-book-on-command: true
 

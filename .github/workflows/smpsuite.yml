@@ -1,0 +1,126 @@
+name: SMPSuite
+
+on:
+  push:
+    paths:
+      - "smpsuite/**"
+      - "kushcraft/**"
+      - ".github/workflows/smpsuite.yml"
+  pull_request:
+    paths:
+      - "smpsuite/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Gem texture pack in the jar is the released one
+        working-directory: smpsuite
+        run: |
+          V=$(sed -n '/<artifactId>SMPSuite<\/artifactId>/{n;s#.*<version>\(.*\)</version>.*#\1#p}' pom.xml)
+          echo "version $V"
+          cmp src/main/resources/SMPSuite-pack.zip "release/SMPSuite-pack-$V.zip" \
+            || { echo "::error::the gem pack in the jar differs from release/SMPSuite-pack-$V.zip"; exit 1; }
+
+      - name: Build SMPSuite and KushCraft
+        run: |
+          (cd smpsuite && mvn -B -ntp package)
+          (cd kushcraft && mvn -B -ntp package)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugins
+          path: |
+            smpsuite/target/SMPSuite-*.jar
+            kushcraft/target/KushCraft-*.jar
+
+  server-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugins
+          path: jars
+
+      - name: Download Paper 26.3 (and Simple Voice Chat, if there's a build for it)
+        run: |
+          UA="SMPSuite-CI (https://github.com/${{ github.repository }})"
+          curl -sSf -H "User-Agent: $UA" https://fill.papermc.io/v3/projects/paper/versions/26.3/builds/latest -o build.json
+          URL=$(jq -r '.downloads["server:default"].url' build.json)
+          mkdir -p server/plugins
+          curl -sSfL -H "User-Agent: $UA" "$URL" -o server/paper.jar
+          find jars -name "*.jar" -exec cp {} server/plugins/ \;
+          ls server/plugins
+          # Simple Voice Chat's server plugin from Modrinth (optional: the bridge is tested when it exists)
+          curl -sS -G -H "User-Agent: $UA" "https://api.modrinth.com/v2/project/simple-voice-chat/version" \
+            --data-urlencode 'loaders=["paper","bukkit"]' --data-urlencode 'game_versions=["26.3"]' -o svc.json || echo '[]' > svc.json
+          SVC=$(jq -r '[.[] | .files[] | select(.filename | endswith(".jar"))][0].url // empty' svc.json 2>/dev/null || true)
+          if [ -n "$SVC" ]; then
+            curl -sSfL -H "User-Agent: $UA" "$SVC" -o server/plugins/voicechat.jar && echo "SVC=yes" >> $GITHUB_ENV
+            echo "Simple Voice Chat: $SVC"
+          else
+            echo "SVC=no" >> $GITHUB_ENV
+            echo "::notice::No Simple Voice Chat build for Paper 26.3 on Modrinth yet - skipping the voice bridge check"
+          fi
+
+      - name: Run the server with SMPSuite and KushCraft
+        working-directory: server
+        run: |
+          echo "eula=true" > eula.txt
+          printf 'online-mode=false\nlevel-type=minecraft\\:flat\nview-distance=4\nsimulation-distance=4\nspawn-protection=0\ngenerate-structures=false\n' > server.properties
+          mkfifo console
+          java -Xmx2G -jar paper.jar --nogui < console > server.log 2>&1 &
+          PID=$!
+          exec 3>console
+          for i in $(seq 1 240); do grep -q "Done (" server.log && break; sleep 2; done
+          grep -q "Done (" server.log || { tail -100 server.log; echo "::error::server did not start"; exit 1; }
+          for i in $(seq 1 60); do grep -qE "Resource pack: .*(same as|different|answered|couldn't)" server.log && break; sleep 1; done
+          echo "smp selftest" >&3
+          sleep 6
+          echo "kush selftest" >&3
+          sleep 8
+          echo "smp info" >&3
+          sleep 2
+          echo "stop" >&3
+          timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
+          exec 3>&-
+
+      - name: Check log
+        if: always()
+        working-directory: server
+        run: |
+          grep -iE "smpsuite|kushcraft|voice|selftest|jobs pay" server.log || true
+          echo "-----"
+          fail() { echo "::error::$1"; exit 1; }
+          grep -q "SMPSuite enabled" server.log || fail "SMPSuite did not enable"
+          grep -q "SMPSELFTEST PASS" server.log || fail "SMPSuite selftest failed"
+          grep -q "\[KushCraft\] SELFTEST PASS" server.log || fail "KushCraft selftest failed with SMPSuite installed"
+          grep -q "Jobs pay: paid through KushCraft wallet" server.log || fail "jobs pay isn't hooked into KushCraft's wallet"
+          grep -q "Resource pack: .*(same as this plugin's pack)" server.log || fail "the hosted gem pack isn't this jar's pack"
+          if [ "$SVC" = "yes" ]; then
+            grep -q "Voice chat: hooked into Simple Voice Chat" server.log || fail "the voice bridge didn't hook into Simple Voice Chat"
+          fi
+          if grep -nE "Exception|Error" server.log | grep -iE "smpsuite|dev\.smpsuite"; then fail "SMPSuite errors in the log"; fi
+          echo "SMPSuite server test passed"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smpsuite-server-log
+          path: server/server.log

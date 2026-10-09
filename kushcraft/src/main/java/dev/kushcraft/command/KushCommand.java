@@ -47,7 +47,47 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         if (sub.equals("menu") && !(sender instanceof Player)) {
             sub = "help";
         }
+        if (sender instanceof Player lp && !plugin.access().allowed(lp) && !java.util.Set.of("help", "pack", "unlock",
+                "trade", "exchange", "balance", "bal", "money", "pay", "send", "awards", "achievements", "guide", "book",
+                "handbook").contains(sub)) {
+            plugin.access().explain(lp);
+            return true;
+        }
         switch (sub) {
+            case "unlock" -> {
+                if (args.length >= 2 && admin) {
+                    org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayerIfCached(args[1]);
+                    if (op == null) {
+                        sender.sendMessage(Text.msg("<red>Unknown player."));
+                    } else {
+                        plugin.access().grant(op.getUniqueId());
+                        sender.sendMessage(Text.msg("<green>" + op.getName() + " can use KushCraft now."));
+                    }
+                } else if (sender instanceof Player up) {
+                    String err = plugin.access().unlock(up);
+                    if (err != null) {
+                        up.sendMessage(Text.msg("<red>" + err));
+                        if (!plugin.access().allowed(up)) {
+                            plugin.access().explain(up);
+                        }
+                    }
+                } else {
+                    sender.sendMessage(Text.msg("<red>/kush unlock <player>"));
+                }
+            }
+            case "lock" -> {
+                if (!admin) {
+                    noPerm(sender);
+                    return true;
+                }
+                org.bukkit.OfflinePlayer op = args.length >= 2 ? Bukkit.getOfflinePlayerIfCached(args[1]) : null;
+                if (op == null) {
+                    sender.sendMessage(Text.msg("<red>/kush lock <player>"));
+                } else {
+                    plugin.access().revoke(op.getUniqueId());
+                    sender.sendMessage(Text.msg("<yellow>" + op.getName() + " has to unlock KushCraft again."));
+                }
+            }
             case "menu" -> {
                 Player p = (Player) sender;
                 giveMenuBook(p);

@@ -88,6 +88,10 @@ public final class InteractListener implements Listener {
                 if (!p.hasPermission("kushcraft.use")) {
                     return;
                 }
+                if (!plugin.access().allowed(p)) {
+                    plugin.access().denied(p);
+                    return;
+                }
                 if (m.type() == dev.kushcraft.machine.MachineType.PLANTER_BOX && kindFor(type) != null) {
                     plant(p, item, type, b);
                     return;
@@ -100,6 +104,13 @@ public final class InteractListener implements Listener {
         if (type == null || !p.hasPermission("kushcraft.use")) {
             return;
         }
+        if (type != ItemType.GROWER_GUIDE && !plugin.access().allowed(p)) {
+            if (a == Action.RIGHT_CLICK_AIR || a == Action.RIGHT_CLICK_BLOCK) {
+                e.setCancelled(true);
+                plugin.access().denied(p);
+            }
+            return;
+        }
 
         // ---- planting ----------------------------------------------------
         if (kindFor(type) != null) {
@@ -107,6 +118,9 @@ public final class InteractListener implements Listener {
                 e.setCancelled(true);
                 if (e.getBlockFace() != BlockFace.UP) {
                     p.sendActionBar(Text.mm("<yellow>Click the <white>top</white> of the soil to plant."));
+                    return;
+                }
+                if (!plugin.access().farEnough(p, b.getLocation())) {
                     return;
                 }
                 plant(p, item, type, b);
@@ -121,7 +135,9 @@ public final class InteractListener implements Listener {
         if (dev.kushcraft.worker.WorkerType.of(type) != null) {
             if (a == Action.RIGHT_CLICK_BLOCK) {
                 e.setCancelled(true);
-                plugin.workers().hire(p, item, b, e.getBlockFace());
+                if (plugin.access().farEnough(p, b.getLocation())) {
+                    plugin.workers().hire(p, item, b, e.getBlockFace());
+                }
             } else if (a == Action.RIGHT_CLICK_AIR) {
                 p.sendActionBar(Text.mm("<yellow>Right-click the ground where they should work."));
             }

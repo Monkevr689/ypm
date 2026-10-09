@@ -88,6 +88,9 @@ public final class WorldListener implements Listener {
             return;
         }
         Block b = e.getBlock();
+        if (!plugin.access().allowed(e.getPlayer()) || plugin.access().nearSpawn(b.getLocation())) {
+            return; // add-on mode: no KushCraft seeds for players who haven't unlocked it, none near spawn
+        }
         ThreadLocalRandom r = ThreadLocalRandom.current();
         Location drop = b.getLocation().add(0.5, 0.3, 0.5);
         if (GRASS.contains(b.getType())) {
