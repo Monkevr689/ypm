@@ -227,6 +227,8 @@ public final class Workers implements Listener, dev.kushcraft.storage.Persistenc
         byEntity.clear();
         byChunk.clear();
         deleted.clear();
+        catchUps.clear();
+        overLimitKnown = false;
         List<Worker> rows = plugin.db().call(c -> {
             List<Worker> out = new ArrayList<>();
             try (java.sql.Statement st = c.createStatement();
@@ -509,6 +511,7 @@ public final class Workers implements Listener, dev.kushcraft.storage.Persistenc
     }
 
     private void add(Worker w) {
+        overLimitKnown = false;
         workers.put(w.id(), w);
         list = workers.values().toArray(new Worker[0]);
         crewCache.clear();
@@ -516,6 +519,7 @@ public final class Workers implements Listener, dev.kushcraft.storage.Persistenc
     }
 
     private void forget(Worker w) {
+        overLimitKnown = false;
         workers.remove(w.id());
         list = workers.values().toArray(new Worker[0]);
         crewCache.clear();

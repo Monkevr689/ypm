@@ -362,6 +362,12 @@ public final class ResourcePackManager implements Listener {
         }
         Player p = e.getPlayer();
         switch (e.getStatus()) {
+            case SUCCESSFULLY_LOADED, DECLINED, FAILED_DOWNLOAD, INVALID_URL, FAILED_RELOAD, DISCARDED ->
+                    plugin.onboarding().packDone(p);
+            default -> {
+            }
+        }
+        switch (e.getStatus()) {
             case SUCCESSFULLY_LOADED -> loaded.add(p.getUniqueId());
             case DECLINED -> {
                 loaded.remove(p.getUniqueId());

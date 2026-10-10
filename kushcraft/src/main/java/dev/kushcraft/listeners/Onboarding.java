@@ -41,6 +41,24 @@ public final class Onboarding {
         join(p);
     }
 
+    /** Players whose welcome menu waits for their resource pack prompt to be answered. */
+    private final java.util.Set<java.util.UUID> waiting = new java.util.HashSet<>();
+
+    /** The pack loaded, was declined or failed: the welcome menu can open now (not over the prompt). */
+    public void packDone(Player p) {
+        if (waiting.remove(p.getUniqueId())) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> openGuide(p), 10L);
+        }
+    }
+
+    private void openGuide(Player p) {
+        PlayerRecord r = plugin.economy().account(p.getUniqueId());
+        if (p.isOnline() && !r.has(PlayerRecord.ONBOARDED)) {
+            r.set(PlayerRecord.ONBOARDED, true);
+            InfoMenu.openMain(p);
+        }
+    }
+
     private void welcome(Player p) {
         if (!p.isOnline()) {
             return;
@@ -58,8 +76,17 @@ public final class Onboarding {
             }
         }
         if (!r.has(PlayerRecord.ONBOARDED) && plugin.menuTexts().openOnFirstJoin()) {
-            r.set(PlayerRecord.ONBOARDED, true);
-            InfoMenu.openMain(p);
+            if (!plugin.getConfig().getBoolean("resource-pack.enabled", true) || plugin.pack().hasPack(p)) {
+                openGuide(p);
+                return;
+            }
+            // the texture prompt comes first; the guide opens when it's answered (or after 30 seconds)
+            waiting.add(p.getUniqueId());
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (waiting.remove(p.getUniqueId())) {
+                    openGuide(p);
+                }
+            }, 600L);
         }
     }
 

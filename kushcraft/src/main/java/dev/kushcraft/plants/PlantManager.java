@@ -856,10 +856,13 @@ public final class PlantManager implements dev.kushcraft.storage.Persistence.Sou
         addGrowth(p, away / 1000.0 * awayRate() * awayMultiplier(p));
     }
 
-    /** Workers' catch-up: grows a plant as if this many seconds of away time passed (multiplier precomputed). */
+    /**
+     * Workers' catch-up: grows a plant by this many seconds of work time (already scaled by
+     * workers.away.rate) at the given conditions multiplier (precomputed by awayMultiplier).
+     */
     public void advance(Plant p, double seconds, double multiplier) {
         p.grownAt = System.currentTimeMillis();
-        addGrowth(p, seconds * awayRate() * multiplier);
+        addGrowth(p, seconds * multiplier);
     }
 
     private void notifyRipe() {

@@ -200,8 +200,8 @@ public final class Guide {
                         + " <light_purple>Runner</light_purple> sells what your workers make right away.",
                 "<dark_green><bold>Your workers</bold>\n\n<black>Your <gold>rank</gold> decides how many you can"
                         + " place (/rankup). Right-click one for their satchel.\n\nThey get a <gold>wage</gold>"
-                        + " per job. <dark_gray>No money, no work!</dark_gray> While nobody is near they keep"
-                        + " working, slower.\n" + run("/kush workers", "> Your workers"));
+                        + " per job. <dark_gray>No money, no work!</dark_gray> Alone, they work slower.\n"
+                        + run("/kush workers", "> Your workers"));
     }
 
     private static List<String> recipes(List<RecipeBook.Entry> recipes, int firstRecipe, boolean pictures) {

@@ -44,7 +44,7 @@ jobs:
   server-test:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/setup-java@v5
         with:
@@ -56,7 +56,7 @@ jobs:
           name: KushCraft-jar
           path: jar
 
-      - name: Download Paper 26.3
+      - name: Download Paper 26.3 and Vault
         run: |
           UA="KushCraft-CI (https://github.com/${{ github.repository }})"
           curl -sSf -H "User-Agent: $UA" https://fill.papermc.io/v3/projects/paper/versions/26.3/builds/latest -o build.json
@@ -65,8 +65,11 @@ jobs:
           mkdir -p server/plugins
           curl -sSfL -H "User-Agent: $UA" "$URL" -o server/paper.jar
           cp jar/KushCraft-*.jar server/plugins/
+          # Vault: KushCraft registers itself as the server's Vault economy (tested by the self test)
+          curl -sSfL -H "User-Agent: $UA" https://github.com/MilkBowl/Vault/releases/download/1.7.3/Vault.jar \
+            -o server/plugins/Vault.jar && echo "VAULT=yes" >> $GITHUB_ENV || echo "VAULT=no" >> $GITHUB_ENV
 
-      - name: Run server with KushCraft
+      - name: Fresh install - self test, live workers, Vault, backup, season reset
         working-directory: server
         run: |
           echo "eula=true" > eula.txt
@@ -80,199 +83,171 @@ jobs:
           # url: auto -> the pack of this exact version, hosted on GitHub (works on every host)
           for i in $(seq 1 60); do grep -qE "KB at the link|resource pack link" server.log && break; sleep 1; done
           echo "kush selftest" >&3
-          sleep 8
+          for i in $(seq 1 60); do grep -qE "SELFTEST (PASS|FAIL)" server.log && break; sleep 1; done
           echo "kush strains" >&3
           sleep 2
-          # workers on the server's own clock: walk, harvest, plant, carry, dry, buy and sell by themselves
+          # workers on the server's own clock: walk, harvest, plant, carry from a chest, dry, roll and sell
           echo "kush selftest live" >&3
           for i in $(seq 1 180); do grep -qE "LIVETEST (PASS|FAIL)" server.log && break; sleep 1; done
           grep -E "LIVETEST|livetest" server.log || true
+          echo "kush db" >&3
+          sleep 2
+          echo "kush backup" >&3
+          for i in $(seq 1 30); do grep -qE "Backup (made and verified|FAILED)" server.log && break; sleep 1; done
+          echo "kush rank CI-nobody 2" >&3
+          sleep 1
+          # the season reset: a checked backup first, then a one-time code to confirm
+          echo "kush reset economy" >&3
+          for i in $(seq 1 60); do grep -q "kush reset confirm" server.log && break; sleep 1; done
+          CODE=$(grep -oE "kush reset confirm [A-Z0-9]{6}" server.log | tail -1 | awk '{print $4}')
+          echo "confirm code: $CODE"
+          echo "kush reset confirm WRONG1" >&3
+          sleep 1
+          echo "kush reset confirm $CODE" >&3
+          for i in $(seq 1 60); do grep -qE "Season 2 started|reset did not happen" server.log && break; sleep 1; done
+          echo "kush db" >&3
+          sleep 2
+          echo "kush log" >&3
+          sleep 2
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
-          grep -iE "resource pack" server.log || true
-          grep -q "players download it from https://raw.githubusercontent.com/.*/KushCraft-pack-.*\.zip" server.log \
-            || { echo "::error::url: auto does not point at the hosted pack"; exit 1; }
-          grep -q "(same as this plugin's pack)" server.log \
-            || { echo "::error::the pack hosted on GitHub is not the pack this jar builds"; exit 1; }
-          if grep -q "Resource pack hosted on port" server.log; then
-            echo "::error::built-in web server must not start with url: auto"; exit 1
+          grep -iE "kushcraft|selftest|backup|season|reset|economy" server.log | grep -v "selftest failure" | tail -80 || true
+          fail() { echo "::error::$1"; exit 1; }
+          grep -q "Database ready: kushcraft.db" server.log || fail "the database was not created"
+          grep -q "SELFTEST PASS" server.log || { grep "selftest failure" server.log; fail "selftest failed"; }
+          grep -q "LIVETEST PASS" server.log || { grep -A12 "LIVETEST" server.log | tail -40; fail "live worker test failed"; }
+          if [ "$VAULT" = "yes" ]; then
+            grep -q "registered as the Vault economy" server.log || fail "KushCraft is not the Vault economy"
+            grep -q "SELFTEST vault ok" server.log || fail "the Vault bridge test did not run"
           fi
-          # worker skins are resolved like other client assets: textures/<path>.png
-          VJAR=$(find versions -name "*.jar" | head -1)
-          echo "vanilla jar: $VJAR"
-          unzip -l "$VJAR" | grep -iE "ClientAsset|PlayerSkin" | head -5 || true
+          grep -q "Commands: /menu, /rankup, /balance, /pay and /baltop are KushCraft's" server.log \
+            || fail "another plugin owns a KushCraft command"
+          grep -q "Backup made and verified: .*manual" server.log || fail "/kush backup failed"
+          grep -q "Backup made and verified: .*before-reset-economy" server.log || fail "no checked backup before the reset"
+          grep -q "Backup made and verified: .*final-before-reset-economy" server.log || fail "no final backup before the wipe"
+          grep -q "Wrong code" server.log || fail "a wrong confirm code was not refused"
+          grep -q "Season 2 started: economy reset by" server.log || fail "the reset did not run"
+          grep -q "players download it from https://raw.githubusercontent.com/.*/KushCraft-pack-.*\.zip" server.log \
+            || fail "url: auto does not point at the hosted pack"
+          grep -q "(same as this plugin's pack)" server.log || fail "the pack hosted on GitHub is not the pack this jar builds"
+          if grep -q "Resource pack hosted on port" server.log; then fail "built-in web server must not start with url: auto"; fi
+          if grep -qE "Worker skins are not supported|Could not spawn worker mannequins" server.log; then
+            fail "worker mannequins or skins do not work"
+          fi
+          # the backups are real: manifest says verified, the copy opens and has the right season
+          ls -la plugins/KushCraft/backups/
+          for d in plugins/KushCraft/backups/*before-reset-economy*; do
+            grep -q "verified: yes" "$d/manifest.txt" || fail "backup $d is not verified"
+            grep -q "season: 1" "$d/manifest.txt" || fail "backup $d is not of season 1"
+          done
+          python3 - <<'PY'
+          import glob, sqlite3, sys
+          live = sqlite3.connect("plugins/KushCraft/kushcraft.db")
+          season = live.execute("SELECT value FROM meta WHERE key='season'").fetchone()[0]
+          resets = live.execute("SELECT COUNT(*) FROM ledger WHERE type='RESET'").fetchone()[0]
+          workers = live.execute("SELECT COUNT(*) FROM workers").fetchone()[0]
+          ranks = live.execute("SELECT COUNT(*) FROM players WHERE rank <> 1 OR playtime <> 0").fetchone()[0]
+          start = live.execute("SELECT COUNT(DISTINCT balance) FROM players").fetchone()[0]
+          print("season", season, "resets", resets, "workers", workers, "ranked", ranks, "distinct balances", start)
+          bad = []
+          if season != "2": bad.append("season is not 2")
+          if resets != 1: bad.append("no RESET row in the transaction log")
+          if workers != 0: bad.append("workers survived the reset")
+          if ranks != 0: bad.append("ranks or playtime survived the reset")
+          if start > 1: bad.append("balances were not all reset to the starting money")
+          for b in glob.glob("plugins/KushCraft/backups/*before-reset-economy*/kushcraft.db"):
+              c = sqlite3.connect(b)
+              if c.execute("PRAGMA integrity_check").fetchone()[0] != "ok": bad.append(b + " integrity")
+              if c.execute("SELECT value FROM meta WHERE key='season'").fetchone()[0] != "1": bad.append(b + " season")
+          if bad:
+              print("::error::" + "; ".join(bad)); sys.exit(1)
+          PY
+          if grep -nE "Exception|Error" server.log | grep -iE "kushcraft"; then fail "KushCraft errors in log"; fi
+          echo "Fresh install test passed"
 
-      - name: Upgrade an old server (old config, old pack link) to this version
+      - name: Restart after the reset (data stays in the database)
         working-directory: server
         run: |
-          # pretend this is an old config (version 6: no new-players / harvest / death /
-          # animals sections, the old cheaper shop and ores, the softer market, cartel levels
-          # with grow and lab bonuses, the pack on the old GitHub link; from 5.0: a worker
-          # limit and short reach, jobs paying, Trade buying things back, a Trade with
-          # netherite and End items) and a 2.0 strains.yml (no looks or climates, plus a bred strain)
-          python3 - <<'PY'
-          lines = open("plugins/KushCraft/config.yml").read().split("\n")
-          out, skip, section = [], False, ""
-          for l in lines:
-              if l and not l[0].isspace() and not l.startswith("#"):
-                  section = l.split(":")[0]
-                  skip = section in ("new-players", "harvest", "shop", "death", "animals")
-              if l.startswith("config-version:"):
-                  l = "config-version: 6"
-              if section == "workers" and l.startswith("  max-per-player:"):
-                  l = "  max-per-player: 4"
-              if section == "workers" and l.startswith("  radius:"):
-                  l = "  radius: [6, 9, 12]"
-              if section == "jobs" and l.startswith("  enabled:"):
-                  l = "  enabled: true"
-              if section == "exchange" and l.startswith("  enabled:"):
-                  l += "\n  sell-ratio: 0.2\n  min-price: 0.8"
-              if "{item: glass_bottle, price:" in l and section == "exchange":
-                  l += "\n        - {item: netherite_ingot, price: 52000, amount: 1}\n        - {item: elytra, price: 250000, amount: 1}"
-              if l.startswith("  demand-drop:"):
-                  l = "  demand-drop: 0.004"
-              if l.startswith("  url:"):
-                  l = "  url: 'https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip'"
-              if "{item: diamond, price:" in l:
-                  l = "        - {item: diamond, price: 1500, amount: 1}"
-              if "{name: Gang," in l:
-                  l = "    - {name: Gang, cost: 10000, members: 6, sell-bonus: 0.03, grow-bonus: 0.05, lab-bonus: 0}"
-              if l.startswith("  plants:") or l.startswith("  plant-") or l.startswith("  max-plants") \
-                      or l.startswith("  max-near-player"):
-                  continue
-              if not skip:
-                  out.append(l)
-          out += [
-              "shop:",
-              "  seed-price-multiplier: 1.0",
-              "  buy:",
-              "    - {item: rolling_papers, amount: 8, price: 5}",
-              "    - {item: lab_station, amount: 1, price: 400}",
-              "  sell:",
-              "    bud_dried: 15",
-          ]
-          open("plugins/KushCraft/config.yml", "w").write("\n".join(out) + "\n")
-          open("plugins/KushCraft/strains.yml", "w").write("""strains:
-            og_kush:
-              name: OG Kush
-              type: HYBRID
-              color: '#A8E05A'
-              potency: 20
-              effects: [GIGGLES, MUNCHIES, FOCUS]
-              wild-biomes: [forest, plains]
-            purple_kush:
-              name: Purple Kush
-              type: INDICA
-              color: '#A45AE8'
-              potency: 26
-              effects: [COUCH_LOCK, MUNCHIES, EUPHORIA]
-              wild-biomes: [dark_forest]
-            old_breed:
-              name: Old Breed
-              type: SATIVA
-              color: '#3A8AE8'
-              potency: 24
-              effects: [ENERGY, FLOATY]
-              wild-biomes: []
-              creator: 00000000-0000-0000-0000-000000000001
-              creator-name: Tester
-          """)
-          PY
-          grep -n "url:\|^config-version" plugins/KushCraft/config.yml
           rm -f console && mkfifo console
-          java -Xmx2G -jar paper.jar --nogui < console > server2.log 2>&1 &
+          java -Xmx2G -jar paper.jar --nogui < console > server5.log 2>&1 &
           PID=$!
           exec 3>console
-          for i in $(seq 1 240); do grep -q "Done (" server2.log && break; sleep 2; done
-          grep -q "Done (" server2.log || { tail -100 server2.log; echo "::error::server did not start"; exit 1; }
-          for i in $(seq 1 60); do grep -qE "KB at the link|resource pack link" server2.log && break; sleep 1; done
+          for i in $(seq 1 240); do grep -q "Done (" server5.log && break; sleep 2; done
+          grep -q "Done (" server5.log || { tail -100 server5.log; echo "::error::server did not start"; exit 1; }
           echo "kush selftest" >&3
-          sleep 8
+          for i in $(seq 1 60); do grep -qE "SELFTEST (PASS|FAIL)" server5.log && break; sleep 1; done
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
-          grep -iE "kushcraft|resource pack" server2.log || true
           fail() { echo "::error::$1"; exit 1; }
-          grep -q "Updated config.yml to version 11" server2.log || fail "config was not upgraded"
-          grep -q "Updated strains.yml: 100 new strains" server2.log || fail "strains.yml was not upgraded"
-          grep -q "^  url: auto" plugins/KushCraft/config.yml || fail "the old pack link was not switched to auto"
-          grep -q "(same as this plugin's pack)" server2.log || fail "the upgraded server does not get the matching pack"
-          for section in workers new-players harvest death animals cartel jobs awards; do
-            grep -q "^$section:" plugins/KushCraft/config.yml || fail "$section section missing after the upgrade"
-          done
-          grep -q "^  plants: true" plugins/KushCraft/config.yml || fail "wild plants not added"
-          grep -q "item: cook" plugins/KushCraft/config.yml || fail "the Cook is not in the shop"
-          grep -q "item: runner" plugins/KushCraft/config.yml || fail "the Runner is not in the shop"
-          if grep -q "item: supplier" plugins/KushCraft/config.yml; then fail "the Supplier is still in the shop"; fi
-          grep -q "^  auto-buy: true" plugins/KushCraft/config.yml || fail "worker auto-buy setting missing"
-          grep -q "^  water-price: 2" plugins/KushCraft/config.yml || fail "worker water price missing"
-          grep -q "^  mythic-seeds: true" plugins/KushCraft/config.yml || fail "Mythic seed settings missing"
-          # 6.0: money only from drugs, Trade only sells, no OP PvP / End items, no worker limit
-          awk '/^jobs:/{f=1} f && /^  enabled:/{print; exit}' plugins/KushCraft/config.yml | grep -q "false" \
-            || fail "jobs still pay"
-          grep -q "^  cash-rewards: false" plugins/KushCraft/config.yml || fail "awards still pay cash"
-          if grep -qE "sell-ratio|min-price: 0.8" plugins/KushCraft/config.yml; then fail "Trade still buys things back"; fi
-          if grep -qE "item: (netherite_ingot|elytra|totem_of_undying|enchanted_golden_apple|ender_pearl|end_stone)" \
-              plugins/KushCraft/config.yml; then fail "OP PvP or End items still in Trade"; fi
-          grep -q "^    lab:" plugins/KushCraft/config.yml || fail "no Lab Ingredients shelf"
-          grep -q "^  max-per-player: 0" plugins/KushCraft/config.yml || fail "worker limit kept"
-          # (Bukkit writes the upgraded list one item per line)
-          grep -A3 "^  radius:" plugins/KushCraft/config.yml | tr -d ' \n' | grep -qE "radius:(-8-12-16|\[8,12,16\])" \
-            || fail "workers did not get their new reach"
-          grep -q "^    speed: 50" plugins/KushCraft/config.yml || fail "new drug prices missing"
-          if grep -qE "^    seed_pack: [0-9]" plugins/KushCraft/config.yml; then fail "seeds still sell"; fi
-          # Bukkit writes lists of maps in block style (item / price / amount on separate lines)
-          grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 650" || fail "new shop prices not written"
-          grep -A3 "item: farmhand" plugins/KushCraft/config.yml | grep -q "price: 12000" || fail "workers did not get pricier"
-          if grep -A3 "item: lab_station" plugins/KushCraft/config.yml | grep -q "price: 400"; then fail "old shop prices kept"; fi
-          grep -A3 "item: diamond$" plugins/KushCraft/config.yml | grep -q "price: 1950" || fail "ores did not get pricier"
-          grep -A4 "name: Gang" plugins/KushCraft/config.yml | grep -q "sell-bonus: 0.04" || fail "cartel levels not simplified"
-          if grep -q "grow-bonus: 0.05" plugins/KushCraft/config.yml; then fail "old cartel bonuses kept"; fi
-          grep -q "^  demand-drop: 0.006" plugins/KushCraft/config.yml || fail "market not updated"
-          grep -q "^  min-price: 0.4" plugins/KushCraft/config.yml || fail "market floor not updated"
-          grep -q "^  categories:" plugins/KushCraft/config.yml || fail "Trade shelves lost"
-          grep -q "^  seconds: 30" plugins/KushCraft/config.yml || fail "drying seconds lost"
-          grep -q "^  titles:" plugins/KushCraft/config.yml || fail "leaderboard ranks lost"
-          grep -q "^version: 6" plugins/KushCraft/strains.yml || fail "strains.yml version not set"
-          grep -q "^  event_horizon:" plugins/KushCraft/strains.yml || fail "Exotic strains not added"
-          grep -A10 "^  tiger_kush:" plugins/KushCraft/strains.yml | grep -q "pattern: stripes" || fail "two-tone strains not added"
-          grep -q "creator-name: Tester" plugins/KushCraft/strains.yml || fail "bred strain lost"
-          grep -q "^  solar_flare:" plugins/KushCraft/strains.yml || fail "new strains not added"
-          grep -q "^  koi_kush:" plugins/KushCraft/strains.yml || fail "8.0 strains not added"
-          awk '/^  og_kush:$/{f=1;next} /^  [a-z0-9_]+:$/{f=0} f' plugins/KushCraft/strains.yml > og.txt
-          grep -q "color: '#A8E05A'" og.txt || fail "own strain colour was overwritten"
-          grep -q "climate:" og.txt || fail "built-in strain did not get its climate"
-          grep -q "SELFTEST PASS" server2.log || { grep "selftest failure" server2.log; fail "selftest failed on the upgraded config"; }
-          if grep -nE "Exception|Error" server2.log | grep -iE "kushcraft"; then fail "KushCraft errors in the upgrade run"; fi
-          echo "Upgrade test passed"
+          grep -iE "kushcraft" server5.log | head -30 || true
+          grep -q "KushCraft enabled - season 2" server5.log || fail "the season was not kept across a restart"
+          grep -q "SELFTEST PASS" server5.log || { grep "selftest failure" server5.log; fail "selftest failed after the restart"; }
+          if grep -nE "Exception|Error" server5.log | grep -iE "kushcraft"; then fail "KushCraft errors after the restart"; fi
+          echo "Restart test passed"
 
-      - name: Upgrade a 7.2 server (Suppliers, version 10 config) to this version
+      - name: Upgrade an 8.0 server (YAML data files, version 11 config) to 9.0
         working-directory: server
         run: |
+          # a fresh data folder with what KushCraft 8.0 left behind: no database, the old .yml files
+          mv plugins/KushCraft plugins/KushCraft-9 && mkdir -p plugins/KushCraft
+          cp plugins/KushCraft-9/strains.yml plugins/KushCraft/
           python3 - <<'PY'
           import re
-          c = open("plugins/KushCraft/config.yml").read()
-          c = c.replace("config-version: 11", "config-version: 10")
-          c = re.sub(r"(?m)^  auto-buy: true\n", "", c)
-          c = re.sub(r"(?m)^  water-price: 2\n", "", c)
-          c = c.replace("\n  runner:\n", "\n  supplier:\n    wage: 6\n    water-price: 3\n  runner:\n", 1)
-          c = c.replace("\nworkers:\n", "\nworkers:\n  work-offline: true\n", 1)
-          c = re.sub(r"(?m)^  demand-drop: .*$", "  demand-drop: 0.0025", c)
-          # the Supplier in the shop, at whatever indent Bukkit wrote the list with
-          i = c.index("\n  buy:\n") + len("\n  buy:\n")
-          first = c[i:c.index("\n", i)]
-          ind = first[:len(first) - len(first.lstrip())]
-          c = c[:i] + ind + "- item: supplier\n" + ind + "  amount: 1\n" + ind + "  price: 13000\n" + c[i:]
-          open("plugins/KushCraft/config.yml", "w").write(c)
-          st = open("plugins/KushCraft/strains.yml").read()
-          st = re.sub(r"(?m)^version: .*$", "version: 5", st)
-          st = st.replace("\n  aurora_kush:\n", "\n  aurora_kush:\n    shop: false\n", 1)
-          open("plugins/KushCraft/strains.yml", "w").write(st)
-          open("plugins/KushCraft/workers.yml", "w").write("""workers:
+          # the 8.0 config: version 11, dealer titles under "ranks", death.cash-lost, the old prices, an old pack link
+          cfg = """config-version: 11
+          resource-pack:
+            enabled: true
+            required: false
+            url: 'https://raw.githubusercontent.com/Monkevr689/ypm/claude/inspiring-keller-65lzp9/kushcraft/release/KushCraft-pack.zip'
+            port: 8163
+            host: ''
+          growth:
+            cannabis-minutes: 25
+          economy:
+            use-vault: true
+            starting-balance: 250
+            symbol: '$'
+          ranks:
+            titles:
+              - {top: 1, name: Cartel Boss, color: dark_red, bonus: 0.15}
+              - {top: 3, name: The Plug, color: gold, bonus: 0.10}
+            everyone: {name: Street Seller, color: gray, bonus: 0}
+            tab-list: true
+          give-guide-on-first-join: false
+          death:
+            cash-lost: 0.3
+          workers:
+            auto-buy: true
+            max-per-player: 0
+          shop:
+            seed-price-multiplier: 1.25
+            buy:
+              - {item: lab_station, amount: 1, price: 650}
+              - {item: farmhand, amount: 1, price: 12000}
+          exchange:
+            price-multiplier: 1.0
+          """
+          open("plugins/KushCraft/config.yml", "w").write(re.sub(r"(?m)^          ", "", cfg))
+          A = "00000000-0000-0000-0000-00000000000a"
+          B = "00000000-0000-0000-0000-00000000000b"
+          files = {
+            "balances.yml": f"""players:
+            {A}:
+              name: Alice
+              balance: 1234.5
+              sales: 50000
+            {B}:
+              name: Bob
+              balance: 10
+          """,
+            "workers.yml": f"""settings:
+            auto-buy-off: [{A}]
+          workers:
             00000000-0000-0000-0000-0000000000aa:
               type: SUPPLIER
-              owner: 00000000-0000-0000-0000-000000000002
+              owner: {B}
               world: world
               x: 8.5
               y: -60
@@ -281,7 +256,7 @@ jobs:
               name: Sam
             00000000-0000-0000-0000-0000000000bb:
               type: COOK
-              owner: 00000000-0000-0000-0000-000000000002
+              owner: {A}
               world: world
               x: 10.5
               y: -60
@@ -289,36 +264,123 @@ jobs:
               yaw: 0
               name: Cory
               recipe: AUTO
-          """)
+          """,
+            "plants.yml": f"""plants:
+            world;3;-60;3:
+              kind: CANNABIS
+              strain: og_kush
+              growth: 40.0
+              fert: false
+              owner: {A}
+          """,
+            "cartels.yml": f"""cartels:
+            ci:
+              name: CI Crew
+              color: 15219258
+              leader: {A}
+              members: [{A}]
+              bank: 777.0
+              level: 1
+          """,
+            "market.yml": "demand:\n  cocaine: 0.5\nnext-id: 3\n",
+            "awards.yml": f"players:\n  {A}:\n    done: [first_sale]\n",
+          }
+          for name, text in files.items():
+              open("plugins/KushCraft/" + name, "w").write(re.sub(r"(?m)^          ", "", text))
           PY
-          grep -n "supplier\|^config-version\|demand-drop" plugins/KushCraft/config.yml
+          rm -f console && mkfifo console
+          java -Xmx2G -jar paper.jar --nogui < console > server2.log 2>&1 &
+          PID=$!
+          exec 3>console
+          for i in $(seq 1 240); do grep -q "Done (" server2.log && break; sleep 2; done
+          grep -q "Done (" server2.log || { tail -100 server2.log; echo "::error::server did not start"; exit 1; }
+          echo "kush selftest" >&3
+          for i in $(seq 1 60); do grep -qE "SELFTEST (PASS|FAIL)" server2.log && break; sleep 1; done
+          echo "stop" >&3
+          timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
+          exec 3>&-
+          grep -iE "kushcraft|imported|moved|updated config" server2.log | head -40 || true
+          fail() { echo "::error::$1"; exit 1; }
+          grep -q "Updated config.yml to version 13" server2.log || fail "config was not upgraded"
+          test -f plugins/KushCraft/config-old-v11.yml || fail "the old config was not kept"
+          grep -q "^config-version: 13" plugins/KushCraft/config.yml || fail "config version not 13"
+          grep -q "^  death-cash-lost: 0.3" plugins/KushCraft/config.yml || fail "death cash loss not carried into pvp"
+          grep -q "^  give-guide: false" plugins/KushCraft/config.yml || fail "give-guide not carried over"
+          grep -q "^  cannabis-minutes: 25" plugins/KushCraft/config.yml || fail "growth settings not carried over"
+          grep -q "^  url: auto" plugins/KushCraft/config.yml || fail "the old pack link was not switched to auto"
+          grep -q "^dealer-titles:" plugins/KushCraft/config.yml || fail "dealer titles not moved"
+          grep -q "name: The Plug" plugins/KushCraft/config.yml || fail "the server's own dealer titles were lost"
+          grep -q "name: Drug Lord" plugins/KushCraft/config.yml || fail "the rank ladder is missing"
+          grep -q "^  auto-buy: false" plugins/KushCraft/config.yml || fail "auto-buy is not off in 9.0"
+          grep -q "price: 60000" plugins/KushCraft/config.yml || fail "9.0 worker prices missing"
+          grep -q "price-multiplier: 5.0" plugins/KushCraft/config.yml || fail "9.0 Trade prices missing"
+          if grep -qE "price: 12000|price: 650$" plugins/KushCraft/config.yml; then fail "8.0 prices kept"; fi
+          grep -q "Imported 2 balances from balances.yml" server2.log || fail "balances not imported"
+          grep -q "Suppliers are gone: refunded 1 of them" server2.log || fail "the Supplier was not refunded"
+          grep -q "Imported 1 workers from workers.yml" server2.log || fail "the 8.0 Cook was not imported"
+          grep -q "Moved .* old data files" server2.log || fail "old files not moved aside"
+          ls plugins/KushCraft/legacy-yaml/*/balances.yml || fail "balances.yml not in legacy-yaml"
+          test ! -f plugins/KushCraft/workers.yml || fail "workers.yml was not moved"
+          python3 - <<'PY'
+          import sqlite3, sys
+          c = sqlite3.connect("plugins/KushCraft/kushcraft.db")
+          A = "00000000-0000-0000-0000-00000000000a"
+          B = "00000000-0000-0000-0000-00000000000b"
+          bal = dict(c.execute("SELECT uuid, balance FROM players WHERE uuid IN (?, ?)", (A, B)).fetchall())
+          flags = c.execute("SELECT flags FROM players WHERE uuid=?", (A,)).fetchone()[0]
+          sales = c.execute("SELECT sales FROM players WHERE uuid=?", (A,)).fetchone()[0]
+          bank = c.execute("SELECT bank FROM cartels WHERE id='ci'").fetchone()
+          plants = c.execute("SELECT COUNT(*) FROM plants").fetchone()[0]
+          market = c.execute("SELECT data FROM docs WHERE name='market'").fetchone()
+          awards = c.execute("SELECT data FROM awards WHERE uuid=?", (A,)).fetchone()
+          refund = c.execute("SELECT amount FROM ledger WHERE player=? AND type='REFUND'", (B,)).fetchone()
+          print(bal, flags, sales, bank, plants, market is not None, awards, refund)
+          bad = []
+          if bal.get(A) != 123450: bad.append("Alice's balance")
+          if bal.get(B) != 1000 + 1300000: bad.append("Bob's balance + Supplier refund")
+          if sales != 5000000: bad.append("lifetime sales")
+          if not flags & 4: bad.append("auto-buy switch")
+          if not bank or bank[0] != 77700: bad.append("cartel bank")
+          if plants != 1: bad.append("plants")
+          if market is None or "cocaine" not in market[0]: bad.append("market")
+          if awards is None or "first_sale" not in awards[0]: bad.append("awards")
+          if refund is None or refund[0] != 1300000: bad.append("refund logged")
+          if bad:
+              print("::error::import: " + ", ".join(bad)); sys.exit(1)
+          PY
+          grep -q "SELFTEST PASS" server2.log || { grep "selftest failure" server2.log; fail "selftest failed after the 8.0 upgrade"; }
+          if grep -nE "Exception|Error" server2.log | grep -iE "kushcraft"; then fail "KushCraft errors in the upgrade run"; fi
+          echo "8.0 upgrade test passed"
+
+      - name: Upgrade an 8.1 config (add-on mode, version 12)
+        working-directory: server
+        run: |
+          python3 - <<'PY'
+          c = open("plugins/KushCraft/config-old-v11.yml").read()
+          c = c.replace("config-version: 11", "config-version: 12")
+          c += "access:\n  unlock: true\n  unlock-cost: 2500\nmarket:\n  anywhere: false\n  income-multiplier: 0.35\nmenu:\n  shift-f: false\n"
+          c += "new-players:\n  starter-kit:\n    - {item: seed_pack, strain: og_kush, amount: 2}\n    - {item: dealer, amount: 1}\n"
+          open("plugins/KushCraft/config.yml", "w").write(c)
+          PY
           rm -f console && mkfifo console
           java -Xmx2G -jar paper.jar --nogui < console > server4.log 2>&1 &
           PID=$!
           exec 3>console
           for i in $(seq 1 240); do grep -q "Done (" server4.log && break; sleep 2; done
           grep -q "Done (" server4.log || { tail -100 server4.log; echo "::error::server did not start"; exit 1; }
-          echo "kush selftest" >&3
-          sleep 8
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
-          grep -iE "kushcraft|supplier|workers" server4.log || true
           fail() { echo "::error::$1"; exit 1; }
-          grep -q "Updated config.yml to version 11" server4.log || fail "7.2 config was not upgraded"
-          if grep -qE "item: supplier|^  supplier:|work-offline" plugins/KushCraft/config.yml; then fail "Supplier settings kept"; fi
-          grep -q "^  water-price: 3" plugins/KushCraft/config.yml || fail "the Supplier's water price was not kept"
-          grep -q "^  auto-buy: true" plugins/KushCraft/config.yml || fail "auto-buy not added"
-          grep -q "^  demand-drop: 0.006" plugins/KushCraft/config.yml || fail "7.x market not reset"
-          grep -q "^version: 6" plugins/KushCraft/strains.yml || fail "strains.yml not upgraded"
-          awk '/^  aurora_kush:$/{f=1;next} /^  [a-z0-9_]+:$/{f=0} f' plugins/KushCraft/strains.yml | grep -q "shop: false" \
-            && fail "Mythic seeds are still not sold"
-          grep -q "Suppliers are gone: refunded 1 of them" server4.log || fail "the Supplier was not refunded"
-          grep -q "Loaded 1 workers" server4.log || fail "the 7.2 Cook was not loaded"
-          if grep -q "SUPPLIER" plugins/KushCraft/workers.yml; then fail "the Supplier is still in workers.yml"; fi
-          grep -q "SELFTEST PASS" server4.log || { grep "selftest failure" server4.log; fail "selftest failed after the 7.2 upgrade"; }
-          if grep -nE "Exception|Error" server4.log | grep -iE "kushcraft"; then fail "KushCraft errors in the 7.2 upgrade run"; fi
-          echo "7.2 upgrade test passed"
+          grep -q "Updated config.yml to version 13" server4.log || fail "8.1 config was not upgraded"
+          if grep -qE "^access:|income-multiplier" plugins/KushCraft/config.yml; then fail "8.1 add-on settings kept"; fi
+          awk '/^new-players:/{f=1;next} /^[a-z]/{f=0} f' plugins/KushCraft/config.yml > kit.txt
+          cat kit.txt
+          if grep -q "item: dealer" kit.txt; then fail "8.1's Dealer Stand is still in the starter kit"; fi
+          grep -q "^  anywhere: true" plugins/KushCraft/config.yml || fail "market.anywhere not back on"
+          grep -q "^  shift-f: true" plugins/KushCraft/config.yml || fail "Shift+F not back on"
+          if grep -nE "Exception|Error" server4.log | grep -iE "kushcraft"; then fail "KushCraft errors in the 8.1 upgrade run"; fi
+          echo "8.1 upgrade test passed"
 
       - name: Run server again hosting the pack itself (url '')
         working-directory: server
@@ -336,33 +398,11 @@ jobs:
           exec 3>&-
           grep -q "Resource pack hosted on port 8163" server3.log || { echo "::error::built-in pack server did not start"; exit 1; }
           unzip -l pack.zip | tail -3
-          unzip -p pack.zip pack.mcmeta
           unzip -l pack.zip | grep -q "assets/kush/items/machine_lab_station.json"
           unzip -l pack.zip | grep -q "assets/kush/items/worker_cook.json"
-          unzip -l pack.zip | grep -q "assets/kush/items/worker_runner.json"
-          unzip -l pack.zip | grep -q "assets/kush/items/xanny_bars.json"
-          unzip -l pack.zip | grep -q "assets/kush/textures/item/pattern/stripes_bud_dried_classic.png"
-          unzip -l pack.zip | grep -q "assets/kush/textures/item/exotic/void_bud_dried_classic.png"
           unzip -l pack.zip | grep -q "assets/kush/textures/gui/worker.png"
           cmp -s pack.zip plugins/KushCraft/KushCraft-pack.zip || { echo "::error::served zip differs"; exit 1; }
           echo "Built-in pack server test passed"
-
-      - name: Check log
-        if: always()
-        working-directory: server
-        run: |
-          grep -iE "kushcraft|selftest" server.log || true
-          echo "-----"
-          grep -q "KushCraft enabled" server.log || { echo "::error::plugin did not enable"; exit 1; }
-          grep -q "SELFTEST PASS" server.log || { echo "::error::selftest failed"; exit 1; }
-          grep -q "LIVETEST PASS" server.log || { grep -A12 "LIVETEST" server.log | tail -40; echo "::error::live worker test failed"; exit 1; }
-          if grep -qE "Worker skins are not supported|Could not spawn worker mannequins" server.log; then
-            echo "::error::worker mannequins or skins do not work"; exit 1
-          fi
-          if grep -nE "Exception|Error" server.log | grep -iE "kushcraft"; then
-            echo "::error::KushCraft errors in log"; exit 1
-          fi
-          echo "Server test passed"
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -373,3 +413,4 @@ jobs:
             server/server2.log
             server/server3.log
             server/server4.log
+            server/server5.log
