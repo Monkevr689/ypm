@@ -1,8 +1,8 @@
 package dev.kushcraft.catalog;
 
-import dev.kushcraft.effect.Dose;
-import dev.kushcraft.effect.EffectType;
-import dev.kushcraft.item.ItemType;
+import dev.kushcraft.effects.Dose;
+import dev.kushcraft.effects.EffectType;
+import dev.kushcraft.items.ItemType;
 
 import java.util.ArrayList;
 import java.util.List;

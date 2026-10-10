@@ -117,7 +117,7 @@ def check_animations():
 def check_strain_looks():
     """Bud items pick a shape for every BudShape, an overlay for every Mythic / Exotic look
     and (buds and plants) an accent pattern for every BudPattern."""
-    strain_dir = os.path.join(JAVA, "dev", "kushcraft", "strain")
+    strain_dir = os.path.join(JAVA, "dev", "kushcraft", "strains")
 
     def enum(name):
         found = re.findall(r"^    ([A-Z_]+)\(", open(os.path.join(strain_dir, name + ".java")).read(), re.M)
@@ -163,12 +163,12 @@ def check_menus():
     tools/pack_meta.py, and the image has the right number of rows."""
     sys.path.insert(0, HERE)
     import pack_meta
-    gui_src = open(os.path.join(JAVA, "dev", "kushcraft", "gui", "GuiFont.java"), encoding="utf-8").read()
+    gui_src = open(os.path.join(JAVA, "dev", "kushcraft", "menus", "GuiFont.java"), encoding="utf-8").read()
     m = re.search(r"GUIS = List\.of\(([^;]*)\);", gui_src)
     java_guis = re.findall(r'"([a-z_]+)"', m.group(1)) if m else []
     if java_guis != pack_meta.GUIS:
         errors.append(f"GuiFont.GUIS {java_guis} != pack_meta.GUIS {pack_meta.GUIS}")
-    gui_dir = os.path.join(JAVA, "dev", "kushcraft", "gui")
+    gui_dir = os.path.join(JAVA, "dev", "kushcraft", "menus")
     import gui
 
     def rows_of(name):
@@ -225,7 +225,7 @@ def check_menus():
     hire_slots = tuple((int(a), int(b)) for a, b in re.findall(r"at\((\d+), (\d+)\)", hire.group(1))) if hire else ()
     if hire_slots != tuple(gui.HIRE_SLOTS):
         errors.append(f"GearMenu HIRE {hire_slots} but tools/gui.py draws {gui.HIRE_SLOTS}")
-    worker_types = len(re.findall(r'^    [A-Z]+\("', open(os.path.join(JAVA, "dev", "kushcraft", "worker", "WorkerType.java"),
+    worker_types = len(re.findall(r'^    [A-Z]+\("', open(os.path.join(JAVA, "dev", "kushcraft", "workers", "WorkerType.java"),
                                                         encoding="utf-8").read(), re.M))
     if worker_types != len(gui.HIRE_SLOTS):
         errors.append(f"{worker_types} worker types but {len(gui.HIRE_SLOTS)} hiring posters")
@@ -239,7 +239,7 @@ def check_menus():
         m = re.search(r"static final int " + const + r" = at\((\d+), (\d+)\);", cartel_src)
         if not m or (int(m.group(1)), int(m.group(2))) != cell:
             errors.append(f"CartelMenu {const} should be at {cell} (tools/gui.py cartel())")
-    starter = open(os.path.join(JAVA, "dev", "kushcraft", "award", "Starter.java"), encoding="utf-8").read()
+    starter = open(os.path.join(JAVA, "dev", "kushcraft", "awards", "Starter.java"), encoding="utf-8").read()
     steps = len(re.findall(r'^    [A-Z]+\("', starter, re.M))
     if steps != gui.GUIDE_STEPS:
         errors.append(f"{steps} starter steps but tools/gui.py guide() draws {gui.GUIDE_STEPS}")
@@ -258,8 +258,8 @@ def check_menus():
 
 
 def check_workers():
-    """Every worker has a 64x64 skin and a hat model (dev.kushcraft.worker.WorkerType)."""
-    src = open(os.path.join(JAVA, "dev", "kushcraft", "worker", "WorkerType.java"), encoding="utf-8").read()
+    """Every worker has a 64x64 skin and a hat model (dev.kushcraft.workers.WorkerType)."""
+    src = open(os.path.join(JAVA, "dev", "kushcraft", "workers", "WorkerType.java"), encoding="utf-8").read()
     for name in re.findall(r'^    ([A-Z]+)\("', src, re.M):
         t = name.lower()
         skin = os.path.join(ASSETS, "kush", "textures", "entity", "worker", t + ".png")
@@ -354,27 +354,27 @@ def main():
                 used.add(m.group(1))
             for m in re.finditer(r'Keys\.model\("([a-z0-9_]+)"\)', src):
                 used.add(m.group(1))
-    enum_src = open(os.path.join(JAVA, "dev", "kushcraft", "item", "ItemType.java")).read()
+    enum_src = open(os.path.join(JAVA, "dev", "kushcraft", "items", "ItemType.java")).read()
     for m in re.finditer(r'\("[^"]+", "([a-z0-9_]+)"', enum_src):
         used.add(m.group(1))
-    effects = open(os.path.join(JAVA, "dev", "kushcraft", "effect", "EffectType.java")).read()
+    effects = open(os.path.join(JAVA, "dev", "kushcraft", "effects", "EffectType.java")).read()
     for m in re.finditer(r'"(effect_[a-z_]+)"', effects):
         used.add(m.group(1))
-    types = open(os.path.join(JAVA, "dev", "kushcraft", "strain", "StrainType.java")).read()
+    types = open(os.path.join(JAVA, "dev", "kushcraft", "strains", "StrainType.java")).read()
     for m in re.finditer(r'"(type_[a-z]+)"', types):
         used.add(m.group(1))
-    for src_name in ("gui/TabMenu.java", "gui/LabTabMenu.java"):
+    for src_name in ("menus/TabMenu.java", "menus/LabTabMenu.java"):
         src = open(os.path.join(JAVA, "dev", "kushcraft", src_name)).read()
         for m in re.finditer(r'^        [A-Z]+\("[^"]+", "([a-z0-9_]+)"', src, re.M):
             used.add(m.group(1))
-    awards = open(os.path.join(JAVA, "dev", "kushcraft", "award", "Award.java")).read()
+    awards = open(os.path.join(JAVA, "dev", "kushcraft", "awards", "Award.java")).read()
     for m in re.finditer(r'\("[^"]+", "[^"]+", "([a-z0-9_]+)", \d+', awards):
         used.add(m.group(1))
         used.add(m.group(1) + "_locked")
     for kind in ("sativa", "indica", "hybrid"):
         for st in range(5):
             used.add(f"plant_{kind}_{st}")
-    dry_src = open(os.path.join(JAVA, "dev", "kushcraft", "gui", "DryMenu.java")).read()
+    dry_src = open(os.path.join(JAVA, "dev", "kushcraft", "menus", "DryMenu.java")).read()
     steps = int(re.search(r"GAUGE_STEPS = (\d+);", dry_src).group(1))
     for st in range(steps + 1):
         used.add(f"gauge_{st}")

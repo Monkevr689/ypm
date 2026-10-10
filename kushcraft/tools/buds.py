@@ -35,11 +35,11 @@ import items32
 G = None
 
 SHAPES = ["classic", "foxtail", "popcorn", "spear"]
-# MUST match dev.kushcraft.strain.Exotic (without NONE)
+# MUST match dev.kushcraft.strains.Exotic (without NONE)
 EXOTICS = ["rainbow", "galaxy", "golden", "crystal", "neon", "inferno", "aurora", "toxic", "sakura", "plasma",
            "blood_moon", "ocean", "candy",
            "void", "prism", "celestial", "phoenix", "quantum", "eclipse"]
-# MUST match dev.kushcraft.strain.BudPattern (without NONE)
+# MUST match dev.kushcraft.strains.BudPattern (without NONE)
 PATTERNS = ["tips", "stripes", "spots", "marble", "speckles", "halo", "split"]
 FRAMES = 16
 FRAMETIME = 2

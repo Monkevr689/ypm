@@ -206,8 +206,8 @@ def contact_sheet(entries, path, scale=6, cols=10, bg=(44, 52, 40, 255)):
 
 
 def award_icons():
-    """Item models used as award pictures (dev.kushcraft.award.Award)."""
-    src = open(os.path.join(PROJECT, "src", "main", "java", "dev", "kushcraft", "award", "Award.java"),
+    """Item models used as award pictures (dev.kushcraft.awards.Award)."""
+    src = open(os.path.join(PROJECT, "src", "main", "java", "dev", "kushcraft", "awards", "Award.java"),
                encoding="utf-8").read()
     return sorted(set(re.findall(r'\("[^"]+", "[^"]+", "([a-z0-9_]+)", \d+', src)))
 

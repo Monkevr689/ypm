@@ -8,7 +8,7 @@ head slot (kush:worker_hat_<type>): the head slot draws an item at 0.625x
 centred on the head, so the head spans 1.6..14.4 of the model's 0..16 box
 and north is the face.
 
-Must match dev.kushcraft.worker.WorkerType.
+Must match dev.kushcraft.workers.WorkerType.
 """
 import os
 import random

@@ -1,8 +1,8 @@
 package dev.kushcraft.util;
 
-import dev.kushcraft.item.ItemType;
-import dev.kushcraft.item.Items;
-import dev.kushcraft.strain.Strain;
+import dev.kushcraft.items.ItemType;
+import dev.kushcraft.items.Items;
+import dev.kushcraft.strains.Strain;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;

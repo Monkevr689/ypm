@@ -1,11 +1,11 @@
 package dev.kushcraft.guide;
 
 import dev.kushcraft.KushCraft;
-import dev.kushcraft.effect.EffectType;
+import dev.kushcraft.effects.EffectType;
 import dev.kushcraft.lab.LabRecipe;
-import dev.kushcraft.recipe.RecipeBook;
-import dev.kushcraft.recipe.Recipes;
-import dev.kushcraft.strain.Strain;
+import dev.kushcraft.recipes.RecipeBook;
+import dev.kushcraft.recipes.Recipes;
+import dev.kushcraft.strains.Strain;
 import dev.kushcraft.util.Text;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -280,7 +280,7 @@ public final class Guide {
                 "<dark_green><bold>Top Dealers</bold>\n\n<black>The players who sold the most get the titles:"
                         + "\n<dark_red>#1 Cartel Boss\n<red>#2 Kingpin\n<gold>#3 The Plug\n<dark_gray>top 5, 10, 25..."
                         + "\n\n<black>Titles pay extra on every sale.\n" + run("/kush top", "> Top"),
-                "<dark_green><bold>Awards</bold>\n\n<black>" + dev.kushcraft.award.Award.values().length
+                "<dark_green><bold>Awards</bold>\n\n<black>" + dev.kushcraft.awards.Award.values().length
                         + " achievements to collect. They pop up like"
                         + " advancements (press <dark_gray>L</dark_gray>).\n\nSend money:"
                         + "\n<dark_gray>/kush pay \\<name> \\<amount>\n" + run("/kush awards", "> Awards"));
@@ -319,7 +319,7 @@ public final class Guide {
         List<String> out = new ArrayList<>();
         List<Strain> strains = new ArrayList<>();
         for (Strain s : KushCraft.get().strains().all()) {
-            if (!s.isCustom() && s.rarity() == dev.kushcraft.strain.Rarity.MYTHIC) {
+            if (!s.isCustom() && s.rarity() == dev.kushcraft.strains.Rarity.MYTHIC) {
                 strains.add(s);
             }
         }

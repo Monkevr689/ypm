@@ -1,8 +1,8 @@
 package dev.kushcraft.lab;
 
 import dev.kushcraft.KushCraft;
-import dev.kushcraft.item.Items;
-import dev.kushcraft.machine.Machine;
+import dev.kushcraft.items.Items;
+import dev.kushcraft.machines.Machine;
 import dev.kushcraft.util.InventoryUtil;
 import dev.kushcraft.util.StrainStock;
 import org.bukkit.inventory.Inventory;

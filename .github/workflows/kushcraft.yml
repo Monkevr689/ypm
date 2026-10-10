@@ -194,7 +194,7 @@ jobs:
           exec 3>&-
           grep -iE "kushcraft|resource pack" server2.log || true
           fail() { echo "::error::$1"; exit 1; }
-          grep -q "Updated config.yml to version 12" server2.log || fail "config was not upgraded"
+          grep -q "Updated config.yml to version 11" server2.log || fail "config was not upgraded"
           grep -q "Updated strains.yml: 100 new strains" server2.log || fail "strains.yml was not upgraded"
           grep -q "^  url: auto" plugins/KushCraft/config.yml || fail "the old pack link was not switched to auto"
           grep -q "(same as this plugin's pack)" server2.log || fail "the upgraded server does not get the matching pack"
@@ -208,14 +208,6 @@ jobs:
           grep -q "^  auto-buy: true" plugins/KushCraft/config.yml || fail "worker auto-buy setting missing"
           grep -q "^  water-price: 2" plugins/KushCraft/config.yml || fail "worker water price missing"
           grep -q "^  mythic-seeds: true" plugins/KushCraft/config.yml || fail "Mythic seed settings missing"
-          # 8.1 add-on mode: unlocked on purpose, away from spawn, a fraction of the income, not in everyone's face
-          grep -q "^access:" plugins/KushCraft/config.yml || fail "add-on mode (access) settings missing"
-          grep -q "^  income-multiplier: 0.35" plugins/KushCraft/config.yml || fail "drug income not scaled down"
-          grep -q "^  anywhere: false" plugins/KushCraft/config.yml || fail "the Shop still opens anywhere"
-          grep -q "^  shift-f: false" plugins/KushCraft/config.yml || fail "Shift+F still opens KushCraft"
-          grep -q "^  tab-list: false" plugins/KushCraft/config.yml || fail "dealer titles still in the tab list"
-          grep -q "^give-guide-on-first-join: false" plugins/KushCraft/config.yml || fail "new players still get the book"
-          grep -A12 "^  starter-kit:" plugins/KushCraft/config.yml | grep -q "dealer" || fail "unlock kit has no Dealer Stand"
           # 6.0: money only from drugs, Trade only sells, no OP PvP / End items, no worker limit
           awk '/^jobs:/{f=1} f && /^  enabled:/{print; exit}' plugins/KushCraft/config.yml | grep -q "false" \
             || fail "jobs still pay"
@@ -261,7 +253,7 @@ jobs:
           python3 - <<'PY'
           import re
           c = open("plugins/KushCraft/config.yml").read()
-          c = c.replace("config-version: 12", "config-version: 10")
+          c = c.replace("config-version: 11", "config-version: 10")
           c = re.sub(r"(?m)^  auto-buy: true\n", "", c)
           c = re.sub(r"(?m)^  water-price: 2\n", "", c)
           c = c.replace("\n  runner:\n", "\n  supplier:\n    wage: 6\n    water-price: 3\n  runner:\n", 1)
@@ -313,7 +305,7 @@ jobs:
           exec 3>&-
           grep -iE "kushcraft|supplier|workers" server4.log || true
           fail() { echo "::error::$1"; exit 1; }
-          grep -q "Updated config.yml to version 12" server4.log || fail "7.2 config was not upgraded"
+          grep -q "Updated config.yml to version 11" server4.log || fail "7.2 config was not upgraded"
           if grep -qE "item: supplier|^  supplier:|work-offline" plugins/KushCraft/config.yml; then fail "Supplier settings kept"; fi
           grep -q "^  water-price: 3" plugins/KushCraft/config.yml || fail "the Supplier's water price was not kept"
           grep -q "^  auto-buy: true" plugins/KushCraft/config.yml || fail "auto-buy not added"

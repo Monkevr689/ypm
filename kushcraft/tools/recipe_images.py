@@ -8,7 +8,7 @@ They are used three ways:
    self test compares with the real recipes (so the pictures can't drift
    away from the game).
 
-RECIPES below MUST match dev.kushcraft.recipe.Recipes and
+RECIPES below MUST match dev.kushcraft.recipes.Recipes and
 dev.kushcraft.lab.LabRecipe; the self test fails if they don't.
 """
 import json

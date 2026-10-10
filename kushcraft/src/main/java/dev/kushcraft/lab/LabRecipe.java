@@ -1,7 +1,7 @@
 package dev.kushcraft.lab;
 
-import dev.kushcraft.item.ItemType;
-import dev.kushcraft.item.Items;
+import dev.kushcraft.items.ItemType;
+import dev.kushcraft.items.Items;
 import dev.kushcraft.util.Text;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -61,7 +61,7 @@ public enum LabRecipe {
     // downers
     OPIUM(ItemType.OPIUM, 2, 30,
             Ingredient.of(ItemType.POPPY_POD, 3)),
-    // morphine base: 4 poppy seeds, also at the crafting table (dev.kushcraft.recipe.Recipes)
+    // morphine base: 4 poppy seeds, also at the crafting table (dev.kushcraft.recipes.Recipes)
     MORPHINE(ItemType.MORPHINE, 1, 20,
             Ingredient.of(ItemType.POPPY_SEEDS, 4)),
     HEROIN(ItemType.HEROIN, 2, 60,

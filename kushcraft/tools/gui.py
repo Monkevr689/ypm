@@ -10,7 +10,7 @@ where something goes, and a little scene behind each page: wooden seed
 shelves in the Shop, market crates in Trade, a red-and-gold cartel room,
 a drying room with five racks, a trophy cabinet for the Awards.
 
-The layouts here MUST match dev.kushcraft.gui.* in the Java code
+The layouts here MUST match dev.kushcraft.menus.* in the Java code
 (tools/validate_pack.py checks the tab order, row counts and item counts).
 """
 import math
@@ -410,7 +410,7 @@ def label_plate(img, cx, y, s, col="2a1a0a", plate="e8dcb8"):
 LAYOUTS = {}
 
 # ---------------------------------------------------------------------------
-# /kush tab pages (6 rows). MUST match dev.kushcraft.gui.TabMenu.Tab order.
+# /kush tab pages (6 rows). MUST match dev.kushcraft.menus.TabMenu.Tab order.
 # ---------------------------------------------------------------------------
 TABS = ["SHOP", "DRUGS", "TRADE", "CARTEL", "AWARDS"]
 TITLES = {"SHOP": "SHOP", "DRUGS": "DRUGS", "TRADE": "TRADE", "CARTEL": "CARTEL", "AWARDS": "AWARDS",
@@ -688,7 +688,7 @@ def awards():
 
 
 # ---------------------------------------------------------------------------
-# Drug Lab pages (5 rows). MUST match dev.kushcraft.gui.LabTabMenu.Tab order.
+# Drug Lab pages (5 rows). MUST match dev.kushcraft.menus.LabTabMenu.Tab order.
 # ---------------------------------------------------------------------------
 LAB_TABS = ["COOK", "ROLL", "DRY", "MIX"]
 # recipes per group, in LabRecipe order: weed, psychedelics, uppers, downers

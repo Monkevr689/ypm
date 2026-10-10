@@ -1,28 +1,28 @@
 package dev.kushcraft;
 
-import dev.kushcraft.award.Awards;
-import dev.kushcraft.cartel.Cartels;
-import dev.kushcraft.command.KushCommand;
-import dev.kushcraft.effect.EffectManager;
-import dev.kushcraft.gui.ChatInput;
-import dev.kushcraft.gui.MenuListener;
-import dev.kushcraft.listener.InteractListener;
-import dev.kushcraft.listener.MachineListener;
-import dev.kushcraft.listener.PlantListener;
-import dev.kushcraft.listener.PlayerListener;
-import dev.kushcraft.listener.WorldListener;
-import dev.kushcraft.machine.MachineManager;
+import dev.kushcraft.awards.Awards;
+import dev.kushcraft.cartels.Cartels;
+import dev.kushcraft.commands.KushCommand;
+import dev.kushcraft.effects.EffectManager;
+import dev.kushcraft.menus.ChatInput;
+import dev.kushcraft.menus.MenuListener;
+import dev.kushcraft.listeners.InteractListener;
+import dev.kushcraft.listeners.MachineListener;
+import dev.kushcraft.listeners.PlantListener;
+import dev.kushcraft.listeners.PlayerListener;
+import dev.kushcraft.listeners.WorldListener;
+import dev.kushcraft.machines.MachineManager;
 import dev.kushcraft.pack.ResourcePackManager;
-import dev.kushcraft.plant.PlantManager;
-import dev.kushcraft.recipe.Recipes;
+import dev.kushcraft.plants.PlantManager;
+import dev.kushcraft.recipes.Recipes;
 import dev.kushcraft.jobs.Jobs;
-import dev.kushcraft.shop.Economy;
-import dev.kushcraft.shop.Exchange;
-import dev.kushcraft.shop.Market;
-import dev.kushcraft.shop.Ranks;
-import dev.kushcraft.shop.Shop;
-import dev.kushcraft.strain.StrainRegistry;
-import dev.kushcraft.worker.Workers;
+import dev.kushcraft.economy.Economy;
+import dev.kushcraft.economy.Exchange;
+import dev.kushcraft.economy.Market;
+import dev.kushcraft.ranks.DealerTitles;
+import dev.kushcraft.economy.Shop;
+import dev.kushcraft.strains.StrainRegistry;
+import dev.kushcraft.workers.Workers;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -48,15 +48,14 @@ public final class KushCraft extends JavaPlugin {
     private Economy economy;
     private Shop shop;
     private Market market;
-    private Ranks ranks;
+    private DealerTitles titles;
     private Exchange exchange;
     private Jobs jobs;
     private Awards awards;
     private Cartels cartels;
     private Workers workers;
-    private Access access;
-    private dev.kushcraft.plant.WildPlants wild;
-    private dev.kushcraft.effect.HighAnimals animals;
+    private dev.kushcraft.plants.WildPlants wild;
+    private dev.kushcraft.effects.HighAnimals animals;
     private ResourcePackManager pack;
 
     public static KushCraft get() {
@@ -78,8 +77,8 @@ public final class KushCraft extends JavaPlugin {
         awards.load();
         shop = new Shop(this);
         shop.load();
-        ranks = new Ranks(this);
-        ranks.load();
+        titles = new DealerTitles(this);
+        titles.load();
         market = new Market(this);
         market.load();
         exchange = new Exchange(this);
@@ -94,11 +93,9 @@ public final class KushCraft extends JavaPlugin {
         plants.load();
         workers = new Workers(this);
         workers.load();
-        access = new Access(this);
-        access.load();
         effects = new EffectManager(this);
-        wild = new dev.kushcraft.plant.WildPlants(this);
-        animals = new dev.kushcraft.effect.HighAnimals(this);
+        wild = new dev.kushcraft.plants.WildPlants(this);
+        animals = new dev.kushcraft.effects.HighAnimals(this);
         pack = new ResourcePackManager(this, getFile());
 
         Recipes.register(this);
@@ -144,7 +141,7 @@ public final class KushCraft extends JavaPlugin {
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             economy.join(p);
-            ranks.showInTab(p);
+            titles.showInTab(p);
             p.discoverRecipes(Recipes.keys());
             pack.send(p);
         }
@@ -194,7 +191,7 @@ public final class KushCraft extends JavaPlugin {
         reloadConfig();
         strains.load();
         shop.load();
-        ranks.load();
+        titles.load();
         exchange.load();
         cartels.save();
         cartels.load();
@@ -232,8 +229,8 @@ public final class KushCraft extends JavaPlugin {
         return market;
     }
 
-    public Ranks ranks() {
-        return ranks;
+    public DealerTitles titles() {
+        return titles;
     }
 
     public Exchange exchange() {
@@ -256,11 +253,11 @@ public final class KushCraft extends JavaPlugin {
         return workers;
     }
 
-    public dev.kushcraft.plant.WildPlants wild() {
+    public dev.kushcraft.plants.WildPlants wild() {
         return wild;
     }
 
-    public dev.kushcraft.effect.HighAnimals animals() {
+    public dev.kushcraft.effects.HighAnimals animals() {
         return animals;
     }
 
@@ -276,7 +273,7 @@ public final class KushCraft extends JavaPlugin {
      */
     private void migrateConfig() {
         int version = getConfig().getInt("config-version", 1);
-        if (version >= 12) {
+        if (version >= 11) {
             return;
         }
         java.io.InputStream in = getResource("config.yml");
@@ -343,18 +340,6 @@ public final class KushCraft extends JavaPlugin {
                 getConfig().set("shop.buy", buy);
             }
         }
-        if (version < 12) {
-            // 8.1 add-on mode: a side activity players unlock, away from spawn, paying a fraction
-            // (access.* and market.income-multiplier come from the defaults below)
-            for (String key : List.of("market.anywhere", "ranks.tab-list", "give-guide-on-first-join", "menu.shift-f")) {
-                getConfig().set(key, def.get(key));
-            }
-            List<java.util.Map<?, ?>> kit = new java.util.ArrayList<>(getConfig().getMapList("new-players.starter-kit"));
-            if (kit.stream().noneMatch(m -> "dealer".equals(String.valueOf(m.get("item"))))) {
-                kit.add(java.util.Map.of("item", "dealer", "amount", 1));
-                getConfig().set("new-players.starter-kit", kit);
-            }
-        }
         // players on most hosts can't reach the built-in pack server: use the hosted copy
         String url = getConfig().getString("resource-pack.url", "");
         if (url == null || url.isBlank() || url.contains("raw.githubusercontent.com/Monkevr689/ypm/")) {
@@ -362,15 +347,10 @@ public final class KushCraft extends JavaPlugin {
         }
         getConfig().setDefaults(def);
         getConfig().options().copyDefaults(true);
-        getConfig().set("config-version", 12);
+        getConfig().set("config-version", 11);
         saveConfig();
-        getLogger().info("Updated config.yml to version 12 (8.1 add-on mode: players unlock KushCraft, not near spawn,"
-                + " the Shop at Dealer Stands, drug prices x" + getConfig().getDouble("market.income-multiplier")
-                + "). Your other settings were kept.");
-    }
-
-    public Access access() {
-        return access;
+        getLogger().info("Updated config.yml to version 11 (8.0: workers use any of your chests and buy what they"
+                + " need, Mythic seeds in the Shop, no Suppliers). Your other settings were kept.");
     }
 
     public ResourcePackManager pack() {

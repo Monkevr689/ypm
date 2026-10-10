@@ -37,7 +37,7 @@ public final class InventoryUtil {
     }
 
     public static int count(Player p, Material m) {
-        return count(p, it -> it.getType() == m && !dev.kushcraft.item.Items.isCustom(it));
+        return count(p, it -> it.getType() == m && !dev.kushcraft.items.Items.isCustom(it));
     }
 
     /** Removes up to amount matching items. Returns how many were removed. */
@@ -63,7 +63,7 @@ public final class InventoryUtil {
     }
 
     public static int remove(Player p, Material m, int amount) {
-        return remove(p, it -> it.getType() == m && !dev.kushcraft.item.Items.isCustom(it), amount);
+        return remove(p, it -> it.getType() == m && !dev.kushcraft.items.Items.isCustom(it), amount);
     }
 
     /** First stack in the inventory (hotbar first) that matches. */
