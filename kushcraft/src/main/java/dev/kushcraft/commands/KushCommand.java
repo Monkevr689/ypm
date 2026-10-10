@@ -204,7 +204,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 plugin.reload();
-                sender.sendMessage(Text.msg("<green>KushCraft reloaded (config, strains, shop, recipes)."));
+                sender.sendMessage(Text.msg("<green>KushCraft reloaded (config, rank ladder, menus.yml, strains, shop, recipes)."));
             }
             default -> {
                 sender.sendMessage(Text.msg("<green>KushCraft <gray>- type <white>/kush</white> (or press <white>Shift+F</white>)"
