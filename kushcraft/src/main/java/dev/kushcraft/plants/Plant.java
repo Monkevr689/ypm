@@ -34,6 +34,11 @@ public final class Plant {
     private final UUID owner;
     /** Wild plants (grown by themselves, owner null): when they wither, else 0. */
     private long wildUntil;
+    /** Last time growth was worked out (growth while nobody was near is caught up from here). */
+    long grownAt = System.currentTimeMillis();
+    /** Changed since the last database write (dirty: right away; soft: only growth, on the next full save). */
+    transient boolean dirty = true;
+    transient boolean soft;
 
     transient UUID displayId;
     transient UUID hitboxId;
@@ -67,7 +72,15 @@ public final class Plant {
     }
 
     public void growth(double g) {
-        this.growth = Math.max(0, Math.min(100, g));
+        double v = Math.max(0, Math.min(100, g));
+        if (v != growth) {
+            growth = v;
+            soft = true;
+        }
+    }
+
+    public long grownAt() {
+        return grownAt;
     }
 
     public boolean fertilized() {
@@ -76,6 +89,7 @@ public final class Plant {
 
     public void fertilized(boolean f) {
         this.fertilized = f;
+        dirty = true;
     }
 
     /** True for a plant that grew by itself out in the world (anyone can pick it). */
@@ -89,6 +103,7 @@ public final class Plant {
 
     public void wildUntil(long until) {
         wildUntil = until;
+        dirty = true;
     }
 
     public UUID owner() {

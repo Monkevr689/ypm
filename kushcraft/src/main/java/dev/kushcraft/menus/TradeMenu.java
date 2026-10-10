@@ -120,7 +120,7 @@ public final class TradeMenu extends TabMenu {
     private void buy(Exchange.Offer o, int amount) {
         double each = ex().buyPrice(o);
         double total = Math.round(each * amount * 100) / 100.0;
-        if (!eco().withdraw(player, total)) {
+        if (!eco().withdraw(player, total, dev.kushcraft.economy.Tx.TRADE, amount + "x " + o.material().getKey().getKey())) {
             player.sendActionBar(Text.mm("<red>You need " + eco().format(total) + " <gray>- sell some drugs first."));
             failSound();
             return;

@@ -40,7 +40,12 @@ public final class MyWorkersMenu extends ListMenu {
             Location h = w.home();
             List<String> lore = new ArrayList<>();
             lore.add("<gold>Level " + w.level() + " <dark_gray>· <gray>" + w.carried() + " items in the satchel");
-            lore.add("<white>" + (w.paused() ? "<red>Paused" : w.isLoaded() ? w.status() : "<dark_gray>Asleep (nobody nearby)"));
+            lore.add("<white>" + (w.knockedOut() ? "<red>Knocked out" : w.paused() ? "<red>Paused"
+                    : KushCraft.get().workers().overLimit(w) ? "<red>Over your rank's worker limit"
+                    : w.isLoaded() ? w.status() : "<dark_gray>Working slowly while nobody's around"));
+            if (w.needs() != null) {
+                lore.add("<yellow>Needs: <white>" + w.needs() + " <dark_gray>(Supply, or a chest near them)");
+            }
             if (h != null) {
                 lore.add("<dark_gray>" + w.worldName() + " " + h.getBlockX() + ", " + h.getBlockY() + ", " + h.getBlockZ());
             }
@@ -61,8 +66,9 @@ public final class MyWorkersMenu extends ListMenu {
         var ws = KushCraft.get().workers();
         return Items.icon("ui_workers", "<green>" + (everyone ? "All workers" : "Your workers"),
                 everyone ? "<gray>" + ws.all().size() + " hired on the server"
-                        : "<gray>" + ws.of(player.getUniqueId()).size()
-                        + (ws.maxPerPlayer() > 0 ? "/" + ws.maxPerPlayer() : "") + " hired");
+                        : "<gray>" + ws.of(player.getUniqueId()).size() + "/" + ws.limit(player.getUniqueId())
+                        + " worker slots <dark_gray>(" + KushCraft.get().ranks().of(player.getUniqueId()).name()
+                        + ", /rankup for more)");
     }
 
     @Override
@@ -90,6 +96,37 @@ public final class MyWorkersMenu extends ListMenu {
         player.playSound(player.getLocation(), "minecraft:entity.item.pickup", org.bukkit.SoundCategory.PLAYERS, 0.8f, 1f);
         player.sendActionBar(Text.mm("<green>Collected " + n + " items from your workers."));
         render();
+    }
+
+    private static final int SUPPLY = 52;
+
+    @Override
+    public void render() {
+        super.render();
+        if (!everyone) {
+            set(SUPPLY, Items.icon("ui_wallet", "<aqua><bold>Supply your crew",
+                    "<gray>Hands every worker what they use",
+                    "<gray>from your inventory: seeds and",
+                    "<gray>fertilizer, fresh buds, a Cook's",
+                    "<gray>ingredients. (Runners get nothing.)"));
+        }
+    }
+
+    @Override
+    public void click(int slot, ClickType click) {
+        if (slot == SUPPLY && !everyone) {
+            int n = KushCraft.get().workers().supply(player);
+            if (n <= 0) {
+                player.sendActionBar(Text.mm("<gray>Nothing in your inventory your workers use."));
+                failSound();
+            } else {
+                successSound();
+                player.sendActionBar(Text.mm("<green>Handed " + n + " items to your workers."));
+            }
+            render();
+            return;
+        }
+        super.click(slot, click);
     }
 
     @Override

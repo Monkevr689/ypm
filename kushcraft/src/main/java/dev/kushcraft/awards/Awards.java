@@ -45,7 +45,7 @@ import java.util.logging.Level;
  * "KushCraft" tab, so players get the normal toast and can browse them with
  * the advancements key; if that ever fails the plugin falls back to a title.
  */
-public final class Awards implements Listener {
+public final class Awards implements Listener, dev.kushcraft.storage.Persistence.Source {
 
     public static final String NAMESPACE = "kush";
     static final String CRITERION = "done";
@@ -57,6 +57,8 @@ public final class Awards implements Listener {
         final Set<String> tried = new HashSet<>();
         final Set<String> climates = new HashSet<>();
         final Set<String> grown = new HashSet<>();
+        /** Changed since the last database write. */
+        boolean dirty;
     }
 
     private final KushCraft plugin;
@@ -64,7 +66,6 @@ public final class Awards implements Listener {
     private final Map<UUID, Data> data = new HashMap<>();
     private final Map<Award, Advancement> advancements = new LinkedHashMap<>();
     private Advancement root;
-    private boolean dirty;
 
     public Awards(KushCraft plugin) {
         this.plugin = plugin;
@@ -72,75 +73,120 @@ public final class Awards implements Listener {
     }
 
     // ------------------------------------------------------------------
-    // storage
+    // storage: one database row per player
     // ------------------------------------------------------------------
 
     public void load() {
         data.clear();
-        if (!file.exists()) {
-            return;
-        }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
-        ConfigurationSection sec = y.getConfigurationSection("players");
-        if (sec == null) {
-            return;
-        }
-        for (String k : sec.getKeys(false)) {
-            UUID id;
+        List<String[]> rows = plugin.db().call(c -> {
+            List<String[]> out = new ArrayList<>();
+            try (java.sql.Statement st = c.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT uuid, data FROM awards")) {
+                while (rs.next()) {
+                    out.add(new String[]{rs.getString(1), rs.getString(2)});
+                }
+            }
+            return out;
+        });
+        for (String[] r : rows) {
+            YamlConfiguration y = new YamlConfiguration();
             try {
-                id = UUID.fromString(k);
-            } catch (IllegalArgumentException e) {
-                continue;
+                y.loadFromString(r[1]);
+                data.put(UUID.fromString(r[0]), read(y));
+            } catch (org.bukkit.configuration.InvalidConfigurationException | IllegalArgumentException e) {
+                plugin.getLogger().warning("Skipping broken awards of " + r[0]);
             }
-            Data d = new Data();
-            for (String a : sec.getStringList(k + ".done")) {
-                try {
-                    d.done.add(Award.valueOf(a.toUpperCase(java.util.Locale.ROOT)));
-                } catch (IllegalArgumentException ignored) {
+        }
+        if (rows.isEmpty() && file.exists() && !plugin.legacyImported()) {
+            plugin.legacyFile(file);
+            ConfigurationSection sec = YamlConfiguration.loadConfiguration(file).getConfigurationSection("players");
+            if (sec != null) {
+                for (String k : sec.getKeys(false)) {
+                    ConfigurationSection s = sec.getConfigurationSection(k);
+                    try {
+                        if (s != null) {
+                            Data d = read(s);
+                            d.dirty = true;
+                            data.put(UUID.fromString(k), d);
+                        }
+                    } catch (IllegalArgumentException ignored) {
+                        // not a player id
+                    }
                 }
             }
-            ConfigurationSection st = sec.getConfigurationSection(k + ".stats");
-            if (st != null) {
-                for (String s : st.getKeys(false)) {
-                    d.stats.put(s, st.getInt(s));
-                }
-            }
-            d.cooked.addAll(sec.getStringList(k + ".cooked"));
-            d.tried.addAll(sec.getStringList(k + ".tried"));
-            d.climates.addAll(sec.getStringList(k + ".climates"));
-            d.grown.addAll(sec.getStringList(k + ".grown"));
-            data.put(id, d);
         }
     }
 
-    public void save() {
+    private static Data read(ConfigurationSection sec) {
+        Data d = new Data();
+        for (String a : sec.getStringList("done")) {
+            try {
+                d.done.add(Award.valueOf(a.toUpperCase(java.util.Locale.ROOT)));
+            } catch (IllegalArgumentException ignored) {
+                // an award that's gone
+            }
+        }
+        ConfigurationSection st = sec.getConfigurationSection("stats");
+        if (st != null) {
+            for (String s : st.getKeys(false)) {
+                d.stats.put(s, st.getInt(s));
+            }
+        }
+        d.cooked.addAll(sec.getStringList("cooked"));
+        d.tried.addAll(sec.getStringList("tried"));
+        d.climates.addAll(sec.getStringList("climates"));
+        d.grown.addAll(sec.getStringList("grown"));
+        return d;
+    }
+
+    private static String write(Data d) {
         YamlConfiguration y = new YamlConfiguration();
+        List<String> done = new ArrayList<>();
+        d.done.forEach(a -> done.add(a.id()));
+        y.set("done", done);
+        d.stats.forEach((s, v) -> y.set("stats." + s, v));
+        y.set("cooked", new ArrayList<>(d.cooked));
+        y.set("tried", new ArrayList<>(d.tried));
+        y.set("climates", new ArrayList<>(d.climates));
+        y.set("grown", new ArrayList<>(d.grown));
+        return y.saveToString();
+    }
+
+    @Override
+    public void collect(dev.kushcraft.storage.Persistence.Batch b, boolean full) {
+        List<UUID> ids = new ArrayList<>();
+        List<String> texts = new ArrayList<>();
         for (Map.Entry<UUID, Data> e : data.entrySet()) {
-            String k = "players." + e.getKey();
-            Data d = e.getValue();
-            List<String> done = new ArrayList<>();
-            d.done.forEach(a -> done.add(a.id()));
-            y.set(k + ".done", done);
-            d.stats.forEach((s, v) -> y.set(k + ".stats." + s, v));
-            y.set(k + ".cooked", new ArrayList<>(d.cooked));
-            y.set(k + ".tried", new ArrayList<>(d.tried));
-            y.set(k + ".climates", new ArrayList<>(d.climates));
-            y.set(k + ".grown", new ArrayList<>(d.grown));
+            if (e.getValue().dirty) {
+                e.getValue().dirty = false;
+                ids.add(e.getKey());
+                texts.add(write(e.getValue()));
+            }
         }
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException ex) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save awards.yml", ex);
+        if (ids.isEmpty()) {
+            return;
         }
+        b.write(c -> {
+            try (java.sql.PreparedStatement ps = c.prepareStatement(
+                    "INSERT INTO awards(uuid, data) VALUES(?,?) ON CONFLICT(uuid) DO UPDATE SET data=excluded.data")) {
+                for (int i = 0; i < ids.size(); i++) {
+                    ps.setString(1, ids.get(i).toString());
+                    ps.setString(2, texts.get(i));
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+            }
+        });
+        b.onFailure(() -> ids.forEach(id -> {
+            Data d = data.get(id);
+            if (d != null) {
+                d.dirty = true;
+            }
+        }));
     }
 
     public void start() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (dirty) {
-                save();
-            }
-        }, 20L * 30, 20L * 30);
+        // saved by Persistence with everything else
     }
 
     private Data of(UUID id) {
@@ -218,9 +264,9 @@ public final class Awards implements Listener {
         if (!d.done.add(a)) {
             return;
         }
-        dirty = true;
+        d.dirty = true;
         if (a.reward() > 0) {
-            plugin.economy().deposit(p, a.reward());
+            plugin.economy().deposit(p, a.reward(), dev.kushcraft.economy.Tx.AWARD, a.name());
         }
         boolean toast = awardVanilla(p, a);
         String reward = a.reward() > 0 ? " <gold>+" + plugin.economy().format(a.reward()) : "";
@@ -251,7 +297,7 @@ public final class Awards implements Listener {
 
     private int add(Player p, String stat, int n) {
         Data d = of(p.getUniqueId());
-        dirty = true;
+        d.dirty = true;
         return d.stats.merge(stat, n, Integer::sum);
     }
 
@@ -281,13 +327,13 @@ public final class Awards implements Listener {
             grant(p, Award.IDEAL_CLIMATE);
         }
         if (where != null && kind != Plant.Kind.MUSHROOM && d.climates.add(where.name())) {
-            dirty = true;
+            d.dirty = true;
         }
         if (d.climates.size() >= Climate.values().length) {
             grant(p, Award.ALL_CLIMATES);
         }
         if (strain != null && kind == Plant.Kind.CANNABIS && d.grown.add(strain)) {
-            dirty = true;
+            d.dirty = true;
         }
         if (d.grown.size() >= 10) {
             grant(p, Award.COLLECTOR);
@@ -417,7 +463,7 @@ public final class Awards implements Listener {
     public void used(Player p, ItemType type) {
         Data d = of(p.getUniqueId());
         if (d.tried.add(type.id())) {
-            dirty = true;
+            d.dirty = true;
         }
         int tried = 0;
         for (ItemType t : drugs()) {
@@ -578,13 +624,13 @@ public final class Awards implements Listener {
         try {
             awardRoot(p);
             Data d = data.get(p.getUniqueId());
-            if (d == null) {
-                return;
-            }
-            for (Award a : d.done) {
-                Advancement adv = advancements.get(a);
-                if (adv != null && !p.getAdvancementProgress(adv).isDone()) {
-                    p.getAdvancementProgress(adv).awardCriteria(CRITERION);
+            java.util.Set<Award> done = d == null ? java.util.Set.of() : d.done;
+            for (Map.Entry<Award, Advancement> e : advancements.entrySet()) {
+                AdvancementProgress pr = p.getAdvancementProgress(e.getValue());
+                if (done.contains(e.getKey()) && !pr.isDone()) {
+                    pr.awardCriteria(CRITERION);
+                } else if (!done.contains(e.getKey()) && pr.isDone()) {
+                    pr.revokeCriteria(CRITERION); // a season reset took it away
                 }
             }
         } catch (Throwable t) {

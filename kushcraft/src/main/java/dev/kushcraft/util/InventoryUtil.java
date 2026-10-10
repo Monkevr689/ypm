@@ -14,8 +14,15 @@ public final class InventoryUtil {
     private InventoryUtil() {
     }
 
-    /** Adds items, dropping whatever doesn't fit at the player's feet. */
+    /**
+     * Adds items, dropping whatever doesn't fit at the player's feet. The player's inventory is
+     * saved once the database has the change that gave them (see Persistence: no crash dupes).
+     */
     public static void give(Player p, ItemStack... items) {
+        dev.kushcraft.KushCraft k = dev.kushcraft.KushCraft.get();
+        if (k != null && k.persistence() != null) {
+            k.persistence().gave(p);
+        }
         Map<Integer, ItemStack> rest = p.getInventory().addItem(items);
         for (ItemStack left : rest.values()) {
             p.getWorld().dropItemNaturally(p.getLocation(), left);

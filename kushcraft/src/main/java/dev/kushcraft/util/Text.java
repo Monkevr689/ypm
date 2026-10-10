@@ -57,6 +57,19 @@ public final class Text {
         return seconds / 60 + ":" + String.format(Locale.ROOT, "%02d", seconds % 60);
     }
 
+    /** "3d 4h", "5h 20m", "12m", "40s" (the two biggest units). */
+    public static String duration(long millis) {
+        long s = Math.max(0, millis / 1000);
+        long d = s / 86400, h = s % 86400 / 3600, m = s % 3600 / 60;
+        if (d > 0) {
+            return d + "d" + (h > 0 ? " " + h + "h" : "");
+        }
+        if (h > 0) {
+            return h + "h" + (m > 0 ? " " + m + "m" : "");
+        }
+        return m > 0 ? m + "m" : s + "s";
+    }
+
     public static String number(double v) {
         if (v == Math.rint(v)) {
             return String.format(Locale.ROOT, "%,d", (long) v);

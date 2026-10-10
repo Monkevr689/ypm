@@ -194,14 +194,14 @@ public final class Guide {
                         + " near them: they take what they need and put their work in them.\n\nWorkers"
                         + " within " + chain + " blocks pass things along:\n<dark_gray>Farmhand > Dryer >"
                         + " Cook > Runner",
-                "<dark_green><bold>Auto-buy</bold>\n\n<black>Out of seeds, fertilizer or an ingredient?"
-                        + " They <gold>buy it</gold> with your money.\n\n<dark_gray>Switch it off in Shop >"
-                        + " Gear & Workers. Never Mythic seeds.\n\n<black>The <light_purple>Runner</light_purple>"
-                        + " sells what your workers make right away.",
-                "<dark_green><bold>Your workers</bold>\n\n<black>Hire as many as you like. Right-click one for"
-                        + " their satchel (54 slots).\n\nThey get a <gold>wage</gold> per job (Runners keep a"
-                        + " cut). <dark_gray>No money, no work!</dark_gray>\nTrain them: further, faster.\n"
-                        + run("/kush workers", "> Your workers"));
+                "<dark_green><bold>Supplies</bold>\n\n<black>Workers <gold>don't buy</gold> anything: keep"
+                        + " seeds, fertilizer and ingredients in a chest near them, or press <gold>Supply your"
+                        + " crew</gold> in " + run("/kush workers", "> Your workers") + "\n\n<black>The"
+                        + " <light_purple>Runner</light_purple> sells what your workers make right away.",
+                "<dark_green><bold>Your workers</bold>\n\n<black>Your <gold>rank</gold> decides how many you can"
+                        + " place (/rankup). Right-click one for their satchel.\n\nThey get a <gold>wage</gold>"
+                        + " per job. <dark_gray>No money, no work!</dark_gray> While nobody is near they keep"
+                        + " working, slower.\n" + run("/kush workers", "> Your workers"));
     }
 
     private static List<String> recipes(List<RecipeBook.Entry> recipes, int firstRecipe, boolean pictures) {

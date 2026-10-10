@@ -201,9 +201,27 @@ public final class ShopMenu extends TabMenu {
     /** Buys an entry {@code times} times (as long as the money lasts). */
     static void buy(Player player, Shop.BuyEntry e, int times) {
         KushCraft plugin = KushCraft.get();
+        if (!plugin.rates().allow(player.getUniqueId(), "shop-buy", 150L)) {
+            return; // no macro-speed clicking
+        }
+        if (dev.kushcraft.workers.WorkerType.of(e.type()) != null) {
+            // a worker contract is only worth buying with a free slot (it's a lot of money)
+            var ws = plugin.workers();
+            int have = ws.of(player.getUniqueId()).size();
+            int limit = ws.limit(player.getUniqueId());
+            int held = InventoryUtil.count(player, it -> dev.kushcraft.workers.WorkerType.of(dev.kushcraft.items.Items.type(it)) != null);
+            if (have + held >= limit && !player.hasPermission("kushcraft.workers.unlimited")) {
+                player.sendActionBar(Text.mm("<red>Your rank allows " + limit + " worker" + (limit == 1 ? "" : "s")
+                        + " (you have " + have + (held > 0 ? " + " + held + " contract" + (held == 1 ? "" : "s") : "")
+                        + "). <gray>/rankup for more slots."));
+                player.playSound(player.getLocation(), "minecraft:block.note_block.bass", SoundCategory.MASTER, 0.7f, 0.6f);
+                return;
+            }
+            times = 1;
+        }
         int bought = 0;
         for (int i = 0; i < times; i++) {
-            if (!plugin.economy().withdraw(player, e.price())) {
+            if (!plugin.economy().withdraw(player, e.price(), dev.kushcraft.economy.Tx.BUY, e.amount() + "x " + e.type().display() + (e.strain() == null ? "" : " (" + e.strain() + ")"))) {
                 break;
             }
             InventoryUtil.give(player, plugin.shop().create(e));

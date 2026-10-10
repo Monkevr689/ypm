@@ -125,7 +125,6 @@ public final class LabMenu extends LabTabMenu {
         }
         InventoryUtil.give(player, machine.output().clone());
         machine.clearJob();
-        KushCraft.get().machines().markDirty();
         player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.8f, 1f);
         render();
     }
@@ -143,6 +142,7 @@ public final class LabMenu extends LabTabMenu {
                 return;
             }
         }
+        KushCraft.get().persistence().took(player); // the ingredients go into the lab (database)
         Cooking.Result res = Cooking.start(player.getInventory(), machine, r, wanted, pickStrain, pickQuality,
                 left -> InventoryUtil.give(player, left));
         if (!res.ok()) {

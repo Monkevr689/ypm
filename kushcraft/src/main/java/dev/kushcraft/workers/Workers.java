@@ -92,7 +92,7 @@ import java.util.logging.Level;
  * chests are looked up by chunk (and kept for a while), item checks never copy
  * item meta, and a mannequin only moves every tick while a player can see it.
  */
-public final class Workers implements Listener {
+public final class Workers implements Listener, dev.kushcraft.storage.Persistence.Source {
 
     private static final String[] NAMES = {"Bud", "Sage", "Blaze", "Ziggy", "Dusty", "Basil", "Clover", "Moss",
             "Indie", "Skye", "Rowan", "Jojo", "Pip", "Sunny", "Rico", "Lupe", "Benny", "Nico", "Kiki", "Juniper",
@@ -105,13 +105,10 @@ public final class Workers implements Listener {
     private final Map<String, Set<UUID>> byChunk = new HashMap<>();
     /** Every worker, for the tick loop (no new list every tick). */
     private Worker[] list = new Worker[0];
-    /** Owners who switched auto-buy off. */
-    private final Set<UUID> autoBuyOff = new HashSet<>();
     /** Crews and chests, kept for a little while (they're asked for a lot). */
     private final Map<UUID, List<Worker>> crewCache = new HashMap<>();
     private long crewAt = -1;
     private final Map<UUID, ChestList> chestCache = new HashMap<>();
-    private boolean dirty;
     private long ticks;
     /** False when the server can't spawn mannequins (they stay invisible but still work). */
     private boolean mannequins = true;
@@ -195,31 +192,32 @@ public final class Workers implements Listener {
 
     // ------------------------------------------------------------------
     // auto-buy: workers buy their own seeds, fertilizer and ingredients
+    // (off by default since 9.0: supplying your workers is part of the grind)
     // ------------------------------------------------------------------
 
-    /** True when this player's workers buy what they can't find (on unless they switched it off). */
+    /** True when this player's workers buy what they can't find (server allows it and they didn't switch it off). */
     public boolean autoBuy(UUID owner) {
-        return plugin.getConfig().getBoolean("workers.auto-buy", true) && !autoBuyOff.contains(owner);
+        if (!autoBuyAllowed()) {
+            return false;
+        }
+        var r = plugin.players().get(owner);
+        return r == null || !r.has(dev.kushcraft.storage.PlayerRecord.AUTO_BUY_OFF);
     }
 
     /** True when the server lets workers buy at all (workers.auto-buy). */
     public boolean autoBuyAllowed() {
-        return plugin.getConfig().getBoolean("workers.auto-buy", true);
+        return plugin.getConfig().getBoolean("workers.auto-buy", false);
     }
 
     public void setAutoBuy(UUID owner, boolean on) {
-        if (on) {
-            autoBuyOff.remove(owner);
-        } else {
-            autoBuyOff.add(owner);
-        }
-        dirty = true;
+        plugin.economy().account(owner).set(dev.kushcraft.storage.PlayerRecord.AUTO_BUY_OFF, !on);
     }
 
     // ------------------------------------------------------------------
-    // storage
+    // storage: one database row per worker (satchel included)
     // ------------------------------------------------------------------
 
+    /** Reads every worker from the database; the first time, imports workers.yml (8.0 and older). */
     public void load() {
         for (Worker w : workers.values()) {
             despawn(w);
@@ -228,14 +226,58 @@ public final class Workers implements Listener {
         list = new Worker[0];
         byEntity.clear();
         byChunk.clear();
-        autoBuyOff.clear();
-        if (!file.exists()) {
-            return;
+        deleted.clear();
+        List<Worker> rows = plugin.db().call(c -> {
+            List<Worker> out = new ArrayList<>();
+            try (java.sql.Statement st = c.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT * FROM workers ORDER BY hired")) {
+                while (rs.next()) {
+                    WorkerType type = WorkerType.parse(rs.getString("type"));
+                    if (type == null) {
+                        continue;
+                    }
+                    try {
+                        Worker w = new Worker(UUID.fromString(rs.getString("id")), type,
+                                UUID.fromString(rs.getString("owner")), rs.getString("world"), rs.getDouble("x"),
+                                rs.getDouble("y"), rs.getDouble("z"), (float) rs.getDouble("yaw"), rs.getString("name"));
+                        w.level = Math.max(1, rs.getInt("level"));
+                        w.paused = rs.getInt("paused") != 0;
+                        w.jobs = rs.getInt("jobs");
+                        w.wages = rs.getLong("wages") / 100.0;
+                        w.recipe = rs.getString("recipe");
+                        w.hired = rs.getLong("hired");
+                        w.awaySince = rs.getLong("away_since");
+                        if (w.awaySince > 0) {
+                            w.awaySince += plugin.downtime(); // the server being off isn't time alone
+                        }
+                        w.knockedUntil = rs.getLong("knocked_until");
+                        w.satchel.setStorageContents(dev.kushcraft.storage.ItemCodec.decode(rs.getBytes("satchel"),
+                                Worker.SATCHEL));
+                        w.dirty = false;
+                        out.add(w);
+                    } catch (IllegalArgumentException e) {
+                        plugin.getLogger().warning("Skipped a broken worker row " + rs.getString("id"));
+                    }
+                }
+            }
+            return out;
+        });
+        for (Worker w : rows) {
+            add(w);
         }
+        if (rows.isEmpty() && file.exists() && !plugin.legacyImported()) {
+            importYaml();
+        }
+        plugin.getLogger().info("Loaded " + workers.size() + " workers.");
+    }
+
+    /** 8.0 and older kept workers in workers.yml: read it once (the file is moved to legacy-yaml/ after). */
+    private void importYaml() {
         YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
+        plugin.legacyFile(file);
         for (String id : y.getStringList("settings.auto-buy-off")) {
             try {
-                autoBuyOff.add(UUID.fromString(id));
+                setAutoBuy(UUID.fromString(id), false);
             } catch (IllegalArgumentException ignored) {
                 // not a player id
             }
@@ -244,7 +286,9 @@ public final class Workers implements Listener {
         if (sec == null) {
             return;
         }
-        List<OfflinePlayer> refunds = new ArrayList<>();
+        List<UUID> refunds = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        int n = 0;
         for (String k : sec.getKeys(false)) {
             ConfigurationSection s = sec.getConfigurationSection(k);
             String typeName = s == null ? "" : s.getString("type", "");
@@ -253,8 +297,7 @@ public final class Workers implements Listener {
                 // a Supplier from 7.x: they're gone - their hire price goes back to the owner
                 if (s != null && "SUPPLIER".equalsIgnoreCase(typeName)) {
                     try {
-                        refunds.add(Bukkit.getOfflinePlayer(UUID.fromString(s.getString("owner", ""))));
-                        dirty = true;
+                        refunds.add(UUID.fromString(s.getString("owner", "")));
                     } catch (IllegalArgumentException ignored) {
                         // no owner
                     }
@@ -270,6 +313,7 @@ public final class Workers implements Listener {
                 w.jobs = s.getInt("jobs");
                 w.wages = s.getDouble("wages");
                 w.recipe = s.getString("recipe");
+                w.hired = now + n++; // keeps their order
                 if (w.recipe != null && LabRecipe.parse(w.recipe) == null && !Worker.ROLL_JOINT.equals(w.recipe)
                         && !Worker.ROLL_BLUNT.equals(w.recipe)) {
                     w.recipe = null; // a 7.x job (Auto, mixing strains): pick a drug again
@@ -281,23 +325,24 @@ public final class Workers implements Listener {
                 for (ItemStack it : extra) {
                     w.satchel.addItem(it);
                 }
+                w.dirty = true;
                 add(w);
             } catch (IllegalArgumentException e) {
                 plugin.getLogger().warning("workers.yml: skipped a broken worker " + k);
             }
         }
         if (!refunds.isEmpty()) {
-            // paid a moment later, once the economy (Vault) is hooked up
+            // paid a moment later, once the economy is ready
             double each = Math.max(0, plugin.getConfig().getDouble("workers.supplier-refund", 13000));
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                for (OfflinePlayer o : refunds) {
-                    plugin.economy().deposit(o, each);
+                for (UUID o : refunds) {
+                    plugin.economy().deposit(o, each, dev.kushcraft.economy.Tx.REFUND, null, "7.x Supplier refund");
                 }
                 plugin.getLogger().info("Suppliers are gone: refunded " + refunds.size() + " of them to their owners ("
                         + plugin.economy().format(each) + " each).");
             }, 10L);
         }
-        plugin.getLogger().info("Loaded " + workers.size() + " workers.");
+        plugin.getLogger().info("Imported " + workers.size() + " workers from workers.yml.");
     }
 
     /** Reads saved items into the inventory (by slot); with into == null, or slots it doesn't have, into extra. */
@@ -324,55 +369,6 @@ public final class Workers implements Listener {
         }
     }
 
-    public void save() {
-        YamlConfiguration y = new YamlConfiguration();
-        List<String> off = new ArrayList<>();
-        for (UUID id : autoBuyOff) {
-            off.add(id.toString());
-        }
-        y.set("settings.auto-buy-off", off);
-        ConfigurationSection sec = y.createSection("workers");
-        for (Worker w : workers.values()) {
-            ConfigurationSection s = sec.createSection(w.id().toString());
-            s.set("type", w.type().name());
-            s.set("owner", w.owner().toString());
-            s.set("name", w.name);
-            Location h = w.home();
-            s.set("world", w.worldName());
-            if (h != null) {
-                s.set("x", h.getX());
-                s.set("y", h.getY());
-                s.set("z", h.getZ());
-                s.set("yaw", (double) h.getYaw());
-            }
-            s.set("level", w.level);
-            if (w.paused) {
-                s.set("paused", true);
-            }
-            s.set("jobs", w.jobs);
-            s.set("wages", Math.round(w.wages * 100) / 100.0);
-            if (w.recipe != null) {
-                s.set("recipe", w.recipe);
-            }
-            ItemStack[] items = w.satchel.getStorageContents();
-            for (int i = 0; i < items.length; i++) {
-                if (items[i] != null && !items[i].getType().isAir()) {
-                    s.set("satchel." + i, encode(items[i]));
-                }
-            }
-        }
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save workers.yml", e);
-        }
-    }
-
-    private static String encode(ItemStack item) {
-        return Base64.getEncoder().encodeToString(item.serializeAsBytes());
-    }
-
     private static ItemStack decode(String s) {
         if (s == null || s.isEmpty()) {
             return null;
@@ -384,17 +380,120 @@ public final class Workers implements Listener {
         }
     }
 
+    /** Worker ids removed since the last database write. */
+    private final Set<UUID> deleted = new HashSet<>();
+
+    /**
+     * The worker changed and must be saved. important = money or a player's items were part of it
+     * (always the case for the next flush anyway: every changed worker goes out with it).
+     */
+    public void touch(Worker w, boolean important) {
+        w.dirty = true;
+        w.lastWork = System.currentTimeMillis();
+    }
+
+    /** A satchel changed somewhere (moves between satchels and chests): save its worker. */
+    static void touched(Inventory inv) {
+        if (inv != null && inv.getHolder(false) instanceof Worker.Satchel s) {
+            s.worker().dirty = true;
+        }
+    }
+
+    /** Every worker gets saved again (after a config change). */
     public void markDirty() {
-        dirty = true;
+        for (Worker w : workers.values()) {
+            w.dirty = true;
+        }
+    }
+
+    private record Row(String id, String owner, String type, String world, double x, double y, double z, float yaw,
+                       String name, int level, boolean paused, int jobs, long wages, String recipe, long hired,
+                       long awaySince, long knockedUntil, ItemStack[] satchel) {
+    }
+
+    @Override
+    public void collect(dev.kushcraft.storage.Persistence.Batch b, boolean full) {
+        long recent = System.currentTimeMillis() - 60_000L;
+        List<Worker> changed = new ArrayList<>();
+        for (Worker w : list) {
+            // the safety net on full saves: anyone who worked lately is written even if nobody marked them
+            if (w.dirty || (full && w.lastWork > recent)) {
+                changed.add(w);
+            }
+        }
+        if (changed.isEmpty() && deleted.isEmpty()) {
+            return;
+        }
+        List<Row> rows = new ArrayList<>(changed.size());
+        for (Worker w : changed) {
+            w.dirty = false;
+            Location h = w.home();
+            rows.add(new Row(w.id().toString(), w.owner().toString(), w.type().name(), w.worldName(),
+                    h == null ? w.x() : h.getX(), h == null ? w.y() : h.getY(), h == null ? w.z() : h.getZ(),
+                    h == null ? w.yaw() : h.getYaw(), w.name, w.level, w.paused, w.jobs, Math.round(w.wages * 100),
+                    w.recipe, w.hired, w.awaySince, w.knockedUntil,
+                    dev.kushcraft.storage.ItemCodec.copy(w.satchel.getStorageContents())));
+        }
+        List<String> gone = new ArrayList<>();
+        deleted.forEach(id -> gone.add(id.toString()));
+        Set<UUID> goneIds = new HashSet<>(deleted);
+        deleted.clear();
+        b.write(c -> {
+            if (!rows.isEmpty()) {
+                try (java.sql.PreparedStatement ps = c.prepareStatement("""
+                        INSERT INTO workers(id, owner, type, world, x, y, z, yaw, name, level, paused, jobs, wages, recipe,
+                          hired, away_since, knocked_until, satchel) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        ON CONFLICT(id) DO UPDATE SET owner=excluded.owner, type=excluded.type, world=excluded.world,
+                          x=excluded.x, y=excluded.y, z=excluded.z, yaw=excluded.yaw, name=excluded.name,
+                          level=excluded.level, paused=excluded.paused, jobs=excluded.jobs, wages=excluded.wages,
+                          recipe=excluded.recipe, hired=excluded.hired, away_since=excluded.away_since,
+                          knocked_until=excluded.knocked_until, satchel=excluded.satchel""")) {
+                    for (Row r : rows) {
+                        ps.setString(1, r.id());
+                        ps.setString(2, r.owner());
+                        ps.setString(3, r.type());
+                        ps.setString(4, r.world());
+                        ps.setDouble(5, r.x());
+                        ps.setDouble(6, r.y());
+                        ps.setDouble(7, r.z());
+                        ps.setDouble(8, r.yaw());
+                        ps.setString(9, r.name());
+                        ps.setInt(10, r.level());
+                        ps.setInt(11, r.paused() ? 1 : 0);
+                        ps.setInt(12, r.jobs());
+                        ps.setLong(13, r.wages());
+                        ps.setString(14, r.recipe());
+                        ps.setLong(15, r.hired());
+                        ps.setLong(16, r.awaySince());
+                        ps.setLong(17, r.knockedUntil());
+                        ps.setBytes(18, dev.kushcraft.storage.ItemCodec.encode(r.satchel()));
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+            if (!gone.isEmpty()) {
+                try (java.sql.PreparedStatement ps = c.prepareStatement("DELETE FROM workers WHERE id=?")) {
+                    for (String id : gone) {
+                        ps.setString(1, id);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+        });
+        b.onFailure(() -> {
+            changed.forEach(w -> w.dirty = true);
+            for (UUID id : goneIds) {
+                if (!workers.containsKey(id)) {
+                    deleted.add(id);
+                }
+            }
+        });
     }
 
     public void start() {
         Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (dirty) {
-                save();
-            }
-        }, 20L * 60, 20L * 60);
         for (World w : Bukkit.getWorlds()) {
             for (org.bukkit.Chunk c : w.getLoadedChunks()) {
                 chunkLoaded(w, c.getX(), c.getZ());
@@ -402,11 +501,11 @@ public final class Workers implements Listener {
         }
     }
 
+    /** Takes every mannequin out of the world (shutdown, reset). The data stays. */
     public void shutdown() {
         for (Worker w : workers.values()) {
             despawn(w);
         }
-        save();
     }
 
     private void add(Worker w) {
@@ -428,7 +527,7 @@ public final class Workers implements Listener {
                 byChunk.remove(w.chunkId());
             }
         }
-        dirty = true;
+        deleted.add(w.id());
     }
 
     // ------------------------------------------------------------------
@@ -478,6 +577,327 @@ public final class Workers implements Listener {
     }
 
     // ------------------------------------------------------------------
+    // limits: rank slots, workers per chunk
+    // ------------------------------------------------------------------
+
+    /** How many workers this player may have placed: their rank's slots (and workers.max-per-player if set). */
+    public int limit(UUID owner) {
+        int slots = plugin.ranks().workerSlots(owner);
+        return maxPerPlayer() > 0 ? Math.min(slots, maxPerPlayer()) : slots;
+    }
+
+    public int maxPerChunk() {
+        return Math.max(1, plugin.getConfig().getInt("workers.max-per-chunk", 6));
+    }
+
+    /** Workers past their owner's limit (oldest hires keep working), worked out when it can change. */
+    private final Set<UUID> overLimit = new HashSet<>();
+    private boolean overLimitKnown;
+
+    public boolean overLimit(Worker w) {
+        if (!overLimitKnown) {
+            overLimit.clear();
+            Map<UUID, List<Worker>> byOwner = new HashMap<>();
+            for (Worker o : workers.values()) {
+                byOwner.computeIfAbsent(o.owner(), k -> new ArrayList<>()).add(o);
+            }
+            byOwner.forEach((owner, list) -> {
+                int limit = limit(owner);
+                Player p = Bukkit.getPlayer(owner);
+                if (p != null && p.hasPermission("kushcraft.workers.unlimited")) {
+                    return;
+                }
+                list.sort(java.util.Comparator.comparingLong(Worker::hired));
+                for (int i = limit; i < list.size(); i++) {
+                    overLimit.add(list.get(i).id());
+                }
+            });
+            overLimitKnown = true;
+        }
+        return overLimit.contains(w.id());
+    }
+
+    /** A rank changed (rank-up, admin, reset, config reload): the limits are worked out again. */
+    public void slotsChanged(UUID owner) {
+        overLimitKnown = false;
+    }
+
+    /** True when one of the owner's Farmhands looks after this plant (their catch-up grows it). */
+    public boolean tended(Plant p) {
+        for (Worker w : workers.values()) {
+            if (w.type() == WorkerType.FARMHAND && w.owner().equals(p.owner()) && near(p.key(), w, radius(w))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ------------------------------------------------------------------
+    // raids (pvp/WorkerRaids decides who may hit; this keeps the worker's side)
+    // ------------------------------------------------------------------
+
+    /** Takes health off a worker; returns what's left. */
+    public double hurt(Worker w, double damage, double max) {
+        if (w.health < 0 || w.health > max) {
+            w.health = max;
+        }
+        w.health -= Math.max(0, damage);
+        return w.health;
+    }
+
+    /** Takes everything out of a worker's satchel (a knock-out drops it). */
+    public List<ItemStack> empty(Worker w) {
+        List<ItemStack> out = new ArrayList<>();
+        for (ItemStack it : w.satchel.getStorageContents()) {
+            if (it != null && !it.getType().isAir()) {
+                out.add(it.clone());
+            }
+        }
+        w.satchel.clear();
+        touch(w, true);
+        return out;
+    }
+
+    /** Knocked out until then: no work, lying down. */
+    public void knockOut(Worker w, long until) {
+        w.knockedUntil = until;
+        w.health = -1;
+        w.steps.clear();
+        w.current = null;
+        w.status = "Knocked out";
+        touch(w, true);
+        Entity e = entity(w);
+        Location home = w.home();
+        if (e != null && home != null) {
+            w.pos = home.clone();
+            e.teleport(home);
+            try {
+                e.setPose(org.bukkit.entity.Pose.SLEEPING, true);
+            } catch (RuntimeException ignored) {
+                // this entity can't lie down: they just stand there
+            }
+        }
+        nameplate(w);
+    }
+
+    /** Back on their feet when the knock-out is over. */
+    private void wakeUp(Worker w) {
+        w.knockedUntil = 0;
+        touch(w, true);
+        Entity e = entity(w);
+        if (e != null) {
+            try {
+                e.setPose(org.bukkit.entity.Pose.STANDING, false);
+            } catch (RuntimeException ignored) {
+                // never lay down
+            }
+        }
+        w.status = "Back on their feet";
+        nameplate(w);
+    }
+
+    // ------------------------------------------------------------------
+    // work while nobody is around: caught up when their area loads again
+    // ------------------------------------------------------------------
+
+    /** One crew's catch-up, done a few steps per tick. */
+    private final class CatchUp {
+        final UUID owner;
+        final List<Worker> crew;
+        final List<Plant> plants = new ArrayList<>();
+        final Map<Plant, Double> growth = new HashMap<>();
+        final List<Machine> labs = new ArrayList<>();
+        final double awaySeconds;
+        int steps;
+        int done;
+        int jobs;
+        final double before;
+
+        CatchUp(UUID owner, List<Worker> crew, double awaySeconds, double effectiveSeconds) {
+            this.owner = owner;
+            this.crew = crew;
+            this.awaySeconds = awaySeconds;
+            this.steps = (int) Math.ceil(effectiveSeconds / STEP);
+            this.before = plugin.economy().balance(owner);
+            Set<Plant> seen = new HashSet<>();
+            Set<Machine> labSeen = new HashSet<>();
+            for (Worker w : crew) {
+                if (w.type() == WorkerType.FARMHAND) {
+                    for (Plant p : plantsNear(w, radius(w))) {
+                        if (owner.equals(p.owner()) && !p.wild() && seen.add(p)) {
+                            plants.add(p);
+                            growth.put(p, plugin.plants().awayMultiplier(p));
+                        }
+                    }
+                }
+                if (w.type() == WorkerType.DRYER || w.type() == WorkerType.COOK) {
+                    for (Machine m : labsNear(w, radius(w))) {
+                        if (labSeen.add(m)) {
+                            labs.add(m);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Seconds of (effective) work time per catch-up step. */
+    private static final double STEP = 60;
+    private final java.util.ArrayDeque<CatchUp> catchUps = new java.util.ArrayDeque<>();
+
+    public boolean awayEnabled() {
+        return plugin.getConfig().getBoolean("workers.away.enabled", true);
+    }
+
+    private double awayRate() {
+        return Math.max(0, plugin.getConfig().getDouble("workers.away.rate", 0.5));
+    }
+
+    private long awayMaxMillis() {
+        return (long) (Math.max(0, plugin.getConfig().getDouble("workers.away.max-hours", 12)) * 3_600_000L);
+    }
+
+    /** True while this worker's crew is catching up (they don't do live work meanwhile). */
+    public boolean catchingUp(Worker w) {
+        for (CatchUp c : catchUps) {
+            if (c.crew.contains(w)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Every tick: start catch-ups for crews whose area is back, then work on them within the budget. */
+    private void catchUpTick() {
+        long now = System.currentTimeMillis();
+        if (ticks % 20 == 0) {
+            for (Worker w : list) {
+                if (w.pendingAway > 0 && w.pos != null && now - w.loadedAt > 2_000L) {
+                    startCatchUp(w);
+                }
+            }
+        }
+        if (catchUps.isEmpty()) {
+            return;
+        }
+        long budget = (long) (Math.max(0.5, plugin.getConfig().getDouble("workers.away.budget-ms", 3)) * 1_000_000L);
+        long start = System.nanoTime();
+        while (!catchUps.isEmpty() && System.nanoTime() - start < budget) {
+            CatchUp c = catchUps.peek();
+            if (c.done >= c.steps || c.crew.stream().anyMatch(w -> w.pos == null)) {
+                catchUps.poll();
+                finish(c);
+                continue;
+            }
+            step(c);
+        }
+    }
+
+    private void startCatchUp(Worker first) {
+        List<Worker> crew = new ArrayList<>();
+        crew.add(first);
+        for (Worker o : crew(first)) {
+            if (o.pos != null) {
+                crew.add(o);
+            }
+        }
+        long away = 0;
+        for (Worker w : crew) {
+            away = Math.max(away, w.pendingAway);
+            w.pendingAway = 0;
+        }
+        crew.removeIf(w -> w.paused || w.knockedOut() || overLimit(w));
+        if (crew.isEmpty() || !awayEnabled() || !enabled()) {
+            return;
+        }
+        crew.sort(java.util.Comparator.comparingInt(w -> w.type().ordinal())); // farm, dry, cook, sell
+        double effective = Math.min(away, awayMaxMillis()) / 1000.0 * awayRate();
+        if (effective < STEP) {
+            return;
+        }
+        catchUps.add(new CatchUp(first.owner(), crew, away / 1000.0, effective));
+        for (Worker w : crew) {
+            w.status = "Catching up on the time you were away...";
+        }
+    }
+
+    /** One step: the plants grow and the labs cook for STEP seconds, then everyone works until there's nothing to do. */
+    private void step(CatchUp c) {
+        for (Plant p : c.plants) {
+            if (plugin.plants().at(p.key()) == p) {
+                plugin.plants().advance(p, STEP, c.growth.getOrDefault(p, 0.0));
+            }
+        }
+        // plants a Farmhand replanted this step are new objects: follow them
+        for (int i = 0; i < c.plants.size(); i++) {
+            Plant p = c.plants.get(i);
+            Plant now = plugin.plants().at(p.key());
+            if (now != p && now != null && c.owner.equals(now.owner())) {
+                c.plants.set(i, now);
+                c.growth.put(now, c.growth.getOrDefault(p, plugin.plants().awayMultiplier(now)));
+            }
+        }
+        for (Machine m : c.labs) {
+            m.shift((long) (STEP * 1000));
+        }
+        for (Worker w : c.crew) {
+            int max = (int) Math.ceil(STEP / (restSeconds(w) + 3.0));
+            for (int i = 0; i < max; i++) {
+                if (!workOnce(w)) {
+                    break;
+                }
+                c.jobs++;
+            }
+        }
+        c.done++;
+    }
+
+    private void finish(CatchUp c) {
+        double earned = plugin.economy().balance(c.owner) - c.before;
+        String hours = dev.kushcraft.util.Text.duration((long) (c.awaySeconds * 1000));
+        for (Worker w : c.crew) {
+            w.status = "Caught up";
+            touch(w, true);
+        }
+        if (c.jobs == 0) {
+            return;
+        }
+        plugin.economy().ledger().log(c.owner, dev.kushcraft.economy.Tx.WORKER_AWAY, 0, null, c.crew.size() + " workers",
+                "caught up " + hours + " away (" + c.done + " of " + c.steps + " steps): " + c.jobs + " jobs, money "
+                        + (earned >= 0 ? "+" : "") + plugin.economy().format(earned));
+        Player p = Bukkit.getPlayer(c.owner);
+        if (p != null) {
+            p.sendMessage(Text.msg("<gray>While nobody was around (" + hours + "), your crew of " + c.crew.size()
+                    + " did <white>" + c.jobs + "</white> jobs" + (Math.abs(earned) >= 0.01 ? " <gray>(money "
+                    + (earned >= 0 ? "<green>+" : "<red>") + plugin.economy().format(earned) + "<gray>)" : "") + "."));
+        }
+    }
+
+    /**
+     * Self test: as if this worker's crew had been alone for awayMillis, caught up right now (no
+     * budget). Returns how many jobs they did.
+     */
+    public int catchUpNow(Worker w, long awayMillis) {
+        w.pendingAway = awayMillis;
+        int before = catchUps.size();
+        startCatchUp(w);
+        if (catchUps.size() == before) {
+            return 0;
+        }
+        CatchUp c = catchUps.pollLast();
+        while (c.done < c.steps) {
+            step(c);
+        }
+        finish(c);
+        return c.jobs;
+    }
+
+    /** Stops catch-ups (shutdown, reset): what wasn't done yet is skipped. */
+    public void stopping() {
+        catchUps.clear();
+    }
+
+    // ------------------------------------------------------------------
     // hiring, upgrading, dismissing
     // ------------------------------------------------------------------
 
@@ -505,9 +925,21 @@ public final class Workers implements Listener {
             p.sendActionBar(Text.mm("<red>You can't hire anyone here."));
             return false;
         }
+        if (!plugin.rates().allow(p.getUniqueId(), "hire", 2_000L)) {
+            p.sendActionBar(Text.mm("<gray>One worker at a time."));
+            return false;
+        }
+        // the cap is checked and the worker made in the same tick: nothing can slip in between
         int have = of(p.getUniqueId()).size();
-        if (maxPerPlayer() > 0 && have >= maxPerPlayer() && !p.hasPermission("kushcraft.admin")) {
-            p.sendActionBar(Text.mm("<red>You already have " + have + " workers (the most you can hire)."));
+        int limit = limit(p.getUniqueId());
+        if (have >= limit && !p.hasPermission("kushcraft.workers.unlimited")) {
+            p.sendActionBar(Text.mm("<red>Your rank (" + plugin.ranks().of(p.getUniqueId()).colored()
+                    + "<red>) allows " + limit + " worker" + (limit == 1 ? "" : "s") + ". <gray>/rankup for more."));
+            return false;
+        }
+        Set<UUID> here = byChunk.get(BlockKey.chunkId(spot.getWorld().getName(), spot.getX() >> 4, spot.getZ() >> 4));
+        if (here != null && here.size() >= maxPerChunk()) {
+            p.sendActionBar(Text.mm("<red>This chunk already has " + here.size() + " workers. <gray>Spread them out a little."));
             return false;
         }
         Location home = spot.getLocation().add(0.5, 0, 0.5);
@@ -515,7 +947,11 @@ public final class Workers implements Listener {
         Worker w = hireAt(home, type, p.getUniqueId(), Items.level(item));
         if (p.getGameMode() != GameMode.CREATIVE) {
             item.setAmount(item.getAmount() - 1);
+            plugin.persistence().took(p); // the contract left their inventory for a worker in the database
         }
+        plugin.economy().ledger().log(p.getUniqueId(), dev.kushcraft.economy.Tx.WORKER_HIRE, 0, null, w.id().toString(),
+                type.display() + " " + w.name() + " (level " + w.level() + ") at " + home.getBlockX() + " " + home.getBlockY()
+                        + " " + home.getBlockZ() + ", " + (have + 1) + "/" + limit + " slots");
         p.swingMainHand();
         p.sendMessage(Text.msg(type.colored() + " " + Text.escape(w.name) + " <gray>started working for you. "
                 + type.job() + " <dark_gray>(Right-click them for their satchel.)"));
@@ -545,7 +981,7 @@ public final class Workers implements Listener {
         w.level = Math.max(1, Math.min(maxLevel(), level));
         w.restTicks = 2;
         add(w);
-        dirty = true;
+        w.hired = System.currentTimeMillis();
         spawn(w);
         World world = home.getWorld();
         world.playSound(home, "minecraft:entity.villager.celebrate", SoundCategory.NEUTRAL, 0.8f, 1.2f);
@@ -557,6 +993,10 @@ public final class Workers implements Listener {
     public void dismiss(Worker w, Player p) {
         despawn(w);
         forget(w);
+        plugin.economy().ledger().log(w.owner(), dev.kushcraft.economy.Tx.WORKER_DISMISS, 0, null, w.id().toString(),
+                w.type().display() + " " + w.name() + (p != null && !p.getUniqueId().equals(w.owner())
+                ? " by " + p.getName() : ""));
+        overLimit.clear();
         List<ItemStack> back = new ArrayList<>();
         back.add(Items.machine(w.type().item(), w.level()));
         for (ItemStack it : w.satchel.getStorageContents()) {
@@ -584,11 +1024,12 @@ public final class Workers implements Listener {
             return "Already at the top level.";
         }
         double cost = costs.get(w.level() - 1);
-        if (!plugin.economy().withdraw(p, cost)) {
+        if (!plugin.economy().withdraw(p.getUniqueId(), cost, dev.kushcraft.economy.Tx.WORKER_TRAIN, w.id().toString(),
+                w.type().display() + " " + w.name() + " to level " + (w.level() + 1))) {
             return "Training costs " + plugin.economy().format(cost) + ".";
         }
         w.level++;
-        dirty = true;
+        touch(w, true);
         chestCache.remove(w.id());
         nameplate(w);
         return null;
@@ -600,7 +1041,7 @@ public final class Workers implements Listener {
             return;
         }
         w.name = clean.length() > 16 ? clean.substring(0, 16) : clean;
-        dirty = true;
+        touch(w, true);
         nameplate(w);
     }
 
@@ -610,7 +1051,7 @@ public final class Workers implements Listener {
         if (paused) {
             w.steps.clear();
         }
-        dirty = true;
+        touch(w, true);
         nameplate(w);
     }
 
@@ -638,7 +1079,7 @@ public final class Workers implements Listener {
         w.status = made == null ? "Pick a drug for them" : "Ready to make " + made.display();
         w.restTicks = 1;
         w.want = null;
-        dirty = true;
+        touch(w, true);
         nameplate(w);
     }
 
@@ -650,7 +1091,7 @@ public final class Workers implements Listener {
                 left.addAll(w.satchel.addItem(it).values());
             }
         }
-        dirty = true;
+        touch(w, true);
         return left;
     }
 
@@ -677,7 +1118,8 @@ public final class Workers implements Listener {
         try {
             Mannequin m = home.getWorld().spawn(home, Mannequin.class, e -> {
                 e.setPersistent(false);
-                e.setInvulnerable(true);
+                // not invulnerable: hits must reach the event so raids can see them (all other damage is cancelled)
+                e.setInvulnerable(false);
                 e.setSilent(true);
                 e.setGravity(false);
                 e.setImmovable(true);
@@ -705,6 +1147,13 @@ public final class Workers implements Listener {
             });
             w.entityId = m.getUniqueId();
             byEntity.put(m.getUniqueId(), w);
+            if (w.knockedOut()) {
+                try {
+                    m.setPose(org.bukkit.entity.Pose.SLEEPING, true);
+                } catch (RuntimeException ignored) {
+                    // can't lie down
+                }
+            }
             nameplate(w);
         } catch (RuntimeException ex) {
             mannequins = false;
@@ -729,7 +1178,7 @@ public final class Workers implements Listener {
         e.setCustomNameVisible(true);
         if (e instanceof Mannequin m) {
             ItemType made = w.product();
-            m.setDescription(Text.mm(w.paused ? "<red>Paused" : "<gray>" + w.type().display()
+            m.setDescription(Text.mm(w.knockedOut() ? "<red>Knocked out" : w.paused ? "<red>Paused" : "<gray>" + w.type().display()
                     + (made != null ? " <dark_gray>· <aqua>" + made.display() : "")
                     + " <dark_gray>· <gold>Lv " + w.level));
         }
@@ -763,9 +1212,16 @@ public final class Workers implements Listener {
             return;
         }
         crewCache.clear();
+        long now = System.currentTimeMillis();
         for (UUID id : new ArrayList<>(ids)) {
             Worker w = workers.get(id);
             if (w != null) {
+                w.loadedAt = now;
+                if (w.awaySince > 0) {
+                    w.pendingAway += Math.max(0, now - w.awaySince);
+                    w.awaySince = 0;
+                    touch(w, false);
+                }
                 spawn(w);
             }
         }
@@ -777,10 +1233,15 @@ public final class Workers implements Listener {
             return;
         }
         crewCache.clear();
+        long now = System.currentTimeMillis();
         for (UUID id : ids) {
             Worker w = workers.get(id);
             if (w != null) {
                 despawn(w);
+                if (w.awaySince == 0) {
+                    w.awaySince = now;
+                    touch(w, false);
+                }
             }
         }
     }
@@ -789,10 +1250,22 @@ public final class Workers implements Listener {
     // working
     // ------------------------------------------------------------------
 
+    private int cursor;
+
     private void tick() {
-        long start = System.nanoTime();
         ticks++;
-        for (Worker w : list) {
+        catchUpTick(); // has its own budget (workers.away.budget-ms)
+        long start = System.nanoTime();
+        long budget = (long) (Math.max(0.5, plugin.getConfig().getDouble("workers.tick-budget-ms", 5)) * 1_000_000L);
+        int n = list.length;
+        int first = n == 0 ? 0 : cursor % n;
+        for (int k = 0; k < n; k++) {
+            // a time budget per tick: whoever doesn't fit goes first next tick (no lag, however many workers)
+            if ((k & 7) == 7 && System.nanoTime() - start > budget) {
+                cursor = (first + k) % n;
+                break;
+            }
+            Worker w = list[(first + k) % n];
             if (w.pos == null) {
                 continue; // not loaded
             }
@@ -832,6 +1305,21 @@ public final class Workers implements Listener {
      * walk home after a while with nothing to do (no running back and forth between jobs).
      */
     private void think(Worker w) {
+        if (w.knockedUntil > 0) {
+            if (w.knockedOut()) {
+                w.status = "Knocked out - back in " + Text.duration(w.knockedUntil - System.currentTimeMillis());
+                return;
+            }
+            wakeUp(w);
+        }
+        if (catchingUp(w)) {
+            return;
+        }
+        if (overLimit(w)) {
+            w.status = "<red>Not working: your rank allows " + limit(w.owner()) + " workers (/rankup)";
+            goHome(w);
+            return;
+        }
         if (w.paused) {
             w.status = "Paused";
             goHome(w);
@@ -891,6 +1379,22 @@ public final class Workers implements Listener {
         return w.type() != WorkerType.RUNNER && planDeposit(w, true);
     }
 
+    /** One job right away, without walking, keeping the chest and soil caches (the away catch-up). */
+    private boolean workOnce(Worker w) {
+        if (!plan(w)) {
+            return false;
+        }
+        boolean ok = true;
+        while (ok && !w.steps.isEmpty()) {
+            Worker.Step s = w.steps.poll();
+            ok = s.act() == null || act(s);
+        }
+        w.steps.clear();
+        w.current = null;
+        touch(w, false);
+        return ok;
+    }
+
     /** Does the next job right away, without walking or waiting (for /kush selftest). */
     public boolean workNow(Worker w) {
         chestCache.remove(w.id());
@@ -920,11 +1424,12 @@ public final class Workers implements Listener {
 
     private void pay(Worker w) {
         double wage = wage(w.type());
-        if (wage > 0 && plugin.economy().withdraw(Bukkit.getOfflinePlayer(w.owner()), wage)) {
+        if (wage > 0 && plugin.economy().frequent(w.owner(), -wage, dev.kushcraft.economy.Tx.WAGES, w.id().toString(),
+                w.type().display() + " " + w.name())) {
             w.wages += wage;
         }
         w.jobs++;
-        dirty = true;
+        touch(w, false);
     }
 
     private boolean near(BlockKey k, Worker w, double r) {
@@ -1206,7 +1711,10 @@ public final class Workers implements Listener {
                 break; // the other side is full
             }
         }
-        dirty |= moved > 0;
+        if (moved > 0) {
+            touched(from);
+            touched(to);
+        }
         return moved;
     }
 
@@ -1510,7 +2018,8 @@ public final class Workers implements Listener {
             return false;
         }
         OfflinePlayer owner = Bukkit.getOfflinePlayer(w.owner());
-        if (plugin.economy().balance(owner) < b.cost() || !plugin.economy().withdraw(owner, b.cost())) {
+        if (plugin.economy().balance(owner) < b.cost() || !plugin.economy().frequent(owner.getUniqueId(), -b.cost(),
+                dev.kushcraft.economy.Tx.WORKER_BUY, w.id().toString(), b.name())) {
             w.status = "<red>Can't buy " + b.name() + ": you need " + plugin.economy().format(b.cost()) + ".";
             return false;
         }
@@ -1532,7 +2041,7 @@ public final class Workers implements Listener {
         if (c != null) {
             c.getWorld().playSound(c, "minecraft:entity.villager.trade", SoundCategory.NEUTRAL, 0.7f, 1.1f);
         }
-        dirty = true;
+        touch(w, true);
         return true;
     }
 
@@ -1692,7 +2201,7 @@ public final class Workers implements Listener {
                         Plant.Kind kind = PlantManager.kindOf(Items.type(seed));
                         Strain strain = kind == Plant.Kind.CANNABIS ? Items.strain(seed) : null;
                         seed.setAmount(seed.getAmount() - 1);
-                        dirty = true;
+                        touch(w, true);
                         plugin.plants().plantAt(spot, kind, strain, w.owner());
                         Location c = spot.bottomCenter();
                         c.getWorld().playSound(c, "minecraft:item.crop.plant", SoundCategory.BLOCKS, 1f, 1f);
@@ -1722,7 +2231,7 @@ public final class Workers implements Listener {
                     }
                     if (plugin.plants().at(target.key()) == target && plugin.plants().fertilize(target)) {
                         f.setAmount(f.getAmount() - 1);
-                        dirty = true;
+                        touch(w, true);
                     }
                     return true;
                 });
@@ -1870,7 +2379,9 @@ public final class Workers implements Listener {
             drop(w, stash(w, List.of(Items.create(ItemType.FERTILIZER, spare / 4))), BlockKey.of(spot(w)));
             w.status = "Turned " + spare + " spare seeds into fertilizer";
         }
-        dirty |= spare > 0;
+        if (spare > 0) {
+            touch(w, false);
+        }
     }
 
     private String plantName(Plant p) {
@@ -1985,7 +2496,6 @@ public final class Workers implements Listener {
                         return false;
                     }
                     drop(w, stash(w, dried), lab.key());
-                    plugin.machines().markDirty();
                     pay(w);
                     w.status = "Collected dry buds";
                     return true;
@@ -2007,7 +2517,6 @@ public final class Workers implements Listener {
                     if (hung <= 0) {
                         return false;
                     }
-                    plugin.machines().markDirty();
                     pay(w);
                     w.status = "Hung " + hung + " buds to dry";
                     return true;
@@ -2076,7 +2585,6 @@ public final class Workers implements Listener {
                 }
                 ItemStack out = lab.output().clone();
                 lab.clearJob();
-                plugin.machines().markDirty();
                 drop(w, stash(w, List.of(out)), lab.key());
                 w.status = "Collected " + out.getAmount() + " " + Text.plain(out.effectiveName());
                 return true;
@@ -2443,20 +2951,20 @@ public final class Workers implements Listener {
         total *= bonus;
         double cut = Math.round(total * runnerCut() * 100) / 100.0;
         double paid = Math.round((total - cut) * 100) / 100.0;
-        plugin.economy().deposit(owner, paid);
+        plugin.economy().frequent(owner.getUniqueId(), paid, dev.kushcraft.economy.Tx.RUNNER_SALE, w.id().toString(),
+                w.name() + " sold product");
+        touch(w, true);
         sold.forEach((t, n) -> plugin.market().sold(t, n));
         if (online != null) {
             plugin.titles().sold(online, paid);
             online.sendActionBar(Text.mm("<yellow>" + Text.escape(w.name()) + " <gray>sold " + count + " items: <gold>+"
                     + plugin.economy().format(paid)));
         } else {
-            plugin.economy().addSales(owner, paid);
-            plugin.cartels().sold(w.owner(), paid);
-            plugin.titles().refresh();
+            plugin.titles().soldOffline(w.owner(), paid);
         }
         w.jobs++;
         w.wages += cut;
-        dirty = true;
+        touch(w, true);
         Location c = spot(w);
         if (c != null) {
             c.getWorld().playSound(c, "minecraft:entity.villager.yes", SoundCategory.NEUTRAL, 0.8f, 1.1f);
@@ -2477,8 +2985,48 @@ public final class Workers implements Listener {
         return v;
     }
 
+    /**
+     * The easy way to keep a crew going: everything in the player's inventory that one of their
+     * workers uses (seeds and fertilizer, fresh buds, a Cook's ingredients) goes into that
+     * worker's satchel. Runners get nothing (they'd sell it for a cut). Returns how many items.
+     */
+    public int supply(Player p) {
+        List<Worker> mine = of(p.getUniqueId());
+        mine.removeIf(w -> w.type() == WorkerType.RUNNER);
+        mine.sort(java.util.Comparator.comparingInt(w -> w.type().ordinal()));
+        ItemStack[] inv = p.getInventory().getStorageContents();
+        int moved = 0;
+        for (int i = 0; i < inv.length; i++) {
+            ItemStack it = inv[i];
+            if (it == null || it.getType().isAir() || Items.type(it) == ItemType.GROWER_GUIDE) {
+                continue;
+            }
+            for (Worker w : mine) {
+                if (it.getAmount() <= 0 || !uses(w, it)) {
+                    continue;
+                }
+                int before = it.getAmount();
+                Map<Integer, ItemStack> left = w.satchel.addItem(it.clone());
+                int now = left.isEmpty() ? 0 : left.values().iterator().next().getAmount();
+                if (now < before) {
+                    moved += before - now;
+                    it.setAmount(now);
+                    touch(w, true);
+                    hurry(w);
+                }
+            }
+            inv[i] = it.getAmount() <= 0 ? null : it;
+        }
+        if (moved > 0) {
+            p.getInventory().setStorageContents(inv);
+            plugin.persistence().took(p);
+        }
+        return moved;
+    }
+
     /** Everything your workers made (not what they need) goes to your inventory. Returns how many items. */
     public int collectAll(Player p) {
+        plugin.persistence().gave(p);
         int n = 0;
         for (Worker w : of(p.getUniqueId())) {
             ItemStack[] items = w.satchel.getStorageContents();
@@ -2494,11 +3042,11 @@ public final class Workers implements Listener {
                     ItemStack rest = it.clone();
                     rest.setAmount(kept);
                     w.satchel.setItem(i, rest);
-                    dirty = true;
+                    touch(w, true);
                     return n; // inventory full
                 }
                 w.satchel.setItem(i, null);
-                dirty = true;
+                touch(w, true);
             }
         }
         return n;
@@ -2517,7 +3065,9 @@ public final class Workers implements Listener {
             it.setAmount(it.getAmount() - n);
             hung += n;
         }
-        dirty |= hung > 0;
+        if (hung > 0) {
+            touch(w, false);
+        }
         return hung;
     }
 

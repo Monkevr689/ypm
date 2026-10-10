@@ -77,7 +77,6 @@ public final class DryMenu extends LabTabMenu {
             failSound();
             return;
         }
-        KushCraft.get().machines().markDirty();
         KushCraft.get().awards().dried(player);
         player.sendActionBar(Text.mm("<green>Collected " + total + " dried buds"));
         player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.8f, 1f);
@@ -105,7 +104,6 @@ public final class DryMenu extends LabTabMenu {
             failSound();
             return;
         }
-        KushCraft.get().machines().markDirty();
         if (machine.racksInUse() == Machine.RACKS) {
             KushCraft.get().awards().fullRacks(player);
         }
@@ -127,6 +125,9 @@ public final class DryMenu extends LabTabMenu {
                 now + KushCraft.get().machines().dryingSeconds() * 1000L);
         inSlot.setAmount(inSlot.getAmount() - add);
         player.getInventory().setItem(slot, inSlot.getAmount() <= 0 ? null : inSlot);
+        if (add > 0) {
+            KushCraft.get().persistence().took(player); // the buds went onto a rack in the database
+        }
         return add;
     }
 

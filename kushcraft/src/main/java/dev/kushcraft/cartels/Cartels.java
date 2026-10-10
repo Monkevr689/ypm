@@ -32,7 +32,7 @@ import java.util.logging.Level;
  * for everyone) and the cartel fills big shipments together. Saved in
  * cartels.yml; levels and prices in config.yml (cartel.*).
  */
-public final class Cartels {
+public final class Cartels implements dev.kushcraft.storage.Persistence.Source {
 
     /** One cartel level from config.yml: name, upgrade cost and the bonuses every member gets. */
     public record Tier(String name, double cost, int members, double sell, double grow, double lab) {
@@ -55,48 +55,77 @@ public final class Cartels {
     }
 
     // ------------------------------------------------------------------
-    // storage
+    // storage: one database row per cartel (bank in its own column)
     // ------------------------------------------------------------------
 
     public void load() {
         loadTiers();
         cartels.clear();
         byMember.clear();
-        if (!file.exists()) {
-            return;
-        }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
-        ConfigurationSection sec = y.getConfigurationSection("cartels");
-        if (sec == null) {
-            return;
-        }
-        for (String id : sec.getKeys(false)) {
-            ConfigurationSection s = sec.getConfigurationSection(id);
-            if (s == null) {
+        List<String[]> rows = plugin.db().call(c -> {
+            List<String[]> out = new ArrayList<>();
+            try (java.sql.Statement st = c.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT id, bank, data FROM cartels")) {
+                while (rs.next()) {
+                    out.add(new String[]{rs.getString(1), String.valueOf(rs.getLong(2)), rs.getString(3)});
+                }
+            }
+            return out;
+        });
+        for (String[] r : rows) {
+            YamlConfiguration y = new YamlConfiguration();
+            try {
+                y.loadFromString(r[2]);
+            } catch (org.bukkit.configuration.InvalidConfigurationException e) {
+                plugin.getLogger().warning("Skipping broken cartel '" + r[0] + "' in the database");
                 continue;
             }
-            try {
-                Cartel c = new Cartel(id, s.getString("name", id), s.getInt("color", Cartel.COLORS[0]),
-                        UUID.fromString(s.getString("leader", "")));
-                for (String m : s.getStringList("members")) {
-                    c.members.add(UUID.fromString(m));
-                }
-                c.bank = s.getDouble("bank");
-                c.level = Math.max(1, Math.min(tiers.size(), s.getInt("level", 1)));
-                c.sales = s.getDouble("sales");
-                c.shipments = s.getInt("shipments");
-                c.created = s.getLong("created");
-                c.nextShipment = s.getLong("next-shipment");
-                ConfigurationSection sh = s.getConfigurationSection("shipment");
-                ItemType t = sh == null ? null : ItemType.parse(sh.getString("item"));
-                if (t != null) {
-                    c.shipment = new Cartel.Shipment(t, sh.getInt("amount"), sh.getInt("delivered"),
-                            sh.getDouble("reward"), sh.getLong("expires"));
-                }
+            Cartel c = read(r[0], y);
+            if (c != null) {
+                c.bank = Long.parseLong(r[1]) / 100.0;
                 add(c);
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Skipping broken cartel '" + id + "' in cartels.yml");
             }
+        }
+        if (rows.isEmpty() && file.exists() && !plugin.legacyImported()) {
+            plugin.legacyFile(file);
+            ConfigurationSection sec = YamlConfiguration.loadConfiguration(file).getConfigurationSection("cartels");
+            if (sec != null) {
+                for (String id : sec.getKeys(false)) {
+                    ConfigurationSection s = sec.getConfigurationSection(id);
+                    Cartel c = s == null ? null : read(id, s);
+                    if (c != null) {
+                        c.bank = s.getDouble("bank");
+                        add(c);
+                    }
+                }
+                dirty = true;
+            }
+        }
+    }
+
+    /** One cartel from its saved section (null when broken). */
+    private Cartel read(String id, ConfigurationSection s) {
+        try {
+            Cartel c = new Cartel(id, s.getString("name", id), s.getInt("color", Cartel.COLORS[0]),
+                    UUID.fromString(s.getString("leader", "")));
+            for (String m : s.getStringList("members")) {
+                c.members.add(UUID.fromString(m));
+            }
+            c.level = Math.max(1, Math.min(tiers.size(), s.getInt("level", 1)));
+            c.sales = s.getDouble("sales");
+            c.shipments = s.getInt("shipments");
+            c.created = s.getLong("created");
+            c.nextShipment = s.getLong("next-shipment");
+            ConfigurationSection sh = s.getConfigurationSection("shipment");
+            ItemType t = sh == null ? null : ItemType.parse(sh.getString("item"));
+            if (t != null) {
+                c.shipment = new Cartel.Shipment(t, sh.getInt("amount"), sh.getInt("delivered"),
+                        sh.getDouble("reward"), sh.getLong("expires"));
+            }
+            return c;
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("Skipping broken cartel '" + id + "'");
+            return null;
         }
     }
 
@@ -111,50 +140,70 @@ public final class Cartels {
         }
     }
 
+    /** Reload the levels from the config (/kush reload); cartels stay as they are. */
+    public void reloadTiers() {
+        loadTiers();
+    }
+
     private static double num(Object o) {
         return o instanceof Number n ? Math.max(0, n.doubleValue()) : 0;
     }
 
-    public void save() {
+    /** A cartel as YAML text (everything but the bank, which has its own column). */
+    private static String write(Cartel c) {
         YamlConfiguration y = new YamlConfiguration();
+        y.set("name", c.name);
+        y.set("color", c.color);
+        y.set("leader", c.leader.toString());
+        List<String> members = new ArrayList<>();
+        c.members.forEach(m -> members.add(m.toString()));
+        y.set("members", members);
+        y.set("level", c.level);
+        y.set("sales", Math.round(c.sales * 100) / 100.0);
+        y.set("shipments", c.shipments);
+        y.set("created", c.created);
+        y.set("next-shipment", c.nextShipment);
+        if (c.shipment != null) {
+            y.set("shipment.item", c.shipment.type().id());
+            y.set("shipment.amount", c.shipment.amount());
+            y.set("shipment.delivered", c.shipment.delivered());
+            y.set("shipment.reward", c.shipment.reward());
+            y.set("shipment.expires", c.shipment.expires());
+        }
+        return y.saveToString();
+    }
+
+    /** Cartels are few: when anything changed, the whole table is written again (removed ones disappear). */
+    @Override
+    public void collect(dev.kushcraft.storage.Persistence.Batch b, boolean full) {
+        if (!dirty) {
+            return;
+        }
+        dirty = false;
+        List<String[]> rows = new ArrayList<>();
         for (Cartel c : cartels.values()) {
-            String k = "cartels." + c.id + ".";
-            y.set(k + "name", c.name);
-            y.set(k + "color", c.color);
-            y.set(k + "leader", c.leader.toString());
-            List<String> members = new ArrayList<>();
-            c.members.forEach(m -> members.add(m.toString()));
-            y.set(k + "members", members);
-            y.set(k + "bank", Math.round(c.bank * 100) / 100.0);
-            y.set(k + "level", c.level);
-            y.set(k + "sales", Math.round(c.sales * 100) / 100.0);
-            y.set(k + "shipments", c.shipments);
-            y.set(k + "created", c.created);
-            y.set(k + "next-shipment", c.nextShipment);
-            if (c.shipment != null) {
-                y.set(k + "shipment.item", c.shipment.type().id());
-                y.set(k + "shipment.amount", c.shipment.amount());
-                y.set(k + "shipment.delivered", c.shipment.delivered());
-                y.set(k + "shipment.reward", c.shipment.reward());
-                y.set(k + "shipment.expires", c.shipment.expires());
+            rows.add(new String[]{c.id, String.valueOf(Math.round(c.bank * 100)), write(c)});
+        }
+        b.write(c -> {
+            try (java.sql.Statement st = c.createStatement()) {
+                st.executeUpdate("DELETE FROM cartels");
             }
-        }
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException ex) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save cartels.yml", ex);
-        }
+            try (java.sql.PreparedStatement ps = c.prepareStatement("INSERT INTO cartels(id, bank, data) VALUES(?,?,?)")) {
+                for (String[] r : rows) {
+                    ps.setString(1, r[0]);
+                    ps.setLong(2, Long.parseLong(r[1]));
+                    ps.setString(3, r[2]);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+            }
+        });
+        b.onFailure(() -> dirty = true);
     }
 
     public void start() {
         tick();
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            tick();
-            if (dirty) {
-                save();
-            }
-        }, 20L * 60, 20L * 60);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L * 60, 20L * 60);
     }
 
     /** Once a minute: expired shipments go, new ones arrive, old invites are dropped. */
@@ -321,7 +370,7 @@ public final class Cartels {
         if (bad != null) {
             return bad;
         }
-        if (!plugin.economy().withdraw(p, createCost())) {
+        if (!plugin.economy().withdraw(p, createCost(), dev.kushcraft.economy.Tx.CARTEL_CREATE, name)) {
             return "Starting a cartel costs " + money(createCost()) + ".";
         }
         Cartel c = found(p.getUniqueId(), name);
@@ -433,7 +482,8 @@ public final class Cartels {
             return "You're not in a cartel.";
         }
         amount = Math.min(amount, plugin.economy().balance(p));
-        if (amount < 1 || !plugin.economy().withdraw(p, amount)) {
+        if (amount < 1 || !plugin.economy().withdraw(p.getUniqueId(), amount, dev.kushcraft.economy.Tx.CARTEL_DEPOSIT,
+                "cartel:" + c.id, c.name)) {
             return "You don't have any money to put in.";
         }
         c.bank += amount;
@@ -452,7 +502,7 @@ public final class Cartels {
             return "The bank is empty.";
         }
         c.bank -= amount;
-        plugin.economy().deposit(p, amount);
+        plugin.economy().deposit(p.getUniqueId(), amount, dev.kushcraft.economy.Tx.CARTEL_WITHDRAW, "cartel:" + c.id, c.name);
         dirty = true;
         tell(c, "<white>" + Text.escape(p.getName()) + " <gray>took <gold>" + money(amount) + " <gray>out of the bank.");
         return null;
@@ -472,6 +522,8 @@ public final class Cartels {
         }
         c.bank -= next.cost();
         c.level++;
+        plugin.economy().ledger().log(p.getUniqueId(), dev.kushcraft.economy.Tx.CARTEL_BANK, -Math.round(next.cost() * 100),
+                null, "cartel:" + c.id, c.name + " bought level " + next.name());
         dirty = true;
         Bukkit.broadcast(Text.msg(c.colored() + " <gray>is now a <gold>" + next.name() + "<gray>!"));
         for (UUID m : c.members) {
@@ -524,13 +576,16 @@ public final class Cartels {
         }
         int take = InventoryUtil.remove(p, it -> Items.type(it) == s.type(), Math.min(have, s.left()));
         double pay = Math.round(plugin.shop().basePrice(s.type()) * take * 100) / 100.0;
-        plugin.economy().deposit(p, pay);
+        plugin.economy().deposit(p.getUniqueId(), pay, dev.kushcraft.economy.Tx.SHIPMENT, "cartel:" + c.id,
+                take + "x " + s.type().display());
         plugin.titles().sold(p, pay);
         c.shipment = new Cartel.Shipment(s.type(), s.amount(), s.delivered() + take, s.reward(), s.expires());
         dirty = true;
         p.sendActionBar(Text.mm("<green>Delivered " + take + "x " + s.type().display() + " <gold>+" + money(pay)));
         if (c.shipment.done()) {
             c.bank += s.reward();
+            plugin.economy().ledger().log(p.getUniqueId(), dev.kushcraft.economy.Tx.CARTEL_BANK, Math.round(s.reward() * 100),
+                    null, "cartel:" + c.id, c.name + " shipment reward");
             c.shipments++;
             c.shipment = null;
             c.nextShipment = System.currentTimeMillis() + cooldown();
@@ -554,7 +609,10 @@ public final class Cartels {
             return;
         }
         c.sales += money;
-        c.bank += money * Math.max(0, plugin.getConfig().getDouble("cartel.bank-cut", 0.05));
+        double cut = money * Math.max(0, plugin.getConfig().getDouble("cartel.bank-cut", 0.05));
+        c.bank += cut;
+        plugin.economy().ledger().sum(player, dev.kushcraft.economy.Tx.CARTEL_BANK, Math.round(cut * 100), null,
+                "cartel:" + c.id, "sale cut to " + c.name);
         dirty = true;
     }
 
@@ -564,7 +622,10 @@ public final class Cartels {
         if (c == null || !enabled()) {
             return;
         }
-        c.bank += reward * Math.max(0, plugin.getConfig().getDouble("cartel.contract-cut", 0.1));
+        double cut = reward * Math.max(0, plugin.getConfig().getDouble("cartel.contract-cut", 0.1));
+        c.bank += cut;
+        plugin.economy().ledger().log(player, dev.kushcraft.economy.Tx.CARTEL_BANK, Math.round(cut * 100), null,
+                "cartel:" + c.id, "contract cut to " + c.name);
         dirty = true;
     }
 
@@ -577,6 +638,8 @@ public final class Cartels {
     /** Admin: put money in a cartel's bank. */
     public void addBank(Cartel c, double amount) {
         c.bank = Math.max(0, c.bank + amount);
+        plugin.economy().ledger().log(null, dev.kushcraft.economy.Tx.ADMIN, Math.round(amount * 100), null,
+                "cartel:" + c.id, "admin changed the bank of " + c.name);
         dirty = true;
     }
 

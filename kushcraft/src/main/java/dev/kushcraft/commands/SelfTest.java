@@ -67,8 +67,10 @@ final class SelfTest {
             recipes();
             exchange();
             money();
+            ladder();
             awards();
             menus();
+            guideMenu();
             World w = Bukkit.getWorlds().get(0);
             Location spawn = w.getSpawnLocation();
             int bx = spawn.getBlockX() + 4, bz = spawn.getBlockZ() + 4;
@@ -76,12 +78,20 @@ final class SelfTest {
             plants(w, bx, y, bz);
             machines(w, bx + 3, y, bz);
             workers(w, bx + 8, y, bz);
+            away(w, bx + 8, y, bz + 12);
             nature(w, bx + 18, y, bz);
             guide();
             jobs(w, bx - 4, y, bz);
         } catch (Throwable t) {
             fails.add("exception: " + t);
             plugin.getLogger().log(java.util.logging.Level.SEVERE, "selftest crashed", t);
+        } finally {
+            plugin.getConfig().set("workers.auto-buy", false);
+            plugin.getConfig().set("pvp.worker-raids.enabled", false);
+            for (UUID id : fake) {
+                plugin.players().delete(id);
+            }
+            plugin.persistence().flushNow();
         }
         plugin.getLogger().info("SELFTEST " + (fails.isEmpty() ? "PASS" : "FAIL") + " - " + checks + " checks, "
                 + fails.size() + " failed");
@@ -250,10 +260,10 @@ final class SelfTest {
                 .average().orElse(1e9);
         check(epicAvg > commonAvg, "epic seeds cost more than common ones");
         for (var e : plugin.shop().gear()) {
-            check(e.price() <= 800, "gear is affordable: " + e.type() + " " + e.price());
+            check(e.price() <= 4000, "gear costs at most 4000: " + e.type() + " " + e.price());
         }
         for (var e : plugin.shop().hires()) {
-            check(e.price() >= 8000, "workers are expensive: " + e.type() + " " + e.price());
+            check(e.price() >= 45000, "9.0: workers are very expensive: " + e.type() + " " + e.price());
         }
         for (var e : plugin.shop().buyEntries()) {
             check(Items.type(plugin.shop().create(e)) == e.type(), "shop item " + e.type());
@@ -388,12 +398,10 @@ final class SelfTest {
                 check(m.racksInUse() == 5 && m.racksDry() == 2, "racks dry on their own");
                 check(m.rack(4).progress() > 0 && m.rack(4).progress() < 1 && m.rack(4).secondsLeft() <= 30,
                         "rack progress");
-                plugin.machines().save();
-                var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                        new File(plugin.getDataFolder(), "machines.yml"));
-                var racks = saved.getConfigurationSection("machines." + BlockKey.of(b).serialize() + ".racks");
-                check(racks != null && racks.getKeys(false).size() == 5 && racks.getInt("3.amount") == 13,
-                        "racks are saved");
+                check(plugin.persistence().flushNow(), "the lab is written to the database");
+                String racks = dbString("SELECT racks FROM machines WHERE pos=?", BlockKey.of(b).serialize());
+                check(racks != null && racks.split(";").length == 5 && racks.contains("3|" + s.id() + "|3|13|"),
+                        "racks are saved (" + racks + ")");
                 m.startJob(LabRecipe.SPEED.name(), 1, Items.create(ItemType.LUCID_TAB, 2));
                 check(m.busy(), "lab busy");
                 double slow = dev.kushcraft.menus.LabMenu.timeFactor(m);
@@ -430,10 +438,9 @@ final class SelfTest {
         check(wild != null && plugin.plants().at(BlockKey.of(soil).up()) == wild, "the wild plant is in the world");
         check(plugin.wild().grow(soil, Plant.Kind.CANNABIS) == null, "only one plant per spot");
         if (wild != null) {
-            plugin.plants().save();
-            var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                    new File(plugin.getDataFolder(), "plants.yml"));
-            check(saved.getLong("plants." + wild.key().serialize() + ".wild-until") > System.currentTimeMillis(),
+            check(plugin.persistence().flushNow(), "plants are written to the database");
+            String until = dbString("SELECT wild_until FROM plants WHERE pos=?", wild.key().serialize());
+            check(until != null && Long.parseLong(until) > System.currentTimeMillis(),
                     "wild plants are saved with the time they wither");
             plugin.plants().remove(wild);
         }
@@ -453,7 +460,7 @@ final class SelfTest {
         check(cow.getPersistentDataContainer().has(dev.kushcraft.Keys.HIGH), "it stays high when its chunk reloads");
         cow.remove();
         // dying costs 20% of your cash, and nobody gets it
-        check(Math.abs(plugin.getConfig().getDouble("death.cash-lost") - 0.2) < 1e-9, "dying costs 20% of your cash");
+        check(Math.abs(plugin.getConfig().getDouble("pvp.death-cash-lost") - 0.2) < 1e-9, "dying costs 20% of your cash");
         check(dev.kushcraft.listeners.PlayerListener.cashLost(1234.56, 0.2) == 246.91
                 && dev.kushcraft.listeners.PlayerListener.cashLost(0, 0.2) == 0, "the death loss is worked out right");
         // the pack: by default players get the copy of this version from GitHub
@@ -468,9 +475,13 @@ final class SelfTest {
         var eco = plugin.economy();
         UUID boss = UUID.randomUUID();
         var owner = Bukkit.getOfflinePlayer(boss);
-        eco.set(owner, 1000);
+        fake.add(boss);
+        eco.set(owner, 1000, "selftest");
         check(ws.enabled(), "workers are on");
-        check(ws.autoBuy(boss) && ws.autoBuyAllowed(), "auto-buy is on for new players");
+        check(!ws.autoBuyAllowed() && !ws.autoBuy(boss), "9.0: workers don't buy their own supplies");
+        // the rest of this test also covers auto-buy, for servers that switch it back on
+        plugin.getConfig().set("workers.auto-buy", true);
+        check(ws.autoBuy(boss) && ws.autoBuyAllowed(), "with workers.auto-buy on, it's on for new players");
         // a ripe plant on farmland, an empty farmland next to it, the farmhand standing beside them
         for (int dx = -1; dx <= 6; dx++) {
             for (int dz = -1; dz <= 4; dz++) {
@@ -647,10 +658,16 @@ final class SelfTest {
         cook.satchel().clear();
         ws.stash(cook, List.of(Items.strainItem(ItemType.BUD_DRIED, s, 3, 4), new ItemStack(Material.IRON_NUGGET, 2),
                 new ItemStack(Material.GLASS_PANE, 1)));
-        eco.set(owner, 5000);
+        eco.set(owner, 5000, "selftest");
         check(ws.nextBuy(cook) != null && ws.workNow(cook) && count(cook.satchel(), ItemType.LAB_SOLVENT) > 0
                 && eco.balance(owner) < 5000, "the cook buys the Lab Solvent they're missing");
-        check(ws.maxPerPlayer() == 0, "no limit on workers");
+        check(ws.maxPerPlayer() == 0 && ws.limit(boss) == plugin.ranks().get(1).workers(),
+                "the rank decides how many workers (" + ws.limit(boss) + ")");
+        check(ws.overLimit(cook) && !ws.overLimit(farm), "workers past the rank's slots don't work (the oldest do)");
+        plugin.ranks().set(boss, plugin.ranks().top(), "selftest");
+        check(!ws.overLimit(cook) && ws.limit(boss) == plugin.ranks().get(plugin.ranks().top()).workers(),
+                "ranking up gives more slots");
+        plugin.ranks().set(boss, 1, "selftest");
         // spare seeds become fertilizer when the satchel gets full and the chests are full or gone
         chestBlock.setType(Material.AIR);
         chest2Block.setType(Material.AIR);
@@ -669,22 +686,39 @@ final class SelfTest {
         check(count(farm.satchel(), ItemType.COCA_SEEDS) == 64 && count(farm.satchel(), ItemType.FERTILIZER) == 88,
                 "spare seeds become fertilizer");
         // nobody to pay: no work
-        eco.set(owner, 0);
+        eco.set(owner, 0, "selftest");
         ripe = plugin.plants().at(key);
         if (ripe != null) {
             ripe.growth(100);
         }
         check(!ws.workNow(farm) && farm.status().contains("Not paid"), "unpaid workers stop");
-        // save
+        // saved in the database: the row, the satchel, the recipe, the auto-buy switch
         ws.setAutoBuy(boss, false);
-        ws.save();
-        var saved = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                new File(plugin.getDataFolder(), "workers.yml"));
-        check(saved.isConfigurationSection("workers." + runner.id()) && saved.isConfigurationSection(
-                "workers." + farm.id() + ".satchel") && "VAPE_PEN".equals(saved.getString("workers." + cook.id() + ".recipe")),
-                "workers, their satchels and a cook's recipe are saved");
-        check(saved.getStringList("settings.auto-buy-off").contains(boss.toString()), "the auto-buy switch is saved");
+        check(plugin.persistence().flushNow(), "workers are written to the database");
+        check(dbString("SELECT id FROM workers WHERE id=?", runner.id().toString()) != null
+                && "VAPE_PEN".equals(dbString("SELECT recipe FROM workers WHERE id=?", cook.id().toString())),
+                "workers and a cook's recipe are saved");
+        byte[] blob = plugin.db().call(c -> {
+            try (var ps = c.prepareStatement("SELECT satchel FROM workers WHERE id=?")) {
+                ps.setString(1, farm.id().toString());
+                try (var rs = ps.executeQuery()) {
+                    return rs.next() ? rs.getBytes(1) : null;
+                }
+            }
+        });
+        ItemStack[] back = dev.kushcraft.storage.ItemCodec.decode(blob, 54);
+        int seedsBack = 0;
+        for (ItemStack it : back) {
+            if (Items.type(it) == ItemType.COCA_SEEDS) {
+                seedsBack += it.getAmount();
+            }
+        }
+        check(seedsBack == count(farm.satchel(), ItemType.COCA_SEEDS), "a satchel comes back from the database item for item");
+        String flags = dbString("SELECT flags FROM players WHERE uuid=?", boss.toString());
+        check(flags != null && (Integer.parseInt(flags) & dev.kushcraft.storage.PlayerRecord.AUTO_BUY_OFF) != 0,
+                "the auto-buy switch is saved");
         ws.setAutoBuy(boss, true);
+        raids(farm);
         check(ws.radius(farm) < ws.radius(ws.hireAt(new Location(w, x + 3.5, y + 1, z + 3.5),
                 dev.kushcraft.workers.WorkerType.FARMHAND, boss, 3)), "trained workers reach further");
         check(Items.level(Items.machine(ItemType.FARMHAND, 2)) == 2, "a dismissed worker keeps their level");
@@ -694,6 +728,7 @@ final class SelfTest {
             check(ent == null || Bukkit.getEntity(ent) == null || Bukkit.getEntity(ent).isDead(), "mannequin removed");
         }
         check(ws.of(boss).isEmpty(), "workers dismissed");
+        plugin.getConfig().set("workers.auto-buy", false);
         plugin.machines().breakMachine(lab, null);
         for (BlockKey k : List.of(key, empty, third)) {
             Plant p = plugin.plants().at(k);
@@ -706,6 +741,160 @@ final class SelfTest {
                 e.remove();
             }
         }
+    }
+
+    /** The rank ladder: exponential costs, playtime and waits, worker slots, the gates. */
+    private void ladder() {
+        var ranks = plugin.ranks();
+        var all = ranks.all();
+        check(all.size() >= 10, "a long ladder (" + all.size() + " ranks)");
+        check(all.get(0).cost() == 0 && all.get(0).workers() >= 1, "rank 1 is free and has a worker slot");
+        for (int i = 2; i < all.size(); i++) {
+            var lo = all.get(i - 1);
+            var hi = all.get(i);
+            check(hi.cost() >= lo.cost() * 1.7, "each rank costs a lot more than the last: " + hi.name());
+            check(hi.playtimeHours() > lo.playtimeHours(), "each rank needs more playtime: " + hi.name());
+            check(hi.waitHours() >= lo.waitHours(), "the waits never get shorter: " + hi.name());
+            check(hi.workers() >= lo.workers() && hi.workers() - lo.workers() <= 1, "worker slots grow slowly: " + hi.name());
+        }
+        check(all.get(1).cost() <= 10_000 && all.get(1).playtimeHours() <= 3, "rank 2 is reachable in a first session");
+        check(all.get(all.size() - 1).playtimeHours() >= 150, "the top rank is a long grind");
+        check(ranks.minGapMillis() >= 10 * 60_000L, "rank-ups are at least 10 minutes apart");
+        // the gates, on a fake player
+        UUID id = UUID.randomUUID();
+        fake.add(id);
+        var eco = plugin.economy();
+        var r = eco.account(id);
+        var p = Bukkit.getOfflinePlayer(id);
+        eco.set(p, all.get(1).cost() * 10, "selftest");
+        r.rank(1, System.currentTimeMillis());
+        check(ranks.rankUp(id, 1, null) != null && r.rank() == 1, "no playtime: no rank-up");
+        r.setPlaytime((long) (all.get(1).playtimeHours() * 3600));
+        r.lastRankTry = 0;
+        check(ranks.rankUp(id, 1, null) != null && r.rank() == 1, "too soon after the last rank-up: no rank-up");
+        r.rank(1, System.currentTimeMillis() - ranks.minGapMillis() - 1000);
+        r.lastRankTry = 0;
+        double before = eco.balance(p);
+        check(ranks.rankUp(id, 1, null) == null && r.rank() == 2
+                && Math.abs(before - eco.balance(p) - all.get(1).cost()) < 1e-6, "money + playtime + wait: rank 2, paid");
+        r.lastRankTry = 0;
+        check(ranks.rankUp(id, 1, null) != null && r.rank() == 2, "a second click from rank 1 does nothing");
+        check(ranks.rankUp(id, 2, null) != null && r.rank() == 2, "and rank 3 needs its own wait");
+        eco.set(p, 0, "selftest");
+        r.setPlaytime(1_000_000);
+        r.rank(2, 0);
+        r.lastRankTry = 0;
+        check(ranks.rankUp(id, 2, null) != null && r.rank() == 2, "no money: no rank-up");
+        check(plugin.persistence().flushNow()
+                && "2".equals(dbString("SELECT rank FROM players WHERE uuid=?", id.toString()))
+                && dbString("SELECT id FROM ledger WHERE player=? AND type='RANK_UP'", id.toString()) != null,
+                "the rank and the rank-up payment are in the database together");
+    }
+
+    /** Worker raids: off by default; when on, a knocked-out worker drops their satchel and rests. */
+    private void raids(dev.kushcraft.workers.Worker w) {
+        var raids = plugin.raids();
+        check(!raids.enabled(), "worker raids are off until the admin turns them on");
+        plugin.getConfig().set("pvp.worker-raids.enabled", true);
+        var ws = plugin.workers();
+        ws.stash(w, List.of(Items.create(ItemType.FERTILIZER, 5)));
+        check(ws.hurt(w, 10, raids.maxHealth()) == raids.maxHealth() - 10, "a hit takes health off");
+        List<ItemStack> dropped = ws.empty(w);
+        ws.knockOut(w, System.currentTimeMillis() + raids.knockoutMillis());
+        check(w.knockedOut() && w.carried() == 0 && dropped.stream().mapToInt(ItemStack::getAmount).sum() >= 5,
+                "a knocked-out worker drops their satchel");
+        ws.knockOut(w, 0);
+        check(!w.knockedOut(), "and gets up again");
+        ws.stash(w, dropped);
+        plugin.getConfig().set("pvp.worker-raids.enabled", false);
+    }
+
+    /** Work while nobody is around: plants grow and a farmhand harvests and replants, caught up at once. */
+    private void away(World w, int x, int y, int z) {
+        var ws = plugin.workers();
+        UUID boss = UUID.randomUUID();
+        fake.add(boss);
+        var owner = Bukkit.getOfflinePlayer(boss);
+        plugin.economy().set(owner, 100_000, "selftest");
+        for (int dx = -1; dx <= 5; dx++) {
+            for (int dz = -1; dz <= 3; dz++) {
+                w.getBlockAt(x + dx, y, z + dz).setType(Material.STONE);
+                for (int dy = 1; dy <= 3; dy++) {
+                    w.getBlockAt(x + dx, y + dy, z + dz).setType(Material.AIR);
+                }
+            }
+        }
+        w.getBlockAt(x, y, z).setType(Material.WATER);
+        Strain s = plugin.strains().get("og_kush");
+        if (s == null) {
+            s = plugin.strains().all().iterator().next();
+        }
+        List<BlockKey> keys = new ArrayList<>();
+        for (int i = 1; i <= 3; i++) {
+            w.getBlockAt(x + i, y, z).setType(Material.FARMLAND);
+            BlockKey k = BlockKey.of(w.getBlockAt(x + i, y + 1, z));
+            plugin.plants().plantAt(k, Plant.Kind.CANNABIS, s, boss);
+            keys.add(k);
+        }
+        var farm = ws.hireAt(new Location(w, x + 2.5, y + 1, z + 2.5), dev.kushcraft.workers.WorkerType.FARMHAND, boss, 1);
+        check(ws.awayEnabled() && plugin.getConfig().getDouble("workers.away.rate") < 1, "away work is on, and slower");
+        // a plant alone (no farmhand near it) catches up its growth when its chunk loads
+        int jobs = ws.catchUpNow(farm, 3 * 3_600_000L);
+        int buds = count(farm.satchel(), ItemType.BUD_FRESH);
+        check(jobs > 0 && buds >= 6, "3 hours alone: the farmhand harvested again and again (" + jobs + " jobs, "
+                + buds + " buds)");
+        check(keys.stream().allMatch(k -> plugin.plants().at(k) != null), "and replanted every plant");
+        check(ws.catchUpNow(farm, 30_000L) == 0, "half a minute alone isn't worth catching up");
+        double cap = plugin.getConfig().getDouble("workers.away.max-hours");
+        farm.satchel().clear();
+        int capped = ws.catchUpNow(farm, (long) ((cap + 48) * 3_600_000L));
+        farm.satchel().clear();
+        int full = ws.catchUpNow(farm, (long) (cap * 3_600_000L));
+        check(capped <= full * 1.5 + 5, "time alone is capped at " + cap + "h (" + capped + " vs " + full + ")");
+        for (var wk : ws.of(boss)) {
+            ws.dismiss(wk, null);
+        }
+        for (BlockKey k : keys) {
+            Plant p = plugin.plants().at(k);
+            if (p != null) {
+                plugin.plants().remove(p);
+            }
+        }
+        // a plant with nobody tending it grows while its chunk is unloaded
+        w.getBlockAt(x + 1, y, z + 2).setType(Material.FARMLAND);
+        BlockKey lone = BlockKey.of(w.getBlockAt(x + 1, y + 1, z + 2));
+        Plant p = plugin.plants().plantAt(lone, Plant.Kind.CANNABIS, s, boss);
+        p.growth(0);
+        try {
+            var f = Plant.class.getDeclaredField("grownAt");
+            f.setAccessible(true);
+            f.setLong(p, System.currentTimeMillis() - 3_600_000L);
+        } catch (ReflectiveOperationException e) {
+            check(false, "grownAt: " + e);
+        }
+        plugin.plants().catchUp(p);
+        check(p.growth() > 0, "an untended plant grew while nobody was around (" + p.growth() + "%)");
+        plugin.plants().remove(p);
+        for (Entity e : w.getNearbyEntities(new Location(w, x + 2, y + 1, z + 1), 8, 3, 8)) {
+            if (e instanceof Item) {
+                e.remove();
+            }
+        }
+    }
+
+    /** menus.yml: the guide pages are there and point at real pages. */
+    private void guideMenu() {
+        var t = plugin.menuTexts();
+        List<String> pages = List.of("main", "economy", "ranks", "rules", "community");
+        for (String page : pages) {
+            check(!t.entries(page).isEmpty(), "the guide has a " + page + " page");
+            for (var e : t.entries(page)) {
+                check(e.slot() >= 0 && e.slot() < 54 && e.slot() != 45, "guide item slot " + page + " " + e.slot());
+                check(e.page() == null || pages.contains(e.page()), "guide link to a real page: " + e.page());
+            }
+        }
+        check(t.link("discord") != null && !t.voteLinks().isEmpty(), "discord and vote links are set up in menus.yml");
+        check(t.openOnFirstJoin(), "the guide opens on the first join");
     }
 
     private void guide() {
@@ -751,12 +940,13 @@ final class SelfTest {
         ranks.refresh();
         check(ranks.place(c) == 1 && ranks.place(a) == 2, "outselling takes the title");
         for (var x : List.of(a, b, c)) {
-            plugin.economy().setSales(x, 0);
+            plugin.economy().setSales(x, 0, "selftest");
+            fake.add(x.getUniqueId());
         }
         ranks.refresh();
         check(ranks.place(a) == 0, "test sellers removed");
-        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() <= 800),
-                "the Drug Lab is affordable to start with");
+        check(plugin.shop().buyEntries().stream().anyMatch(e -> e.type() == ItemType.LAB_STATION && e.price() >= 3000),
+                "9.0: a Drug Lab costs 5x the 8.0 price (or craft one)");
     }
 
     private void breeding() {
@@ -1103,16 +1293,103 @@ final class SelfTest {
         check(cs.of(member) == null && cs.byName("los selftest") == null, "cartels removed");
     }
 
+    /** Fake players made by the test (their rows are removed at the end). */
+    private final List<UUID> fake = new ArrayList<>();
+
+    private String dbString(String sql, String arg) {
+        return plugin.db().call(c -> {
+            try (var ps = c.prepareStatement(sql)) {
+                ps.setString(1, arg);
+                try (var rs = ps.executeQuery()) {
+                    return rs.next() ? rs.getString(1) : null;
+                }
+            }
+        });
+    }
+
     private void money() {
         var eco = plugin.economy();
-        var a = Bukkit.getOfflinePlayer(UUID.randomUUID());
-        var b = Bukkit.getOfflinePlayer(UUID.randomUUID());
-        eco.set(a, 100);
-        eco.set(b, 0);
-        check(eco.withdraw(a, 40) && Math.abs(eco.balance(a) - 60) < 1e-6, "withdraw");
-        eco.deposit(b, 40);
-        check(Math.abs(eco.balance(b) - 40) < 1e-6, "deposit");
-        check(!eco.withdraw(a, 1000), "can't spend more than you have");
+        UUID ia = UUID.randomUUID(), ib = UUID.randomUUID();
+        fake.add(ia);
+        fake.add(ib);
+        var a = Bukkit.getOfflinePlayer(ia);
+        var b = Bukkit.getOfflinePlayer(ib);
+        eco.set(a, 100, "selftest");
+        eco.set(b, 0, "selftest");
+        check(eco.withdraw(a, 40, dev.kushcraft.economy.Tx.BUY, "test") && Math.abs(eco.balance(a) - 60) < 1e-9, "withdraw");
+        eco.deposit(b, 40, dev.kushcraft.economy.Tx.SELL, "test");
+        check(Math.abs(eco.balance(b) - 40) < 1e-9, "deposit");
+        check(!eco.withdraw(a, 1000, dev.kushcraft.economy.Tx.BUY, "test") && Math.abs(eco.balance(a) - 60) < 1e-9,
+                "can't spend more than you have (and nothing changes)");
+        check(!eco.withdraw(a, Double.NaN, dev.kushcraft.economy.Tx.BUY, "test")
+                && !eco.withdraw(a, -5, dev.kushcraft.economy.Tx.BUY, "test")
+                && !eco.withdraw(a, Double.POSITIVE_INFINITY, dev.kushcraft.economy.Tx.BUY, "test")
+                && Math.abs(eco.balance(a) - 60) < 1e-9, "NaN, negative and infinite amounts are refused");
+        for (int i = 0; i < 10; i++) {
+            eco.deposit(b, 0.1, dev.kushcraft.economy.Tx.SELL, "test");
+        }
+        check(eco.account(ib).balance() == 4100, "money is whole cents: ten dimes are exactly one dollar");
+        // the transaction log and the balance go out in the same snapshot
+        check(plugin.persistence().flushNow(), "the snapshot is written");
+        check("6000".equals(dbString("SELECT balance FROM players WHERE uuid=?", ia.toString())),
+                "the balance is in the database");
+        String last = dbString("SELECT balance FROM ledger WHERE player=? ORDER BY id DESC LIMIT 1", ib.toString());
+        check("4100".equals(last), "the log's last balance matches the wallet (" + last + ")");
+        // small, frequent payments are added up per minute in one log row
+        for (int i = 0; i < 25; i++) {
+            eco.frequent(ib, -1, dev.kushcraft.economy.Tx.WAGES, "selftest-worker", "wage");
+        }
+        check(plugin.persistence().flushNow(), "the sums are written");
+        String count = dbString("SELECT SUM(count) FROM ledger WHERE player=? AND type='WAGES'", ib.toString());
+        String rows = dbString("SELECT COUNT(*) FROM ledger WHERE player=? AND type='WAGES'", ib.toString());
+        check("25".equals(count) && rows != null && Integer.parseInt(rows) <= 2,
+                "25 wages are 1-2 log rows that count 25 (" + rows + " rows)");
+        // atomic: a snapshot that fails leaves the database as it was, and is written in full later
+        dev.kushcraft.storage.Persistence.Source broken = (batch, full) -> batch.write(c -> {
+            throw new java.sql.SQLException("selftest: a write fails");
+        });
+        plugin.persistence().register(broken);
+        eco.deposit(a, 5, dev.kushcraft.economy.Tx.SELL, "atomic test");
+        check(!plugin.persistence().flushNow(), "the failing snapshot is reported");
+        check("6000".equals(dbString("SELECT balance FROM players WHERE uuid=?", ia.toString())),
+                "nothing of a failed snapshot is in the database");
+        plugin.persistence().unregister(broken);
+        check(plugin.persistence().flushNow() && "6500".equals(dbString("SELECT balance FROM players WHERE uuid=?",
+                ia.toString())), "the retry writes it all");
+        // Vault: when it's installed, KushCraft is the economy other plugins use
+        if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
+            vault(a);
+        }
+        // a backup of the live database: checked, with a manifest
+        var bk = plugin.backups().make("selftest", "selftest");
+        check(bk.verified() && new File(bk.dir(), "manifest.txt").isFile() && bk.size() > 0,
+                "a backup is made and checked (" + bk.problem() + ")");
+        if (bk.dir() != null) {
+            for (File f : java.util.Objects.requireNonNullElse(bk.dir().listFiles(), new File[0])) {
+                f.delete();
+            }
+            bk.dir().delete();
+        }
+    }
+
+    /** Vault's Economy, called the way another plugin would. */
+    private void vault(org.bukkit.OfflinePlayer a) {
+        try {
+            Class<?> ecoClass = Class.forName("net.milkbowl.vault.economy.Economy");
+            var reg = Bukkit.getServicesManager().getRegistration(ecoClass);
+            check(reg != null && reg.getPlugin() == plugin, "Vault's economy is KushCraft");
+            Object v = reg.getProvider();
+            double bal = (double) ecoClass.getMethod("getBalance", org.bukkit.OfflinePlayer.class).invoke(v, a);
+            check(Math.abs(bal - plugin.economy().balance(a)) < 1e-9, "Vault reads the KushCraft balance");
+            Object r = ecoClass.getMethod("depositPlayer", org.bukkit.OfflinePlayer.class, double.class).invoke(v, a, 10.0);
+            check((boolean) r.getClass().getMethod("transactionSuccess").invoke(r)
+                    && Math.abs(plugin.economy().balance(a) - bal - 10) < 1e-9, "Vault deposits land in the wallet");
+            r = ecoClass.getMethod("withdrawPlayer", org.bukkit.OfflinePlayer.class, double.class).invoke(v, a, 1e9);
+            check(!(boolean) r.getClass().getMethod("transactionSuccess").invoke(r), "Vault can't overdraw");
+            plugin.getLogger().info("SELFTEST vault ok");
+        } catch (ReflectiveOperationException e) {
+            check(false, "vault: " + e);
+        }
     }
 
     private void jobs(World w, int x, int y, int z) {

@@ -24,7 +24,7 @@ import java.util.logging.Level;
  * Items are expensive on purpose - a diamond costs a lot of weed. Buying
  * raises an item's price a little and it drifts back to normal over time.
  */
-public final class Exchange {
+public final class Exchange implements dev.kushcraft.storage.Persistence.Source {
 
     public record Offer(Material material, double price, int amount) {
     }
@@ -46,7 +46,8 @@ public final class Exchange {
         this.file = new File(plugin.getDataFolder(), "exchange.yml");
     }
 
-    public void load() {
+    /** The shelves and prices from config.yml (/kush reload); what's been bought stays. */
+    public void reloadOffers() {
         offers.clear();
         byMaterial.clear();
         categories.clear();
@@ -71,9 +72,14 @@ public final class Exchange {
         if (!flat.isEmpty()) {
             categories.add(new Category("all", "Resources", Material.CHEST, List.copyOf(flat)));
         }
+    }
+
+    /** Shelves from the config, prices bought up from the database. */
+    public void load() {
+        reloadOffers();
         demand.clear();
-        if (file.exists()) {
-            YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
+        YamlConfiguration y = plugin.docs().read("exchange", file);
+        if (y != null) {
             ConfigurationSection d = y.getConfigurationSection("demand");
             if (d != null) {
                 for (String k : d.getKeys(false)) {
@@ -115,24 +121,20 @@ public final class Exchange {
         return out;
     }
 
-    public void save() {
+    /** Saved with every snapshot it changed in. */
+    @Override
+    public void collect(dev.kushcraft.storage.Persistence.Batch b, boolean full) {
+        if (!dirty) {
+            return;
+        }
+        dirty = false;
         YamlConfiguration y = new YamlConfiguration();
         demand.forEach((m, v) -> y.set("demand." + m.name().toLowerCase(java.util.Locale.ROOT), Math.round(v * 1000) / 1000.0));
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException ex) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save exchange.yml", ex);
-        }
+        dev.kushcraft.storage.Docs.write(b, "exchange", y.saveToString(), () -> dirty = true);
     }
 
     public void start() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            tick();
-            if (dirty) {
-                save();
-            }
-        }, 20L * 60, 20L * 60);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L * 60, 20L * 60);
     }
 
     /** Once a minute every price drifts back towards normal. */

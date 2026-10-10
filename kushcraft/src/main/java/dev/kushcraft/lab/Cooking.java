@@ -107,7 +107,6 @@ public final class Cooking {
                 ? Items.strainItem(r.output(), KushCraft.get().strains().getOrDefault(null), 3, amount)
                 : Items.create(r.output(), amount);
         machine.startJob(r.name(), (long) (r.seconds() * 1000L * batches * timeFactor(machine)), result);
-        KushCraft.get().machines().markDirty();
         return new Result(null, batches, bonus, result);
     }
 }

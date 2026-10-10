@@ -45,7 +45,10 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         String sub = args.length == 0 ? "menu" : args[0].toLowerCase(Locale.ROOT);
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (sub.equals("menu") && !(sender instanceof Player)) {
-            sub = "help";
+            sub = "commands";
+        }
+        if (sub.equals("help") && !(sender instanceof Player)) {
+            sub = "commands";
         }
         switch (sub) {
             case "menu" -> {
@@ -68,7 +71,17 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     open(sender, TradeMenu::new);
                 }
             }
-            case "top", "ranks", "leaderboard" -> open(sender, TopMenu::new);
+            case "top", "leaderboard", "dealers" -> open(sender, TopMenu::new);
+            case "rankup", "ranks", "rank-up" -> open(sender, dev.kushcraft.menus.RanksMenu::new);
+            case "help", "info", "rules" -> open(sender, p -> new dev.kushcraft.menus.InfoMenu(p, "main"));
+            case "reset" -> plugin.reset().command(sender, args);
+            case "rank", "playtime", "backup", "backups", "db", "log" -> {
+                if (!admin && !(sub.equals("playtime") && args.length == 1)) {
+                    noPerm(sender);
+                    return true;
+                }
+                AdminCommands.run(plugin, sender, sub, args);
+            }
             case "gear" -> open(sender, dev.kushcraft.menus.GearMenu::new);
             case "workers", "worker" -> open(sender, dev.kushcraft.menus.MyWorkersMenu::new);
             case "start", "steps", "help-me", "tutorial" -> open(sender, dev.kushcraft.menus.StarterMenu::new);
@@ -108,9 +121,8 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                 }
                 try {
                     Player t = Bukkit.getPlayerExact(args[1]);
-                    plugin.economy().setSales(t, Double.parseDouble(args[2]));
+                    plugin.economy().setSales(t, Double.parseDouble(args[2]), sender.getName());
                     plugin.titles().refresh();
-                    Bukkit.getOnlinePlayers().forEach(o -> plugin.titles().showInTab(o));
                     sender.sendMessage(Text.msg("<green>" + t.getName() + " is now " + plugin.titles().label(t)));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(Text.msg("<red>Not a number."));
@@ -140,7 +152,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     }
                     try {
                         double v = Double.parseDouble(args[2]);
-                        plugin.economy().set(t, v);
+                        plugin.economy().set(t, v, sender.getName());
                         sender.sendMessage(Text.msg("<green>Set " + t.getName() + "'s balance to " + plugin.economy().format(v)));
                     } catch (NumberFormatException e) {
                         sender.sendMessage(Text.msg("<red>Not a number."));
@@ -192,7 +204,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             }
             default -> {
                 sender.sendMessage(Text.msg("<green>KushCraft <gray>- type <white>/kush</white> (or press <white>Shift+F</white>)"
-                        + " to open the menu!"));
+                        + " to open the menu! <white>/menu</white> explains the server, <white>/rankup</white> your rank."));
                 sender.sendMessage(Text.mm(" <white>/kush <gray>- the menu (everything is in there)"));
                 sender.sendMessage(Text.mm(" <white>/kush shop|drugs|trade|cartel|top|awards <gray>- open a tab directly"));
                 sender.sendMessage(Text.mm(" <white>/kush cartel invite|join|leave <gray>- cartels"));
@@ -210,6 +222,12 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Text.mm(" <red>/kush items <gray>- click any item to get it"));
                     sender.sendMessage(Text.mm(" <red>/kush money <player> <amount> <gray>- set balance"));
                     sender.sendMessage(Text.mm(" <red>/kush sales <player> <amount> <gray>- set lifetime sales (rank)"));
+                    sender.sendMessage(Text.mm(" <red>/kush rank <player> <n> <gray>- set a rank (logged)"));
+                    sender.sendMessage(Text.mm(" <red>/kush playtime <player> [hours] <gray>- see or set active playtime"));
+                    sender.sendMessage(Text.mm(" <red>/kush log [player] [page] <gray>- the transaction log"));
+                    sender.sendMessage(Text.mm(" <red>/kush backup <gray>/ <red>/kush backups <gray>- make / list checked backups"));
+                    sender.sendMessage(Text.mm(" <red>/kush db <gray>- database status"));
+                    sender.sendMessage(Text.mm(" <red>/kush reset [economy|kushcraft|everything] <gray>- new season (backup first)"));
                     sender.sendMessage(Text.mm(" <red>/kush reload"));
                 }
             }
@@ -344,11 +362,14 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             from.sendMessage(Text.msg("<red>That player isn't online."));
             return false;
         }
-        if (!plugin.economy().withdraw(from, amount)) {
+        if (!plugin.rates().allow(from.getUniqueId(), "pay", 1_000L)) {
+            from.sendMessage(Text.msg("<red>One payment a second."));
+            return false;
+        }
+        if (!plugin.economy().transfer(from, to, amount)) {
             from.sendMessage(Text.msg("<red>You only have " + plugin.economy().format(plugin.economy().balance(from)) + "."));
             return false;
         }
-        plugin.economy().deposit(to, amount);
         from.sendMessage(Text.msg("<green>Sent <gold>" + plugin.economy().format(amount) + "</gold> to <white>"
                 + Text.escape(to.getName())));
         to.sendMessage(Text.msg("<green>You got <gold>" + plugin.economy().format(amount) + "</gold> from <white>"
@@ -367,9 +388,13 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
             out.addAll(List.of("menu", "shop", "gear", "market", "drugs", "trade", "cartel", "top", "awards", "sell", "workers",
-                    "start", "pay", "guide", "pack", "balance", "strains", "help"));
+                    "start", "pay", "guide", "pack", "balance", "strains", "help", "rankup", "playtime"));
             if (admin) {
-                out.addAll(List.of("admin", "give", "items", "money", "sales", "reload"));
+                out.addAll(List.of("admin", "give", "items", "money", "sales", "reload", "rank", "log", "backup", "backups",
+                        "db"));
+            }
+            if (sender.hasPermission("kushcraft.reset")) {
+                out.add("reset");
             }
         } else if (admin && args[0].equalsIgnoreCase("give")) {
             if (args.length == 2) {
@@ -391,6 +416,10 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (args[0].equalsIgnoreCase("cartel") && args.length == 3 && args[1].equalsIgnoreCase("join")) {
             plugin.cartels().all().forEach(c -> out.add(c.id()));
+        } else if (args[0].equalsIgnoreCase("reset") && args.length == 2) {
+            out.addAll(List.of("economy", "kushcraft", "everything", "confirm"));
+        } else if (admin && List.of("rank", "playtime", "log").contains(args[0].toLowerCase(Locale.ROOT)) && args.length == 2) {
+            Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (args[0].equalsIgnoreCase("pay") && args.length == 2) {
             Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (admin && (args[0].equalsIgnoreCase("money") || args[0].equalsIgnoreCase("sales") || args[0].equalsIgnoreCase("balance")) && args.length == 2) {

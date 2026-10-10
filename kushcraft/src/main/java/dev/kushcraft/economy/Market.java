@@ -26,7 +26,7 @@ import java.util.logging.Level;
  *  - a "hot item" that pays a bonus for a while
  *  - daily orders: hand in N of something for a big bonus
  */
-public final class Market {
+public final class Market implements dev.kushcraft.storage.Persistence.Source {
 
     public record Order(int id, ItemType type, int amount, double reward, long expires) {
     }
@@ -62,10 +62,10 @@ public final class Market {
     public void load() {
         demand.clear();
         orders.clear();
-        if (!file.exists()) {
+        YamlConfiguration y = plugin.docs().read("market", file);
+        if (y == null) {
             return;
         }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection d = y.getConfigurationSection("demand");
         if (d != null) {
             for (String k : d.getKeys(false)) {
@@ -90,7 +90,16 @@ public final class Market {
         }
     }
 
-    public void save() {
+    /** Saved with every snapshot it changed in. */
+    @Override
+    public void collect(dev.kushcraft.storage.Persistence.Batch b, boolean full) {
+        if (dirty) {
+            dirty = false;
+            dev.kushcraft.storage.Docs.write(b, "market", toYaml(), () -> dirty = true);
+        }
+    }
+
+    private String toYaml() {
         YamlConfiguration y = new YamlConfiguration();
         for (Map.Entry<ItemType, Double> e : demand.entrySet()) {
             y.set("demand." + e.getKey().id(), Math.round(e.getValue() * 1000) / 1000.0);
@@ -110,22 +119,12 @@ public final class Market {
                     "expires", o.expires()));
         }
         y.set("orders", list);
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException ex) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save market.yml", ex);
-        }
+        return y.saveToString();
     }
 
     public void start() {
         tick();
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            tick();
-            if (dirty) {
-                save();
-            }
-        }, 20L * 60, 20L * 60);
+        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L * 60, 20L * 60);
     }
 
     /** Once a minute: demand recovers, the hot item rotates, orders expire and refill. */
@@ -326,7 +325,7 @@ public final class Market {
             return false;
         }
         InventoryUtil.remove(p, it -> Items.type(it) == o.type(), o.amount());
-        plugin.economy().deposit(p, o.reward());
+        plugin.economy().deposit(p, o.reward(), Tx.ORDER, o.amount() + "x " + o.type().display());
         plugin.titles().sold(p, o.reward());
         plugin.cartels().contract(p.getUniqueId(), o.reward());
         plugin.awards().order(p);

@@ -37,6 +37,7 @@ public final class MachineListener implements Listener {
             return;
         }
         plugin.machines().place(e.getPlayer(), e.getBlockPlaced(), t.machine(), Items.level(e.getItemInHand()));
+        plugin.persistence().took(e.getPlayer()); // the item became a machine in the database
         if (t == ItemType.LAB_STATION) {
             plugin.awards().labPlaced(e.getPlayer());
         }

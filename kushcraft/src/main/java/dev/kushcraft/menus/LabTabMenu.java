@@ -115,13 +115,13 @@ public abstract class LabTabMenu extends Menu {
             return;
         }
         double cost = costs.get(level - 1);
-        if (!KushCraft.get().economy().withdraw(player, cost)) {
+        if (!KushCraft.get().economy().withdraw(player, cost, dev.kushcraft.economy.Tx.LAB_UPGRADE,
+                "level " + (level + 1) + " at " + machine.key().serialize())) {
             player.sendActionBar(Text.mm("<red>Upgrading costs " + KushCraft.get().economy().format(cost)));
             failSound();
             return;
         }
         machine.level(level + 1);
-        KushCraft.get().machines().markDirty();
         KushCraft.get().awards().labLevel(player, level + 1, costs.size() + 1);
         player.playSound(player.getLocation(), "minecraft:block.anvil.use", SoundCategory.BLOCKS, 0.7f, 1.2f);
         player.sendActionBar(Text.mm("<gold>Drug Lab is now level " + (level + 1)));

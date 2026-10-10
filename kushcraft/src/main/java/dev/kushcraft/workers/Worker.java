@@ -33,7 +33,7 @@ public final class Worker {
     private final double y;
     private final double z;
     private final float yaw;
-    final Inventory satchel = Bukkit.createInventory(null, SATCHEL);
+    final Inventory satchel = Bukkit.createInventory(new Satchel(this), SATCHEL);
     String name;
     int level = 1;
     boolean paused;
@@ -41,6 +41,22 @@ public final class Worker {
     double wages;
     /** Cook: the LabRecipe they make, or ROLL_JOINT / ROLL_BLUNT (null = not picked yet). */
     String recipe;
+    /** When they were hired (the oldest workers keep working when a rank has fewer slots). */
+    long hired;
+    /** Since when nobody has been near them (their chunk unloaded); 0 = loaded. Work while away is caught up. */
+    long awaySince;
+    /** Knocked out by a raider until then (no work). */
+    long knockedUntil;
+
+    /** Changed since the last database write. */
+    transient boolean dirty = true;
+    /** Health while raids are on (back to full when they come round). */
+    transient double health = -1;
+    /** Last time they did anything (a safety net for the database write). */
+    transient long lastWork;
+    /** Time alone (millis) still to be caught up, and when their chunk loaded. */
+    transient long pendingAway;
+    transient long loadedAt;
 
     // live state
     transient UUID entityId;
@@ -58,6 +74,24 @@ public final class Worker {
     transient long idleSince;
     /** When they last bought something themselves (no buying sprees). */
     transient long boughtAt;
+
+    /** The satchel's holder: lets any satchel change find its worker (to save it). */
+    public static final class Satchel implements org.bukkit.inventory.InventoryHolder {
+        private final Worker worker;
+
+        Satchel(Worker worker) {
+            this.worker = worker;
+        }
+
+        public Worker worker() {
+            return worker;
+        }
+
+        @Override
+        public Inventory getInventory() {
+            return worker.satchel;
+        }
+    }
 
     /** Something a worker is missing: what matches, a name for it and how many they want. */
     record Want(java.util.function.Predicate<ItemStack> match, String what, int amount) {
@@ -107,6 +141,20 @@ public final class Worker {
         return level;
     }
 
+    /** Hired at (epoch millis). */
+    public long hired() {
+        return hired;
+    }
+
+    /** True while knocked out by a raider. */
+    public boolean knockedOut() {
+        return knockedUntil > System.currentTimeMillis();
+    }
+
+    public long knockedUntil() {
+        return knockedUntil;
+    }
+
     public boolean paused() {
         return paused;
     }
@@ -144,6 +192,11 @@ public final class Worker {
         return r != null ? r.output() : rolls();
     }
 
+    /** What they're missing right now ("seeds", "Lab Solvent"...), or null. */
+    public String needs() {
+        return want == null ? null : want.what();
+    }
+
     /** What they're doing right now (shown in their menu). */
     public String status() {
         return status;
@@ -156,6 +209,22 @@ public final class Worker {
 
     public Inventory satchel() {
         return satchel;
+    }
+
+    double x() {
+        return x;
+    }
+
+    double y() {
+        return y;
+    }
+
+    double z() {
+        return z;
+    }
+
+    float yaw() {
+        return yaw;
     }
 
     public String worldName() {

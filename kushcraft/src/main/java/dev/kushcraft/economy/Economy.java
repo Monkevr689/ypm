@@ -1,29 +1,25 @@
 package dev.kushcraft.economy;
 
 import dev.kushcraft.KushCraft;
-import dev.kushcraft.Keys;
+import dev.kushcraft.storage.PlayerRecord;
+import dev.kushcraft.storage.PlayerStore;
 import dev.kushcraft.util.Text;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.RegisteredServiceProvider;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
 
 /**
- * Money. Uses Vault when it's installed (and enabled in the config),
- * otherwise a simple wallet saved in plugins/KushCraft/balances.yml.
+ * Money. KushCraft owns the server's money: every balance is a whole number
+ * of cents in the players table, changed only on the server thread, and every
+ * change writes a row to the transaction log (Ledger) in the same database
+ * transaction. Other plugins reach it through Vault (see VaultBridge).
+ *
+ * Nothing here trusts the client: amounts come from the server's own prices,
+ * are checked for NaN/infinity/negatives and rounded to cents once.
  */
 public final class Economy {
 
@@ -31,224 +27,240 @@ public final class Economy {
     }
 
     private final KushCraft plugin;
-    private final File file;
-    private final Map<UUID, Double> wallet = new HashMap<>();
-    private final Map<UUID, String> names = new HashMap<>();
-    private final Map<UUID, Double> sales = new HashMap<>();
-    private boolean dirty;
-    private Object vault;
-    private Method vGet, vWithdraw, vDeposit, vSuccess;
+    private final PlayerStore store;
+    private final Ledger ledger;
 
-    public Economy(KushCraft plugin) {
+    public Economy(KushCraft plugin, PlayerStore store, Ledger ledger) {
         this.plugin = plugin;
-        this.file = new File(plugin.getDataFolder(), "balances.yml");
+        this.store = store;
+        this.ledger = ledger;
+    }
+
+    public Ledger ledger() {
+        return ledger;
     }
 
     // ------------------------------------------------------------------
-    // storage
+    // cents
     // ------------------------------------------------------------------
 
-    public void load() {
-        wallet.clear();
-        names.clear();
-        sales.clear();
-        if (!file.exists()) {
-            return;
+    /** Dollars to cents; -1 for anything that isn't a sane positive amount. */
+    public static long cents(double dollars) {
+        if (Double.isNaN(dollars) || Double.isInfinite(dollars) || dollars < 0 || dollars > 9e13) {
+            return -1;
         }
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
-        ConfigurationSection sec = y.getConfigurationSection("players");
-        if (sec == null) {
-            return;
-        }
-        for (String k : sec.getKeys(false)) {
-            try {
-                UUID id = UUID.fromString(k);
-                names.put(id, sec.getString(k + ".name", "?"));
-                if (sec.isSet(k + ".balance")) {
-                    wallet.put(id, sec.getDouble(k + ".balance"));
-                }
-                if (sec.isSet(k + ".sales")) {
-                    sales.put(id, sec.getDouble(k + ".sales"));
-                }
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
+        return Math.round(dollars * 100.0);
     }
 
-    public void save() {
-        YamlConfiguration y = new YamlConfiguration();
-        for (Map.Entry<UUID, String> e : names.entrySet()) {
-            String k = "players." + e.getKey();
-            y.set(k + ".name", e.getValue());
-            Double b = wallet.get(e.getKey());
-            if (b != null) {
-                y.set(k + ".balance", Math.round(b * 100) / 100.0);
-            }
-            Double sold = sales.get(e.getKey());
-            if (sold != null) {
-                y.set(k + ".sales", Math.round(sold * 100) / 100.0);
-            }
-        }
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException ex) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save balances.yml", ex);
-        }
+    public static double dollars(long cents) {
+        return cents / 100.0;
     }
 
-    public void start() {
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (dirty) {
-                save();
-            }
-        }, 20L * 30, 20L * 30);
+    public double startingBalance() {
+        return Math.max(0, plugin.getConfig().getDouble("economy.starting-balance", 250));
     }
 
-    /** Remembers the player's name and moves an old (v1.0) wallet into balances.yml. */
+    // ------------------------------------------------------------------
+    // accounts
+    // ------------------------------------------------------------------
+
+    /** The player's row (made with the starting money when they never had one). */
+    public PlayerRecord account(UUID id) {
+        PlayerRecord r = store.get(id);
+        if (r != null) {
+            return r;
+        }
+        OfflinePlayer o = Bukkit.getOfflinePlayer(id);
+        r = store.getOrCreate(id, o.getName());
+        long start = cents(startingBalance());
+        if (start > 0) {
+            r.balance(start);
+            ledger.log(id, Tx.START, start, start, null, null);
+        }
+        return r;
+    }
+
+    /** Remembers the name and when they were here. */
     public void join(Player p) {
-        String old = names.put(p.getUniqueId(), p.getName());
-        if (!p.getName().equals(old)) {
-            dirty = true;
-        }
-        if (!wallet.containsKey(p.getUniqueId())) {
-            Double legacy = p.getPersistentDataContainer().get(Keys.BALANCE, PersistentDataType.DOUBLE);
-            wallet.put(p.getUniqueId(), legacy != null ? legacy : plugin.getConfig().getDouble("economy.starting-balance", 100));
-            dirty = true;
+        PlayerRecord r = account(p.getUniqueId());
+        r.name(p.getName());
+        r.seen(System.currentTimeMillis());
+        r.lastActive = System.currentTimeMillis();
+    }
+
+    public void quit(Player p) {
+        PlayerRecord r = store.get(p.getUniqueId());
+        if (r != null) {
+            r.seen(System.currentTimeMillis());
         }
     }
 
-    // ------------------------------------------------------------------
-    // vault
-    // ------------------------------------------------------------------
-
-    public void hook() {
-        vault = null;
-        if (!plugin.getConfig().getBoolean("economy.use-vault", true)
-                || Bukkit.getPluginManager().getPlugin("Vault") == null) {
-            plugin.getLogger().info("Economy: using the built-in KushCraft wallet.");
-            return;
-        }
-        try {
-            Class<?> eco = Class.forName("net.milkbowl.vault.economy.Economy");
-            RegisteredServiceProvider<?> rsp = Bukkit.getServicesManager().getRegistration(eco);
-            if (rsp == null) {
-                plugin.getLogger().info("Vault found but no economy plugin - using the built-in wallet.");
-                return;
-            }
-            vault = rsp.getProvider();
-            vGet = eco.getMethod("getBalance", OfflinePlayer.class);
-            vWithdraw = eco.getMethod("withdrawPlayer", OfflinePlayer.class, double.class);
-            vDeposit = eco.getMethod("depositPlayer", OfflinePlayer.class, double.class);
-            vSuccess = Class.forName("net.milkbowl.vault.economy.EconomyResponse").getMethod("transactionSuccess");
-            plugin.getLogger().info("Economy: hooked into Vault.");
-        } catch (Exception e) {
-            vault = null;
-            plugin.getLogger().warning("Could not hook Vault (" + e.getMessage() + ") - using the built-in wallet.");
-        }
-    }
-
-    public boolean usingVault() {
-        return vault != null;
+    /** True for players KushCraft knows (joined at least once). */
+    public boolean known(UUID id) {
+        return store.get(id) != null;
     }
 
     // ------------------------------------------------------------------
-    // money
+    // balances
     // ------------------------------------------------------------------
 
     public double balance(OfflinePlayer p) {
-        if (vault != null) {
-            try {
-                return (double) vGet.invoke(vault, p);
-            } catch (Exception e) {
-                return 0;
-            }
-        }
-        Double d = wallet.get(p.getUniqueId());
-        if (d == null) {
-            d = plugin.getConfig().getDouble("economy.starting-balance", 100);
-            wallet.put(p.getUniqueId(), d);
-            dirty = true;
-        }
-        return d;
+        return balance(p.getUniqueId());
     }
 
-    public boolean withdraw(OfflinePlayer p, double amount) {
-        if (amount <= 0) {
-            return true;
-        }
-        if (vault != null) {
-            try {
-                if (balance(p) < amount) {
-                    return false;
-                }
-                return (boolean) vSuccess.invoke(vWithdraw.invoke(vault, p, amount));
-            } catch (Exception e) {
-                return false;
-            }
-        }
-        double b = balance(p);
-        if (b + 1e-9 < amount) {
+    public double balance(UUID id) {
+        PlayerRecord r = store.get(id);
+        return r == null ? (Bukkit.isPrimaryThread() ? dollars(account(id).balance()) : startingBalance()) : dollars(r.balance());
+    }
+
+    public boolean has(OfflinePlayer p, double amount) {
+        long c = cents(amount);
+        return c >= 0 && account(p.getUniqueId()).balance() >= c;
+    }
+
+    /**
+     * Takes money for a reason. False (and nothing changes) when they don't have it.
+     * Server thread only.
+     */
+    public boolean withdraw(OfflinePlayer p, double amount, Tx type, String detail) {
+        return withdraw(p.getUniqueId(), amount, type, null, detail);
+    }
+
+    public boolean withdraw(UUID id, double amount, Tx type, String other, String detail) {
+        check();
+        long c = cents(amount);
+        if (c < 0) {
             return false;
         }
-        wallet.put(p.getUniqueId(), b - amount);
-        dirty = true;
+        if (c == 0) {
+            return true;
+        }
+        PlayerRecord r = account(id);
+        if (r.balance() < c) {
+            return false;
+        }
+        r.balance(r.balance() - c);
+        ledger.log(id, type, -c, r.balance(), other, detail);
         return true;
     }
 
-    public void deposit(OfflinePlayer p, double amount) {
-        if (amount <= 0) {
-            return;
-        }
-        if (vault != null) {
-            try {
-                vDeposit.invoke(vault, p, amount);
-            } catch (Exception e) {
-                plugin.getLogger().warning("Vault deposit failed: " + e.getMessage());
-            }
-            return;
-        }
-        wallet.put(p.getUniqueId(), balance(p) + amount);
-        dirty = true;
+    /** Pays money for a reason. Server thread only. */
+    public void deposit(OfflinePlayer p, double amount, Tx type, String detail) {
+        deposit(p.getUniqueId(), amount, type, null, detail);
     }
 
-    /** Admin: set a balance. */
-    public void set(OfflinePlayer p, double amount) {
-        if (vault != null) {
-            double diff = amount - balance(p);
-            if (diff > 0) {
-                deposit(p, diff);
-            } else {
-                withdraw(p, -diff);
-            }
+    public void deposit(UUID id, double amount, Tx type, String other, String detail) {
+        check();
+        long c = cents(amount);
+        if (c <= 0) {
             return;
         }
-        wallet.put(p.getUniqueId(), Math.max(0, amount));
-        dirty = true;
+        PlayerRecord r = account(id);
+        r.balance(r.balance() + c);
+        ledger.log(id, type, c, r.balance(), other, detail);
+        tookFrom(id, type);
     }
 
-    /** Lifetime money made selling product (Market and orders) - decides the dealer rank. */
+    /**
+     * Small, frequent money changes (wages, Runner sales, worker supply buys): the same as
+     * withdraw/deposit, but the log adds them up per worker per minute. amount &lt; 0 = take.
+     * Returns false when a payment couldn't be made (not enough money).
+     */
+    public boolean frequent(UUID id, double amount, Tx type, String key, String detail) {
+        check();
+        long c = Math.round(amount * 100.0);
+        if (Double.isNaN(amount) || Double.isInfinite(amount)) {
+            return false;
+        }
+        if (c == 0) {
+            return true;
+        }
+        PlayerRecord r = account(id);
+        if (c < 0 && r.balance() < -c) {
+            return false;
+        }
+        r.balance(r.balance() + c);
+        ledger.sum(id, type, c, r.balance(), key, detail);
+        return true;
+    }
+
+    /** /pay: both sides in one go (it can't half happen). */
+    public boolean transfer(Player from, OfflinePlayer to, double amount) {
+        check();
+        long c = cents(amount);
+        if (c <= 0 || from.getUniqueId().equals(to.getUniqueId())) {
+            return false;
+        }
+        PlayerRecord a = account(from.getUniqueId());
+        if (a.balance() < c) {
+            return false;
+        }
+        PlayerRecord b = account(to.getUniqueId());
+        a.balance(a.balance() - c);
+        b.balance(b.balance() + c);
+        ledger.log(from.getUniqueId(), Tx.PAY_OUT, -c, a.balance(), to.getUniqueId().toString(), to.getName());
+        ledger.log(to.getUniqueId(), Tx.PAY_IN, c, b.balance(), from.getUniqueId().toString(), from.getName());
+        return true;
+    }
+
+    /** Admin: set a balance (logged with who did it). */
+    public void set(OfflinePlayer p, double amount, String by) {
+        check();
+        long c = Math.max(0, cents(amount));
+        PlayerRecord r = account(p.getUniqueId());
+        long diff = c - r.balance();
+        r.balance(c);
+        ledger.log(p.getUniqueId(), Tx.ADMIN, diff, c, by, "balance set to " + format(dollars(c)));
+    }
+
+    /** Marks the player's inventory to be saved before this payment is written (they handed items in). */
+    private void tookFrom(UUID id, Tx type) {
+        if (type.took()) {
+            Player p = Bukkit.getPlayer(id);
+            if (p != null) {
+                plugin.persistence().took(p);
+            }
+        }
+    }
+
+    private static void check() {
+        if (!Bukkit.isPrimaryThread()) {
+            throw new IllegalStateException("KushCraft money can only change on the server thread");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // lifetime sales (the dealer titles)
+    // ------------------------------------------------------------------
+
+    /** Lifetime money made selling product (this season). */
     public double sales(OfflinePlayer p) {
-        return sales.getOrDefault(p.getUniqueId(), 0.0);
+        PlayerRecord r = store.get(p.getUniqueId());
+        return r == null ? 0 : dollars(r.sales());
     }
 
     public void addSales(OfflinePlayer p, double amount) {
-        sales.merge(p.getUniqueId(), amount, Double::sum);
-        dirty = true;
+        long c = cents(amount);
+        if (c > 0) {
+            PlayerRecord r = account(p.getUniqueId());
+            r.sales(r.sales() + c);
+        }
     }
 
-    /** Admin: set lifetime sales (and so the rank). */
-    public void setSales(OfflinePlayer p, double amount) {
-        sales.put(p.getUniqueId(), Math.max(0, amount));
-        dirty = true;
+    /** Admin: set lifetime sales (and so the title). */
+    public void setSales(OfflinePlayer p, double amount, String by) {
+        PlayerRecord r = account(p.getUniqueId());
+        long c = Math.max(0, cents(amount));
+        r.sales(c);
+        ledger.log(p.getUniqueId(), Tx.ADMIN, 0, r.balance(), by, "lifetime sales set to " + format(dollars(c)));
     }
 
-    /** Every player who ever sold product, best seller first (balance = lifetime sales). */
+    /** Every player who sold product, best seller first (balance = lifetime sales). */
     public List<Rich> topSales() {
         List<Rich> out = new ArrayList<>();
-        for (Map.Entry<UUID, Double> e : sales.entrySet()) {
-            if (e.getValue() > 0) {
-                out.add(new Rich(e.getKey(), names.getOrDefault(e.getKey(), "?"), e.getValue()));
+        for (PlayerRecord r : store.all()) {
+            if (r.sales() > 0) {
+                out.add(new Rich(r.id(), r.name() == null ? "?" : r.name(), dollars(r.sales())));
             }
         }
         // ties: the name decides, so the order never flickers
@@ -257,15 +269,23 @@ public final class Economy {
         return out;
     }
 
-    /** Richest players (everyone that ever joined since KushCraft was installed). */
+    /** Richest players. */
     public List<Rich> top(int limit) {
         List<Rich> out = new ArrayList<>();
-        for (Map.Entry<UUID, String> e : names.entrySet()) {
-            double b = vault != null ? balance(Bukkit.getOfflinePlayer(e.getKey())) : wallet.getOrDefault(e.getKey(), 0.0);
-            out.add(new Rich(e.getKey(), e.getValue(), b));
+        for (PlayerRecord r : store.all()) {
+            out.add(new Rich(r.id(), r.name() == null ? "?" : r.name(), dollars(r.balance())));
         }
         out.sort((a, b) -> Double.compare(b.balance(), a.balance()));
         return out.size() > limit ? out.subList(0, limit) : out;
+    }
+
+    /** All the money on the server (the admin's inflation check). */
+    public double total() {
+        long t = 0;
+        for (PlayerRecord r : store.all()) {
+            t += r.balance();
+        }
+        return dollars(t);
     }
 
     public String format(double amount) {

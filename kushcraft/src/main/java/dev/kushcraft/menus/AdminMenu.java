@@ -200,7 +200,6 @@ public final class AdminMenu extends Menu {
                 n++;
             }
         }
-        plugin().machines().markDirty();
         return n;
     }
 }

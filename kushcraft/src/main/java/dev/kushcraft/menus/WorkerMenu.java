@@ -200,8 +200,8 @@ public final class WorkerMenu extends Menu {
                     "<gray>plants them again, plants seeds on empty",
                     "<gray>farmland (" + workers().emptyFarmland(worker) + " near them) and fertilizes.",
                     "<gray>The harvest goes in your chests; seeds",
-                    "<gray>and fertilizer come from them (or they",
-                    "<gray>buy some, with auto-buy on)."));
+                    "<gray>and fertilizer come from them or their",
+                    "<gray>satchel (Supply your crew in /kush workers)."));
             case DRYER -> lore.addAll(List.of(
                     "<gray>Put them near your Drug Lab. They take",
                     "<gray>fresh buds from your Farmhands and chests,",
@@ -344,7 +344,7 @@ public final class WorkerMenu extends Menu {
             failSound();
             return;
         }
-        workers().markDirty();
+        workers().touch(worker, true);
         player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.8f, 1f);
     }
 
@@ -355,7 +355,7 @@ public final class WorkerMenu extends Menu {
         }
         InventoryUtil.give(player, it);
         worker.satchel().setItem(i, null);
-        workers().markDirty();
+        workers().touch(worker, true);
         player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.6f, 1.2f);
     }
 
@@ -378,6 +378,7 @@ public final class WorkerMenu extends Menu {
         }
         List<ItemStack> left = workers().stash(worker, List.of(inSlot.clone()));
         player.getInventory().setItem(slot, left.isEmpty() ? null : left.get(0));
+        KushCraft.get().persistence().took(player); // into a satchel in the database: their inventory is saved first
         if (!left.isEmpty() && left.get(0).getAmount() == inSlot.getAmount()) {
             player.sendActionBar(Text.mm("<red>The satchel is full."));
             failSound();

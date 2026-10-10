@@ -34,9 +34,9 @@ import java.util.UUID;
  * server's own clock, nobody online. A Farmhand, a Dryer at a Drug Lab, a
  * Cook rolling joints and a Runner around a small farm with eight ripe
  * plants, empty farmland and a chest with fertilizer: the workers walk,
- * harvest, plant, fetch from the chest, dry, buy what's missing (seeds,
- * papers), roll and sell by themselves - and the worker tick has to stay
- * cheap. Logs LIVETEST PASS / FAIL (used by CI). Safe on a test world.
+ * harvest, plant, fetch fertilizer, seeds and papers from the chest, dry,
+ * roll and sell by themselves (9.0: they never buy anything) - and the
+ * worker tick has to stay cheap. Logs LIVETEST PASS / FAIL (used by CI). Safe on a test world.
  */
 final class LiveTest {
 
@@ -97,7 +97,7 @@ final class LiveTest {
         UUID boss = UUID.randomUUID();
         var owner = Bukkit.getOfflinePlayer(boss);
         var eco = plugin.economy();
-        eco.set(owner, 100_000);
+        eco.set(owner, 100_000, "livetest");
         Strain strain = plugin.strains().get("og_kush");
         if (strain == null) {
             strain = plugin.strains().all().iterator().next();
@@ -116,6 +116,9 @@ final class LiveTest {
         chestBlock.setType(Material.CHEST);
         Inventory chest = ((Container) chestBlock.getState(false)).getInventory();
         chest.addItem(Items.create(ItemType.FERTILIZER, 16));
+        // 9.0: workers don't buy supplies - their owner stocks a chest (seeds and rolling papers)
+        chest.addItem(Items.strainItem(ItemType.SEED_PACK, strain, 3, 16));
+        chest.addItem(Items.create(ItemType.ROLLING_PAPERS, 32));
         int oldDrying = plugin.getConfig().getInt("drying.seconds", 30);
         plugin.getConfig().set("drying.seconds", 5);
         Machine lab = plugin.machines().placeAt(w.getBlockAt(x + 5, y + 1, z + 3), MachineType.LAB_STATION, 0f, boss);
@@ -125,7 +128,8 @@ final class LiveTest {
         Worker cook = ws.hireAt(new Location(w, x + 2.5, y + 1, z + 7.5), WorkerType.COOK, boss, 3);
         ws.setJob(cook, Worker.ROLL_JOINT);
         Worker runner = ws.hireAt(new Location(w, x - 3 + 0.5, y + 1, z + 3.5), WorkerType.RUNNER, boss, 3);
-        ws.setAutoBuy(boss, true);
+        // four workers: the owner needs a rank with four slots
+        plugin.ranks().set(boss, plugin.ranks().top(), "livetest");
         ws.resetTiming();
         plugin.getLogger().info("LIVETEST started: " + farmland.size() + " farmland, " + ripeAt.size()
                 + " ripe plants, 4 workers (up to " + TIMEOUT_SECONDS + " s)");
@@ -160,11 +164,14 @@ final class LiveTest {
                 if (count(chest, ItemType.FERTILIZER) > 0) {
                     missing.add("the farmhand didn't fetch the fertilizer from the chest");
                 }
+                if (eco.ledger() == null || plugin.workers().autoBuyAllowed()) {
+                    missing.add("auto-buy should be off");
+                }
                 if (dryer.jobs() < 2) {
                     missing.add("the dryer hung and collected nothing (" + dryer.jobs() + " jobs)");
                 }
                 if (cook.jobs() < 1) {
-                    missing.add("the cook rolled nothing (they have to buy papers)");
+                    missing.add("the cook rolled nothing (papers are in the chest)");
                 }
                 if (eco.sales(owner) <= 0) {
                     missing.add("the runner sold nothing");
@@ -220,6 +227,7 @@ final class LiveTest {
                 for (long[] t : tickets) {
                     w.removePluginChunkTicket((int) t[0], (int) t[1], plugin);
                 }
+                plugin.players().delete(boss);
             }
         }.runTaskTimer(plugin, 20L, 20L);
     }

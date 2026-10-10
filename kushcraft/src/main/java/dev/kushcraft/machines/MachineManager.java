@@ -40,14 +40,13 @@ import java.util.UUID;
 import java.util.logging.Level;
 
 /** Stores machines and keeps their 3D models in the world. */
-public final class MachineManager {
+public final class MachineManager implements dev.kushcraft.storage.Persistence.Source {
 
     private final KushCraft plugin;
     private final File file;
     private final Map<BlockKey, Machine> machines = new HashMap<>();
     private final Map<String, Set<BlockKey>> byChunk = new HashMap<>();
     private final Set<BlockKey> lamps = new HashSet<>();
-    private boolean dirty;
 
     public MachineManager(KushCraft plugin) {
         this.plugin = plugin;
@@ -55,16 +54,107 @@ public final class MachineManager {
     }
 
     // ------------------------------------------------------------------
-    // storage
+    // storage: one database row per machine
     // ------------------------------------------------------------------
 
+    /** Positions of machines removed since the last database write. */
+    private final Set<String> deleted = new HashSet<>();
+
     public void load() {
+        for (Machine m : machines.values()) {
+            despawn(m);
+        }
         machines.clear();
         byChunk.clear();
         lamps.clear();
-        if (!file.exists()) {
+        deleted.clear();
+        long shift = plugin.downtime();
+        List<Machine> rows = plugin.db().call(c -> {
+            List<Machine> out = new ArrayList<>();
+            try (java.sql.Statement st = c.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT * FROM machines")) {
+                while (rs.next()) {
+                    BlockKey key = BlockKey.parse(rs.getString("pos"));
+                    MachineType type = MachineType.parse(rs.getString("type"));
+                    if (key == null || type == null) {
+                        continue;
+                    }
+                    UUID owner = null;
+                    try {
+                        String o = rs.getString("owner");
+                        owner = o == null ? null : UUID.fromString(o);
+                    } catch (IllegalArgumentException ignored) {
+                        // no owner
+                    }
+                    Machine m = new Machine(key, type, (float) rs.getDouble("yaw"), owner);
+                    m.level = Math.max(1, rs.getInt("level"));
+                    String job = rs.getString("job");
+                    if (job != null) {
+                        m.job = job;
+                        // the server being off doesn't count as cooking time
+                        m.jobStart = rs.getLong("job_start") + shift;
+                        m.jobEnd = rs.getLong("job_end") + shift;
+                        m.output = dev.kushcraft.storage.ItemCodec.decode(rs.getBytes("output"));
+                        if (m.output == null) {
+                            m.clearJob();
+                        }
+                    }
+                    readRacks(m, rs.getString("racks"), shift);
+                    m.dirty = shift > 0;
+                    out.add(m);
+                }
+            }
+            return out;
+        });
+        for (Machine m : rows) {
+            add(m);
+        }
+        loadCleanup();
+        if (rows.isEmpty() && file.exists() && !plugin.legacyImported()) {
+            importYaml();
+        }
+        plugin.getLogger().info("Loaded " + machines.size() + " machines.");
+    }
+
+    private static void readRacks(Machine m, String text, long shift) {
+        if (text == null || text.isEmpty()) {
             return;
         }
+        for (String part : text.split(";")) {
+            String[] f = part.split("\\|");
+            if (f.length != 6) {
+                continue;
+            }
+            try {
+                int i = Integer.parseInt(f[0]);
+                if (i >= 0 && i < Machine.RACKS) {
+                    m.racks[i] = new Machine.Rack(f[1], Integer.parseInt(f[2]), Integer.parseInt(f[3]),
+                            Long.parseLong(f[4]) + shift, Long.parseLong(f[5]) + shift);
+                }
+            } catch (NumberFormatException ignored) {
+                // a broken rack
+            }
+        }
+    }
+
+    private static String writeRacks(Machine m) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < Machine.RACKS; i++) {
+            Machine.Rack r = m.racks[i];
+            if (r != null) {
+                if (!b.isEmpty()) {
+                    b.append(';');
+                }
+                b.append(i).append('|').append(r.strain()).append('|').append(r.quality()).append('|').append(r.amount())
+                        .append('|').append(r.start()).append('|').append(r.done());
+            }
+        }
+        return b.isEmpty() ? null : b.toString();
+    }
+
+    /** 8.0 and older kept machines in machines.yml: read it once. */
+    private void importYaml() {
+        plugin.legacyFile(file);
         YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection sec = y.getConfigurationSection("machines");
         if (sec == null) {
@@ -85,6 +175,7 @@ public final class MachineManager {
                 String o = s.getString("owner");
                 owner = o == null ? null : UUID.fromString(o);
             } catch (IllegalArgumentException ignored) {
+                // no owner
             }
             Machine m = new Machine(key, type, (float) s.getDouble("yaw"), owner);
             m.level = Math.max(1, s.getInt("level", 1));
@@ -118,52 +209,9 @@ public final class MachineManager {
                     }
                 }
             }
+            m.dirty = true;
             add(m);
         }
-        plugin.getLogger().info("Loaded " + machines.size() + " machines.");
-    }
-
-    public void save() {
-        YamlConfiguration y = new YamlConfiguration();
-        ConfigurationSection sec = y.createSection("machines");
-        for (Machine m : machines.values()) {
-            ConfigurationSection s = sec.createSection(m.key().serialize());
-            s.set("type", m.type().name());
-            s.set("yaw", (double) m.yaw());
-            if (m.owner() != null) {
-                s.set("owner", m.owner().toString());
-            }
-            if (m.level > 1) {
-                s.set("level", m.level);
-            }
-            if (m.job != null && m.output != null) {
-                s.set("job", m.job);
-                s.set("job-start", m.jobStart);
-                s.set("job-end", m.jobEnd);
-                s.set("output", encode(m.output));
-            }
-            for (int i = 0; i < Machine.RACKS; i++) {
-                Machine.Rack r = m.racks[i];
-                if (r != null) {
-                    String k = "racks." + i + ".";
-                    s.set(k + "strain", r.strain());
-                    s.set(k + "quality", r.quality());
-                    s.set(k + "amount", r.amount());
-                    s.set(k + "start", r.start());
-                    s.set(k + "done", r.done());
-                }
-            }
-        }
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save machines.yml", e);
-        }
-    }
-
-    private static String encode(ItemStack item) {
-        return item == null ? null : Base64.getEncoder().encodeToString(item.serializeAsBytes());
     }
 
     private static ItemStack decode(String s) {
@@ -177,17 +225,83 @@ public final class MachineManager {
         }
     }
 
+    /** Every machine gets saved again (admin "finish all labs"). Single changes mark themselves. */
     public void markDirty() {
-        dirty = true;
+        for (Machine m : machines.values()) {
+            m.dirty = true;
+        }
+    }
+
+    private record Row(String pos, String type, float yaw, String owner, int level, String job, long jobStart,
+                       long jobEnd, ItemStack output, String racks) {
+    }
+
+    @Override
+    public void collect(dev.kushcraft.storage.Persistence.Batch b, boolean full) {
+        List<Machine> changed = new ArrayList<>();
+        for (Machine m : machines.values()) {
+            if (m.dirty) {
+                changed.add(m);
+            }
+        }
+        if (changed.isEmpty() && deleted.isEmpty()) {
+            return;
+        }
+        List<Row> rows = new ArrayList<>(changed.size());
+        for (Machine m : changed) {
+            m.dirty = false;
+            rows.add(new Row(m.key().serialize(), m.type().name(), m.yaw(), m.owner() == null ? null : m.owner().toString(),
+                    m.level, m.job, m.jobStart, m.jobEnd, m.output == null ? null : m.output.clone(), writeRacks(m)));
+        }
+        List<String> gone = new ArrayList<>(deleted);
+        deleted.clear();
+        b.write(c -> {
+            if (!gone.isEmpty()) {
+                try (java.sql.PreparedStatement ps = c.prepareStatement("DELETE FROM machines WHERE pos=?")) {
+                    for (String k : gone) {
+                        ps.setString(1, k);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+            if (!rows.isEmpty()) {
+                try (java.sql.PreparedStatement ps = c.prepareStatement("""
+                        INSERT INTO machines(pos, type, yaw, owner, level, job, job_start, job_end, output, racks)
+                        VALUES(?,?,?,?,?,?,?,?,?,?)
+                        ON CONFLICT(pos) DO UPDATE SET type=excluded.type, yaw=excluded.yaw, owner=excluded.owner,
+                          level=excluded.level, job=excluded.job, job_start=excluded.job_start, job_end=excluded.job_end,
+                          output=excluded.output, racks=excluded.racks""")) {
+                    for (Row r : rows) {
+                        ps.setString(1, r.pos());
+                        ps.setString(2, r.type());
+                        ps.setDouble(3, r.yaw());
+                        ps.setString(4, r.owner());
+                        ps.setInt(5, r.level());
+                        ps.setString(6, r.job());
+                        ps.setLong(7, r.jobStart());
+                        ps.setLong(8, r.jobEnd());
+                        ps.setBytes(9, dev.kushcraft.storage.ItemCodec.encode(r.output()));
+                        ps.setString(10, r.racks());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+        });
+        b.onFailure(() -> {
+            changed.forEach(m -> m.dirty = true);
+            for (String k : gone) {
+                BlockKey key = BlockKey.parse(k);
+                if (key == null || !machines.containsKey(key)) {
+                    deleted.add(k);
+                }
+            }
+        });
     }
 
     public void start() {
         Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (dirty) {
-                save();
-            }
-        }, 20L * 60, 20L * 60);
         for (World w : Bukkit.getWorlds()) {
             for (org.bukkit.Chunk c : w.getLoadedChunks()) {
                 chunkLoaded(w, c.getX(), c.getZ());
@@ -195,15 +309,16 @@ public final class MachineManager {
         }
     }
 
+    /** Takes every machine model out of the world (shutdown, reset). The data and blocks stay. */
     public void shutdown() {
         for (Machine m : machines.values()) {
             despawn(m);
         }
-        save();
     }
 
     private void add(Machine m) {
         machines.put(m.key(), m);
+        deleted.remove(m.key().serialize());
         byChunk.computeIfAbsent(m.key().chunkId(), k -> new HashSet<>()).add(m.key());
         if (m.type() == MachineType.GROW_LAMP) {
             lamps.add(m.key());
@@ -220,7 +335,7 @@ public final class MachineManager {
                 byChunk.remove(m.key().chunkId());
             }
         }
-        markDirty();
+        deleted.add(m.key().serialize());
     }
 
     public Machine at(BlockKey key) {
@@ -287,7 +402,6 @@ public final class MachineManager {
         }
         Machine m = new Machine(BlockKey.of(block), type, yaw, owner);
         add(m);
-        markDirty();
         spawn(m);
         if (type == MachineType.GROW_LAMP) {
             Block above = block.getRelative(0, 1, 0);
@@ -296,6 +410,82 @@ public final class MachineManager {
             }
         }
         return m;
+    }
+
+    /** The block (and a Grow Lamp's light) of a machine that's gone. */
+    private static void clearBlocks(Block b, boolean lamp) {
+        if (b != null && b.getType() == Material.BARRIER) {
+            b.setType(Material.AIR);
+        }
+        if (lamp && b != null) {
+            Block above = b.getRelative(0, 1, 0);
+            if (above.getType() == Material.LIGHT) {
+                above.setType(Material.AIR);
+            }
+        }
+    }
+
+    /**
+     * Season reset: every machine leaves the world. Blocks in loaded chunks are cleared now; the
+     * positions of the rest are returned (the reset stores them, they're cleared when they load).
+     */
+    public List<String> removeAllBlocks() {
+        List<String> later = new ArrayList<>();
+        for (Machine m : new ArrayList<>(machines.values())) {
+            despawn(m);
+            if (m.key().isLoaded()) {
+                clearBlocks(m.key().block(), true);
+            } else {
+                later.add(m.key().serialize());
+            }
+        }
+        return later;
+    }
+
+    /** Positions (by chunk) whose leftover machine block is cleared when the chunk loads (after a reset). */
+    private final Map<String, Set<BlockKey>> cleanup = new HashMap<>();
+
+    private void loadCleanup() {
+        cleanup.clear();
+        List<String> rows = plugin.db().call(c -> {
+            List<String> out = new ArrayList<>();
+            try (java.sql.Statement st = c.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT pos FROM cleanup")) {
+                while (rs.next()) {
+                    out.add(rs.getString(1));
+                }
+            }
+            return out;
+        });
+        for (String r : rows) {
+            BlockKey k = BlockKey.parse(r);
+            if (k != null) {
+                cleanup.computeIfAbsent(k.chunkId(), x -> new HashSet<>()).add(k);
+            }
+        }
+    }
+
+    private void cleanUp(String chunk) {
+        Set<BlockKey> keys = cleanup.remove(chunk);
+        if (keys == null) {
+            return;
+        }
+        List<String> done = new ArrayList<>();
+        for (BlockKey k : keys) {
+            if (!machines.containsKey(k)) {
+                clearBlocks(k.block(), true);
+            }
+            done.add(k.serialize());
+        }
+        plugin.db().run(c -> {
+            try (java.sql.PreparedStatement ps = c.prepareStatement("DELETE FROM cleanup WHERE pos=?")) {
+                for (String d : done) {
+                    ps.setString(1, d);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+            }
+        });
     }
 
     /** Removes the machine, drops its item (unless creative) and anything stored inside. */
@@ -357,7 +547,6 @@ public final class MachineManager {
             InventoryUtil.give(player, Items.strainItem(ItemType.BUD_DRIED, s, m.rackQuality(), m.rackAmount()));
             player.sendActionBar(Text.mm("<green>Collected " + m.rackAmount() + "x dried " + s.colored()));
             m.emptyRack();
-            markDirty();
             refresh(m);
             player.playSound(player.getLocation(), "minecraft:entity.item.pickup", SoundCategory.PLAYERS, 0.8f, 1f);
             return;
@@ -380,7 +569,6 @@ public final class MachineManager {
             hand.setAmount(hand.getAmount() - add);
             int seconds = dryingSeconds();
             m.fillRack(s.id(), q, m.rackAmount() + add, System.currentTimeMillis() + seconds * 1000L);
-            markDirty();
             refresh(m);
             player.sendActionBar(Text.mm("<green>Hung " + add + " buds to dry. <gray>Ready in " + Text.time(seconds) + "."));
             player.playSound(player.getLocation(), "minecraft:block.azalea_leaves.place", SoundCategory.BLOCKS, 1f, 1f);
@@ -531,6 +719,9 @@ public final class MachineManager {
     }
 
     public void chunkLoaded(World w, int cx, int cz) {
+        if (!cleanup.isEmpty()) {
+            cleanUp(BlockKey.chunkId(w.getName(), cx, cz));
+        }
         Set<BlockKey> keys = byChunk.get(BlockKey.chunkId(w.getName(), cx, cz));
         if (keys == null) {
             return;

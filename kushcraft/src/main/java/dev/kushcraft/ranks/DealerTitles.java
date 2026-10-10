@@ -45,13 +45,13 @@ public final class DealerTitles {
 
     public void load() {
         titles.clear();
-        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("ranks");
+        ConfigurationSection sec = plugin.getConfig().getConfigurationSection("dealer-titles");
         int last = 0;
         if (sec != null) {
             for (Map<?, ?> m : sec.getMapList("titles")) {
                 int top = m.get("top") instanceof Number n ? n.intValue() : 0;
                 if (top <= last) {
-                    plugin.getLogger().warning("ranks.titles: '" + m.get("name") + "' must have a bigger top than the one before it - skipped.");
+                     plugin.getLogger().warning("dealer-titles.titles: '" + m.get("name") + "' must have a bigger top than the one before it - skipped.");
                     continue;
                 }
                 last = top;
@@ -74,11 +74,38 @@ public final class DealerTitles {
         return o instanceof Number n ? Math.max(0, n.doubleValue()) : 0;
     }
 
-    /** Re-sorts the leaderboard (after every sale). */
+    /** Sorts the whole leaderboard again (start-up, admin changes, a reset). */
     public void refresh() {
-        board = plugin.economy().topSales();
+        board = new java.util.ArrayList<>(plugin.economy().topSales());
         places.clear();
         for (int i = 0; i < board.size(); i++) {
+            places.put(board.get(i).id(), i + 1);
+        }
+    }
+
+    private static final java.util.Comparator<Economy.Rich> ORDER = (a, b) -> a.balance() != b.balance()
+            ? Double.compare(b.balance(), a.balance()) : a.name().compareToIgnoreCase(b.name());
+
+    /**
+     * One seller's total changed: they move to their new place (a binary search and a shift, not
+     * a sort of everyone - sales happen many times a second on a big server).
+     */
+    private void moved(UUID id) {
+        var r = plugin.players().get(id);
+        if (r == null || r.sales() <= 0) {
+            return;
+        }
+        Integer old = places.get(id);
+        if (old != null) {
+            board.remove(old - 1);
+        }
+        Economy.Rich now = new Economy.Rich(id, r.name() == null ? "?" : r.name(), r.sales() / 100.0);
+        int at = java.util.Collections.binarySearch(board, now, ORDER);
+        at = at < 0 ? -at - 1 : at;
+        board.add(at, now);
+        int from = old == null ? at : Math.min(old - 1, at);
+        int to = old == null ? board.size() - 1 : Math.max(old - 1, at);
+        for (int i = from; i <= to; i++) {
             places.put(board.get(i).id(), i + 1);
         }
     }
@@ -137,14 +164,17 @@ public final class DealerTitles {
         if (money <= 0) {
             return;
         }
+        // only the titled players can lose a title to this sale: remember theirs
         Map<UUID, Rank> before = new HashMap<>();
-        for (Player o : Bukkit.getOnlinePlayers()) {
-            before.put(o.getUniqueId(), of(o));
+        int titled = titles.isEmpty() ? 0 : titles.get(titles.size() - 1).top();
+        for (int i = 0; i < Math.min(titled + 1, board.size()); i++) {
+            UUID id = board.get(i).id();
+            before.put(id, forPlace(i + 1));
         }
         int placeBefore = place(p);
         plugin.economy().addSales(p, money);
         plugin.cartels().sold(p.getUniqueId(), money);
-        refresh();
+        moved(p.getUniqueId());
         plugin.awards().sales(p, plugin.economy().sales(p));
         Rank now = of(p);
         Rank was = before.getOrDefault(p.getUniqueId(), everyone);
@@ -160,29 +190,28 @@ public final class DealerTitles {
         } else if (placeBefore != place && place > 0) {
             p.sendActionBar(Text.mm("<gray>You're now <white>#" + place + "</white> on the leaderboard."));
         }
-        for (Player o : Bukkit.getOnlinePlayers()) {
-            Rank b = before.get(o.getUniqueId());
-            if (o != p && b != null && b != everyone && of(o) != b) {
+        before.forEach((id, b) -> {
+            Player o = Bukkit.getPlayer(id);
+            if (o != null && o != p && b != everyone && of(o) != b) {
                 o.sendMessage(Text.msg("<gray>" + Text.escape(p.getName()) + " sold more than you - you're now "
                         + of(o).colored() + " <gray>(#" + place(o) + ")."));
             }
-            showInTab(o);
-        }
+        });
     }
 
-    /** Puts the title in front of the name (and the cartel after it) in the tab list (ranks.tab-list). */
+    /** A sale of an offline player's Runner: their place moves (no messages). */
+    public void soldOffline(UUID id, double money) {
+        if (money <= 0) {
+            return;
+        }
+        var o = Bukkit.getOfflinePlayer(id);
+        plugin.economy().addSales(o, money);
+        plugin.cartels().sold(id, money);
+        moved(id);
+    }
+
+    /** The tab list shows the ladder rank and the cartel (RankLadder). */
     public void showInTab(Player p) {
-        if (!plugin.getConfig().getBoolean("ranks.tab-list", true)) {
-            return;
-        }
-        Rank r = of(p);
-        dev.kushcraft.cartels.Cartel c = plugin.cartels().enabled() ? plugin.cartels().of(p) : null;
-        if (r == everyone && c == null) {
-            p.playerListName(null);
-            return;
-        }
-        p.playerListName(Text.mm((r == everyone ? "" : "<" + r.color() + ">[" + r.name() + "]</" + r.color() + "> ")
-                + "<white>" + Text.escape(p.getName()) + "</white>"
-                + (c == null ? "" : " <dark_gray>·</dark_gray> " + c.colored())));
+        plugin.ranks().showInTab(p);
     }
 }

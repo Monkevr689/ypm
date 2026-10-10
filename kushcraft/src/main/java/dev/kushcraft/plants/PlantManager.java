@@ -48,7 +48,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
 /** Stores, grows and draws every plant. */
-public final class PlantManager {
+public final class PlantManager implements dev.kushcraft.storage.Persistence.Source {
 
     private static final Set<Material> CANNABIS_SOIL = EnumSet.of(Material.FARMLAND, Material.GRASS_BLOCK,
             Material.DIRT, Material.COARSE_DIRT, Material.ROOTED_DIRT, Material.PODZOL, Material.MUD,
@@ -65,7 +65,6 @@ public final class PlantManager {
     private final File file;
     private final Map<BlockKey, Plant> plants = new HashMap<>();
     private final Map<String, Set<BlockKey>> byChunk = new HashMap<>();
-    private boolean dirty;
 
     public PlantManager(KushCraft plugin) {
         this.plugin = plugin;
@@ -73,15 +72,70 @@ public final class PlantManager {
     }
 
     // ------------------------------------------------------------------
-    // storage
+    // storage: one database row per plant
     // ------------------------------------------------------------------
 
+    /** Positions of plants removed since the last database write. */
+    private final Set<String> deleted = new HashSet<>();
+
     public void load() {
+        for (Plant p : plants.values()) {
+            despawn(p);
+        }
         plants.clear();
         byChunk.clear();
-        if (!file.exists()) {
-            return;
+        deleted.clear();
+        long shift = plugin.downtime();
+        List<Plant> rows = plugin.db().call(c -> {
+            List<Plant> out = new ArrayList<>();
+            try (java.sql.Statement st = c.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT * FROM plants")) {
+                while (rs.next()) {
+                    BlockKey key = BlockKey.parse(rs.getString("pos"));
+                    Plant.Kind kind;
+                    try {
+                        kind = Plant.Kind.valueOf(rs.getString("kind"));
+                    } catch (IllegalArgumentException | NullPointerException e) {
+                        continue;
+                    }
+                    if (key == null) {
+                        continue;
+                    }
+                    UUID owner = null;
+                    try {
+                        String o = rs.getString("owner");
+                        owner = o == null ? null : UUID.fromString(o);
+                    } catch (IllegalArgumentException ignored) {
+                        // no owner
+                    }
+                    Plant plant = new Plant(key, kind, rs.getString("strain"), rs.getDouble("growth"),
+                            rs.getInt("fert") != 0, owner);
+                    long wild = rs.getLong("wild_until");
+                    if (wild > 0) {
+                        plant.wildUntil(wild + shift);
+                    }
+                    long at = rs.getLong("grown_at");
+                    // the server being off doesn't count as time to grow
+                    plant.grownAt = at <= 0 ? System.currentTimeMillis() : at + shift;
+                    plant.dirty = false;
+                    plant.soft = shift > 0;
+                    out.add(plant);
+                }
+            }
+            return out;
+        });
+        for (Plant p : rows) {
+            add(p);
         }
+        if (rows.isEmpty() && file.exists() && !plugin.legacyImported()) {
+            importYaml();
+        }
+        plugin.getLogger().info("Loaded " + plants.size() + " plants.");
+    }
+
+    /** 8.0 and older kept plants in plants.yml: read it once. */
+    private void importYaml() {
+        plugin.legacyFile(file);
         YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
         ConfigurationSection sec = y.getConfigurationSection("plants");
         if (sec == null) {
@@ -104,42 +158,86 @@ public final class PlantManager {
                 String o = s.getString("owner");
                 owner = o == null ? null : UUID.fromString(o);
             } catch (IllegalArgumentException ignored) {
+                // no owner
             }
             Plant plant = new Plant(key, kind, s.getString("strain"), s.getDouble("growth"), s.getBoolean("fert"), owner);
             plant.wildUntil(s.getLong("wild-until", 0));
+            plant.dirty = true;
             add(plant);
         }
-        plugin.getLogger().info("Loaded " + plants.size() + " plants.");
     }
 
-    public void save() {
-        YamlConfiguration y = new YamlConfiguration();
-        ConfigurationSection sec = y.createSection("plants");
-        for (Plant p : plants.values()) {
-            ConfigurationSection s = sec.createSection(p.key().serialize());
-            s.set("kind", p.kind().name());
-            if (p.strainId() != null) {
-                s.set("strain", p.strainId());
-            }
-            s.set("growth", Math.round(p.growth() * 100) / 100.0);
-            s.set("fert", p.fertilized());
-            if (p.owner() != null) {
-                s.set("owner", p.owner().toString());
-            }
-            if (p.wild()) {
-                s.set("wild-until", p.wildUntil());
-            }
-        }
-        try {
-            y.save(file);
-            dirty = false;
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "Could not save plants.yml", e);
-        }
-    }
-
+    /** Every plant gets saved again. */
     public void markDirty() {
-        dirty = true;
+        for (Plant p : plants.values()) {
+            p.dirty = true;
+        }
+    }
+
+    private record Row(String pos, String kind, String strain, double growth, boolean fert, String owner,
+                       long wildUntil, long grownAt) {
+    }
+
+    @Override
+    public void collect(dev.kushcraft.storage.Persistence.Batch b, boolean full) {
+        List<Plant> changed = new ArrayList<>();
+        for (Plant p : plants.values()) {
+            if (p.dirty || (full && p.soft)) {
+                changed.add(p);
+            }
+        }
+        if (changed.isEmpty() && deleted.isEmpty()) {
+            return;
+        }
+        List<Row> rows = new ArrayList<>(changed.size());
+        for (Plant p : changed) {
+            p.dirty = false;
+            p.soft = false;
+            rows.add(new Row(p.key().serialize(), p.kind().name(), p.strainId(), Math.round(p.growth() * 100) / 100.0,
+                    p.fertilized(), p.owner() == null ? null : p.owner().toString(), p.wildUntil(), p.grownAt));
+        }
+        List<String> gone = new ArrayList<>(deleted);
+        deleted.clear();
+        b.write(c -> {
+            if (!gone.isEmpty()) {
+                try (java.sql.PreparedStatement ps = c.prepareStatement("DELETE FROM plants WHERE pos=?")) {
+                    for (String k : gone) {
+                        ps.setString(1, k);
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+            if (!rows.isEmpty()) {
+                try (java.sql.PreparedStatement ps = c.prepareStatement("""
+                        INSERT INTO plants(pos, kind, strain, growth, fert, owner, wild_until, grown_at) VALUES(?,?,?,?,?,?,?,?)
+                        ON CONFLICT(pos) DO UPDATE SET kind=excluded.kind, strain=excluded.strain, growth=excluded.growth,
+                          fert=excluded.fert, owner=excluded.owner, wild_until=excluded.wild_until,
+                          grown_at=excluded.grown_at""")) {
+                    for (Row r : rows) {
+                        ps.setString(1, r.pos());
+                        ps.setString(2, r.kind());
+                        ps.setString(3, r.strain());
+                        ps.setDouble(4, r.growth());
+                        ps.setInt(5, r.fert() ? 1 : 0);
+                        ps.setString(6, r.owner());
+                        ps.setLong(7, r.wildUntil());
+                        ps.setLong(8, r.grownAt());
+                        ps.addBatch();
+                    }
+                    ps.executeBatch();
+                }
+            }
+        });
+        b.onFailure(() -> {
+            changed.forEach(p -> p.dirty = true);
+            for (String k : gone) {
+                BlockKey key = BlockKey.parse(k);
+                if (key == null || !plants.containsKey(key)) {
+                    deleted.add(k);
+                }
+            }
+        });
     }
 
     public void start() {
@@ -147,11 +245,6 @@ public final class PlantManager {
         // every plant grows once every tick-seconds, a few each tick (no lag spike every 10 seconds)
         Bukkit.getScheduler().runTaskTimer(plugin, () -> growSlice(tickSeconds), 20L, 1L);
         Bukkit.getScheduler().runTaskTimer(plugin, this::sparkle, 20L, 10L);
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (dirty) {
-                save();
-            }
-        }, 20L * 60, 20L * 60);
         // draw plants in chunks that are already loaded
         for (World w : Bukkit.getWorlds()) {
             for (org.bukkit.Chunk c : w.getLoadedChunks()) {
@@ -160,20 +253,22 @@ public final class PlantManager {
         }
     }
 
+    /** Takes every plant model out of the world (shutdown, reset). The data stays. */
     public void shutdown() {
         for (Plant p : plants.values()) {
             despawn(p);
         }
-        save();
     }
 
     private void add(Plant p) {
         plants.put(p.key(), p);
+        deleted.remove(p.key().serialize());
         byChunk.computeIfAbsent(p.key().chunkId(), k -> new HashSet<>()).add(p.key());
     }
 
     private void forget(Plant p) {
         plants.remove(p.key());
+        deleted.add(p.key().serialize());
         Set<BlockKey> set = byChunk.get(p.key().chunkId());
         if (set != null) {
             set.remove(p.key());
@@ -181,7 +276,6 @@ public final class PlantManager {
                 byChunk.remove(p.key().chunkId());
             }
         }
-        markDirty();
     }
 
     public Plant at(BlockKey key) {
@@ -270,7 +364,6 @@ public final class PlantManager {
     public Plant plantAt(BlockKey key, Plant.Kind kind, Strain strain, UUID owner) {
         Plant p = new Plant(key, kind, strain == null ? null : strain.id(), 0, false, owner);
         add(p);
-        markDirty();
         spawn(p);
         return p;
     }
@@ -457,7 +550,7 @@ public final class PlantManager {
         }
         p.fertilized(true);
         p.growth(p.growth() + 5);
-        markDirty();
+        p.dirty = true;
         refresh(p);
         Location c = p.key().center();
         c.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, c, 15, 0.35, 0.35, 0.35, 0);
@@ -470,7 +563,7 @@ public final class PlantManager {
             return false;
         }
         p.growth(p.growth() + 8);
-        markDirty();
+        p.dirty = true;
         refresh(p);
         Location c = p.key().center();
         c.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, c, 10, 0.35, 0.35, 0.35, 0);
@@ -488,6 +581,11 @@ public final class PlantManager {
     }
 
     public Conditions conditions(Plant p) {
+        return conditions(p, -1);
+    }
+
+    /** The conditions; light &gt;= 0 replaces the light level the block has right now. */
+    public Conditions conditions(Plant p, int lightOverride) {
         Block at = p.key().block();
         if (at == null) {
             return new Conditions(0, 1, "", "", "", "World not loaded", Climate.Fit.OK);
@@ -497,7 +595,7 @@ public final class PlantManager {
         int quality = 3;
         String problem = null;
         boolean lamp = plugin.machines().lampNear(p.key(), plugin.getConfig().getInt("growth.lamp-radius", 6));
-        int light = at.getLightLevel();
+        int light = lightOverride >= 0 ? lightOverride : at.getLightLevel();
         String lightText;
         Machine soilMachine = plugin.machines().at(BlockKey.of(soil));
         boolean planter = soilMachine != null && soilMachine.type() == MachineType.PLANTER_BOX;
@@ -661,6 +759,7 @@ public final class PlantManager {
         if (p.mature() || !p.key().isLoaded()) {
             return;
         }
+        p.grownAt = now;
         Block at = p.key().block();
         Block soil = at.getRelative(0, -1, 0);
         if (!isSoil(soil, p.kind())) {
@@ -669,27 +768,37 @@ public final class PlantManager {
             return;
         }
         Conditions c = conditions(p);
-        double minutes = Math.max(0.1, plugin.getConfig().getDouble(switch (p.kind()) {
+        p.status = c.problem() == null ? "" : c.problem();
+        if (c.multiplier() <= 0) {
+            return;
+        }
+        addGrowth(p, tickSeconds * c.multiplier());
+    }
+
+    /** Real-time minutes a plant kind needs in average conditions (growth.*-minutes). */
+    public double growMinutes(Plant.Kind kind) {
+        return Math.max(0.1, plugin.getConfig().getDouble(switch (kind) {
             case CANNABIS -> "growth.cannabis-minutes";
             case MUSHROOM -> "growth.mushroom-minutes";
             case COCA -> "growth.coca-minutes";
             case POPPY -> "growth.poppy-minutes";
             case PEYOTE -> "growth.peyote-minutes";
-        }, switch (p.kind()) {
+        }, switch (kind) {
             case CANNABIS -> 20;
             case MUSHROOM -> 12;
             case COCA -> 16;
             case POPPY -> 14;
             case PEYOTE -> 18;
         }));
-        double perTick = 100.0 / (minutes * 60.0 / tickSeconds);
-        p.status = c.problem() == null ? "" : c.problem();
-        if (c.multiplier() <= 0) {
+    }
+
+    /** Adds this many seconds of normal-speed growth (and shows the new stage). */
+    private void addGrowth(Plant p, double seconds) {
+        if (seconds <= 0 || p.mature()) {
             return;
         }
-        p.growth(p.growth() + perTick * c.multiplier());
-        markDirty();
-        if (p.stage() != p.shownStage) {
+        p.growth(p.growth() + 100.0 / (growMinutes(p.kind()) * 60.0) * seconds);
+        if (p.stage() != p.shownStage && p.key().isLoaded()) {
             refresh(p);
             if (p.mature()) {
                 Location l = p.key().center();
@@ -699,6 +808,58 @@ public final class PlantManager {
                 }
             }
         }
+    }
+
+    /**
+     * How fast a plant grows while nobody is near (its chunk unloaded): the conditions with the
+     * light it gets by day (a plant that only has sunlight grows half the time).
+     */
+    public double awayMultiplier(Plant p) {
+        Block at = p.key().block();
+        if (at == null || !isSoil(at.getRelative(0, -1, 0), p.kind())) {
+            return 0;
+        }
+        if (p.kind() == Plant.Kind.MUSHROOM) {
+            return conditions(p).multiplier();
+        }
+        int minLight = plugin.getConfig().getInt("growth.min-light", 9);
+        int blocks = at.getLightFromBlocks();
+        if (blocks >= minLight) {
+            return conditions(p, blocks).multiplier();
+        }
+        int sky = at.getLightFromSky();
+        return sky >= minLight ? conditions(p, sky).multiplier() * 0.5 : conditions(p, blocks).multiplier();
+    }
+
+    /** growth.away-rate: how much of the normal speed plants grow while nobody is near. */
+    public double awayRate() {
+        return Math.max(0, plugin.getConfig().getDouble("growth.away-rate", 0.5));
+    }
+
+    /** growth.away-max-hours: at most this much time away is caught up. */
+    public long awayMaxMillis() {
+        return (long) (Math.max(0, plugin.getConfig().getDouble("growth.away-max-hours", 12)) * 3_600_000L);
+    }
+
+    /**
+     * Catches up the growth a plant missed while its chunk was unloaded (chunk load). Plants tended
+     * by workers are left to the workers' own catch-up, which harvests them along the way.
+     */
+    public void catchUp(Plant p) {
+        long now = System.currentTimeMillis();
+        long away = Math.min(now - p.grownAt, awayMaxMillis());
+        p.grownAt = now;
+        if (away < 60_000L || p.mature() || p.wild() || awayRate() <= 0
+                || (p.owner() != null && plugin.workers().tended(p))) {
+            return;
+        }
+        addGrowth(p, away / 1000.0 * awayRate() * awayMultiplier(p));
+    }
+
+    /** Workers' catch-up: grows a plant as if this many seconds of away time passed (multiplier precomputed). */
+    public void advance(Plant p, double seconds, double multiplier) {
+        p.grownAt = System.currentTimeMillis();
+        addGrowth(p, seconds * awayRate() * multiplier);
     }
 
     private void notifyRipe() {
@@ -885,6 +1046,7 @@ public final class PlantManager {
         for (BlockKey k : new ArrayList<>(keys)) {
             Plant p = plants.get(k);
             if (p != null) {
+                catchUp(p);
                 spawn(p);
             }
         }

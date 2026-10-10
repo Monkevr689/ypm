@@ -1,7 +1,6 @@
 package dev.kushcraft.listeners;
 
 import dev.kushcraft.KushCraft;
-import dev.kushcraft.Keys;
 import dev.kushcraft.effects.EffectType;
 import dev.kushcraft.menus.TabMenu;
 import dev.kushcraft.items.ItemType;
@@ -30,7 +29,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -51,23 +49,11 @@ public final class PlayerListener implements Listener {
     public void onJoin(PlayerJoinEvent e) {
         Player p = e.getPlayer();
         plugin.economy().join(p);
-        plugin.titles().showInTab(p);
+        plugin.ranks().showInTab(p);
         p.discoverRecipes(Recipes.keys());
         plugin.effects().join(p);
-        if (plugin.getConfig().getBoolean("give-guide-on-first-join", true)
-                && !p.getPersistentDataContainer().has(Keys.GOT_GUIDE, PersistentDataType.BYTE)) {
-            p.getPersistentDataContainer().set(Keys.GOT_GUIDE, PersistentDataType.BYTE, (byte) 1);
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (p.isOnline()) {
-                    InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
-                    int kit = starterKit(p);
-                    p.sendMessage(Text.msg("<gray>This server runs <green>KushCraft</green>! Type <white>/kush</white>, press"
-                            + " <white>Shift+F</white> or right-click the <green>KushCraft Menu</green> book to start."));
-                    p.sendMessage(Text.msg("<aqua>New here? <gray>The glowing <aqua>Next</aqua> button in the menu shows"
-                            + " your next step." + (kit > 0 ? " <green>You got a starter kit!" : "")));
-                }
-            }, 60L);
-        }
+        // season wipe catch-up, starter kit and the welcome menu (once a season)
+        plugin.onboarding().join(p);
     }
 
     /** Gives the new-players.starter-kit from config.yml. Returns how many stacks were given. */
@@ -108,6 +94,8 @@ public final class PlayerListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
         plugin.effects().quit(e.getPlayer());
+        plugin.economy().quit(e.getPlayer());
+        plugin.rates().forget(e.getPlayer().getUniqueId());
     }
 
     @EventHandler
@@ -122,11 +110,12 @@ public final class PlayerListener implements Listener {
         return balance <= 0 ? 0 : Math.floor(balance * Math.max(0, Math.min(1, pct)) * 100) / 100.0;
     }
 
-    /** death.cash-lost of the wallet is gone (nobody gets it). Returns the amount lost. */
+    /** pvp.death-cash-lost of the wallet is gone (nobody gets it). Returns the amount lost. */
     public double loseCash(Player p) {
-        double pct = Math.max(0, Math.min(1, plugin.getConfig().getDouble("death.cash-lost", 0.2)));
+        double pct = Math.max(0, Math.min(1, plugin.getConfig().getDouble("pvp.death-cash-lost", 0.2)));
         double lost = cashLost(plugin.economy().balance(p), pct);
-        if (pct <= 0 || lost < 0.01 || !plugin.economy().withdraw(p, lost)) {
+        if (pct <= 0 || lost < 0.01 || !plugin.economy().withdraw(p, lost, dev.kushcraft.economy.Tx.DEATH,
+                p.getKiller() == null ? null : "killed by " + p.getKiller().getName())) {
             return 0;
         }
         p.sendMessage(Text.msg("<red>You died and lost <gold>" + plugin.economy().format(lost) + "</gold> <gray>("

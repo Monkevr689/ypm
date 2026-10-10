@@ -338,6 +338,24 @@ public final class StrainRegistry {
         return s;
     }
 
+    /** Season reset "everything": strains players bred are gone (the built-in ones stay). Returns how many. */
+    public int removeBred() {
+        List<String> bred = new ArrayList<>();
+        for (Strain st : strains.values()) {
+            if (st.isCustom()) {
+                bred.add(st.id());
+            }
+        }
+        for (String id : bred) {
+            strains.remove(id);
+            yaml.set("strains." + id, null);
+        }
+        if (!bred.isEmpty()) {
+            save();
+        }
+        return bred.size();
+    }
+
     /** Forgets a strain (selftest clean-up). */
     public void remove(String id) {
         strains.remove(id);

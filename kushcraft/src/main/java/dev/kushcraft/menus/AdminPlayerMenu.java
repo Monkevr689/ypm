@@ -73,11 +73,11 @@ public final class AdminPlayerMenu extends Menu {
             if (slot == MONEY[i]) {
                 double a = AMOUNTS[i];
                 if (a > 0) {
-                    eco.deposit(target, a);
+                    eco.deposit(target.getUniqueId(), a, dev.kushcraft.economy.Tx.ADMIN, player.getName(), "admin panel");
                 } else if (a < 0) {
-                    eco.set(target, Math.max(0, eco.balance(target) + a));
+                    eco.set(target, Math.max(0, eco.balance(target) + a), player.getName());
                 } else {
-                    eco.set(target, 0);
+                    eco.set(target, 0, player.getName());
                 }
                 ok();
                 return;
@@ -85,12 +85,12 @@ public final class AdminPlayerMenu extends Menu {
         }
         switch (slot) {
             case SALES_UP -> {
-                eco.setSales(target, eco.sales(target) + 10000);
+                eco.setSales(target, eco.sales(target) + 10000, player.getName());
                 refreshRanks();
                 ok();
             }
             case SALES_RESET -> {
-                eco.setSales(target, 0);
+                eco.setSales(target, 0, player.getName());
                 refreshRanks();
                 ok();
             }

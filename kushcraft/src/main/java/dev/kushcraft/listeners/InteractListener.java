@@ -185,6 +185,7 @@ public final class InteractListener implements Listener {
         if (plugin.plants().plant(p, soil, kind, s)) {
             if (p.getGameMode() != org.bukkit.GameMode.CREATIVE) {
                 item.setAmount(item.getAmount() - 1);
+                plugin.persistence().took(p); // the seed became a plant in the database
             }
             p.swingMainHand();
         }

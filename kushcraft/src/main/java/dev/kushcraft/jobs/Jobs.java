@@ -170,7 +170,7 @@ public final class Jobs implements Listener {
         double paid = Math.min(room, amount);
         e.total += paid;
         e.perJob.merge(job, paid, Double::sum);
-        plugin.economy().deposit(p, paid);
+        plugin.economy().deposit(p, paid, dev.kushcraft.economy.Tx.JOB, job.display());
         if (announce && plugin.getConfig().getBoolean("jobs.action-bar", true)) {
             p.sendActionBar(Text.mm("<gold>+" + plugin.economy().format(paid) + " <gray>" + job.display()
                     + " <dark_gray>• this hour " + plugin.economy().format(e.total)));

@@ -35,6 +35,8 @@ public final class Machine {
 
     // lab station
     int level = 1;
+    /** Changed since the last database write. */
+    transient boolean dirty = true;
     String job;
     long jobEnd;
     long jobStart;
@@ -62,6 +64,7 @@ public final class Machine {
     }
 
     public void level(int level) {
+        dirty = true;
         this.level = Math.max(1, level);
     }
 
@@ -119,6 +122,7 @@ public final class Machine {
     }
 
     public void startJob(String recipe, long durationMs, ItemStack result) {
+        dirty = true;
         this.job = recipe;
         this.jobStart = System.currentTimeMillis();
         this.jobEnd = jobStart + durationMs;
@@ -127,6 +131,7 @@ public final class Machine {
     }
 
     public void clearJob() {
+        dirty = true;
         this.job = null;
         this.output = null;
         this.jobEnd = 0;
@@ -140,10 +145,12 @@ public final class Machine {
     }
 
     public void rack(int i, Rack r) {
+        dirty = true;
         racks[i] = r;
     }
 
     public void emptyRack(int i) {
+        dirty = true;
         racks[i] = null;
     }
 
@@ -179,6 +186,7 @@ public final class Machine {
      * every few seconds never dried). Returns how many were hung.
      */
     public int hang(String strain, int quality, int amount, long now, long done) {
+        dirty = true;
         int hung = 0;
         for (int pass = 0; pass < 2 && hung < amount; pass++) {
             for (int i = 0; i < RACKS && hung < amount; i++) {
@@ -204,6 +212,7 @@ public final class Machine {
 
     /** Takes every dry rack off (returns them, null-free). */
     public java.util.List<Rack> takeDry() {
+        dirty = true;
         java.util.List<Rack> out = new java.util.ArrayList<>();
         for (int i = 0; i < RACKS; i++) {
             if (racks[i] != null && racks[i].dry()) {
@@ -226,7 +235,26 @@ public final class Machine {
     }
 
     /** Admin: the batch and every drying rack are done right now. */
+    /** Moves the cooking job and the racks this much closer to done (workers' catch-up). */
+    public void shift(long ms) {
+        if (ms <= 0) {
+            return;
+        }
+        dirty = true;
+        if (job != null) {
+            jobStart -= ms;
+            jobEnd -= ms;
+        }
+        for (int i = 0; i < racks.length; i++) {
+            Rack r = racks[i];
+            if (r != null) {
+                racks[i] = new Rack(r.strain(), r.quality(), r.amount(), r.start() - ms, r.done() - ms);
+            }
+        }
+    }
+
     public void finishNow() {
+        dirty = true;
         long now = System.currentTimeMillis();
         if (job != null) {
             jobEnd = Math.min(jobEnd, now);
@@ -261,11 +289,13 @@ public final class Machine {
     }
 
     public void fillRack(String strain, int quality, int amount, long doneAt) {
+        dirty = true;
         long start = racks[0] != null && racks[0].strain().equals(strain) ? racks[0].start() : System.currentTimeMillis();
         racks[0] = new Rack(strain, quality, amount, Math.min(start, doneAt), doneAt);
     }
 
     public void emptyRack() {
+        dirty = true;
         racks[0] = null;
     }
 }

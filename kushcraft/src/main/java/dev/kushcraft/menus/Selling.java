@@ -70,7 +70,9 @@ public final class Selling {
         }
         pi.setStorageContents(contents);
         total = Math.round(total * 100) / 100.0;
-        paid(p, total);
+        StringBuilder what = new StringBuilder();
+        sold.forEach((t, n) -> what.append(what.isEmpty() ? "" : ", ").append(n).append("x ").append(t.display()));
+        paid(p, total, what.toString());
         sold.forEach((t, n) -> plugin.market().sold(t, n));
         p.sendActionBar(Text.mm("<green>Sold " + count + " items for <gold>" + plugin.economy().format(total)));
         return true;
@@ -94,15 +96,15 @@ public final class Selling {
         ItemType type = Items.type(item);
         inSlot.setAmount(inSlot.getAmount() - amount);
         p.getInventory().setItem(slot, inSlot.getAmount() <= 0 ? null : inSlot);
-        paid(p, total);
+        paid(p, total, amount + "x " + type.display());
         plugin.market().sold(type, amount);
         p.sendActionBar(Text.mm("<green>Sold " + amount + "x for <gold>" + plugin.economy().format(total)));
         return true;
     }
 
-    private static void paid(Player p, double total) {
+    private static void paid(Player p, double total, String what) {
         KushCraft plugin = KushCraft.get();
-        plugin.economy().deposit(p, total);
+        plugin.economy().deposit(p, total, dev.kushcraft.economy.Tx.SELL, what);
         plugin.titles().sold(p, total);
         p.playSound(p.getLocation(), "minecraft:entity.experience_orb.pickup", SoundCategory.PLAYERS, 0.7f, 1.4f);
         p.playSound(p.getLocation(), "minecraft:block.chain.place", SoundCategory.PLAYERS, 0.6f, 1.8f);

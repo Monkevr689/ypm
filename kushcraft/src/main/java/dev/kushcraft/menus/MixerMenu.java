@@ -247,7 +247,7 @@ public final class MixerMenu extends LabTabMenu {
             failSound();
             return;
         }
-        if (!plugin.economy().withdraw(player, cost())) {
+        if (!plugin.economy().withdraw(player, cost(), dev.kushcraft.economy.Tx.MIX, null)) {
             player.sendActionBar(Text.mm("<red>Mixing costs " + plugin.economy().format(cost()) + "."));
             failSound();
             return;
