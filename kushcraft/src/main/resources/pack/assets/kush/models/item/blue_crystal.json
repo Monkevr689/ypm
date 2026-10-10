@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/blue_crystal",
+  "layer1": "kush:item/blue_crystal_tint",
+  "layer2": "kush:item/blue_crystal_overlay"
+ }
+}

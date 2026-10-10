@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/icon/award_workforce",
+  "layer1": "kush:item/icon/award_workforce_tint",
+  "layer2": "kush:item/icon/award_workforce_overlay"
+ }
+}

@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/gummies",
+  "layer1": "kush:item/gummies_tint",
+  "layer2": "kush:item/gummies_overlay"
+ }
+}

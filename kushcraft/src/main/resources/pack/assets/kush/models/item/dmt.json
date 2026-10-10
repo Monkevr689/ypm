@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/dmt",
+  "layer1": "kush:item/dmt_tint",
+  "layer2": "kush:item/dmt_overlay"
+ }
+}

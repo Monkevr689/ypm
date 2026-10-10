@@ -1,0 +1,6 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/exotic/ocean_bud_dried_foxtail"
+ }
+}

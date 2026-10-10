@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/icon/award_legendary",
+  "layer1": "kush:item/icon/award_legendary_tint",
+  "layer2": "kush:item/icon/award_legendary_overlay"
+ }
+}

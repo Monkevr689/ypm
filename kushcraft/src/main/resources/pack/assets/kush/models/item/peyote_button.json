@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/peyote_button",
+  "layer1": "kush:item/peyote_button_tint",
+  "layer2": "kush:item/peyote_button_overlay"
+ }
+}

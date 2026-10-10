@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/mescaline",
+  "layer1": "kush:item/mescaline_tint",
+  "layer2": "kush:item/mescaline_overlay"
+ }
+}

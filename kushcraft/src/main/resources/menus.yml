@@ -1,0 +1,250 @@
+# =====================================================================
+#  The server guide: opens by itself on a player's first join each
+#  season, and any time with /menu (or /kush help). Edit anything here,
+#  then /kush reload - no restart.
+#
+#  Text uses MiniMessage: <red>, <gold>, <bold>, <gray>, <#ff8800>...
+#  These are filled in for the player looking at it:
+#    {player} {rank} {rank-number} {top-rank} {next-rank} {next-cost}
+#    {next-playtime} {next-wait} {money} {playtime} {workers}
+#    {worker-slots} {season} {discord}
+#  Every page is 6 rows: slots 0-8 top row ... 45-53 bottom row.
+#  Slot 45 is always the Back / Close button.
+#  An item can open a page (page: economy) or post a link in chat
+#  (link: discord | vote | store | a full https:// address).
+#  The guide only shows information - it can't buy or rank anything up.
+# =====================================================================
+title: Server Guide
+open-on-first-join: true
+
+links:
+  discord: 'https://discord.gg/your-invite'
+  # Every vote site gets its own clickable line.
+  vote:
+    - 'https://example.com/vote-site-1'
+    - 'https://example.com/vote-site-2'
+
+pages:
+  # ------------------------------------------------------------------
+  main:
+    title: Server Guide
+    # The progress card: rank, worker slots, what the next rank needs.
+    progress:
+      slot: 4
+      icon: nether_star
+      name: '<gold><bold>{player}</bold> <gray>- season {season}'
+      lore:
+        - '<gray>Rank: {rank} <dark_gray>({rank-number}/{top-rank})'
+        - '<gray>Workers: <aqua>{workers}/{worker-slots}'
+        - '<gray>Money: <gold>{money}'
+        - '<gray>Active playtime: <white>{playtime}'
+        - ''
+      not-ready:
+        - '<gray>Next: {next-rank}'
+        - '<dark_gray> · <gray>{next-cost}'
+        - '<dark_gray> · <gray>{next-playtime} more active playtime'
+        - '<dark_gray> · <gray>{next-wait} until you can rank up again'
+        - '<yellow>/rankup <gray>shows the details.'
+      ready:
+        - '<green><bold>You can rank up to {next-rank}!'
+        - '<yellow>/rankup'
+      top:
+        - '<gold>You reached the top rank. Respect.'
+    items:
+      - slot: 19
+        icon: book
+        name: '<white><bold>What is this server?'
+        lore:
+          - '<gray>An <red>anarchy</red> drug-economy server.'
+          - '<gray>Grow, cook and deal to get rich,'
+          - '<gray>hire workers, climb the ranks, run'
+          - '<gray>a cartel - and protect what you build.'
+          - '<red>No claims, no safe zones: anyone can'
+          - '<red>raid your farm, your chests and you.'
+          - ''
+          - '<dark_gray>Read Rules before you start.'
+      - slot: 21
+        icon: emerald
+        name: '<green><bold>Economy'
+        page: economy
+        lore:
+          - '<gray>How to make money: growing, cooking,'
+          - '<gray>selling, workers - and what it costs.'
+          - '<yellow>Click to open'
+      - slot: 23
+        icon: gold_ingot
+        name: '<gold><bold>Ranks'
+        page: ranks
+        lore:
+          - '<gray>The ladder: what each rank costs,'
+          - '<gray>how long it takes and how many'
+          - '<gray>workers it gives.'
+          - '<yellow>Click to open'
+      - slot: 25
+        icon: writable_book
+        name: '<red><bold>Rules'
+        page: rules
+        lore:
+          - '<gray>Anarchy, but not lawless: what'
+          - '<gray>gets you banned.'
+          - '<yellow>Click to open'
+      - slot: 31
+        icon: bell
+        name: '<aqua><bold>Community'
+        page: community
+        lore:
+          - '<gray>Discord, voting rewards, events.'
+          - '<yellow>Click to open'
+      - slot: 37
+        icon: compass
+        name: '<white>Getting started'
+        lore:
+          - '<gray>1. <white>/kush</white> opens the shop and your lab.'
+          - '<gray>2. Plant your starter seeds in the light.'
+          - '<gray>3. Harvest, dry buds in a <white>Drug Lab</white>, roll, sell.'
+          - '<gray>4. Save up: <white>/rankup</white> for worker slots.'
+          - '<gray>5. Hire a worker and keep them supplied.'
+      - slot: 43
+        icon: clock
+        name: '<white>Useful commands'
+        lore:
+          - '<white>/menu <gray>- this guide'
+          - '<white>/kush <gray>- shop, lab, cartel, workers'
+          - '<white>/rankup <gray>- your rank and the next one'
+          - '<white>/balance <gray>/ <white>/pay <gray>/ <white>/baltop'
+          - '<white>/kush workers <gray>- your crew from anywhere'
+          - '<white>/kush sell <gray>- sell all your product'
+
+  # ------------------------------------------------------------------
+  economy:
+    title: Economy
+    items:
+      - slot: 4
+        icon: emerald
+        name: '<green><bold>How to earn money'
+        lore:
+          - '<gray>Money only comes from <white>selling drugs</white>.'
+          - '<gray>Everything you buy is expensive - plan it.'
+          - '<gray>Dying costs <red>20%</red> of the cash you carry.'
+      - slot: 19
+        icon: wheat_seeds
+        name: '<green>1. Grow'
+        lore:
+          - '<gray>Plant seeds (Shop, or found in grass).'
+          - '<gray>Each strain loves a climate: grow it'
+          - '<gray>there for more buds. Plants need light.'
+          - '<gray>They keep growing (slower) while you''re away.'
+      - slot: 21
+        icon: brewing_stand
+        name: '<aqua>2. Cook'
+        lore:
+          - '<gray>Dry buds and cook drugs in a <white>Drug Lab</white>.'
+          - '<gray>Every step is worth more than what went in:'
+          - '<gray>dried bud > joint > vape pen, coca > cocaine...'
+      - slot: 23
+        icon: gold_nugget
+        name: '<gold>3. Sell'
+        lore:
+          - '<gray><white>/kush sell</white> or the Shop. Selling a lot of one'
+          - '<gray>thing drops its price - sell a mix.'
+          - '<gray>Market contracts pay a bonus for batches.'
+      - slot: 25
+        icon: villager_spawn_egg
+        name: '<light_purple>4. Workers'
+        lore:
+          - '<gray>Farmhand, Dryer, Cook and Runner run the chain'
+          - '<gray>for you - even while you''re offline (slower).'
+          - '<gray>Your <white>rank</white> decides how many you can place.'
+          - '<gray>They don''t buy supplies: keep them stocked'
+          - '<gray>(<white>/kush workers</white> > Supply your crew).'
+          - '<red>They live in the world: they can be found.'
+      - slot: 31
+        icon: iron_sword
+        name: '<red>5. PvP looting'
+        lore:
+          - '<gray>Anarchy: raid farms, chests and players.'
+          - '<gray>Product you steal sells like your own.'
+          - '<gray>Guard your base, or hide it well.'
+      - slot: 40
+        icon: chest
+        name: '<white>Trade & Cartels'
+        lore:
+          - '<gray><white>Trade</white> sells vanilla items for money (buy only).'
+          - '<gray>A <white>cartel</white> shares a bank and better prices,'
+          - '<gray>and fills big shipments together.'
+
+  # ------------------------------------------------------------------
+  ranks:
+    title: Ranks
+    # Every rank of config.yml's ranks.ladder is listed from this slot on.
+    ladder:
+      first-slot: 18
+      icon: paper
+      reached-icon: lime_dye
+    items:
+      - slot: 4
+        icon: gold_ingot
+        name: '<gold><bold>The rank ladder'
+        lore:
+          - '<gray>Each rank needs <white>money</white>, <white>active playtime</white>'
+          - '<gray>and <white>time since your last rank-up</white> - so'
+          - '<gray>nobody can buy their way to the top in a day.'
+          - '<gray>AFK time doesn''t count.'
+          - '<gray>Higher ranks give more worker slots.'
+          - '<yellow>/rankup <gray>to see your next step.'
+
+  # ------------------------------------------------------------------
+  rules:
+    title: Rules
+    items:
+      - slot: 4
+        icon: writable_book
+        name: '<red><bold>Anarchy - almost everything goes'
+        lore:
+          - '<gray>Killing, raiding, stealing, scamming in'
+          - '<gray>trades, griefing: all part of the game.'
+          - '<gray>Only the things below get you banned.'
+      - slot: 20
+        icon: barrier
+        name: '<red>No hacked clients'
+        lore:
+          - '<gray>No cheat clients or mods that give an'
+          - '<gray>advantage: fly, kill aura, x-ray, auto-clicker...'
+      - slot: 22
+        icon: tnt
+        name: '<red>No exploits or dupes'
+        lore:
+          - '<gray>Duplicating items or money, crashing or'
+          - '<gray>lagging the server on purpose, abusing'
+          - '<gray>bugs: report them, don''t use them.'
+      - slot: 24
+        icon: name_tag
+        name: '<red>No real-life harm'
+        lore:
+          - '<gray>No doxxing, real-world threats or'
+          - '<gray>hate speech. No advertising other servers.'
+      - slot: 31
+        icon: shield
+        name: '<white>Everything else is fair game'
+        lore:
+          - '<gray>Staff won''t return stolen items or'
+          - '<gray>undo raids. Protect your stuff.'
+
+  # ------------------------------------------------------------------
+  community:
+    title: Community
+    items:
+      - slot: 20
+        icon: bell
+        name: '<#5865F2><bold>Discord'
+        link: discord
+        lore:
+          - '<gray>News, trading, events, support.'
+          - '<yellow>Click for the link'
+      - slot: 22
+        icon: diamond
+        name: '<aqua><bold>Vote for the server'
+        link: vote
+        lore:
+          - '<gray>Voting helps the server grow.'
+          - '<yellow>Click for the vote links'

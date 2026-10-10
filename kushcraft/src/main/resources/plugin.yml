@@ -1,0 +1,47 @@
+name: KushCraft
+version: ${project.version}
+main: dev.kushcraft.KushCraft
+api-version: '1.21.4'
+description: The drug economy for an anarchy server - grow, cook and deal, a rank ladder, workers, cartels, all server side.
+author: KushCraft
+softdepend: [Vault]
+# KushCraft owns the money: it enables before EssentialsX so /balance, /pay and /baltop are KushCraft's.
+loadbefore: [Essentials]
+commands:
+  kush:
+    description: The KushCraft menu (shop, drugs, trade, cartel, awards, workers, admin)
+    usage: /kush help
+    aliases: [k, kc, kushcraft]
+  menu:
+    description: The server guide - how the server works, economy, ranks, rules, community
+    usage: /menu
+  rankup:
+    description: Your rank and what the next one needs; rank up
+    usage: /rankup
+  balance:
+    description: Your money
+    usage: /balance
+    aliases: [bal, money]
+  pay:
+    description: Send money to a player
+    usage: /pay <player> <amount>
+  baltop:
+    description: The richest players
+    usage: /baltop [page]
+    aliases: [balancetop]
+permissions:
+  kushcraft.use:
+    description: Use KushCraft items, machines and menus
+    default: true
+  kushcraft.strainmaker:
+    description: Breed new strains (Drug Lab > Mix)
+    default: true
+  kushcraft.admin:
+    description: The admin panel and admin commands (give, money, rank, log, backup, reload)
+    default: op
+  kushcraft.reset:
+    description: Season resets (/kush reset) - wipes player progress after a checked backup
+    default: op
+  kushcraft.workers.unlimited:
+    description: Place workers beyond the rank's worker slots (for staff builds; not given to ops by default)
+    default: false

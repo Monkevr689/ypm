@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/icon/gauge_7",
+  "layer1": "kush:item/icon/gauge_7_tint",
+  "layer2": "kush:item/icon/gauge_7_overlay"
+ }
+}

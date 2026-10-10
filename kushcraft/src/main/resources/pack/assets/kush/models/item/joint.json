@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/joint",
+  "layer1": "kush:item/joint_tint",
+  "layer2": "kush:item/joint_overlay"
+ }
+}

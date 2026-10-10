@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/lean",
+  "layer1": "kush:item/lean_tint",
+  "layer2": "kush:item/lean_overlay"
+ }
+}

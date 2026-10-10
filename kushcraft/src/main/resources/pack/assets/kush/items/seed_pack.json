@@ -1,0 +1,165 @@
+{
+ "model": {
+  "type": "minecraft:composite",
+  "models": [
+   {
+    "type": "minecraft:model",
+    "model": "kush:item/seed_pack",
+    "tints": [
+     {
+      "type": "minecraft:constant",
+      "value": 16777215
+     },
+     {
+      "type": "minecraft:custom_model_data",
+      "index": 0,
+      "default": 6995514
+     }
+    ]
+   },
+   {
+    "type": "minecraft:select",
+    "property": "minecraft:custom_model_data",
+    "index": 1,
+    "cases": [
+     {
+      "when": "rainbow",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/rainbow_seed_pack"
+      }
+     },
+     {
+      "when": "galaxy",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/galaxy_seed_pack"
+      }
+     },
+     {
+      "when": "golden",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/golden_seed_pack"
+      }
+     },
+     {
+      "when": "crystal",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/crystal_seed_pack"
+      }
+     },
+     {
+      "when": "neon",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/neon_seed_pack"
+      }
+     },
+     {
+      "when": "inferno",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/inferno_seed_pack"
+      }
+     },
+     {
+      "when": "aurora",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/aurora_seed_pack"
+      }
+     },
+     {
+      "when": "toxic",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/toxic_seed_pack"
+      }
+     },
+     {
+      "when": "sakura",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/sakura_seed_pack"
+      }
+     },
+     {
+      "when": "plasma",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/plasma_seed_pack"
+      }
+     },
+     {
+      "when": "blood_moon",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/blood_moon_seed_pack"
+      }
+     },
+     {
+      "when": "ocean",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/ocean_seed_pack"
+      }
+     },
+     {
+      "when": "candy",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/candy_seed_pack"
+      }
+     },
+     {
+      "when": "void",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/void_seed_pack"
+      }
+     },
+     {
+      "when": "prism",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/prism_seed_pack"
+      }
+     },
+     {
+      "when": "celestial",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/celestial_seed_pack"
+      }
+     },
+     {
+      "when": "phoenix",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/phoenix_seed_pack"
+      }
+     },
+     {
+      "when": "quantum",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/quantum_seed_pack"
+      }
+     },
+     {
+      "when": "eclipse",
+      "model": {
+       "type": "minecraft:model",
+       "model": "kush:item/exotic/eclipse_seed_pack"
+      }
+     }
+    ],
+    "fallback": {
+     "type": "minecraft:empty"
+    }
+   }
+  ]
+ }
+}
