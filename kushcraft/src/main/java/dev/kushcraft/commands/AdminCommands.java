@@ -170,7 +170,7 @@ final class AdminCommands {
         Map<String, Long> counts = plugin.db().call(Database::counts);
         File f = plugin.db().file();
         double[] t = plugin.workers().timing();
-        s.sendMessage(Text.msg("<gold>Database <gray>" + f.getName() + " " + f.length() / 1024 + " KB, season "
+        s.sendMessage(Text.msg("<gold>Database <gray>" + f.getName() + " " + plugin.db().size() / 1024 + " KB, season "
                 + plugin.season()));
         s.sendMessage(Text.mm(" <gray>Rows: <white>" + counts));
         s.sendMessage(Text.mm(" <gray>Writes: <white>" + plugin.persistence().commits() + "</white> snapshots, last "

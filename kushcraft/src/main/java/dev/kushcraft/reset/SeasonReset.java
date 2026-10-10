@@ -305,6 +305,16 @@ public final class SeasonReset {
 
     /** For the admin: what the last reset was. */
     public String lastReset() {
-        return plugin.db().meta("last-reset", "never");
+        String v = plugin.db().meta("last-reset", null);
+        if (v == null) {
+            return "never";
+        }
+        String[] p = v.split(" ", 3);
+        try {
+            return p[0] + " on " + new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(new java.util.Date(Long.parseLong(p[1])))
+                    + (p.length > 2 ? " by " + p[2] : "");
+        } catch (RuntimeException e) {
+            return v;
+        }
     }
 }

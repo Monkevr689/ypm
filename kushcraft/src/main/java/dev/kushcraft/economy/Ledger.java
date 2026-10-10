@@ -220,8 +220,9 @@ public final class Ledger implements Persistence.Source {
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         long bal = rs.getLong("balance");
+                        Long balance = rs.wasNull() ? null : bal; // right after reading it (wasNull is about the last column)
                         out.add(new Row(rs.getLong("ts"), rs.getString("player"), rs.getString("type"), rs.getLong("amount"),
-                                rs.wasNull() ? null : bal, rs.getString("other"), rs.getString("detail"), rs.getInt("count")));
+                                balance, rs.getString("other"), rs.getString("detail"), rs.getInt("count")));
                     }
                 }
             }

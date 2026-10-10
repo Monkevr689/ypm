@@ -161,17 +161,17 @@ shop:
 ranks:
   ladder:
     - {name: Fresh Meat,  color: gray,         cost: 0,        playtime-hours: 0,   wait-hours: 0,   workers: 1}
-    - {name: Lookout,     color: white,        cost: 5000,     playtime-hours: 2,   wait-hours: 0,   workers: 1}
-    - {name: Corner Boy,  color: green,        cost: 15000,    playtime-hours: 5,   wait-hours: 12,  workers: 2}
-    - {name: Pusher,      color: dark_green,   cost: 40000,    playtime-hours: 10,  wait-hours: 24,  workers: 2}
-    - {name: Trapper,     color: aqua,         cost: 100000,   playtime-hours: 18,  wait-hours: 48,  workers: 3}
-    - {name: Chemist,     color: dark_aqua,    cost: 250000,   playtime-hours: 30,  wait-hours: 72,  workers: 3}
-    - {name: Distributor, color: blue,         cost: 550000,   playtime-hours: 45,  wait-hours: 96,  workers: 4}
-    - {name: Smuggler,    color: light_purple, cost: 1100000,  playtime-hours: 65,  wait-hours: 120, workers: 4}
-    - {name: Lieutenant,  color: dark_purple,  cost: 2200000,  playtime-hours: 90,  wait-hours: 144, workers: 5}
-    - {name: Underboss,   color: gold,         cost: 4250000,  playtime-hours: 120, wait-hours: 168, workers: 6}
-    - {name: Don,         color: red,          cost: 8000000,  playtime-hours: 160, wait-hours: 240, workers: 7}
-    - {name: Drug Lord,   color: dark_red,     cost: 15000000, playtime-hours: 220, wait-hours: 336, workers: 8}
+    - {name: Lookout,     color: white,        cost: 3000,     playtime-hours: 2,   wait-hours: 0,   workers: 1}
+    - {name: Corner Boy,  color: green,        cost: 12500,    playtime-hours: 5,   wait-hours: 12,  workers: 2}
+    - {name: Pusher,      color: dark_green,   cost: 35000,    playtime-hours: 10,  wait-hours: 24,  workers: 2}
+    - {name: Trapper,     color: aqua,         cost: 85000,    playtime-hours: 18,  wait-hours: 48,  workers: 3}
+    - {name: Chemist,     color: dark_aqua,    cost: 200000,   playtime-hours: 30,  wait-hours: 72,  workers: 3}
+    - {name: Distributor, color: blue,         cost: 425000,   playtime-hours: 45,  wait-hours: 96,  workers: 4}
+    - {name: Smuggler,    color: light_purple, cost: 850000,   playtime-hours: 65,  wait-hours: 120, workers: 4}
+    - {name: Lieutenant,  color: dark_purple,  cost: 1600000,  playtime-hours: 90,  wait-hours: 144, workers: 5}
+    - {name: Underboss,   color: gold,         cost: 3000000,  playtime-hours: 120, wait-hours: 168, workers: 6}
+    - {name: Don,         color: red,          cost: 5500000,  playtime-hours: 160, wait-hours: 240, workers: 7}
+    - {name: Drug Lord,   color: dark_red,     cost: 10000000, playtime-hours: 220, wait-hours: 336, workers: 8}
   # Never two rank-ups closer together than this, whatever the rank says.
   min-gap-minutes: 30
   # Playtime only counts while the player did something in the last N minutes.

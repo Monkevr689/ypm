@@ -96,8 +96,11 @@ jobs:
           for i in $(seq 1 30); do grep -qE "Backup (made and verified|FAILED)" server.log && break; sleep 1; done
           echo "kush rank CI-nobody 2" >&3
           sleep 1
-          # the season reset: a checked backup first, then a one-time code to confirm
-          echo "kush reset economy" >&3
+          # a made-up player with money, a rank, playtime, sales, a worker, a plant and a cartel for the reset to wipe
+          echo "kush selftest seed" >&3
+          for i in $(seq 1 30); do grep -qE "SEED (ready|FAILED)" server.log && break; sleep 1; done
+          # the season reset (the scope the server will use): a checked backup first, then a one-time code to confirm
+          echo "kush reset kushcraft" >&3
           for i in $(seq 1 60); do grep -q "kush reset confirm" server.log && break; sleep 1; done
           CODE=$(grep -oE "kush reset confirm [A-Z0-9]{6}" server.log | tail -1 | awk '{print $4}')
           echo "confirm code: $CODE"
@@ -124,10 +127,11 @@ jobs:
           grep -q "Commands: /menu, /rankup, /balance, /pay and /baltop are KushCraft's" server.log \
             || fail "another plugin owns a KushCraft command"
           grep -q "Backup made and verified: .*manual" server.log || fail "/kush backup failed"
-          grep -q "Backup made and verified: .*before-reset-economy" server.log || fail "no checked backup before the reset"
-          grep -q "Backup made and verified: .*final-before-reset-economy" server.log || fail "no final backup before the wipe"
+          grep -q "SEED ready" server.log || fail "the test player for the reset was not set up"
+          grep -q "Backup made and verified: .*before-reset-kushcraft" server.log || fail "no checked backup before the reset"
+          grep -q "Backup made and verified: .*final-before-reset-kushcraft" server.log || fail "no final backup before the wipe"
           grep -q "Wrong code" server.log || fail "a wrong confirm code was not refused"
-          grep -q "Season 2 started: economy reset by" server.log || fail "the reset did not run"
+          grep -q "Season 2 started: kushcraft reset by" server.log || fail "the reset did not run"
           grep -q "players download it from https://raw.githubusercontent.com/.*/KushCraft-pack-.*\.zip" server.log \
             || fail "url: auto does not point at the hosted pack"
           grep -q "(same as this plugin's pack)" server.log || fail "the pack hosted on GitHub is not the pack this jar builds"
@@ -137,29 +141,45 @@ jobs:
           fi
           # the backups are real: manifest says verified, the copy opens and has the right season
           ls -la plugins/KushCraft/backups/
-          for d in plugins/KushCraft/backups/*before-reset-economy*; do
+          for d in plugins/KushCraft/backups/*before-reset-kushcraft*; do
             grep -q "verified: yes" "$d/manifest.txt" || fail "backup $d is not verified"
             grep -q "season: 1" "$d/manifest.txt" || fail "backup $d is not of season 1"
           done
           python3 - <<'PY'
           import glob, sqlite3, sys
+          K = "00000000-0000-0000-0000-00000000c1c1"
           live = sqlite3.connect("plugins/KushCraft/kushcraft.db")
           season = live.execute("SELECT value FROM meta WHERE key='season'").fetchone()[0]
           resets = live.execute("SELECT COUNT(*) FROM ledger WHERE type='RESET'").fetchone()[0]
-          workers = live.execute("SELECT COUNT(*) FROM workers").fetchone()[0]
-          ranks = live.execute("SELECT COUNT(*) FROM players WHERE rank <> 1 OR playtime <> 0").fetchone()[0]
+          left = {t: live.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+                  for t in ("workers", "plants", "machines", "cartels", "awards")}
+          ranks = live.execute("SELECT COUNT(*) FROM players WHERE rank <> 1 OR playtime <> 0 OR sales <> 0").fetchone()[0]
           start = live.execute("SELECT COUNT(DISTINCT balance) FROM players").fetchone()[0]
-          print("season", season, "resets", resets, "workers", workers, "ranked", ranks, "distinct balances", start)
+          keeper = live.execute("SELECT balance, rank, playtime, sales FROM players WHERE uuid=?", (K,)).fetchone()
+          print("season", season, "resets", resets, "left", left, "ranked", ranks, "distinct balances", start,
+                "keeper", keeper)
           bad = []
           if season != "2": bad.append("season is not 2")
           if resets != 1: bad.append("no RESET row in the transaction log")
-          if workers != 0: bad.append("workers survived the reset")
-          if ranks != 0: bad.append("ranks or playtime survived the reset")
+          for t, n in left.items():
+              if n != 0: bad.append(f"{n} {t} rows survived the reset")
+          if ranks != 0: bad.append("ranks, playtime or sales survived the reset")
           if start > 1: bad.append("balances were not all reset to the starting money")
-          for b in glob.glob("plugins/KushCraft/backups/*before-reset-economy*/kushcraft.db"):
+          if keeper != (25000, 1, 0, 0): bad.append(f"the test player was not wiped: {keeper}")
+          backups = glob.glob("plugins/KushCraft/backups/*before-reset-kushcraft*/kushcraft.db")
+          if len(backups) != 2: bad.append(f"{len(backups)} reset backups, not 2")
+          for b in backups:
               c = sqlite3.connect(b)
               if c.execute("PRAGMA integrity_check").fetchone()[0] != "ok": bad.append(b + " integrity")
               if c.execute("SELECT value FROM meta WHERE key='season'").fetchone()[0] != "1": bad.append(b + " season")
+              # the backup holds the test player as they were before the reset
+              row = c.execute("SELECT balance, rank, playtime, sales FROM players WHERE uuid=?", (K,)).fetchone()
+              kept = {t: c.execute(f"SELECT COUNT(*) FROM {t} WHERE owner=?", (K,)).fetchone()[0]
+                      for t in ("workers", "plants")}
+              cartel = c.execute("SELECT COUNT(*) FROM cartels WHERE id='ci_keepers'").fetchone()[0]
+              print(b, row, kept, "cartel", cartel)
+              if row != (1234500, 3, 7200, 500000): bad.append(f"{b}: test player {row}")
+              if kept["workers"] != 1 or kept["plants"] != 1 or cartel != 1: bad.append(f"{b}: {kept}, cartel {cartel}")
           if bad:
               print("::error::" + "; ".join(bad)); sys.exit(1)
           PY
@@ -320,6 +340,7 @@ jobs:
           grep -q "Imported 1 workers from workers.yml" server2.log || fail "the 8.0 Cook was not imported"
           grep -q "Moved .* old data files" server2.log || fail "old files not moved aside"
           ls plugins/KushCraft/legacy-yaml/*/balances.yml || fail "balances.yml not in legacy-yaml"
+          ls plugins/KushCraft/legacy-yaml/*/market.yml || fail "market.yml was not imported"
           test ! -f plugins/KushCraft/workers.yml || fail "workers.yml was not moved"
           python3 - <<'PY'
           import sqlite3, sys
@@ -342,7 +363,7 @@ jobs:
           if not flags & 4: bad.append("auto-buy switch")
           if not bank or bank[0] != 77700: bad.append("cartel bank")
           if plants != 1: bad.append("plants")
-          if market is None or "cocaine" not in market[0]: bad.append("market")
+          if market is None: bad.append("market")  # read from market.yml (the self test resets the prices afterwards)
           if awards is None or "first_sale" not in awards[0]: bad.append("awards")
           if refund is None or refund[0] != 1300000: bad.append("refund logged")
           if bad:

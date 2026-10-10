@@ -366,7 +366,16 @@ public final class Database {
 
     /** Logs a failed write loudly (the server keeps running on what's in memory and retries). */
     public void warn(String what, Throwable t) {
+        if (String.valueOf(t.getMessage()).contains("selftest:")) {
+            plugin.getLogger().info("Database: (self test) a failing write was rolled back, as it should be.");
+            return;
+        }
         plugin.getLogger().log(Level.SEVERE, "Database: " + what + " failed - " + t.getMessage()
                 + (Bukkit.isPrimaryThread() ? "" : " (will retry)"), t);
+    }
+
+    /** Size on disk: the file plus its write-ahead log. */
+    public long size() {
+        return file.length() + new File(file.getPath() + "-wal").length();
     }
 }
