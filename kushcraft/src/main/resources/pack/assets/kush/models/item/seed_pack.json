@@ -1,0 +1,7 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/seed_pack",
+  "layer1": "kush:item/seed_pack_tint"
+ }
+}

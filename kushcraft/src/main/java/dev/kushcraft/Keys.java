@@ -1,0 +1,54 @@
+package dev.kushcraft;
+
+import org.bukkit.NamespacedKey;
+import org.bukkit.plugin.Plugin;
+
+/** Persistent data keys. */
+public final class Keys {
+
+    /** Resource pack namespace used by every model / texture. */
+    public static final String PACK_NS = "kush";
+
+    public static NamespacedKey ID;
+    public static NamespacedKey STRAIN;
+    public static NamespacedKey QUALITY;
+    public static NamespacedKey HITS;
+    public static NamespacedKey PLANT;
+    public static NamespacedKey MACHINE;
+    public static NamespacedKey VISUAL;
+    public static NamespacedKey BALANCE;
+    public static NamespacedKey GOT_GUIDE;
+    public static NamespacedKey ICON;
+    public static NamespacedKey PLACED;
+    public static NamespacedKey LEVEL;
+    public static NamespacedKey WORKER;
+    public static NamespacedKey HIGH;
+    /** Chests and barrels: who placed them (workers only use their owner's chests, and old unmarked ones). */
+    public static NamespacedKey PLACER;
+
+    private Keys() {
+    }
+
+    static void init(Plugin plugin) {
+        ID = new NamespacedKey(plugin, "id");
+        STRAIN = new NamespacedKey(plugin, "strain");
+        QUALITY = new NamespacedKey(plugin, "quality");
+        HITS = new NamespacedKey(plugin, "hits");
+        PLANT = new NamespacedKey(plugin, "plant");
+        MACHINE = new NamespacedKey(plugin, "machine");
+        VISUAL = new NamespacedKey(plugin, "visual");
+        BALANCE = new NamespacedKey(plugin, "balance");
+        GOT_GUIDE = new NamespacedKey(plugin, "got_guide");
+        ICON = new NamespacedKey(plugin, "icon");
+        PLACED = new NamespacedKey(plugin, "placed");
+        LEVEL = new NamespacedKey(plugin, "level");
+        WORKER = new NamespacedKey(plugin, "worker");
+        HIGH = new NamespacedKey(plugin, "high");
+        PLACER = new NamespacedKey(plugin, "placer");
+    }
+
+    /** kush:&lt;path&gt; - a model / item definition from our resource pack. */
+    public static NamespacedKey model(String path) {
+        return NamespacedKey.fromString(PACK_NS + ":" + path);
+    }
+}

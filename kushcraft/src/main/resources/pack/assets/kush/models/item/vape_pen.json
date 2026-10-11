@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/vape_pen",
+  "layer1": "kush:item/vape_pen_tint",
+  "layer2": "kush:item/vape_pen_overlay"
+ }
+}

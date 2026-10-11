@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/oxy",
+  "layer1": "kush:item/oxy_tint",
+  "layer2": "kush:item/oxy_overlay"
+ }
+}

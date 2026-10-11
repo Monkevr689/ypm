@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/moonshine",
+  "layer1": "kush:item/moonshine_tint",
+  "layer2": "kush:item/moonshine_overlay"
+ }
+}

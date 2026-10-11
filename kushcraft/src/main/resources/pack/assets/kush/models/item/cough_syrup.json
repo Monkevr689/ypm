@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/cough_syrup",
+  "layer1": "kush:item/cough_syrup_tint",
+  "layer2": "kush:item/cough_syrup_overlay"
+ }
+}

@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/angel_dust",
+  "layer1": "kush:item/angel_dust_tint",
+  "layer2": "kush:item/angel_dust_overlay"
+ }
+}

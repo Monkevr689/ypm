@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/icon/effect_smooth_talker",
+  "layer1": "kush:item/icon/effect_smooth_talker_tint",
+  "layer2": "kush:item/icon/effect_smooth_talker_overlay"
+ }
+}

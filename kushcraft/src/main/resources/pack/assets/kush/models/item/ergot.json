@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/ergot",
+  "layer1": "kush:item/ergot_tint",
+  "layer2": "kush:item/ergot_overlay"
+ }
+}

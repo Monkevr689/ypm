@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/speed",
+  "layer1": "kush:item/speed_tint",
+  "layer2": "kush:item/speed_overlay"
+ }
+}

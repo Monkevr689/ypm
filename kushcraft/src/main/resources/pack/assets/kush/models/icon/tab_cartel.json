@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/icon/tab_cartel",
+  "layer1": "kush:item/icon/tab_cartel_tint",
+  "layer2": "kush:item/icon/tab_cartel_overlay"
+ }
+}

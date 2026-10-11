@@ -1,0 +1,10 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/bud/bud_fresh_foxtail",
+  "layer1": "kush:item/bud/bud_fresh_foxtail_bud",
+  "layer2": "kush:item/bud/bud_fresh_foxtail_hair",
+  "layer3": "kush:item/bud/bud_fresh_foxtail_leaf",
+  "layer4": "kush:item/bud/bud_fresh_foxtail_frost"
+ }
+}

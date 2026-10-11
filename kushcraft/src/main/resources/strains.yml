@@ -1,0 +1,1551 @@
+# =====================================================================
+#  KushCraft strains
+#  Add your own strains here, or let players breed them in the Drug Lab
+#  (bred strains are saved to this file too, marked with "creator").
+#
+#  type:        SATIVA (tall plant), INDICA (short and bushy) or HYBRID
+#  color:       bud colour (seeds, buds and the growing plant)
+#  leaf:        leaf colour of the plant and the sugar leaves on buds
+#  pistil:      colour of the little hairs on the buds
+#  shape:       CLASSIC, FOXTAIL, POPCORN or SPEAR buds
+#  pattern:     (optional) a second bud colour: TIPS, STRIPES, SPOTS, MARBLE,
+#               SPECKLES, HALO or SPLIT
+#  accent:      the colour of that pattern
+#  exotic:      (optional) a Mythic look: RAINBOW, GALAXY, GOLDEN, CRYSTAL, NEON,
+#               INFERNO, AURORA, TOXIC, SAKURA, PLASMA, BLOOD_MOON, OCEAN, CANDY
+#               or an Exotic look: VOID, PRISM, CELESTIAL, PHOENIX, QUANTUM,
+#               ECLIPSE. Exotic strains only come from breeding two Mythic
+#               strains (never wild, never in the Shop)
+#  parents:     (Exotic strains) the two Mythic strains whose cross can give it
+#  climate:     where it grows best: TROPICAL, DESERT, TEMPERATE, WETLAND,
+#               COLD or MOUNTAIN. Fast + better quality there, slow in the
+#               opposite climate (a Grow Lamp fixes that)
+#  potency:     5-35 (THC %). Stronger = longer effects + higher price
+#  effects:     up to 4 of GIGGLES, MUNCHIES, COUCH_LOCK, ENERGY, EUPHORIA,
+#               CREATIVE, FLOATY, PARANOIA, SLEEPY, FOCUS, PAIN_RELIEF, TRIPPY,
+#               LUCKY, NIGHT_OWL, AQUATIC, FIREPROOF, GHOST, LOVED_UP, VISIONS,
+#               RAGE, DIZZY, GREEN_THUMB, SMOOTH_TALKER, FROSTY, MAGNETIC,
+#               SIXTH_SENSE, ZEN
+#  flavor:      shown on the seeds and buds
+#  price:       Shop price of one seed (leave out: by rarity and potency)
+#  shop:        false = not sold in the Shop (find it wild or breed it).
+#               Mythic seeds are sold too (at shop.mythic-seed-multiplier x)
+#  wild-biomes: biomes where breaking grass can drop these seeds
+#  wild-weight: how often it drops there compared to the others (1 = normal)
+# =====================================================================
+version: 6
+strains:
+  og_kush:
+    name: OG Kush
+    type: HYBRID
+    color: '#8FD14F'
+    leaf: '#4C9A30'
+    pistil: '#E8862E'
+    shape: classic
+    climate: temperate
+    potency: 20
+    effects: [GIGGLES, MUNCHIES, FOCUS]
+    flavor: Pine & lemon
+    price: 20
+    wild-biomes: [forest, birch_forest, old_growth_birch_forest, plains, sunflower_plains]
+  swamp_skunk:
+    name: Swamp Skunk
+    type: HYBRID
+    color: '#B8B040'
+    leaf: '#4E5E26'
+    pistil: '#C87A3A'
+    shape: popcorn
+    climate: wetland
+    potency: 18
+    effects: [MUNCHIES, PARANOIA, SLEEPY]
+    flavor: Skunk
+    price: 15
+    wild-biomes: [swamp, mangrove_swamp]
+  savanna_gold:
+    name: Savanna Gold
+    type: SATIVA
+    color: '#F0C850'
+    leaf: '#8AA032'
+    pistil: '#E85A2A'
+    shape: foxtail
+    climate: desert
+    potency: 20
+    effects: [EUPHORIA, ENERGY, FOCUS]
+    flavor: Honey
+    price: 30
+    wild-biomes: [savanna, savanna_plateau, windswept_savanna]
+  blue_cheese:
+    name: Blue Cheese
+    type: INDICA
+    color: '#5A8AD8'
+    leaf: '#3A6A7A'
+    pistil: '#FFE08A'
+    shape: classic
+    climate: wetland
+    potency: 22
+    effects: [MUNCHIES, PAIN_RELIEF, SLEEPY]
+    flavor: Blue cheese
+    price: 35
+    wild-biomes: [mushroom_fields]
+  blue_dream:
+    name: Blue Dream
+    type: HYBRID
+    color: '#6FA8F0'
+    leaf: '#3A8A78'
+    pistil: '#F4F4FF'
+    shape: foxtail
+    pattern: tips
+    accent: '#E8A8FF'
+    climate: wetland
+    potency: 21
+    effects: [EUPHORIA, CREATIVE, FLOATY]
+    flavor: Blueberry
+    price: 40
+    wild-biomes: [river, beach, stony_shore]
+  jungle_haze:
+    name: Jungle Haze
+    type: SATIVA
+    color: '#D4F05A'
+    leaf: '#2FA040'
+    pistil: '#FF8A2A'
+    shape: spear
+    climate: tropical
+    potency: 22
+    effects: [ENERGY, CREATIVE, GIGGLES]
+    flavor: Mango
+    price: 40
+    wild-biomes: [jungle, sparse_jungle]
+  strawberry_cough:
+    name: Strawberry Cough
+    type: SATIVA
+    color: '#F04A5A'
+    leaf: '#4AA83A'
+    pistil: '#FFE0E0'
+    shape: foxtail
+    pattern: speckles
+    accent: '#FFD82A'
+    climate: temperate
+    potency: 21
+    effects: [ENERGY, GIGGLES, EUPHORIA]
+    flavor: Strawberry
+    price: 45
+    wild-biomes: [flower_forest]
+  tangie:
+    name: Tangie
+    type: SATIVA
+    color: '#FF962A'
+    leaf: '#56B03A'
+    pistil: '#FFF4D8'
+    shape: foxtail
+    pattern: stripes
+    accent: '#FFD82A'
+    climate: tropical
+    potency: 22
+    effects: [ENERGY, CREATIVE, AQUATIC]
+    flavor: Tangerine
+    price: 50
+    wild-biomes: [bamboo_jungle]
+  cherry_pie:
+    name: Cherry Pie
+    type: HYBRID
+    color: '#F07AAA'
+    leaf: '#3E9A4A'
+    pistil: '#FF3A5A'
+    shape: classic
+    pattern: marble
+    accent: '#3A0A2A'
+    climate: mountain
+    potency: 20
+    effects: [EUPHORIA, FLOATY, LOVED_UP]
+    flavor: Cherry
+    price: 50
+    wild-biomes: [cherry_grove, meadow]
+  lemon_haze:
+    name: Lemon Haze
+    type: SATIVA
+    color: '#F8EC4A'
+    leaf: '#7AC83A'
+    pistil: '#FFFFFF'
+    shape: spear
+    climate: desert
+    potency: 23
+    effects: [FOCUS, ENERGY, GIGGLES]
+    flavor: Lemon
+    price: 55
+    wild-biomes: [desert]
+  northern_lights:
+    name: Northern Lights
+    type: INDICA
+    color: '#7FE0D0'
+    leaf: '#2A6E5A'
+    pistil: '#E8F8FF'
+    shape: popcorn
+    climate: cold
+    potency: 24
+    effects: [COUCH_LOCK, SLEEPY, PAIN_RELIEF]
+    flavor: Mint
+    price: 60
+    wild-biomes: [taiga, snowy_taiga, old_growth_pine_taiga, old_growth_spruce_taiga, snowy_plains]
+  ak_47:
+    name: AK-47
+    type: HYBRID
+    color: '#A8C8A0'
+    leaf: '#3E8A3A'
+    pistil: '#D83A2A'
+    shape: classic
+    climate: desert
+    potency: 24
+    effects: [FOCUS, RAGE, ENERGY]
+    flavor: Sour wood
+    price: 70
+    wild-biomes: [badlands, wooded_badlands, eroded_badlands]
+  pineapple_express:
+    name: Pineapple Express
+    type: HYBRID
+    color: '#F8D03A'
+    leaf: '#4AB43A'
+    pistil: '#FF7A2A'
+    shape: foxtail
+    climate: tropical
+    potency: 23
+    effects: [GIGGLES, ENERGY, LUCKY]
+    flavor: Pineapple
+    price: 75
+    wild-biomes: []
+  purple_kush:
+    name: Purple Kush
+    type: INDICA
+    color: '#A45AE8'
+    leaf: '#5A3A82'
+    pistil: '#F08AD8'
+    shape: classic
+    pattern: halo
+    accent: '#E8A8FF'
+    climate: mountain
+    potency: 26
+    effects: [COUCH_LOCK, MUNCHIES, EUPHORIA]
+    flavor: Grape
+    price: 85
+    wild-biomes: [windswept_hills, windswept_forest, windswept_gravelly_hills]
+  sour_diesel:
+    name: Sour Diesel
+    type: SATIVA
+    color: '#D8F0A0'
+    leaf: '#2E8A4A'
+    pistil: '#FF5A3A'
+    shape: spear
+    climate: temperate
+    potency: 25
+    effects: [ENERGY, FOCUS, PARANOIA]
+    flavor: Diesel
+    price: 90
+    wild-biomes: []
+  trainwreck:
+    name: Trainwreck
+    type: SATIVA
+    color: '#5AD8A0'
+    leaf: '#3A9A6A'
+    pistil: '#FF6A2A'
+    shape: foxtail
+    climate: mountain
+    potency: 26
+    effects: [ENERGY, PARANOIA, DIZZY]
+    flavor: Spicy pepper
+    price: 95
+    wild-biomes: []
+  gelato:
+    name: Gelato
+    type: HYBRID
+    color: '#E89AE0'
+    leaf: '#4A7A5A'
+    pistil: '#FFB04A'
+    shape: popcorn
+    pattern: marble
+    accent: '#7A2AFF'
+    climate: temperate
+    potency: 25
+    effects: [EUPHORIA, GIGGLES, LUCKY]
+    flavor: Sherbet
+    price: 110
+    wild-biomes: []
+  white_widow:
+    name: White Widow
+    type: HYBRID
+    color: '#F0F4F8'
+    leaf: '#5AA84A'
+    pistil: '#FFFFFF'
+    shape: popcorn
+    pattern: tips
+    accent: '#8AE4FF'
+    climate: cold
+    potency: 27
+    effects: [EUPHORIA, CREATIVE, PAIN_RELIEF]
+    flavor: Frost
+    price: 120
+    wild-biomes: [ice_spikes, frozen_river]
+  granddaddy_purple:
+    name: Granddaddy Purple
+    type: INDICA
+    color: '#7A3AD8'
+    leaf: '#6A2A8A'
+    pistil: '#FFB0E8'
+    shape: popcorn
+    pattern: speckles
+    accent: '#FF2AD8'
+    climate: mountain
+    potency: 27
+    effects: [SLEEPY, MUNCHIES, VISIONS]
+    flavor: Grape candy
+    price: 130
+    wild-biomes: [stony_peaks, jagged_peaks]
+  gorilla_glue:
+    name: Gorilla Glue
+    type: HYBRID
+    color: '#B8C8A8'
+    leaf: '#3A7A2A'
+    pistil: '#E8A85A'
+    shape: classic
+    climate: wetland
+    potency: 29
+    effects: [COUCH_LOCK, EUPHORIA, MUNCHIES]
+    flavor: Earthy coffee
+    price: 140
+    wild-biomes: [dark_forest]
+  black_domina:
+    name: Black Domina
+    type: INDICA
+    color: '#3E2A52'
+    leaf: '#24332A'
+    pistil: '#E83A3A'
+    shape: classic
+    pattern: halo
+    accent: '#7A2AFF'
+    climate: cold
+    potency: 28
+    effects: [COUCH_LOCK, SLEEPY, NIGHT_OWL]
+    flavor: Black pepper
+    price: 160
+    wild-biomes: []
+  ghost_og:
+    name: Ghost OG
+    type: INDICA
+    color: '#E4ECEA'
+    leaf: '#8AA898'
+    pistil: '#C8E8FF'
+    shape: classic
+    climate: cold
+    potency: 30
+    effects: [GHOST, FLOATY, PAIN_RELIEF, SLEEPY]
+    flavor: Cool mint
+    price: 200
+    wild-biomes: []
+  dragon_fruit:
+    name: Dragon Fruit
+    type: HYBRID
+    color: '#FF3AA8'
+    leaf: '#2FA05A'
+    pistil: '#F8F04A'
+    shape: foxtail
+    pattern: spots
+    accent: '#C8FF2A'
+    climate: tropical
+    potency: 31
+    effects: [EUPHORIA, LOVED_UP, VISIONS, FIREPROOF]
+    flavor: Dragon fruit
+    price: 240
+    wild-biomes: []
+  mango_kush:
+    name: Mango Kush
+    type: HYBRID
+    color: '#FFC24A'
+    leaf: '#2E6A2A'
+    pistil: '#E83A5A'
+    shape: classic
+    climate: tropical
+    potency: 22
+    effects: [EUPHORIA, MUNCHIES, GREEN_THUMB]
+    flavor: Ripe mango
+    price: 65
+    wild-biomes: []
+  green_crack:
+    name: Green Crack
+    type: SATIVA
+    color: '#4AE84A'
+    leaf: '#1E8A2A'
+    pistil: '#FF8A00'
+    shape: spear
+    climate: tropical
+    potency: 24
+    effects: [ENERGY, FOCUS, MAGNETIC]
+    flavor: Tangy citrus
+    price: 80
+    wild-biomes: []
+  red_congolese:
+    name: Red Congolese
+    type: SATIVA
+    color: '#C82A1A'
+    leaf: '#6A8A2A'
+    pistil: '#FFD040'
+    shape: spear
+    climate: tropical
+    potency: 23
+    effects: [ENERGY, RAGE, FIREPROOF]
+    flavor: Spicy cherry
+    price: 95
+    wild-biomes: []
+  durban_poison:
+    name: Durban Poison
+    type: SATIVA
+    color: '#9AE83A'
+    leaf: '#2A7A2A'
+    pistil: '#F0A03A'
+    shape: popcorn
+    climate: desert
+    potency: 24
+    effects: [ENERGY, SMOOTH_TALKER, CREATIVE]
+    flavor: Sweet anise
+    price: 100
+    wild-biomes: []
+  blueberry:
+    name: Blueberry
+    type: INDICA
+    color: '#4A4AD8'
+    leaf: '#3A5A7A'
+    pistil: '#FF8AC8'
+    shape: popcorn
+    climate: mountain
+    potency: 25
+    effects: [EUPHORIA, ZEN, SIXTH_SENSE]
+    flavor: Blueberry jam
+    price: 115
+    wild-biomes: []
+  wedding_cake:
+    name: Wedding Cake
+    type: HYBRID
+    color: '#F0D8F0'
+    leaf: '#4A6A4A'
+    pistil: '#D86AE8'
+    shape: classic
+    pattern: tips
+    accent: '#FF9AD8'
+    climate: temperate
+    potency: 26
+    effects: [EUPHORIA, LOVED_UP, ZEN]
+    flavor: Vanilla & pepper
+    price: 135
+    wild-biomes: []
+  girl_scout_cookies:
+    name: Girl Scout Cookies
+    type: HYBRID
+    color: '#6A8A4A'
+    leaf: '#5A3A6A'
+    pistil: '#F0A040'
+    shape: classic
+    pattern: speckles
+    accent: '#E8A8FF'
+    climate: temperate
+    potency: 27
+    effects: [EUPHORIA, GIGGLES, SMOOTH_TALKER]
+    flavor: Sweet & earthy
+    price: 145
+    wild-biomes: []
+  ice_cream_cake:
+    name: Ice Cream Cake
+    type: INDICA
+    color: '#F8E8D0'
+    leaf: '#6A8A5A'
+    pistil: '#F8A8C8'
+    shape: spear
+    pattern: marble
+    accent: '#FF9AD8'
+    climate: cold
+    potency: 27
+    effects: [SLEEPY, FROSTY, EUPHORIA]
+    flavor: Vanilla frosting
+    price: 150
+    wild-biomes: []
+  # --- 7.0: weird colours and two-tone buds ------------------------------
+  midnight_oil:
+    name: Midnight Oil
+    type: INDICA
+    color: '#16141E'
+    leaf: '#24332A'
+    pistil: '#FF6A00'
+    shape: popcorn
+    pattern: speckles
+    accent: '#FFD82A'
+    climate: cold
+    potency: 25
+    effects: [NIGHT_OWL, SLEEPY, GHOST]
+    flavor: Tar & smoke
+    price: 140
+    wild-biomes: []
+  phantom_cookies:
+    name: Phantom Cookies
+    type: HYBRID
+    color: '#F4F4FF'
+    leaf: '#9AB8A8'
+    pistil: '#C8E8FF'
+    shape: spear
+    pattern: halo
+    accent: '#8AE4FF'
+    climate: cold
+    potency: 27
+    effects: [GHOST, FROSTY, ZEN]
+    flavor: Mint frost
+    shop: false
+    wild-biomes: [snowy_slopes, grove]
+    wild-weight: 0.6
+  lime_acid:
+    name: Lime Acid
+    type: SATIVA
+    color: '#C8FF2A'
+    leaf: '#6AD83A'
+    pistil: '#FF2AD8'
+    shape: foxtail
+    pattern: stripes
+    accent: '#2A8A8A'
+    climate: tropical
+    potency: 24
+    effects: [ENERGY, TRIPPY, GIGGLES]
+    flavor: Sour lime
+    price: 110
+    wild-biomes: []
+  cyber_haze:
+    name: Cyber Haze
+    type: SATIVA
+    color: '#2AFFE8'
+    leaf: '#2E5A7A'
+    pistil: '#FF2AD8'
+    shape: spear
+    pattern: halo
+    accent: '#FF2AD8'
+    climate: temperate
+    potency: 26
+    effects: [FOCUS, CREATIVE, SIXTH_SENSE]
+    flavor: Ozone
+    price: 170
+    wild-biomes: []
+  magenta_mayhem:
+    name: Magenta Mayhem
+    type: HYBRID
+    color: '#FF2AD8'
+    leaf: '#5A3A82'
+    pistil: '#FFE23A'
+    shape: popcorn
+    pattern: spots
+    accent: '#7A2AFF'
+    climate: tropical
+    potency: 25
+    effects: [EUPHORIA, LOVED_UP, DIZZY]
+    flavor: Bubblegum
+    price: 125
+    wild-biomes: []
+  ultraviolet:
+    name: Ultraviolet
+    type: INDICA
+    color: '#7A2AFF'
+    leaf: '#24332A'
+    pistil: '#2AFFE8'
+    shape: classic
+    pattern: marble
+    accent: '#FF2AD8'
+    climate: mountain
+    potency: 28
+    effects: [VISIONS, NIGHT_OWL, COUCH_LOCK]
+    flavor: Grape soda
+    price: 190
+    wild-biomes: []
+  blaze_orange:
+    name: Blaze Orange
+    type: SATIVA
+    color: '#FF6A00'
+    leaf: '#8A3A3A'
+    pistil: '#FFE23A'
+    shape: foxtail
+    pattern: tips
+    accent: '#FFD82A'
+    climate: desert
+    potency: 24
+    effects: [ENERGY, FIREPROOF, RAGE]
+    flavor: Blood orange
+    shop: false
+    wild-biomes: [badlands, wooded_badlands]
+    wild-weight: 0.5
+  electric_blue:
+    name: Electric Blue
+    type: HYBRID
+    color: '#2A3AFF'
+    leaf: '#2E5A7A'
+    pistil: '#F4F4FF'
+    shape: spear
+    pattern: stripes
+    accent: '#2AFFE8'
+    climate: wetland
+    potency: 25
+    effects: [AQUATIC, FOCUS, ENERGY]
+    flavor: Blue raspberry
+    price: 130
+    wild-biomes: []
+  crimson_tide:
+    name: Crimson Tide
+    type: INDICA
+    color: '#FF2A4A'
+    leaf: '#8A3A3A'
+    pistil: '#16141E'
+    shape: popcorn
+    pattern: marble
+    accent: '#3A0A2A'
+    climate: wetland
+    potency: 26
+    effects: [MUNCHIES, PAIN_RELIEF, RAGE]
+    flavor: Cherry cola
+    shop: false
+    wild-biomes: [mangrove_swamp]
+    wild-weight: 0.5
+  canary_kush:
+    name: Canary Kush
+    type: HYBRID
+    color: '#FFD82A'
+    leaf: '#A8A03A'
+    pistil: '#FF6A00'
+    shape: classic
+    pattern: speckles
+    accent: '#FF6A00'
+    climate: temperate
+    potency: 22
+    effects: [GIGGLES, LUCKY, SMOOTH_TALKER]
+    flavor: Pineapple
+    price: 75
+    wild-biomes: [sunflower_plains]
+    wild-weight: 0.6
+  chocolope:
+    name: Chocolope
+    type: INDICA
+    color: '#6A3A1E'
+    leaf: '#4E5E26'
+    pistil: '#E8A8FF'
+    shape: classic
+    pattern: tips
+    accent: '#F0C8A0'
+    climate: tropical
+    potency: 24
+    effects: [MUNCHIES, COUCH_LOCK, EUPHORIA]
+    flavor: Dark chocolate
+    price: 100
+    wild-biomes: []
+  mint_condition:
+    name: Mint Condition
+    type: HYBRID
+    color: '#5AE8A8'
+    leaf: '#2A9A8A'
+    pistil: '#F4F4FF'
+    shape: spear
+    pattern: halo
+    accent: '#F4F4FF'
+    climate: cold
+    potency: 23
+    effects: [ZEN, FROSTY, FOCUS]
+    flavor: Peppermint
+    price: 90
+    wild-biomes: [snowy_taiga]
+    wild-weight: 0.5
+  lilac_dream:
+    name: Lilac Dream
+    type: INDICA
+    color: '#E8A8FF'
+    leaf: '#5A3A82'
+    pistil: '#FFFFFF'
+    shape: popcorn
+    pattern: spots
+    accent: '#FFFFFF'
+    climate: temperate
+    potency: 22
+    effects: [SLEEPY, LOVED_UP, FLOATY]
+    flavor: Lavender
+    price: 80
+    wild-biomes: [flower_forest, meadow]
+    wild-weight: 0.5
+  teal_tsunami:
+    name: Teal Tsunami
+    type: SATIVA
+    color: '#2A8A8A'
+    leaf: '#2A9A8A'
+    pistil: '#5AE8A8'
+    shape: foxtail
+    pattern: stripes
+    accent: '#5AE8A8'
+    climate: wetland
+    potency: 24
+    effects: [AQUATIC, FLOATY, ENERGY]
+    flavor: Sea salt
+    shop: false
+    wild-biomes: [beach, snowy_beach]
+    wild-weight: 0.5
+  silverback:
+    name: Silverback
+    type: INDICA
+    color: '#B0B8C0'
+    leaf: '#24332A'
+    pistil: '#16141E'
+    shape: popcorn
+    pattern: marble
+    accent: '#F4F4FF'
+    climate: mountain
+    potency: 29
+    effects: [COUCH_LOCK, PAIN_RELIEF, MAGNETIC]
+    flavor: Metal & pine
+    price: 210
+    wild-biomes: []
+  plum_crazy:
+    name: Plum Crazy
+    type: HYBRID
+    color: '#3A0A2A'
+    leaf: '#5A3A82'
+    pistil: '#FF2AD8'
+    shape: classic
+    pattern: speckles
+    accent: '#FF2AD8'
+    climate: mountain
+    potency: 27
+    effects: [TRIPPY, DIZZY, GIGGLES]
+    flavor: Plum wine
+    shop: false
+    wild-biomes: [windswept_forest]
+    wild-weight: 0.5
+  tiger_kush:
+    name: Tiger Kush
+    type: HYBRID
+    color: '#FF962A'
+    leaf: '#4C9A30'
+    pistil: '#16141E'
+    shape: foxtail
+    pattern: stripes
+    accent: '#16141E'
+    climate: tropical
+    potency: 25
+    effects: [RAGE, ENERGY, FOCUS]
+    flavor: Orange peel
+    price: 150
+    wild-biomes: []
+  leopard_haze:
+    name: Leopard Haze
+    type: SATIVA
+    color: '#F0C850'
+    leaf: '#8AA032'
+    pistil: '#6A3A1E'
+    shape: spear
+    pattern: spots
+    accent: '#6A3A1E'
+    climate: desert
+    potency: 24
+    effects: [SIXTH_SENSE, ENERGY, LUCKY]
+    flavor: Honey & spice
+    shop: false
+    wild-biomes: [savanna_plateau]
+    wild-weight: 0.5
+  zebra_cake:
+    name: Zebra Cake
+    type: INDICA
+    color: '#F4F4FF'
+    leaf: '#4E5E26'
+    pistil: '#16141E'
+    shape: classic
+    pattern: stripes
+    accent: '#16141E'
+    climate: temperate
+    potency: 26
+    effects: [MUNCHIES, GIGGLES, SLEEPY]
+    flavor: Vanilla & licorice
+    price: 160
+    wild-biomes: []
+  two_face:
+    name: Two Face
+    type: HYBRID
+    color: '#FF2A4A'
+    leaf: '#4C9A30'
+    pistil: '#F4F4FF'
+    shape: popcorn
+    pattern: split
+    accent: '#2A3AFF'
+    climate: temperate
+    potency: 27
+    effects: [PARANOIA, EUPHORIA, SIXTH_SENSE]
+    flavor: Sweet & sour
+    shop: false
+    wild-biomes: [dark_forest]
+    wild-weight: 0.5
+  pale_kush:
+    name: Pale Kush
+    type: INDICA
+    color: '#D8D8C8'
+    leaf: '#7A8A7A'
+    pistil: '#B0B8C0'
+    shape: spear
+    pattern: marble
+    accent: '#8A8A96'
+    climate: cold
+    potency: 28
+    effects: [GHOST, SIXTH_SENSE, PARANOIA]
+    flavor: Ash & moss
+    shop: false
+    wild-biomes: [pale_garden]
+    wild-weight: 0.8
+  cherry_bomb:
+    name: Cherry Bomb
+    type: SATIVA
+    color: '#FF3A3A'
+    leaf: '#4C9A30'
+    pistil: '#FFD82A'
+    shape: popcorn
+    pattern: tips
+    accent: '#FFD82A'
+    climate: mountain
+    potency: 25
+    effects: [ENERGY, GIGGLES, RAGE]
+    flavor: Cherry candy
+    price: 120
+    wild-biomes: [cherry_grove]
+    wild-weight: 0.4
+  sour_apple:
+    name: Sour Apple
+    type: SATIVA
+    color: '#9AE83A'
+    leaf: '#6AD83A'
+    pistil: '#FF3A3A'
+    shape: classic
+    pattern: speckles
+    accent: '#FF3A3A'
+    climate: temperate
+    potency: 23
+    effects: [FOCUS, ENERGY, LUCKY]
+    flavor: Green apple
+    price: 85
+    wild-biomes: []
+  cotton_candy:
+    name: Cotton Candy
+    type: HYBRID
+    color: '#FF9AD8'
+    leaf: '#6AD83A'
+    pistil: '#9AFFD8'
+    shape: popcorn
+    pattern: marble
+    accent: '#9AE0FF'
+    climate: temperate
+    potency: 24
+    effects: [GIGGLES, FLOATY, LOVED_UP]
+    flavor: Spun sugar
+    price: 105
+    wild-biomes: []
+  blue_velvet:
+    name: Blue Velvet
+    type: INDICA
+    color: '#1A2A6A'
+    leaf: '#2E5A7A'
+    pistil: '#E8A8FF'
+    shape: classic
+    pattern: halo
+    accent: '#7A2AFF'
+    climate: cold
+    potency: 27
+    effects: [SLEEPY, VISIONS, ZEN]
+    flavor: Blueberry & cream
+    price: 175
+    wild-biomes: []
+  sunset_sherbet:
+    name: Sunset Sherbet
+    type: HYBRID
+    color: '#FF7A5A'
+    leaf: '#4C9A30'
+    pistil: '#FFD82A'
+    shape: spear
+    pattern: split
+    accent: '#FFD82A'
+    climate: tropical
+    potency: 25
+    effects: [EUPHORIA, CREATIVE, SMOOTH_TALKER]
+    flavor: Orange sherbet
+    price: 145
+    wild-biomes: []
+  moss_monster:
+    name: Moss Monster
+    type: INDICA
+    color: '#4A6A2A'
+    leaf: '#24332A'
+    pistil: '#C8FF2A'
+    shape: popcorn
+    pattern: spots
+    accent: '#C8FF2A'
+    climate: wetland
+    potency: 26
+    effects: [GREEN_THUMB, COUCH_LOCK, MUNCHIES]
+    flavor: Wet earth
+    shop: false
+    wild-biomes: [swamp]
+    wild-weight: 0.5
+  dune_runner:
+    name: Dune Runner
+    type: SATIVA
+    color: '#E8C88A'
+    leaf: '#A8A03A'
+    pistil: '#FF6A00'
+    shape: foxtail
+    pattern: speckles
+    accent: '#6A3A1E'
+    climate: desert
+    potency: 23
+    effects: [ENERGY, FIREPROOF, FOCUS]
+    flavor: Dry sage
+    shop: false
+    wild-biomes: [desert]
+    wild-weight: 0.5
+  glacier_glue:
+    name: Glacier Glue
+    type: HYBRID
+    color: '#9AE0FF'
+    leaf: '#2E5A7A'
+    pistil: '#F4F4FF'
+    shape: classic
+    pattern: tips
+    accent: '#F4F4FF'
+    climate: cold
+    potency: 28
+    effects: [FROSTY, COUCH_LOCK, ZEN]
+    flavor: Glacier mint
+    shop: false
+    wild-biomes: [frozen_peaks, snowy_slopes]
+    wild-weight: 0.4
+  voodoo_kush:
+    name: Voodoo Kush
+    type: INDICA
+    color: '#3A0A2A'
+    leaf: '#24332A'
+    pistil: '#5AE8A8'
+    shape: spear
+    pattern: speckles
+    accent: '#5AE8A8'
+    climate: wetland
+    potency: 29
+    effects: [VISIONS, PARANOIA, SIXTH_SENSE]
+    flavor: Smoke & clove
+    price: 220
+    wild-biomes: []
+  hazmat_haze:
+    name: Hazmat Haze
+    type: SATIVA
+    color: '#C8FF2A'
+    leaf: '#6AD83A'
+    pistil: '#16141E'
+    shape: spear
+    pattern: halo
+    accent: '#FFD82A'
+    climate: temperate
+    potency: 28
+    effects: [ENERGY, TRIPPY, MAGNETIC]
+    flavor: Lemon fizz
+    price: 200
+    wild-biomes: []
+  copper_kush:
+    name: Copper Kush
+    type: HYBRID
+    color: '#C87A4A'
+    leaf: '#4E5E26'
+    pistil: '#2AFFE8'
+    shape: classic
+    pattern: marble
+    accent: '#2A9A8A'
+    climate: mountain
+    potency: 25
+    effects: [MAGNETIC, LUCKY, FOCUS]
+    flavor: Pennies & pine
+    price: 155
+    wild-biomes: []
+  # --- 8.0 -----------------------------------------------------------------
+  banana_kush:
+    name: Banana Kush
+    type: HYBRID
+    color: '#E8D84A'
+    leaf: '#5A8A2A'
+    pistil: '#E8862E'
+    shape: classic
+    climate: tropical
+    potency: 19
+    effects: [GIGGLES, MUNCHIES, LOVED_UP]
+    flavor: Ripe banana
+    price: 35
+    wild-biomes: [jungle, sparse_jungle]
+  jungle_juice:
+    name: Jungle Juice
+    type: HYBRID
+    color: '#FF8A3A'
+    leaf: '#2A7A2A'
+    pistil: '#FFE04A'
+    shape: classic
+    pattern: spots
+    accent: '#5AD83A'
+    climate: tropical
+    potency: 21
+    effects: [GIGGLES, ENERGY, MUNCHIES]
+    flavor: Tropical punch
+    price: 55
+    wild-biomes: []
+  frostbite:
+    name: Frostbite
+    type: INDICA
+    color: '#CFE8F0'
+    leaf: '#3A6A6A'
+    pistil: '#FFFFFF'
+    shape: popcorn
+    pattern: speckles
+    accent: '#FFFFFF'
+    climate: cold
+    potency: 23
+    effects: [FROSTY, SLEEPY, PAIN_RELIEF]
+    flavor: Peppermint
+    price: 95
+    wild-biomes: []
+  desert_rose:
+    name: Desert Rose
+    type: SATIVA
+    color: '#E88AA0'
+    leaf: '#6A7A3A'
+    pistil: '#F0C060'
+    shape: spear
+    pattern: tips
+    accent: '#FFD0D8'
+    climate: desert
+    potency: 24
+    effects: [LOVED_UP, ENERGY, CREATIVE]
+    flavor: Rosewater
+    price: 105
+    wild-biomes: []
+  lotus_haze:
+    name: Lotus Haze
+    type: SATIVA
+    color: '#F0B8E0'
+    leaf: '#3A8A6A'
+    pistil: '#FFFFFF'
+    shape: foxtail
+    pattern: halo
+    accent: '#FFFFFF'
+    climate: wetland
+    potency: 25
+    effects: [ZEN, AQUATIC, CREATIVE]
+    flavor: Lotus & honey
+    price: 140
+    wild-biomes: []
+  thunderhead:
+    name: Thunderhead
+    type: SATIVA
+    color: '#6A7AA0'
+    leaf: '#3A4A5A'
+    pistil: '#F0E04A'
+    shape: foxtail
+    pattern: stripes
+    accent: '#F0E04A'
+    climate: mountain
+    potency: 27
+    effects: [ENERGY, FOCUS, SIXTH_SENSE]
+    flavor: Ozone
+    price: 165
+    wild-biomes: []
+  black_cherry_punch:
+    name: Black Cherry Punch
+    type: INDICA
+    color: '#5A0A2A'
+    leaf: '#2A3A1A'
+    pistil: '#FF4A6A'
+    shape: popcorn
+    pattern: marble
+    accent: '#A01A3A'
+    climate: mountain
+    potency: 28
+    effects: [COUCH_LOCK, EUPHORIA, NIGHT_OWL]
+    flavor: Dark cherry
+    price: 185
+    wild-biomes: []
+  kryptonite:
+    name: Kryptonite
+    type: HYBRID
+    color: '#4AFF6A'
+    leaf: '#1A5A2A'
+    pistil: '#C8FFC8'
+    shape: spear
+    pattern: speckles
+    accent: '#E8FFE8'
+    climate: temperate
+    potency: 29
+    effects: [MAGNETIC, ENERGY, RAGE, FOCUS]
+    flavor: Lime zest
+    price: 260
+    wild-biomes: []
+  sunstone:
+    name: Sunstone
+    type: SATIVA
+    color: '#FFB43A'
+    leaf: '#5A8A2A'
+    pistil: '#FF5A1A'
+    shape: foxtail
+    pattern: split
+    accent: '#FF6A3A'
+    climate: desert
+    potency: 30
+    effects: [FIREPROOF, EUPHORIA, SMOOTH_TALKER, LUCKY]
+    flavor: Blood orange
+    price: 300
+    wild-biomes: []
+  fairy_dust:
+    name: Fairy Dust
+    type: HYBRID
+    color: '#E8C8FF'
+    leaf: '#5A8A5A'
+    pistil: '#FFFFFF'
+    shape: popcorn
+    pattern: speckles
+    accent: '#FFFFFF'
+    climate: temperate
+    potency: 25
+    effects: [FLOATY, GIGGLES, LUCKY]
+    flavor: Sugared violets
+    shop: false
+    wild-biomes: [flower_forest, meadow, cherry_grove]
+    wild-weight: 0.4
+  mangrove_mist:
+    name: Mangrove Mist
+    type: SATIVA
+    color: '#7AC8A0'
+    leaf: '#2A5A3A'
+    pistil: '#E8E8C8'
+    shape: foxtail
+    pattern: halo
+    accent: '#C8F0E0'
+    climate: wetland
+    potency: 24
+    effects: [AQUATIC, ZEN, SLEEPY]
+    flavor: Rain & cedar
+    shop: false
+    wild-biomes: [mangrove_swamp]
+    wild-weight: 0.5
+  # --- Mythic: Shop seeds (pricey), or found in the wild once in a blue moon
+  aurora_kush:
+    name: Aurora Kush
+    type: INDICA
+    color: '#3A2A8A'
+    leaf: '#1E3A4A'
+    pistil: '#7AF0E0'
+    shape: popcorn
+    pattern: halo
+    accent: '#7AF0E0'
+    exotic: galaxy
+    climate: cold
+    potency: 32
+    effects: [VISIONS, FLOATY, NIGHT_OWL, EUPHORIA]
+    flavor: Starlight
+    wild-biomes: [ice_spikes, frozen_river, snowy_plains, snowy_taiga]
+    wild-weight: 0.01
+  rainbow_runtz:
+    name: Rainbow Runtz
+    type: HYBRID
+    color: '#FF5AA8'
+    leaf: '#4AB43A'
+    pistil: '#FFE23A'
+    shape: popcorn
+    exotic: rainbow
+    climate: tropical
+    potency: 30
+    effects: [GIGGLES, EUPHORIA, TRIPPY, LUCKY]
+    flavor: Candy
+    wild-biomes: [jungle, sparse_jungle, bamboo_jungle]
+    wild-weight: 0.01
+  solar_flare:
+    name: Solar Flare
+    type: SATIVA
+    color: '#FFD040'
+    leaf: '#3A8A2A'
+    pistil: '#FF6A00'
+    shape: foxtail
+    exotic: golden
+    climate: desert
+    potency: 31
+    effects: [ENERGY, FIREPROOF, SMOOTH_TALKER, GREEN_THUMB]
+    flavor: Sun-baked honey
+    wild-biomes: [desert, badlands, wooded_badlands, eroded_badlands]
+    wild-weight: 0.01
+  aurora_borealis:
+    name: Aurora Borealis
+    type: INDICA
+    color: '#3AFFA8'
+    leaf: '#1E3A4A'
+    pistil: '#A85AFF'
+    shape: foxtail
+    exotic: aurora
+    climate: cold
+    potency: 31
+    effects: [VISIONS, NIGHT_OWL, FROSTY, ZEN]
+    flavor: Northern ice
+    wild-biomes: [frozen_peaks, ice_spikes, snowy_slopes]
+    wild-weight: 0.01
+  toxic_waste:
+    name: Toxic Waste
+    type: SATIVA
+    color: '#C8FF3A'
+    leaf: '#2A4A1A'
+    pistil: '#FF2AD8'
+    shape: spear
+    pattern: speckles
+    accent: '#16141E'
+    exotic: toxic
+    climate: wetland
+    potency: 31
+    effects: [RAGE, MAGNETIC, ENERGY, TRIPPY]
+    flavor: Radioactive lime
+    wild-biomes: [swamp, mangrove_swamp]
+    wild-weight: 0.01
+  sakura_blossom:
+    name: Sakura Blossom
+    type: HYBRID
+    color: '#FFC0E0'
+    leaf: '#4C9A30'
+    pistil: '#FFFFFF'
+    shape: popcorn
+    exotic: sakura
+    climate: mountain
+    potency: 30
+    effects: [LOVED_UP, ZEN, FLOATY, EUPHORIA]
+    flavor: Cherry blossom
+    wild-biomes: [cherry_grove]
+    wild-weight: 0.01
+  plasma_og:
+    name: Plasma OG
+    type: HYBRID
+    color: '#7A2AFF'
+    leaf: '#2E5A7A'
+    pistil: '#2AFFE8'
+    shape: spear
+    exotic: plasma
+    climate: temperate
+    potency: 32
+    effects: [ENERGY, FOCUS, SIXTH_SENSE, CREATIVE]
+    flavor: Ozone & grape
+    wild-biomes: [windswept_hills, windswept_gravelly_hills]
+    wild-weight: 0.01
+  blood_moon_kush:
+    name: Blood Moon
+    type: INDICA
+    color: '#8A0A1A'
+    leaf: '#3A0A2A'
+    pistil: '#FF3A3A'
+    shape: classic
+    exotic: blood_moon
+    climate: cold
+    potency: 32
+    effects: [RAGE, NIGHT_OWL, PARANOIA, PAIN_RELIEF]
+    flavor: Iron & cherry
+    wild-biomes: [dark_forest, pale_garden]
+    wild-weight: 0.01
+  deep_sea_diesel:
+    name: Deep Sea Diesel
+    type: SATIVA
+    color: '#1A5AD8'
+    leaf: '#2E5A7A'
+    pistil: '#9AE0FF'
+    shape: foxtail
+    exotic: ocean
+    climate: wetland
+    potency: 30
+    effects: [AQUATIC, FLOATY, ZEN, LUCKY]
+    flavor: Sea breeze
+    wild-biomes: [beach, river]
+    wild-weight: 0.01
+  candyland:
+    name: Candyland
+    type: HYBRID
+    color: '#FF9AD8'
+    leaf: '#4AB43A'
+    pistil: '#FFFFFF'
+    shape: foxtail
+    pattern: stripes
+    accent: '#FFFFFF'
+    exotic: candy
+    climate: temperate
+    potency: 30
+    effects: [GIGGLES, LOVED_UP, MUNCHIES, EUPHORIA]
+    flavor: Rock candy
+    wild-biomes: [flower_forest, sunflower_plains]
+    wild-weight: 0.01
+  diamond_dust:
+    name: Diamond Dust
+    type: INDICA
+    color: '#E0F8FF'
+    leaf: '#9AB8A8'
+    pistil: '#8AE4FF'
+    shape: spear
+    exotic: crystal
+    climate: mountain
+    potency: 31
+    effects: [LUCKY, FOCUS, FROSTY, MAGNETIC]
+    flavor: Cold stone
+    wild-biomes: [stony_peaks, jagged_peaks]
+    wild-weight: 0.01
+  neon_genesis:
+    name: Neon Genesis
+    type: SATIVA
+    color: '#2AFF8A'
+    leaf: '#24332A'
+    pistil: '#2AFFE8'
+    shape: spear
+    exotic: neon
+    climate: tropical
+    potency: 31
+    effects: [ENERGY, CREATIVE, NIGHT_OWL, GIGGLES]
+    flavor: Electric lime
+    wild-biomes: [sparse_jungle]
+    wild-weight: 0.01
+  hellfire_og:
+    name: Hellfire OG
+    type: INDICA
+    color: '#FF5A1A'
+    leaf: '#3A1A0A'
+    pistil: '#FFE43A'
+    shape: popcorn
+    exotic: inferno
+    climate: desert
+    potency: 32
+    effects: [FIREPROOF, RAGE, PAIN_RELIEF, ENERGY]
+    flavor: Chili & smoke
+    wild-biomes: [badlands, eroded_badlands]
+    wild-weight: 0.01
+  starfall_og:
+    name: Starfall OG
+    type: INDICA
+    color: '#1A2A6A'
+    leaf: '#1A2A3A'
+    pistil: '#FFE88A'
+    shape: popcorn
+    pattern: speckles
+    accent: '#FFE88A'
+    exotic: galaxy
+    climate: mountain
+    potency: 31
+    effects: [VISIONS, NIGHT_OWL, LUCKY, ZEN]
+    flavor: Stardust & grape
+    wild-biomes: [jagged_peaks, frozen_peaks]
+    wild-weight: 0.01
+  koi_kush:
+    name: Koi Kush
+    type: HYBRID
+    color: '#FF7A3A'
+    leaf: '#2A6A5A'
+    pistil: '#FFFFFF'
+    shape: classic
+    pattern: spots
+    accent: '#FFFFFF'
+    exotic: ocean
+    climate: wetland
+    potency: 30
+    effects: [AQUATIC, LUCKY, ZEN, EUPHORIA]
+    flavor: Yuzu & sea salt
+    wild-biomes: [river, beach]
+    wild-weight: 0.01
+  lava_lamp:
+    name: Lava Lamp
+    type: SATIVA
+    color: '#FF3A8A'
+    leaf: '#3A2A5A'
+    pistil: '#FFE43A'
+    shape: foxtail
+    pattern: marble
+    accent: '#FFB43A'
+    exotic: neon
+    climate: desert
+    potency: 31
+    effects: [TRIPPY, CREATIVE, ENERGY, FIREPROOF]
+    flavor: Hot cinnamon
+    wild-biomes: [badlands, wooded_badlands]
+    wild-weight: 0.01
+  frozen_rainbow:
+    name: Frozen Rainbow
+    type: INDICA
+    color: '#E8F0FF'
+    leaf: '#3A6A7A'
+    pistil: '#FF9AD8'
+    shape: popcorn
+    pattern: stripes
+    accent: '#9AD8FF'
+    exotic: rainbow
+    climate: cold
+    potency: 30
+    effects: [FROSTY, GIGGLES, FLOATY, EUPHORIA]
+    flavor: Shaved ice
+    wild-biomes: [snowy_slopes, grove]
+    wild-weight: 0.01
+  # --- Exotic: only from crossing the two Mythic parents listed ----------
+  event_horizon:
+    name: Event Horizon
+    type: INDICA
+    color: '#16141E'
+    leaf: '#1A0A2A'
+    pistil: '#B85AFF'
+    shape: popcorn
+    exotic: void
+    climate: cold
+    potency: 34
+    effects: [VISIONS, GHOST, NIGHT_OWL, ZEN]
+    flavor: Black cherry & stardust
+    shop: false
+    parents: [aurora_kush, blood_moon_kush]
+    wild-biomes: []
+  prismatic_runtz:
+    name: Prismatic Runtz
+    type: HYBRID
+    color: '#FFFFFF'
+    leaf: '#4AB43A'
+    pistil: '#FFE23A'
+    shape: popcorn
+    exotic: prism
+    climate: tropical
+    potency: 33
+    effects: [GIGGLES, EUPHORIA, LUCKY, TRIPPY]
+    flavor: Every candy at once
+    shop: false
+    parents: [rainbow_runtz, diamond_dust]
+    wild-biomes: []
+  celestial_kush:
+    name: Celestial Kush
+    type: HYBRID
+    color: '#2A3A8A'
+    leaf: '#1E3A4A'
+    pistil: '#FFE88A'
+    shape: spear
+    exotic: celestial
+    climate: mountain
+    potency: 34
+    effects: [VISIONS, FLOATY, LUCKY, CREATIVE]
+    flavor: Starlight honey
+    shop: false
+    parents: [solar_flare, aurora_borealis]
+    wild-biomes: []
+  phoenix_tears:
+    name: Phoenix Tears
+    type: SATIVA
+    color: '#FF7A2A'
+    leaf: '#3A1A0A'
+    pistil: '#FFFFFF'
+    shape: foxtail
+    exotic: phoenix
+    climate: desert
+    potency: 35
+    effects: [FIREPROOF, EUPHORIA, ENERGY, PAIN_RELIEF]
+    flavor: Smoked honey
+    shop: false
+    parents: [hellfire_og, solar_flare]
+    wild-biomes: []
+  quantum_kush:
+    name: Quantum Kush
+    type: SATIVA
+    color: '#2AFFFF'
+    leaf: '#24332A'
+    pistil: '#FF3AE8'
+    shape: spear
+    exotic: quantum
+    climate: temperate
+    potency: 34
+    effects: [SIXTH_SENSE, FOCUS, MAGNETIC, TRIPPY]
+    flavor: Static
+    shop: false
+    parents: [plasma_og, neon_genesis]
+    wild-biomes: []
+  total_eclipse:
+    name: Total Eclipse
+    type: INDICA
+    color: '#1A1A1A'
+    leaf: '#24332A'
+    pistil: '#FFF0B0'
+    shape: classic
+    exotic: eclipse
+    climate: cold
+    potency: 35
+    effects: [NIGHT_OWL, GHOST, COUCH_LOCK, VISIONS]
+    flavor: Smoke & gold
+    shop: false
+    parents: [blood_moon_kush, solar_flare]
+    wild-biomes: []
+  abyssal_kush:
+    name: Abyssal Kush
+    type: INDICA
+    color: '#0A1A3A'
+    leaf: '#1A2A3A'
+    pistil: '#2AFFE8'
+    shape: popcorn
+    pattern: halo
+    accent: '#2AFFE8'
+    exotic: void
+    climate: wetland
+    potency: 34
+    effects: [AQUATIC, VISIONS, GHOST, ZEN]
+    flavor: Deep ocean
+    shop: false
+    parents: [deep_sea_diesel, aurora_kush]
+    wild-biomes: []
+  sakura_supernova:
+    name: Sakura Supernova
+    type: HYBRID
+    color: '#FFC0E0'
+    leaf: '#4C9A30'
+    pistil: '#FFE88A'
+    shape: popcorn
+    exotic: prism
+    climate: mountain
+    potency: 34
+    effects: [LOVED_UP, EUPHORIA, FLOATY, LUCKY]
+    flavor: Blossom & champagne
+    shop: false
+    parents: [sakura_blossom, candyland]
+    wild-biomes: []
+  quasar_haze:
+    name: Quasar Haze
+    type: SATIVA
+    color: '#C8FF3A'
+    leaf: '#2A4A1A'
+    pistil: '#2AFFFF'
+    shape: spear
+    exotic: quantum
+    climate: tropical
+    potency: 34
+    effects: [ENERGY, MAGNETIC, CREATIVE, TRIPPY]
+    flavor: Lime static
+    shop: false
+    parents: [toxic_waste, plasma_og]
+    wild-biomes: []
+  golden_phoenix:
+    name: Golden Phoenix
+    type: HYBRID
+    color: '#FFD040'
+    leaf: '#3A8A2A'
+    pistil: '#FF2A8A'
+    shape: foxtail
+    exotic: phoenix
+    climate: tropical
+    potency: 34
+    effects: [SMOOTH_TALKER, FIREPROOF, LUCKY, EUPHORIA]
+    flavor: Mango flambe
+    shop: false
+    parents: [rainbow_runtz, hellfire_og]
+    wild-biomes: []
+  nebula_dream:
+    name: Nebula Dream
+    type: HYBRID
+    color: '#6A3AD8'
+    leaf: '#1A1A4A'
+    pistil: '#FFB4F0'
+    shape: classic
+    pattern: marble
+    accent: '#3AC8FF'
+    exotic: celestial
+    climate: mountain
+    potency: 35
+    effects: [VISIONS, FLOATY, LUCKY, SIXTH_SENSE]
+    flavor: Cosmic berry
+    shop: false
+    parents: [starfall_og, frozen_rainbow]
+    wild-biomes: []

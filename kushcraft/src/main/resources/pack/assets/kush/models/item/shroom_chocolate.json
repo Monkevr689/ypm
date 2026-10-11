@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/shroom_chocolate",
+  "layer1": "kush:item/shroom_chocolate_tint",
+  "layer2": "kush:item/shroom_chocolate_overlay"
+ }
+}
