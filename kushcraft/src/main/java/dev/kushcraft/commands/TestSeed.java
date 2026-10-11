@@ -32,11 +32,21 @@ final class TestSeed {
     private TestSeed() {
     }
 
-    static void run(KushCraft plugin, CommandSender sender) {
+    static void run(KushCraft plugin, CommandSender sender, boolean workerOnly) {
         World w = Bukkit.getWorlds().get(0);
         Location spawn = w.getSpawnLocation();
         int x = spawn.getBlockX() - 20, z = spawn.getBlockZ() - 20;
         int y = w.getHighestBlockYAt(x, z);
+        if (workerOnly) {
+            // one more Farmhand for the same made-up player (the delete-all-workers test), nothing else changes
+            var farm = plugin.workers().hireAt(new Location(w, x + 0.5, y + 1, z + 4.5), WorkerType.FARMHAND, KEEPER, 1);
+            plugin.workers().touch(farm, true);
+            boolean saved = plugin.persistence().flushNow();
+            String line = "SEED worker " + (saved ? "ready" : "FAILED") + ": a Farmhand for " + KEEPER;
+            plugin.getLogger().info(line);
+            sender.sendMessage(line);
+            return;
+        }
         PlayerRecord r = plugin.players().getOrCreate(KEEPER, "CI-keeper");
         var keeper = Bukkit.getOfflinePlayer(KEEPER);
         plugin.economy().set(keeper, 12_345, "seed");

@@ -210,7 +210,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 if (args.length > 1 && args[1].equalsIgnoreCase("seed")) {
-                    TestSeed.run(plugin, sender);
+                    TestSeed.run(plugin, sender, args.length > 2 && args[2].equalsIgnoreCase("worker"));
                     return true;
                 }
                 List<String> fails = new SelfTest(plugin).run();

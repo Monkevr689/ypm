@@ -119,8 +119,9 @@ jobs:
           echo "kush log" >&3
           sleep 2
           # admin: delete every worker in the world (a second seeded player has one): asks, then a checked backup, then gone
-          echo "kush selftest seed" >&3
-          for i in $(seq 1 30); do [ "$(grep -cE 'SEED (ready|FAILED)' server.log)" -ge 2 ] && break; sleep 1; done
+          echo "kush selftest seed worker" >&3
+          for i in $(seq 1 30); do grep -qE "SEED worker (ready|FAILED)" server.log && break; sleep 1; done
+          grep -q "SEED worker ready" server.log || { echo "::error::could not add a worker to delete"; exit 1; }
           echo "kush deleteworkers confirm" >&3
           sleep 1
           echo "kush deleteworkers" >&3
