@@ -64,8 +64,26 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             case "recipes", "recipe", "drugs", "catalog" -> open(sender, DrugsMenu::new);
             case "shop" -> open(sender, ShopMenu::new);
             case "market", "contracts" -> open(sender, dev.kushcraft.menus.MarketMenu::new);
+            case "home" -> open(sender, dev.kushcraft.menus.HomeMenu::new);
+            case "bazaar" -> open(sender, dev.kushcraft.menus.BazaarMenu::new);
+            case "swap", "tradewith" -> {
+                if (sender instanceof Player p && args.length > 1) {
+                    String problem = plugin.trades().request(p, Bukkit.getPlayerExact(args[1]));
+                    if (problem != null) {
+                        p.sendMessage(Text.msg("<red>" + problem));
+                    }
+                } else {
+                    open(sender, dev.kushcraft.menus.TradePickMenu::new);
+                }
+            }
             case "exchange", "trade" -> {
-                if (!plugin.exchange().enabled()) {
+                if (sender instanceof Player p && args.length > 1) {
+                    // /kush trade <player> = a player trade (the shelves of vanilla items have no argument)
+                    String problem = plugin.trades().request(p, Bukkit.getPlayerExact(args[1]));
+                    if (problem != null) {
+                        p.sendMessage(Text.msg("<red>" + problem));
+                    }
+                } else if (!plugin.exchange().enabled()) {
                     sender.sendMessage(Text.msg("<red>The exchange is turned off on this server."));
                 } else {
                     open(sender, TradeMenu::new);
@@ -390,7 +408,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         boolean admin = sender.hasPermission("kushcraft.admin");
         if (args.length == 1) {
             out.addAll(List.of("menu", "shop", "gear", "market", "drugs", "trade", "cartel", "top", "awards", "sell", "workers",
-                    "start", "pay", "guide", "pack", "balance", "strains", "help", "rankup", "playtime"));
+                    "start", "pay", "guide", "pack", "balance", "strains", "help", "rankup", "playtime", "home", "bazaar", "swap"));
             if (admin) {
                 out.addAll(List.of("admin", "give", "items", "money", "sales", "reload", "rank", "log", "backup", "backups",
                         "deleteworkers",
