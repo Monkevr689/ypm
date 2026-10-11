@@ -180,7 +180,8 @@ public final class Trades implements Listener {
     public void onDeath(PlayerDeathEvent e) {
         TradeSession s = of(e.getPlayer());
         if (s != null) {
-            s.cancel(e.getPlayer().getName() + " died.");
+            s.cancel(e.getPlayer().getName() + " died.", e.getPlayer().getUniqueId(),
+                    e.getKeepInventory() ? null : e.getDrops());
         }
     }
 

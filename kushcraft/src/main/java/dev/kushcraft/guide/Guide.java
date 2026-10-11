@@ -269,13 +269,18 @@ public final class Guide {
                 "<dark_green><bold>Trade</bold>\n\n<black>Spend it: lab ingredients, ores, food, wood,"
                         + " blocks, colours, decor, redstone, tools, mob drops, Nether.\n\n<dark_gray>Trade only"
                         + " sells - nothing can be sold back.\n" + run("/kush trade", "> Trade"),
+                "<dark_green><bold>Players</bold>\n\n<black>Trade safely:\n<gold>/trade \\<name></gold>\nBoth put items and money"
+                        + " on the table, both press Ready.\n\n<gold>/bazaar</gold> sells your goods to anyone,"
+                        + " even offline. " + Math.round((KushCraft.get() == null ? 0.08
+                        : KushCraft.get().getConfig().getDouble("bazaar.sale-tax", 0.08)) * 100) + "% tax.\n"
+                        + run("/bazaar", "> Bazaar"),
                 "<dark_green><bold>Cartels</bold>\n\n<black>A team. A shared <gold>bank</gold> (+5% of every"
                         + " sale), levels that pay every member more, and big <gold>shipments</gold> to fill"
                         + " together.\n" + run("/kush cartel", "> Cartel"),
                 "<dark_green><bold>Market</bold>\n\n<black>Shop > <gold>Market</gold>: contracts pay extra"
                         + " for big batches. Sell a mix - flooded products pay less.\n\n<red>Dying costs you "
                         + Math.round((KushCraft.get() == null ? 0.2
-                        : KushCraft.get().getConfig().getDouble("death.cash-lost", 0.2)) * 100)
+                        : KushCraft.get().getConfig().getDouble("pvp.death-cash-lost", 0.2)) * 100)
                         + "%</red> of your cash, so bank on selling, not fighting.",
                 "<dark_green><bold>Top Dealers</bold>\n\n<black>The players who sold the most get the titles:"
                         + "\n<dark_red>#1 Cartel Boss\n<red>#2 Kingpin\n<gold>#3 The Plug\n<dark_gray>top 5, 10, 25..."

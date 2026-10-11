@@ -480,7 +480,7 @@ final class SelfTest {
         UUID boss = UUID.randomUUID();
         var owner = Bukkit.getOfflinePlayer(boss);
         fake.add(boss);
-        eco.set(owner, 1000, "selftest");
+        eco.set(owner, 50_000, "selftest"); // 9.1 prices: seeds and wages cost a lot
         check(ws.enabled(), "workers are on");
         check(!ws.autoBuyAllowed() && !ws.autoBuy(boss), "9.0: workers don't buy their own supplies");
         // the rest of this test also covers auto-buy, for servers that switch it back on
@@ -517,7 +517,7 @@ final class SelfTest {
                 && boss.equals(again.owner()), "and plants it again");
         int fresh = count(farm.satchel(), ItemType.BUD_FRESH);
         check(fresh > 0, "the harvest is in the satchel (" + fresh + " buds)");
-        check(eco.balance(owner) < 1000 && farm.jobs() == 1, "the farmhand was paid");
+        check(eco.balance(owner) < 50_000 && farm.jobs() == 1, "the farmhand was paid");
         // seeds in the satchel go on the empty farmland
         ws.stash(farm, List.of(Items.create(ItemType.COCA_SEEDS, 2)));
         BlockKey empty = BlockKey.of(w.getBlockAt(x, y + 1, z + 2));
@@ -1361,7 +1361,7 @@ final class SelfTest {
                 && cfg.getDouble("shop.sell-multiplier") < 1, "9.1 is expensive, slow and pays less");
         check(Math.abs(plugin.shop().basePrice(ItemType.COCAINE) - cfg.getDouble("shop.sell.cocaine")
                 * cfg.getDouble("shop.sell-multiplier")) < 1e-9, "the dealer pays sell-multiplier of the sell price");
-        check(plugin.ranks().top() == 12 && plugin.ranks().get(12).cost() >= 20_000_000, "the ladder is steep");
+        check(plugin.ranks().top() == 12 && plugin.ranks().get(12).cost() >= 10_000_000, "the ladder is steep");
         // the street drugs
         var street = dev.kushcraft.catalog.Catalog.entries(dev.kushcraft.catalog.Catalog.Category.STREET);
         check(street.size() == 8, "8 street drugs, got " + street.size());

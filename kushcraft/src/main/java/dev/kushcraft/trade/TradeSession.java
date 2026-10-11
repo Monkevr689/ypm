@@ -351,6 +351,14 @@ public final class TradeSession {
 
     /** Ends the trade: everyone gets their own items back, the money never moved. */
     public void cancel(String reason) {
+        cancel(reason, null, null);
+    }
+
+    /**
+     * Same, but for a player who just died: their items go into the death drops (a death event clears the
+     * inventory after the handlers ran, so anything handed back to it would vanish). Null drops = give back normally.
+     */
+    public void cancel(String reason, UUID dying, List<ItemStack> deathDrops) {
         if (over) {
             return;
         }
@@ -359,7 +367,10 @@ public final class TradeSession {
             Player p = player(s);
             ItemStack[] mine = items(s);
             java.util.Arrays.fill(offer[s], null);
-            if (p != null) {
+            if (p != null && deathDrops != null && ids[s].equals(dying)) {
+                deathDrops.addAll(List.of(mine));
+                p.sendMessage(Text.msg("<yellow>Trade cancelled.</yellow> <gray>" + reason));
+            } else if (p != null) {
                 if (mine.length > 0) {
                     InventoryUtil.give(p, mine);
                 }

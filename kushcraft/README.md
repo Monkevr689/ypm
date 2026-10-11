@@ -1,10 +1,11 @@
-# KushCraft 9.0 – the drug economy for an anarchy server (Paper 26.3)
+# KushCraft 9.1 – the drug economy for an anarchy server (Paper 26.3)
 
-A **server-side only** Paper plugin for a drugs-themed anarchy PvP server. Players grow **102 strains**, cook **26 drugs** step by step, hire workers and climb a **12-rank ladder** that takes a full season. In one jar:
+A **server-side only** Paper plugin for a drugs-themed anarchy PvP server. Players grow **102 strains**, cook **34 drugs** step by step, hire workers, trade with each other and climb a **12-rank ladder** that takes months. In one jar:
 
 - strains with climates, custom plants that also **grow wild**, 34 effects, strain breeding with **Mythic** and **Exotic** strains;
 - **workers** (Farmhand, Dryer, Cook, Runner) limited by rank, who keep working at half speed while you're away;
-- cartels, a sales leaderboard, 52 achievements, an admin panel;
+- **player trading**: a safe two-sided trade window (`/trade`) and the **Bazaar** (`/bazaar`) where players list goods for each other;
+- cartels, a sales leaderboard, 52 achievements, an admin panel with **reset everyone** and **delete all workers**;
 - a living market where **money only comes from selling drugs**;
 - **season resets** with verified backups.
 
@@ -12,7 +13,7 @@ Everything players own is in a **database** (SQLite), saved every few ticks in o
 
 Players don't install any mods. The plugin builds its own resource pack (32px art, 3D plants and blocks, worker skins, animated Mythic and Exotic buds, menu art and recipe pictures) and every player gets it when they join.
 
-**Download:** [`release/KushCraft-9.0.0.jar`](release/KushCraft-9.0.0.jar). Drop it in `plugins/` (with Vault) and restart. Players get the textures automatically.
+**Download:** [`release/KushCraft-9.1.0.jar`](release/KushCraft-9.1.0.jar). Drop it in `plugins/` (with Vault) and restart. Players get the textures automatically.
 
 **For the server owner:**
 
@@ -32,21 +33,26 @@ Players don't install any mods. The plugin builds its own resource pack (32px ar
 
 ## The menu
 
-Open it with **`/kush`**, **Shift + F**, or the **KushCraft Menu** book. There are five panels. In the top bar next to them are the glowing **Next** button (your next step, see *Getting started*) and your money. Admins also get a red **Admin** button.
+Open it with **`/kush`**, **Shift + F**, or by right-clicking your **KushCraft Handbook**. It opens the **Home** menu: a dozen big buttons and nothing else.
 
-| Panel | What's there |
+| Button | What it does |
 |---|---|
-| **Shop** | seeds of every strain (page arrows; **Mythic seeds** on their own page), **Gear & Workers**, the **Market** (contracts and flooded products) and selling (click product, or **Sell all**) |
-| **Drugs** | every product in one row per kind; click one to see its recipe picture |
-| **Trade** | spend your money on 11 shelves: lab ingredients, ores, farming & food, wood, building blocks, colours, decoration, redstone, tools, mob drops, the Nether. **Buy only** |
-| **Cartel** | your cartel (bank, level, members), how cartels work, the cartel **shipment** and **Top Dealers** |
-| **Awards** | 52 achievements on two pages, greyed out until you unlock them |
+| **Sell all** | sells everything you carry that sells (it shows how much) |
+| **Shop** | seeds of every strain (**Mythic seeds** on their own page), **Gear & Workers**, the **Market** (contracts and flooded products) |
+| **Drugs** | every product, one row per kind (weed, psychedelics, uppers, downers, **street drugs**); click one to see its recipe picture. The button in the top bar swaps to gear and supplies |
+| **My workers** | your crew: supply them, collect, manage |
+| **Rank up** | what the next rank needs |
+| **Bazaar** / **Trade with a player** | see *Trading* below |
+| **Cartel** | your cartel (bank, level, members), the cartel **shipment** and **Top Dealers** |
+| **Handbook** / **Awards** / **Server guide** | the written guide with recipe pictures, 52 achievements, `/menu` |
 
-The **Drug Lab** block opens on **Cook**, with **Roll**, **Dry** and **Mix** tabs and an **Upgrade** button. Recipes you have everything for glow; a red line under a recipe says what's missing **and where to get it**.
+The Shop, Drugs, Trade (vanilla items, buy only), Cartel and Awards pages have a tab bar of their own; the wallet in their top corner brings you back to Home. Your next step is the glowing **Next** button.
+
+The **Drug Lab** block opens on **Cook** (35 recipes on four rows), with **Roll**, **Dry** and **Mix** tabs and an **Upgrade** button. Recipes you have everything for glow; a red line under a recipe says what's missing **and where to get it**.
 
 ## Getting started
 
-On their **first join of each season**, players get the menu book and a small starter kit (2 OG Kush seeds and 2 fertilizer). Once the resource pack is loaded, the server guide opens. It's also **`/menu`**, with pages for **Economy**, **Ranks**, **Rules** and **Community** (Discord and vote links). All its text is in `menus.yml`.
+**Everyone starts with the KushCraft Handbook** (right-click: the Home menu; sneak + right-click: read it). On their **first join of each season** they also get a small starter kit (2 OG Kush seeds and 2 fertilizer). Players who played before 9.1 get a Handbook on their next join. Once the resource pack is loaded, the server guide opens. It's also **`/menu`**, with pages for **Economy**, **Ranks**, **Rules** and **Community** (Discord and vote links). All its text is in `menus.yml`.
 
 In `/kush`, the glowing **Next** button always shows the next step:
 
@@ -64,11 +70,11 @@ In `/kush`, the glowing **Next** button always shows the next step:
 
 Everyone starts at **Fresh Meat** and climbs to **Drug Lord** (12 ranks). The next rank needs **all three** of:
 
-* **Money**, paid on rank-up. It roughly doubles each rank: $3,000 for rank 2, $10,000,000 for rank 12.
+* **Money**, paid on rank-up. It roughly doubles each rank: $4,500 for rank 2, $15,000,000 for rank 12.
 * **Active playtime** this season. AFK time doesn't count; only looking around, clicking, building and commands do.
 * **Real time** since the last rank-up: 12 hours early on, up to 14 days at the top.
 
-Ranks give **worker slots** (1 → 8) and a tag in the tab list. A dedicated player reaches the top in about a season, never in a weekend: see [`docs/PROGRESSION.md`](docs/PROGRESSION.md). Every number is in `config.yml` under `ranks.ladder`. The numbers there are a **proposal for you to adjust**.
+Ranks give **worker slots** (1 → 8) and a tag in the tab list. A dedicated grinder reaches the top in about six months, never in a weekend: see [`docs/PROGRESSION.md`](docs/PROGRESSION.md). Every number is in `config.yml` under `ranks.ladder`. The numbers there are a **proposal for you to adjust**.
 
 ## Textures for everyone
 
@@ -80,10 +86,10 @@ Shop > **Gear & Workers** has a hiring board. Buy a worker contract, then right-
 
 | Worker | Price | Pay | What they do |
 |---|---|---|---|
-| **Farmhand** | $60,000 | $10 a job | harvests your ripe plants around them and replants, plants seeds on empty farmland and Planters, fertilizes |
-| **Dryer** | $45,000 | $8 a job | hangs fresh buds on your Drug Lab's racks and takes them off dry |
-| **Cook** | $75,000 | $16 a batch | cooks **the drug you pick** at your Drug Lab, or rolls joints or blunts |
-| **Runner** | $55,000 | 15% of sales | sells everything your workers make (the money goes to your wallet) and carries things between your workers and chests |
+| **Farmhand** | $120,000 | $20 a job | harvests your ripe plants around them and replants, plants seeds on empty farmland and Planters, fertilizes |
+| **Dryer** | $90,000 | $16 a job | hangs fresh buds on your Drug Lab's racks and takes them off dry |
+| **Cook** | $150,000 | $32 a batch | cooks **the drug you pick** at your Drug Lab, or rolls joints or blunts |
+| **Runner** | $110,000 | 20% of sales | sells everything your workers make (the money goes to your wallet) and carries things between your workers and chests |
 
 * **Worker slots come from your rank:** 1 at Fresh Meat, up to 8 at Drug Lord. At most 6 workers (anyone's) stand in one chunk.
 * **You supply them.** Workers don't buy anything (`workers.auto-buy: false`). Put seeds, fertilizer, papers and ingredients in a chest near them, or press **Supply your crew** in `/kush workers`, which hands each worker what they use from your inventory. A worker without supplies, money for wages or room stops and says why.
@@ -92,7 +98,7 @@ Shop > **Gear & Workers** has a hiring board. Buy a worker contract, then right-
 
   Attacking workers (`pvp.worker-raids`) is **off** until you've reviewed it. When it's on, a knocked-out worker drops their satchel and sleeps for 30 minutes. Protected areas and your own cartel are respected.
 * **The work chain runs by itself:** your workers within 32 blocks of each other are a crew. The chain is Farmhand → Dryer (fresh buds) → Cook (dried buds) → Runner (joints, vape pens…), and each worker takes what they need from the others and from your chests, trapped chests and barrels.
-* **Right-click** a worker for their menu: their satchel (click to take, click your items to give), the chests they use, rename, pause, **train** ($50,000 / $125,000 for levels 2 and 3: more reach, less rest) and dismiss (you get the contract and satchel back).
+* **Right-click** a worker for their menu: their satchel (click to take, click your items to give), the chests they use, rename, pause, **train** ($100,000 / $250,000 for levels 2 and 3: more reach, less rest) and dismiss (you get the contract and satchel back).
 * `/kush workers` lists all of yours, with **Collect everything** and **Supply your crew**.
 
 ## Wild plants
@@ -145,7 +151,7 @@ Strains carry up to 4 of 27 strain effects, and the hard drugs have their own. *
 
 ## Drugs (Drug Lab > Cook)
 
-Recipes follow the real process **loosely**: many drugs take two or three cooks with an in-between product. They use game items and a made-up **Lab Solvent**, never real chemistry. 27 recipes, 15–60 seconds each. **Shift-click** cooks up to 4 batches.
+Recipes follow the real process **loosely**: many drugs take two or three cooks with an in-between product. They use game items and a made-up **Lab Solvent**, never real chemistry. 35 recipes, 15–60 seconds each (1.5x longer in a Drug Lab at 9.1 settings). **Shift-click** cooks up to 4 batches.
 
 **Weed is kept simple:** fresh bud → dried bud → joint, blunt (rolled) or **vape pen** (4 dried buds + solvent + 2 iron nuggets + a glass pane). Kief, hash, wax, moon rocks, canna butter, brownies and gummies are no longer made; old ones still work and still sell.
 
@@ -158,6 +164,7 @@ Recipes follow the real process **loosely**: many drugs take two or three cooks 
 | Lean | opium + honey → **cough syrup** → lean |
 | Ayahuasca | glow berries → DMT → **ayahuasca** (+ vines, water) |
 | The rest | shroom tea, **shroom chocolate**, mescaline, meth, **speed**, ecstasy, pixie dust, angel dust, ketamine, **xanny bars**, **moonshine**, **laughing gas** |
+| **Street drugs** (new in 9.1) | **Spice** (kelp, fern), **Bath Salts** (quartz, glowstone), **Poppers** (sweet berries), **Absinthe** (fern, sugar), **Moonflower Tea** (lily of the valley), **Kratom Tea** (jungle leaves), **Study Pills** (gold nuggets), **Poppy Tea** (poppy pods) |
 
 **Morphine base** comes straight from poppy seeds: put **4 Poppy Seeds** in a crafting table. Harvested poppies drop 2–4 seeds (one to plant again, the rest for morphine); opium is still made from poppy pods for cough syrup and lean. Every step is worth more than what went in, and the in-between products sell too. Water bottles come back empty.
 
@@ -165,7 +172,7 @@ Recipes follow the real process **loosely**: many drugs take two or three cooks 
 
 ## Cartels
 
-A cartel is a **team**. Start one for $12,500 (Cartel panel) and invite players from the members list, or `/kush cartel invite <player>`.
+A cartel is a **team**. Start one for $25,000 (Cartel panel) and invite players from the members list, or `/kush cartel invite <player>`.
 
 * **Bank:** every sale a member makes adds **5%** on top into the bank (nobody pays it). Members put money in; the boss takes it out.
 * **Levels:** the boss spends the bank on levels. Each one gives **every member better prices** and more member slots:
@@ -173,10 +180,10 @@ A cartel is a **team**. Start one for $12,500 (Cartel panel) and invite players 
 | Level | Cost | Members | Better prices |
 |---|---|---|---|
 | Crew | – | 4 | – |
-| Gang | $50,000 | 6 | +4% |
-| Syndicate | $200,000 | 8 | +8% |
-| Cartel | $600,000 | 12 | +12% |
-| Empire | $1,750,000 | 16 | +16% |
+| Gang | $100,000 | 6 | +4% |
+| Syndicate | $400,000 | 8 | +8% |
+| Cartel | $1,200,000 | 12 | +12% |
+| Empire | $3,500,000 | 16 | +16% |
 
 * **Shipments:** each cartel gets a big order, e.g. 75 cocaine within 24 hours. Every member can deliver part of it and gets paid for it; when it's full the bank gets a big bonus.
 * **Top Dealers:** the best players and the best cartels.
@@ -199,17 +206,29 @@ Titles reset with the season (`dealer-titles` in `config.yml`). The tab list sho
 
 * **KushCraft owns the money.** Balances are whole cents in the database, and every change is in the transaction log (`/kush log [player]`). With **Vault** installed, KushCraft *is* the Vault economy, so other plugins pay into the same wallets (logged as VAULT_IN / VAULT_OUT). `/balance`, `/pay` and `/baltop` are KushCraft's; turn EssentialsX's economy commands off (see *Installing*).
 * **Money only comes from selling drugs:** the Shop, contracts, cartel shipments and your Runners. Seeds, gear and vanilla items don't sell. Jobs and award cash are off (`jobs.enabled`, `awards.cash-rewards`).
-* **Everything you buy is expensive** (about 5× 8.0):
-  * seeds about $100–1,900 by strain;
-  * papers 8 for $40, solvent 8 for $90;
-  * a Drug Lab $3,250 (or craft one);
-  * Trade: a diamond $9,750.
+* **Everything you buy is expensive** (about 10× 8.0):
+  * seeds about $200–3,800 by strain (Mythic about $36,000);
+  * papers 8 for $80, solvent 8 for $180;
+  * a Drug Lab $6,500 (or craft one);
+  * Trade: a diamond $19,500.
 
-  What the dealer **pays** for product is unchanged: dried bud $20, a joint $32, a vape pen $150, cocaine $110, heroin $150, DMT $160. Rarer and stronger strains sell for more (Mythic 4×, Exotic 7×). The full table is in [`docs/PROGRESSION.md`](docs/PROGRESSION.md).
-* **The market fights back:** every item you sell lowers the price of the next one, and prices recover over time. Sell a mix.
+  And **harder to get**: the dealer pays 85% of the sell prices (dried bud $20, a joint $32, a vape pen $150, cocaine $110, heroin $150, DMT $160 *before* the 85%), plants take 35 minutes instead of 20, the Drug Lab is 1.5× slower, wild seeds are rarer, and you start with $100. Rarer and stronger strains sell for more (Mythic 4×, Exotic 7×). The full tables are in [`docs/PROGRESSION.md`](docs/PROGRESSION.md); everything is in `config.yml`.
+* **The market fights back:** every item you sell lowers the price of the next one by 1% (down to 30%), and prices recover slowly. Sell a mix.
 * **Trade only sells**, and there's no OP PvP gear and nothing from the End.
 * **Dying costs 20% of the cash in your wallet** (`pvp.death-cash-lost`). Nobody gets it, so farming your own alt doesn't pay. Otherwise PvP is plain vanilla: no bounties.
-* **Rate limits:** one `/pay` a second, one hire every 2 seconds, Shop buys 150 ms apart, rank-up clicks guarded.
+* **Rate limits:** one `/pay` a second, one hire every 2 seconds, Shop buys 150 ms apart, rank-up clicks guarded, trade requests 2 s apart.
+
+## Trading
+
+* **`/trade <player>`** (or Home > *Trade with a player*): they get a request with an **[Accept]** button. Both of you put **items** (click an item in your inventory; right-click puts one) and **money** (the **+** button) on the table and press **Ready**. The swap is one step: you can't be left holding nothing.
+  * Any change on either side takes both Ready marks away and locks Ready for 3 seconds, so nobody can swap the offer at the last moment.
+  * Closing the window, leaving, dying or 3 idle minutes cancel the trade and everyone gets their own things back.
+  * 2% of the money in a trade is destroyed (`trade.money-fee`); items are free.
+  * Every trade is in `/kush log`.
+* **`/bazaar`** (or Home > *Bazaar*): a shop run by the players. **List an item**, click a stack in your inventory and type the price (`5000`, `1.5k`, `2m`). Anyone can buy it, online or not: you get the money minus **8%** tax (`bazaar.sale-tax`) even while you're offline.
+  * The listed items are kept safe by the server until they sell, you take them back, or they run out after 3 days.
+  * You can have 2 + your rank number listings at once.
+  * Buying takes two clicks, so a mis-click costs nothing.
 
 ## Seasons, backups and the log
 
@@ -239,26 +258,32 @@ There are 52 awards: grow in every climate, pick a wild plant, cook every recipe
    * set `disabled-commands: [balance, bal, money, pay, baltop, balancetop, eco, sell, worth, setworth]`;
    * keep them out of `overridden-commands`.
 
-   The start-up log says *"Commands: /menu, /rankup, /balance, /pay and /baltop are KushCraft's"* when it's right. See [`docs/STRUCTURE.md`](docs/STRUCTURE.md).
+   The start-up log says *"Commands: /menu, /rankup, /balance, /pay, /baltop, /trade and /bazaar are KushCraft's"* when it's right. See [`docs/STRUCTURE.md`](docs/STRUCTURE.md).
 4. Edit `menus.yml` (rules, Discord and vote links) and, if you like, the rank ladder, then `/kush reload`.
+
+**Updating from 9.0:** replace the jar and restart.
+
+* `config.yml` upgrades itself to version 14: the old file is kept as `config-old-v13.yml`, and the 9.1 prices, ladder, growth times, market and the new `trade` and `bazaar` sections come in. Your own switches are carried over (resource pack link, which systems are on, dealer titles, starter kit); **growth times, wild chances, drying and lab speed are the 9.1 ones**.
+* The database moves to schema 2 by itself (the Bazaar's table). Players, workers, plants and cartels are exactly as they were. CI starts a real 9.0.0 server and does this upgrade on every change.
+* Players who already played get a Handbook on their next join.
 
 **Updating from 8.0:** replace the jar and restart.
 
-* `config.yml` upgrades itself to version 13:
-  * the old file is kept as `config-old-v11.yml`;
-  * the 9.0 prices, the ladder and the new sections come in;
-  * your own settings are carried over: growth, effects, resource pack, dealer titles, death cash loss, give-guide.
+* `config.yml` is replaced by the 9.1 one (version 14): the old file is kept as `config-old-v11.yml`, and your own settings are carried over: effects, resource pack, dealer titles, death cash loss, give-guide.
 * Your 8.0 data files are imported into the database once: balances, sales, workers, plants, Drug Labs, cartels, awards and the market. They are then moved to `legacy-yaml/`.
 * For a fresh start after that, run `/kush reset`.
 
 ## Admin panel
 
-Admins (op or `kushcraft.admin`) get a red **Admin** button in the menu's top bar (or `/kush admin`):
+Admins (op or `kushcraft.admin`) get a red **Admin** button on the Home menu (or `/kush admin`):
 
 * **Players & items:** give any item, seeds or buds of any strain (bred ones too), manage players (add or take money, set lifetime sales, starter kit, sober up, teleport), see every worker, level up, fund or disband cartels.
 * **Around you:** grow every plant within 16 blocks, finish every Drug Lab (cooking and drying), sober up, give yourself the starter kit.
 * **Market:** new hot item, reset prices, new contracts, start or stop a market boom, new cartel shipments.
-* **Server:** reload the config, resend the pack to everyone, turn workers on or off, server stats.
+* **Server:**
+  * reload the config, resend the pack to everyone, turn workers on or off, server stats;
+  * **Reset everyone** (needs `kushcraft.reset`): pick money & ranks, all KushCraft progress, or everything. The server saves, makes a backup and **checks it**, shows it in chat with a code, and nothing happens until you type the code. Same as `/kush reset`;
+  * **Delete all workers**: removes every worker in the world and their satchels, for every player. Click twice; a checked backup is made first. Each owner gets a line in the log. Same as `/kush deleteworkers`, then `/kush deleteworkers confirm`.
 
 ## Commands
 
@@ -267,7 +292,9 @@ Admins (op or `kushcraft.admin`) get a red **Admin** button in the menu's top ba
 | `/menu` | everyone | the server guide: Economy, Ranks, Rules, Community |
 | `/rankup` | everyone | your rank, what the next one needs, rank up |
 | `/balance` (`/bal`, `/money`), `/pay <player> <amount>`, `/baltop` | everyone | money |
-| `/kush` (`/k`) | `kushcraft.use` | the KushCraft menu |
+| `/trade [player]`, `/trade accept [player]`, `/trade decline` | everyone | trade items and money with a player |
+| `/bazaar` | everyone | buy from other players, list your goods |
+| `/kush` (`/k`) | `kushcraft.use` | the Home menu |
 | `/kush shop` / `gear` / `market` / `drugs` / `trade` / `cartel` / `top` / `awards` | `kushcraft.use` | open a panel |
 | `/kush start` | `kushcraft.use` | getting started: your next steps |
 | `/kush sell` | `kushcraft.use` | sell all your product |
@@ -282,6 +309,7 @@ Admins (op or `kushcraft.admin`) get a red **Admin** button in the menu's top ba
 | `/kush log [player] [page]` | `kushcraft.admin` | the transaction log |
 | `/kush backup` / `backups` / `db` | `kushcraft.admin` | backups and the database |
 | `/kush reset [economy\|kushcraft\|everything]`, `/kush reset confirm <code>` | `kushcraft.reset` | new season (backup first) |
+| `/kush deleteworkers`, then `/kush deleteworkers confirm` | `kushcraft.admin` | delete every worker in the world (backup first) |
 | `/kush reload` | `kushcraft.admin` | reload the config, menus and strains |
 | `/kush selftest` / `selftest live` / `selftest seed` | console | the built-in tests (test servers only) |
 
@@ -298,15 +326,15 @@ python3 tools/make_pack_zip.py    # release/KushCraft-pack-<version>.zip (url: a
 
 Always build from clean: old files left in `target/` would end up in the jar's pack. A released `KushCraft-pack-<version>.zip` must never change afterwards, because servers running that version download it.
 
-GitHub Actions builds against the real Paper 26.3 API and boots a real Paper 26.3 server with Vault five times:
+GitHub Actions builds against the real Paper 26.3 API and boots a real Paper 26.3 server with Vault several times:
 
 1. **A fresh install.** It runs:
-   * `/kush selftest` (more than 26,000 checks, including atomic money and a rolled-back failing save);
+   * `/kush selftest` (more than 26,000 checks, including atomic money, a rolled-back failing save, player-trade money, the whole Bazaar and the new drugs);
    * `/kush selftest live` (four workers work a farm on the server clock with supplies from a chest; the worker tick has to stay under 1.5 ms on average);
-   * the Vault bridge, a verified backup, and a full **season reset** of a seeded player with money, a rank, a worker, a plant and a cartel.
-
-   It checks the database after the wipe and the backups before it.
+   * the Vault bridge, a verified backup, and a full **season reset** of a seeded player with money, a rank, a worker, a plant and a cartel. It checks the database after the wipe and the backups before it;
+   * **delete all workers** (the confirm flow, the backup before it, the worker gone).
 2. **A restart:** the new season is kept.
 3. **An upgrade from 8.0:** the YAML data files and the old config are imported and checked row by row.
 4. **An 8.1 config upgrade.**
 5. **The built-in pack server.**
+6. **An upgrade from a real 9.0.0 server:** the released 9.0.0 jar makes the data, this build starts on it, and the config, database schema and every row are checked.

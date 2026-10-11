@@ -1,4 +1,4 @@
-# KushCraft 9.0 – dupe, exploit and launch testing checklist
+# KushCraft 9.1 – dupe, exploit and launch testing checklist
 
 Work through this on a **copy of the server** (same plugins, same configs, a copy of the world) before the relaunch, with two or three people. Each test says what to do and what must happen. Tick it off, or write down what happened instead.
 
@@ -20,7 +20,7 @@ Each push builds the jar and starts a real Paper 26.3 server with Vault (`.githu
   - the rank ladder: money, playtime, wait, and no double rank-up from two clicks;
   - worker slots per rank, raids (when on), away catch-up, and the guide menu.
 - [x] passes `/kush selftest live`: four workers really work a small farm on the server clock with nobody online. They take seeds, papers and fertilizer from a chest and never buy anything. The worker tick has to average under 1.5 ms.
-- [x] checks that `/menu`, `/rankup`, `/balance`, `/pay` and `/baltop` belong to KushCraft and that KushCraft is the Vault economy.
+- [x] checks that `/menu`, `/rankup`, `/balance`, `/pay`, `/baltop`, `/trade` and `/bazaar` belong to KushCraft and that KushCraft is the Vault economy.
 - [x] runs `/kush backup`, which must say "verified".
 - [x] runs a season reset with the **kushcraft** scope on a made-up player who has:
   - $12,345, rank 3, 2 h of playtime and $5,000 of sales;
@@ -32,15 +32,23 @@ Each push builds the jar and starts a real Paper 26.3 server with Vault (`.githu
   - the live database has that player at $250, rank 1, 0 playtime and 0 sales;
   - no workers, plants, Drug Labs, cartels or awards are left;
   - there is one RESET row in the log and the season is 2.
+- [x] deletes all workers (`/kush deleteworkers`): the first command only asks, the confirm makes a checked backup and
+  removes the worker; the backup still holds it and the deletion is in the owner's log.
 - [x] restarts the server: season 2 is still season 2 and the self test passes again.
+- [x] upgrades a **real 9.0.0 server** (the released 9.0.0 jar makes the data, then this build starts on it): the config
+  goes to version 14 (the old one kept), the database to schema 2, and the player, worker, plant and cartel are
+  exactly as they were. The self test refuses to delete real workers there.
 - [x] upgrades an 8.0 server, with its YAML files and old config:
   - balances, sales, the auto-buy switch, the cartel bank, plants, awards and the market are imported;
   - the old Supplier is refunded and the refund is logged;
   - the old files are moved to `legacy-yaml/`;
   - the config is upgraded with the old one kept, and the new prices are in.
 - [x] upgrades an 8.1 config: add-on settings are removed and the 8.1 starter kit is fixed.
+- [x] the self test also covers (no players needed): player-trade money (a fee is destroyed, a trade nobody can afford
+  changes nothing), the whole Bazaar (listing limits and prices, buying, taxes, refusals that change nothing, taking
+  back, expiry, the database round trip with a custom item), the eight street drugs and the 9.1 config.
 
-What CI **can't** check: anything that needs a player clicking, a real crash in the middle of a save, real lag with 100 players, or other plugins (EssentialsX, protection, anti-cheat) running next to KushCraft.
+What CI **can't** check: anything that needs a player clicking (the trade window, the Bazaar menu, the new Home menu), a real crash in the middle of a save, real lag with 100 players, or other plugins (EssentialsX, protection, anti-cheat) running next to KushCraft. Parts J-M below are those tests.
 
 ---
 
@@ -162,3 +170,57 @@ After each restart, run `/kush backup`: it runs SQLite's integrity check and mus
 - [ ] With 20+ workers loaded, the worker tick shown in `/kush db` stays low (the live test measures about 0.2 ms on average). `workers.tick-budget-ms` (5) caps it: past the budget, the rest wait until the next tick.
 - [ ] `/kush backup` on a large database causes at most a short pause (it is a database copy, see `STRUCTURE.md` → *Load notes*). Make backups at quiet times; the reset makes its own.
 - [ ] Watch `/tps` / spark for KushCraft after a restart with many owners offline: the away catch-up is spread out over time (`workers.away.budget-ms`, 3 ms per tick).
+
+## J. Player trading (`/trade <player>`) – needs two players
+
+| # | Test | Must happen |
+|---|---|---|
+| J1 | `/trade <friend>`, they click **[Accept]** in chat (or type `/trade accept`) | Both get the trade window. The request runs out after 60 s. |
+| J2 | Put a stack on the table (click it in your inventory; right-click puts one) | It leaves your inventory and shows on your side, and on theirs. Click it on the table: it goes back. |
+| J3 | Both press **Ready**, with items and money on both sides | Items and money swap in one go. 2% of the money is a fee (nobody gets it). Both have a TRADE line in `/kush log`. |
+| J4 | You are Ready, then they change their offer (add or remove anything) | **Both** Ready marks go away and Ready is locked for 3 s: nobody can swap the offer at the last moment. |
+| J5 | Offer all your money, spend it elsewhere while the window is open (e.g. buy something with a macro), then both press Ready | "no longer has the money", nothing moves. Offering more than you have is capped at your balance. |
+| J6 | Either of you has a full inventory | "doesn't have room", nothing moves, Ready is reset. |
+| J7 | Close the window with Esc | The trade is cancelled for both and everyone gets their own items back. |
+| J8 | Log off, die, or get kicked during a trade | Cancelled, items back. A player who dies has their items on the table dropped with the rest of their death loot (or kept, with keepInventory). |
+| J9 | Stop the server (`/stop`) with a trade open | Everyone's items are back in their inventory after the restart. |
+| J10 | `kill -9` the server with a trade open | **Items that were on the table are lost** (they are only in memory). They are never duplicated. Say so in your rules if you want. |
+| J11 | Spam `/trade <friend>` | Once every 2 s; the request is shown once. |
+| J12 | Trade while a third player stands next to you | They can't see or touch it. |
+
+## K. The Bazaar (`/bazaar`) – needs two players
+
+| # | Test | Must happen |
+|---|---|---|
+| K1 | **List an item**, click an item, type `5000` (also `1.5k`, `2m`) | The stack leaves your inventory and shows in the Bazaar and in *My listings*. |
+| K2 | List more stacks than your rank allows (2 + your rank number) | Refused with the number. |
+| K3 | A friend clicks your listing once | "Click again within 6 seconds to buy"; nothing is bought yet. Click again: they get the item, you get the price minus **8%** (the tax is destroyed). |
+| K4 | Two friends click Buy on the same listing at the same moment | One gets it; the other is told it's gone. |
+| K5 | A friend with a full inventory or too little money | Refused, nothing moves. |
+| K6 | Buy your own listing | Refused. Clicking it takes it back instead. |
+| K7 | Log off after listing; a friend buys while you're away | You get the money; `/kush log` shows the sale. |
+| K8 | Let a listing run out (`bazaar.listing-days`, try `1`) | It shows as *ran out*; the seller takes it back from *My listings*. It can't be bought. |
+| K9 | Crash (`kill -9`) right after listing or buying | The item is in the Bazaar **or** in your inventory, never both (the same save order as selling). |
+| K10 | List a Mythic strain item, a named item, a shulker box with items | It comes back exactly as listed. |
+| K11 | A `/kush reset everything` | The Bazaar is emptied with the inventories (the other two scopes keep it). |
+
+## L. Admin panel (admins only)
+
+| # | Test | Must happen |
+|---|---|---|
+| L1 | **Admin panel > Reset everyone** > pick a scope | The server saves, makes a backup and checks it, shows it in chat with a **code**. Nothing is wiped yet. |
+| L2 | Type a wrong code, then wait 5 minutes and type the right one | Refused both times. |
+| L3 | Type the right code in time | The reset runs (same as `/kush reset`): final backup, wipe, everyone gets the guide, kit and a fresh Handbook again. |
+| L4 | **Delete all workers**: click once | "Click again within 10 seconds". Nothing is deleted. |
+| L5 | Click twice | A checked backup, then every worker (and satchel) is gone, mannequins too. Each owner has a line in `/kush log`. |
+| L6 | Someone without `kushcraft.reset` opens the Reset menu | They can't start anything. |
+| L7 | `/kush deleteworkers` in the console | It asks; `/kush deleteworkers confirm` within a minute does it (backup first). |
+
+## M. First join and menus – needs a fresh player
+
+- [ ] A brand-new player gets the **KushCraft Handbook** and the starter kit; the guide menu opens after the resource pack prompt.
+- [ ] Right-click the Handbook: the **Home** menu. Sneak + right-click: the written handbook.
+- [ ] `/kush` and Shift+F open the Home menu, with Sell all, Shop, Drugs, My workers, Rank up, Bazaar, Trade, Cartel, Handbook, Awards and Server guide.
+- [ ] The wallet in the corner of the Shop, Drugs, Trade, Cartel and Awards pages brings you back to Home.
+- [ ] A player who already played on 9.0 gets a Handbook on their next join (once), unless they already carry one.
+- [ ] The Cook page shows all 35 recipes on 4 rows; the Drugs page has a **Street drugs** row and a button for *Gear & supplies*.

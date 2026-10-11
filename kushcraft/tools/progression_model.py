@@ -19,26 +19,32 @@ cfg = yaml.safe_load(open(CONFIG))
 ladder = cfg['ranks']['ladder']
 gap_h = cfg['ranks']['min-gap-minutes'] / 60
 
+# 9.1 is harder than 9.0: the dealer pays 85% (shop.sell-multiplier), plants grow 75% slower
+# (35 min instead of 20) and the Drug Lab cooks 1.5x slower, so a player's output per active
+# hour falls to about 0.64 of the 9.0 figures below.
+HARDER = 0.85 * 0.75
+
 # gross income per ACTIVE hour, by how far along the player is (active hours played so far)
-# (manual farm -> lab drugs -> workers; at 9.0 prices, market saturation included)
+# (manual farm -> lab drugs -> workers; at 9.0 output, market saturation included)
 def income(h, kind):
     base = [(0, 1500), (3, 4000), (10, 8000), (25, 15000), (60, 28000), (120, 42000), (200, 55000)]
     v = base[0][1]
     for at, val in base:
         if h >= at:
             v = val
-    return v * (1.25 if kind == 'grinder' else 1.0)
+    return v * HARDER * (1.25 if kind == 'grinder' else 1.0)
 
 # share of income left for rank-ups after seeds, gear, workers, training, wages and deaths
-SAVE = 0.55
-# workers bought when a slot opens (60k each on average) come out of savings first
-WORKER_COST = 60000
+# (9.1: everything you buy costs about twice as much, wages too, so less is left)
+SAVE = 0.5
+# workers bought when a slot opens (120k each on average) come out of savings first
+WORKER_COST = 120000
 
 def simulate(hours_per_day, kind):
     rows = []
     t_play = 0.0  # active hours
     day = 0.0     # calendar days
-    money = 250.0
+    money = float(cfg['economy']['starting-balance'])
     last_rank_day = 0.0
     slots_used = 0
     step = 0.25

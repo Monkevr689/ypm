@@ -467,7 +467,6 @@ jobs:
           fail() { echo "::error::$1"; exit 1; }
           # a clean data folder, and the released 9.0.0 jar instead of this build
           mv plugins/KushCraft plugins/KushCraft-before90 && mkdir -p plugins/KushCraft
-          cp plugins/KushCraft-before90/strains.yml plugins/KushCraft/ || true
           mkdir -p ../current-jar && mv plugins/KushCraft-9.1.*.jar ../current-jar/ || mv plugins/KushCraft-*.jar ../current-jar/
           cp ../kushcraft/release/KushCraft-9.0.0.jar plugins/
           rm -f console && mkfifo console

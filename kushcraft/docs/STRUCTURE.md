@@ -1,4 +1,4 @@
-# KushCraft 9.0 – structure map
+# KushCraft 9.1 – structure map
 
 What lives where, how data moves, which commands KushCraft owns, what to watch under load, and the code that could go (not deleted: **waiting for your OK**).
 
@@ -10,7 +10,7 @@ What lives where, how data moves, which commands KushCraft owns, what to watch u
         ▼
  Persistence: every 5 ticks, a snapshot of what changed ───────► "KushCraft-DB" thread
         (players, ledger, workers, plants, labs, cartels,          one SQLite transaction
-         awards, market/exchange docs)                             (all or nothing)
+         awards, market/exchange docs, Bazaar listings)            (all or nothing)
         ▼
  plugins/KushCraft/kushcraft.db  (SQLite, WAL)  ── /kush backup ──► backups/<stamp>-<reason>/
 ```
@@ -32,7 +32,8 @@ What lives where, how data moves, which commands KushCraft owns, what to watch u
 |---|---|---|
 | *(root)* | `KushCraft`, `ConfigMigration`, `LegacyImport`, `Keys` | Start-up and wiring, `reload()`, config upgrades (version 13; older configs are kept as `config-old-v<N>.yml`), the one-time 8.0 YAML → database import, item/data keys |
 | `storage` | `Database`, `Persistence`, `PlayerStore`, `PlayerRecord`, `ItemCodec`, `Docs`, `Backups` | **New in 9.0.** SQLite schema and the DB thread, the snapshot/flush loop and save ordering, per-player rows, item serialisation, small YAML documents (market, exchange), verified backups |
-| `economy` | `Economy`, `Tx`, `Ledger`, `VaultBridge`, `Market`, `Shop`, `Exchange` | The wallet (cents, refusals, transfers), the transaction types, the log (per-minute totals for frequent events), the Vault economy provider, market demand, the Shop, the Trade shelves |
+| `economy` | `Economy`, `Tx`, `Ledger`, `VaultBridge`, `Market`, `Shop`, `Exchange` | The wallet (cents, refusals, transfers, **`exchange` for player trades and `sale` for Bazaar sales**: both sides in one step), the transaction types, the log (per-minute totals for frequent events), the Vault economy provider, market demand, the Shop, the Trade shelves |
+| `trade` | `Trades`, `TradeSession`, `Bazaar` | **New in 9.1.** `/trade`: requests and one trade at a time per player, the table, Ready and the swap, every way a trade is cancelled. `Bazaar`: listings kept in the database, buying, taking back, expiry, tax |
 | `ranks` | `RankLadder`, `Playtime`, `DealerTitles` | **New:** the 12-rank ladder (money + active playtime + wait), AFK-aware playtime. `DealerTitles` is 8.0's sales leaderboard titles, renamed |
 | `workers` | `Workers`, `Worker`, `WorkerType` | Hiring (rank slots, chunk cap), the work AI, satchels, chests, wages, Runner sales, **away catch-up**, raid hooks, the tick budget |
 | `plants` | `PlantManager`, `Plant`, `WildPlants` | Growth (with away catch-up), harvests, wild plants |
@@ -46,7 +47,7 @@ What lives where, how data moves, which commands KushCraft owns, what to watch u
 | `jobs` | `Jobs`, `PlacedBlocks` | Paid vanilla work, **off** (`jobs.enabled: false`) |
 | `pvp` | `WorkerRaids` | **New, off** (`pvp.worker-raids.enabled: false`): attacking workers. No bounties: PvP is plain vanilla |
 | `reset` | `SeasonReset` | **New:** `/kush reset` with a verified backup, a confirm code and a one-transaction wipe |
-| `menus` | 36 files | All GUIs. **New:** `InfoMenu` (`/menu` guide: Economy, Ranks, Rules, Community), `RanksMenu` (`/rankup`), `MenuTexts` (reads `menus.yml`) |
+| `menus` | 41 files | All GUIs. **9.0:** `InfoMenu` (`/menu` guide: Economy, Ranks, Rules, Community), `RanksMenu` (`/rankup`), `MenuTexts` (reads `menus.yml`). **9.1:** `HomeMenu` (what `/kush`, Shift+F and the Handbook open), `TradeWindow`, `TradePickMenu`, `BazaarMenu`, `AdminResetMenu` |
 | `listeners` | `PlayerListener`, `Onboarding`, `InteractListener`, `MachineListener`, `PlantListener`, `WorldListener` | Join/quit/death, **first join each season** (kit + guide after the resource pack prompt), block and item events |
 | `commands` | `KushCommand`, `ServerCommands`, `AdminCommands`, `SelfTest`, `LiveTest`, `TestSeed` | `/kush …`, the server commands (`/menu`, `/rankup`, `/balance`, `/pay`, `/baltop`), admin commands (rank, playtime, log, backup, db), the tests CI runs |
 | `pack` | `ResourcePackManager` | Builds and sends the resource pack |
@@ -65,7 +66,7 @@ What lives where, how data moves, which commands KushCraft owns, what to watch u
 
 ### Database tables
 
-`players` (balance in cents, sales, rank, ranked_at, playtime, flags, season), `ledger` (transaction log), `workers` (with satchel), `plants`, `machines`, `cartels` (bank column + data), `awards`, `docs` (market, exchange), `cleanup` (Lab blocks to clear in unloaded chunks after a reset), `meta` (schema, season, last reset).
+`players` (balance in cents, sales, rank, ranked_at, playtime, flags, season), `ledger` (transaction log), `workers` (with satchel), `plants`, `machines`, `cartels` (bank column + data), `awards`, `docs` (market, exchange), `cleanup` (Lab blocks to clear in unloaded chunks after a reset), `meta` (schema, season, last reset), and since schema 2 (9.1) `listings` (the Bazaar: the item is stored here until it is sold, taken back or expired). A 9.0 database moves to schema 2 by itself on the first start (CI tests this with the released 9.0.0 jar).
 
 ## 3. Built on vs replaced
 
@@ -92,6 +93,8 @@ What lives where, how data moves, which commands KushCraft owns, what to watch u
 | Starter steps only | Plus the `/menu` guide, opened on the first join of each season |
 | Nothing | Season reset, backups, rate limits, raid module (off) |
 
+**Added in 9.1:** player trading, the Bazaar, eight street drugs, the Home menu and the Handbook for everyone, two admin tools (reset everyone, delete all workers), and a harder economy (see `PROGRESSION.md`).
+
 **Removed in this branch** (at your request): SMPSuite (skills, gems, teams, voice groups) and KushCraft 8.1 "add-on mode". `release/KushCraft-8.1.0.jar` was replaced by `KushCraft-9.0.0.jar`; the released pack zips are untouched.
 
 ## 4. Commands and collisions
@@ -106,6 +109,10 @@ KushCraft registers:
 | `/balance` | `/bal`, `/money` | everyone |
 | `/pay` | | everyone (1 per second) |
 | `/baltop` | `/balancetop` | everyone |
+| `/trade [player]` | | everyone: trade items and money with a player (`/trade accept`, `/trade decline`) |
+| `/bazaar` | | everyone: the player listings |
+
+**Other plugins that use `/trade` or `/bazaar`** (trade plugins, auction houses) would take the name from KushCraft or the other way round. The start-up log lists which plugin really answers each command: if another plugin has `/trade`, either remove it or tell players to use `/kush` > Trade with a player (the Home menu button).
 
 **Collisions with EssentialsX** (`/balance`, `/bal`, `/money`, `/pay`, `/baltop`, `/balancetop`, `/eco`, `/sell`, `/worth`). **KushCraft should win all of them**, because KushCraft owns the money. If EssentialsX's versions ran, they would read and change EssentialsX's own wallet, a second currency that is invisible to KushCraft and its log.
 
@@ -143,6 +150,8 @@ KushCraft registers:
 | L8 | **`/baltop`** sorts all player rows each time. | Fine up to tens of thousands of rows. *Proposed fix if needed:* cache for 30 s. |
 | L9 | **Log size:** frequent events are one row per player per minute; rows older than 180 days are removed. | Done (`storage.log-days`). |
 | L10 | **All players are in memory** (about 200 bytes each). | Fine. |
+| L11 | **Bazaar** listings are all in memory and written with the other changes (an item is a few hundred bytes). | Fine for thousands of listings. A listing is checked and sold on the server thread in one go; the page you see is built from memory, so browsing costs no database work. |
+| L12 | **Trades:** each open trade ticks its window once a second. | Negligible; idle trades cancel themselves after 3 minutes. |
 
 ## 6. Dead code – waiting for your OK (nothing below has been deleted)
 
@@ -182,3 +191,4 @@ KushCraft registers:
 | `StarterMenu` (the glowing **Next** steps) | `menus/StarterMenu.java`, `awards/Starter.java` | Overlaps the new `/menu` guide but is hands-on (what to do next). Keep both, or drop it and point **Next** at `/menu`. |
 | **Dealer title bonus** (+15% for #1 … +2% for top 25) | `dealer-titles` | Not dead, but a **balance question**: it compounds with the rank ladder (the richest seller earns 15% more, so gets richer faster). Proposal: bonuses to 0 and keep the titles as bragging rights. A config change, so it's in your hands. |
 | Duplicate sell-price code | `Selling.value` and `Workers.sellAll` | Same maths twice. Merge into one `Shop` method when next touched. |
+| `TabMenu.LAST` (the tab a player used last) | `menus/TabMenu.java` | 9.1's Home menu replaced "open the last tab"; the map is still written but never read. Not removed yet, as agreed. |
