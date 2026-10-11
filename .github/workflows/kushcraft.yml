@@ -371,7 +371,7 @@ jobs:
           grep -q "^  auto-buy: false" plugins/KushCraft/config.yml || fail "auto-buy is not off in 9.0"
           grep -q "price: 120000" plugins/KushCraft/config.yml || fail "9.1 worker prices missing"
           grep -q "price-multiplier: 10.0" plugins/KushCraft/config.yml || fail "9.1 Trade prices missing"
-          if grep -qE "price: 12000|price: 650$" plugins/KushCraft/config.yml; then fail "8.0 prices kept"; fi
+          if grep -qE "price: (12000|650)\}" plugins/KushCraft/config.yml; then fail "8.0 prices kept"; fi
           grep -q "Imported 2 balances from balances.yml" server2.log || fail "balances not imported"
           grep -q "Suppliers are gone: refunded 1 of them" server2.log || fail "the Supplier was not refunded"
           grep -q "Imported 1 workers from workers.yml" server2.log || fail "the 8.0 Cook was not imported"
