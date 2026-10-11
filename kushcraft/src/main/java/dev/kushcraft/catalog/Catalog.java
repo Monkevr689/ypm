@@ -19,6 +19,7 @@ public final class Catalog {
         PSYCH("Psychedelics", "lucid_tab"),
         UPPERS("Uppers", "cocaine"),
         DOWNERS("Downers", "heroin"),
+        STREET("Street drugs", "spice"),
         GEAR("Gear", "bong"),
         GROW("Seeds & Ingredients", "seed_pack");
 
@@ -85,6 +86,15 @@ public final class Catalog {
         drug(ItemType.KETAMINE, Category.DOWNERS, "Cook at a Drug Lab.");
         drug(ItemType.MOONSHINE, Category.DOWNERS, "Cook at a Drug Lab.");
         drug(ItemType.LAUGHING_GAS, Category.DOWNERS, "Cook at a Drug Lab.");
+        // street drugs (9.1)
+        drug(ItemType.SPICE, Category.STREET, "Cook at a Drug Lab.");
+        drug(ItemType.BATH_SALTS, Category.STREET, "Cook at a Drug Lab.");
+        drug(ItemType.POPPERS, Category.STREET, "Cook at a Drug Lab.");
+        drug(ItemType.ABSINTHE, Category.STREET, "Cook at a Drug Lab.");
+        drug(ItemType.DATURA_TEA, Category.STREET, "Cook at a Drug Lab.");
+        drug(ItemType.KRATOM_TEA, Category.STREET, "Cook at a Drug Lab.");
+        drug(ItemType.STUDY_PILLS, Category.STREET, "Cook at a Drug Lab.");
+        drug(ItemType.POPPY_TEA, Category.STREET, "Poppy pods > tea at a Drug Lab.");
         // supplies & blocks
         add(ItemType.LAB_STATION, Category.GEAR, null, "Crafting table.");
         add(ItemType.GROW_LAMP, Category.GEAR, null, "Crafting table.");
@@ -193,6 +203,23 @@ public final class Catalog {
                     .add(EffectType.GIGGLES, 60).add(EffectType.DIZZY, 90).high(20);
             case LAUGHING_GAS -> new Dose().add(EffectType.GIGGLES, 40).add(EffectType.FLOATY, 30)
                     .add(EffectType.DIZZY, 20).high(10);
+            case SPICE -> new Dose().add(EffectType.EUPHORIA, 150).add(EffectType.PARANOIA, 120)
+                    .add(EffectType.DIZZY, 60).high(28);
+            case BATH_SALTS -> new Dose().add(EffectType.HYPER, 150).add(EffectType.PARANOIA, 180)
+                    .add(EffectType.RAGE, 60).add(EffectType.BAD_TRIP, 30).high(38);
+            case POPPERS -> new Dose().add(EffectType.FLOATY, 40).add(EffectType.GIGGLES, 40)
+                    .add(EffectType.LOVED_UP, 30).add(EffectType.DIZZY, 30).high(8);
+            case ABSINTHE -> new Dose().add(EffectType.VISIONS, 120).add(EffectType.EUPHORIA, 150)
+                    .add(EffectType.DIZZY, 90).high(22).delay(5, "<green>The green fairy wakes up...");
+            case DATURA_TEA -> new Dose().add(EffectType.VISIONS, 240).add(EffectType.DISSOCIATED, 120)
+                    .add(EffectType.DIZZY, 90).add(EffectType.BAD_TRIP, 40).high(34)
+                    .delay(10, "<light_purple>Moonflowers bloom behind your eyes...");
+            case KRATOM_TEA -> new Dose().add(EffectType.ENERGY, 120).add(EffectType.ZEN, 90)
+                    .add(EffectType.PAIN_RELIEF, 60).high(8);
+            case STUDY_PILLS -> new Dose().add(EffectType.FOCUS, 300).add(EffectType.ENERGY, 90)
+                    .add(EffectType.CREATIVE, 60).add(EffectType.PARANOIA, 30).high(14);
+            case POPPY_TEA -> new Dose().add(EffectType.PAIN_RELIEF, 180).add(EffectType.EUPHORIA, 120)
+                    .add(EffectType.SLEEPY, 120).add(EffectType.COUCH_LOCK, 60).high(20);
             default -> null;
         };
     }
@@ -200,7 +227,8 @@ public final class Catalog {
     /** Psychedelics can turn into a bad trip when you're already very high. */
     public static boolean psychedelic(ItemType t) {
         Entry e = of(t);
-        return e != null && e.category() == Category.PSYCH;
+        Category c = e == null ? null : e.category();
+        return c == Category.PSYCH || t == ItemType.DATURA_TEA || t == ItemType.ABSINTHE;
     }
 
     /** "Energy Rush 2:30, Focus 2:30" for a fixed drug. */

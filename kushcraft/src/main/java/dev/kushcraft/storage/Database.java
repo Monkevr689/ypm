@@ -37,7 +37,7 @@ import java.util.logging.Level;
 public final class Database {
 
     /** Bumped when the tables change; {@link #migrate} brings older files up to date. */
-    public static final int SCHEMA = 1;
+    public static final int SCHEMA = 2;
 
     @FunctionalInterface
     public interface SqlWork {
@@ -303,6 +303,18 @@ public final class Database {
                 s.execute("CREATE TABLE IF NOT EXISTS docs (name TEXT PRIMARY KEY, data TEXT NOT NULL)");
                 // Drug Lab blocks to clear when their chunk loads again (after a reset)
                 s.execute("CREATE TABLE IF NOT EXISTS cleanup (pos TEXT PRIMARY KEY, what TEXT NOT NULL)");
+                // schema 2 (9.1): Bazaar listings - the items are kept here until sold, taken back or expired
+                s.execute("""
+                        CREATE TABLE IF NOT EXISTS listings (
+                          id INTEGER PRIMARY KEY,
+                          seller TEXT NOT NULL,
+                          seller_name TEXT,
+                          price INTEGER NOT NULL,
+                          item BLOB NOT NULL,
+                          created INTEGER NOT NULL,
+                          expires INTEGER NOT NULL,
+                          state INTEGER NOT NULL DEFAULT 0)""");
+                s.execute("CREATE INDEX IF NOT EXISTS listings_seller ON listings(seller)");
             }
             setMeta(t, "schema", String.valueOf(SCHEMA));
             if (meta(t, "season", null) == null) {
@@ -349,7 +361,7 @@ public final class Database {
     /** Row counts of every table (backup check, /kush db). */
     public static Map<String, Long> counts(Connection c) throws SQLException {
         Map<String, Long> out = new LinkedHashMap<>();
-        for (String t : new String[]{"players", "ledger", "workers", "plants", "machines", "cartels", "awards", "docs"}) {
+        for (String t : new String[]{"players", "ledger", "workers", "plants", "machines", "cartels", "awards", "docs", "listings"}) {
             try (Statement s = c.createStatement(); ResultSet rs = s.executeQuery("SELECT COUNT(*) FROM " + t)) {
                 out.put(t, rs.next() ? rs.getLong(1) : 0);
             }

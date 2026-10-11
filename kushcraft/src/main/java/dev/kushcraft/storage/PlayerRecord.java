@@ -16,6 +16,8 @@ public final class PlayerRecord {
     public static final int GOT_KIT = 2;
     /** Switched worker auto-buy off. */
     public static final int AUTO_BUY_OFF = 4;
+    /** They got this season's Handbook (everyone gets one when they join; a reset hands out new ones). */
+    public static final int HANDBOOK = 8;
 
     private final UUID id;
     private final PlayerStore store;

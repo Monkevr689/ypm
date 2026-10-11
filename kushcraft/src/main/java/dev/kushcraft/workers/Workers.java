@@ -510,6 +510,25 @@ public final class Workers implements Listener, dev.kushcraft.storage.Persistenc
         }
     }
 
+    /**
+     * Admin: removes every worker in the world, with their satchels (nothing goes back to the owners).
+     * Each owner gets a line in the transaction log. Returns how many were removed. Server thread.
+     */
+    public int deleteAll(String by) {
+        List<Worker> all = new ArrayList<>(workers.values());
+        Map<UUID, Integer> perOwner = new HashMap<>();
+        for (Worker w : all) {
+            despawn(w);
+            forget(w);
+            w.satchel.clear();
+            perOwner.merge(w.owner(), 1, Integer::sum);
+        }
+        catchUps.clear();
+        perOwner.forEach((owner, n) -> plugin.economy().ledger().log(owner, dev.kushcraft.economy.Tx.ADMIN, 0, null, by,
+                n + " worker" + (n == 1 ? "" : "s") + " deleted by an admin (satchels too)"));
+        return all.size();
+    }
+
     private void add(Worker w) {
         overLimitKnown = false;
         workers.put(w.id(), w);

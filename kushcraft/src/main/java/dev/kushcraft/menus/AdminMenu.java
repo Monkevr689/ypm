@@ -45,6 +45,8 @@ public final class AdminMenu extends Menu {
     static final int PACK = 38;
     static final int TOGGLE_WORKERS = 39;
     static final int STATS = 40;
+    static final int RESET = 41;
+    static final int DELETE_WORKERS = 42;
 
     private static final int NEAR = 16;
 
@@ -93,6 +95,14 @@ public final class AdminMenu extends Menu {
         boolean on = plugin.workers().enabled();
         set(TOGGLE_WORKERS, Items.icon(on ? "ui_play" : "ui_pause", on ? "<aqua>Workers: <green>on" : "<aqua>Workers: <red>off",
                 "<gray>Click to turn them " + (on ? "off" : "on") + "."));
+        set(RESET, Items.icon("ui_admin", "<red>Reset everyone", "<gray>New season: wipes every player's progress.",
+                "<gray>Backup first, then you type a code."));
+        boolean armed = System.currentTimeMillis() < deleteArmedUntil;
+        set(DELETE_WORKERS, Items.glint(Items.icon("ui_workers", armed ? "<red><bold>Click again to delete" : "<red>Delete all workers",
+                armed ? List.of("<red>" + plugin.workers().all().size() + " workers and their satchels go,",
+                        "<red>for every player. A backup is made first.")
+                        : List.of("<gray>Removes every worker in the world", "<gray>(" + plugin.workers().all().size()
+                        + " now), satchels too.", "<gray>Click twice; a backup is made first.")), armed));
         set(STATS, Items.icon("ui_info", "<aqua>Server stats",
                 "<gray>Plants: <white>" + plugin.plants().all().size(),
                 "<gray>Machines: <white>" + plugin.machines().all().size(),
@@ -157,6 +167,8 @@ public final class AdminMenu extends Menu {
                 Bukkit.getOnlinePlayers().forEach(o -> plugin.pack().resend(o));
                 done("Pack sent to everyone online.");
             }
+            case RESET -> openChild(new AdminResetMenu(player));
+            case DELETE_WORKERS -> deleteWorkers();
             case TOGGLE_WORKERS -> {
                 plugin.getConfig().set("workers.enabled", !plugin.workers().enabled());
                 plugin.saveConfig();
@@ -166,6 +178,33 @@ public final class AdminMenu extends Menu {
                 return;
             }
         }
+    }
+
+    private long deleteArmedUntil;
+
+    /** First click arms the button for 10 seconds; the second makes a backup and deletes every worker. */
+    private void deleteWorkers() {
+        KushCraft plugin = plugin();
+        long now = System.currentTimeMillis();
+        if (now >= deleteArmedUntil) {
+            deleteArmedUntil = now + 10_000L;
+            player.sendActionBar(Text.mm("<red>Click again within 10 seconds to delete all " + plugin.workers().all().size()
+                    + " workers."));
+            failSound();
+            render();
+            return;
+        }
+        deleteArmedUntil = 0;
+        player.sendActionBar(Text.mm("<gray>Making a backup first..."));
+        var backup = plugin.backups().make("before-delete-workers", player.getName());
+        if (!backup.verified()) {
+            player.sendMessage(Text.msg("<red>The backup failed, so no worker was deleted: " + backup.problem()));
+            render();
+            return;
+        }
+        int n = plugin.workers().deleteAll(player.getName());
+        plugin.getLogger().info(player.getName() + " deleted all workers (" + n + "). Backup: backups/" + backup.dir().getName());
+        done("Deleted " + n + " workers. Backup: " + backup.dir().getName());
     }
 
     private void done(String msg) {

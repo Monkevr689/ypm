@@ -64,11 +64,17 @@ public final class Onboarding {
             return;
         }
         PlayerRecord r = plugin.economy().account(p.getUniqueId());
+        // everyone starts with the Handbook (once a season; players from before 9.1 get theirs on their next join)
+        if (!r.has(PlayerRecord.HANDBOOK)) {
+            r.set(PlayerRecord.HANDBOOK, true);
+            if (plugin.getConfig().getBoolean("new-players.give-guide", true) && !hasHandbook(p)) {
+                InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
+                p.sendMessage(Text.msg("<green>Here's your <white>KushCraft Handbook</white>.</green> <gray>Right-click it for the "
+                        + "menu, sneak + right-click to read it."));
+            }
+        }
         if (!r.has(PlayerRecord.GOT_KIT)) {
             r.set(PlayerRecord.GOT_KIT, true);
-            if (plugin.getConfig().getBoolean("new-players.give-guide", true)) {
-                InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
-            }
             int kit = PlayerListener.starterKit(p);
             if (kit > 0) {
                 p.sendMessage(Text.msg("<green>You got a starter kit!</green> <gray>Type <white>/menu</white> any time "
@@ -88,6 +94,16 @@ public final class Onboarding {
                 }
             }, 600L);
         }
+    }
+
+    /** True when they already carry a Handbook (a reset that keeps inventories mustn't hand out a second one). */
+    public static boolean hasHandbook(Player p) {
+        for (org.bukkit.inventory.ItemStack it : p.getInventory().getContents()) {
+            if (Items.is(it, ItemType.GROWER_GUIDE)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Season reset "everything": inventory, ender chest and XP are gone. */

@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/poppy_tea",
+  "layer1": "kush:item/poppy_tea_tint",
+  "layer2": "kush:item/poppy_tea_overlay"
+ }
+}

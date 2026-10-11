@@ -102,7 +102,7 @@ TEXT = "d8e4dc"
 ACCENT = {
     "shop": "f2c23a", "drugs": "7ae05a", "trade": "5ad8e8", "cartel": "f04a4a", "top": "f09a3a", "awards": "c08aff",
     "cook": "5ae8c8", "roll": "9ae85a", "dry": "f0c850", "mix": "e85ad0", "recipe": "f0b860", "list": "7ad0e8",
-    "gear": "5ad8e8", "worker": "e8c870", "guide": "5ad8f0", "admin": "e84a4a",
+    "gear": "5ad8e8", "worker": "e8c870", "guide": "5ad8f0", "admin": "e84a4a", "home": "6ad04a", "tradewin": "f0a03a",
 }
 
 
@@ -418,7 +418,7 @@ TITLES = {"SHOP": "SHOP", "DRUGS": "DRUGS", "TRADE": "TRADE", "CARTEL": "CARTEL"
 
 # items per row of the Drugs page (Catalog: weed, psych, uppers, downers, gear)
 DRUG_ROWS = [5, 8, 7, 8, 9]
-DRUG_COLORS = ["5aa83a", "a05ad8", "3aa8d8", "d8803a", "8a8a96"]
+DRUG_COLORS = ["5aa83a", "a05ad8", "3aa8d8", "d8803a", "d85a9a"]
 SHOP_SEEDS = 36
 GEAR_SLOTS = 18
 HIRE_SLOTS = ((3, 1), (3, 3), (3, 5), (3, 7))
@@ -524,8 +524,9 @@ def gear():
 
 
 def drugs():
-    """Rows 1-5: weed, psychedelics, uppers, downers, gear (DRUG_ROWS items each) in a glass cabinet."""
-    img, a = tab_page("drugs", 21)
+    """Rows 1-5: weed, psychedelics, uppers, downers, street drugs (DRUG_ROWS items each) in a glass cabinet;
+    the button at (0,5) swaps the page for gear and supplies (row 5)."""
+    img, a = tab_page("drugs", 21, extra=True)
     d = ImageDraw.Draw(img)
     for r, (n, col) in enumerate(zip(DRUG_ROWS, DRUG_COLORS)):
         y = slot_xy(1 + r, 0)[1]
@@ -692,7 +693,7 @@ def awards():
 # ---------------------------------------------------------------------------
 LAB_TABS = ["COOK", "ROLL", "DRY", "MIX"]
 # recipes per group, in LabRecipe order: weed, psychedelics, uppers, downers
-COOK_GROUPS = [1, 8, 8, 10]
+COOK_GROUPS = [1, 8, 8, 10, 8]
 COOK_RECIPES = sum(COOK_GROUPS)
 
 
@@ -709,26 +710,33 @@ def lab_page(name, seed):
 
 
 def cook():
-    """Recipes rows 1-3 (COOK_RECIPES), tinted by group like the Drugs page;
-    progress tube (4,0..6); arrow (4,7); output (4,8)."""
-    img, a = lab_page("cook", 30)
+    """Cook page (6 rows): recipes rows 1-4 (COOK_RECIPES, up to 36), tinted by group like the Drugs
+    page; progress tube (5,0..6); arrow (5,7); output (5,8)."""
+    rows = 6
+    idx = LAB_TABS.index("COOK")
+    accent = ACCENT["cook"]
+    img = panel(rows, 30)
+    header(img, "COOK", accent, logo="DRUG LAB")
+    content(img, rows, accent)
+    tabs(img, len(LAB_TABS), idx, accent, "upgrade", "COOK")
+    joint_tab(img, idx, accent)
     i = 0
     for n, col in zip(COOK_GROUPS, DRUG_COLORS):
         for _ in range(n):
             cslot(img, 1 + i // 9, i % 9, tint=col)
             i += 1
     d = ImageDraw.Draw(img)
-    x0, y0 = slot_xy(4, 0)
+    x0, y0 = slot_xy(5, 0)
     # glass tube around the progress slots
     d.rectangle((x0 - 2, y0 - 2, x0 + 18 * 7 + 1, y0 + 19), outline=rgba("8ab4c8"))
     d.line((x0 - 1, y0 - 1, x0 + 18 * 7, y0 - 1), fill=rgba("d8f0f8"))
     for c in range(7):
-        cslot(img, 4, c)
-    x, y = slot_xy(4, 7)
-    arrow(img, x + 2, y + 5, a, 14)
-    cslot(img, 4, 8, "glow", a)
-    player_inv(img, 5)
-    return "cook", img, 5
+        cslot(img, 5, c)
+    x, y = slot_xy(5, 7)
+    arrow(img, x + 2, y + 5, accent, 14)
+    cslot(img, 5, 8, "glow", accent)
+    player_inv(img, rows)
+    return "cook", img, rows
 
 
 def roll():
@@ -847,8 +855,8 @@ def recipe():
 
 
 def list_menu():
-    """Generic paged list (admin items): header (0,4); rows 1-4; back (5,0),
-    prev (5,3), page (5,4), next (5,5), action (5,8)."""
+    """Generic paged list (admin items, the Bazaar): header (0,4); rows 1-4; back (5,0),
+    extra buttons (5,1) (5,2) (5,6) (5,7), prev (5,3), page (5,4), next (5,5), action (5,8)."""
     rows = 6
     a = ACCENT["list"]
     img = panel(rows, 41)
@@ -858,7 +866,7 @@ def list_menu():
     for r in range(1, 5):
         for c in range(9):
             cslot(img, r, c)
-    for c in (0, 3, 4, 5, 8):
+    for c in (0, 1, 2, 3, 4, 5, 6, 7, 8):
         cslot(img, 5, c)
     player_inv(img, rows)
     return "list", img, rows
@@ -947,7 +955,7 @@ def guide():
     return "guide", img, rows
 
 
-ADMIN_ROWS = (("PLAYERS", "f2c23a", 5), ("AROUND YOU", "6ad04a", 4), ("MARKET", "f0a03a", 5), ("SERVER", "5ad8f0", 4))
+ADMIN_ROWS = (("PLAYERS", "f2c23a", 5), ("AROUND YOU", "6ad04a", 4), ("MARKET", "f0a03a", 5), ("SERVER", "5ad8f0", 6))
 
 
 def admin():
@@ -972,12 +980,72 @@ def admin():
     return "admin", img, rows
 
 
+HOME_BUTTONS = (
+    (1, 1, "6ad04a"), (1, 3, "f2c23a"), (1, 5, "7ae05a"), (1, 7, "e8c870"),
+    (3, 1, "c08aff"), (3, 3, "f0a03a"), (3, 5, "5ad8e8"), (3, 7, "f04a4a"),
+)
+
+
+def home():
+    """The simple home menu (5 rows): next step (0,0), you (0,4), admin (0,8); sell all, shop,
+    drugs, workers (1,1 1,3 1,5 1,7); rank, bazaar, trade, cartel (3,1 3,3 3,5 3,7);
+    close (4,0), handbook (4,2), awards (4,4), help (4,6)."""
+    rows = 5
+    img, a = plain_page("home", rows, 60, "HOME")
+    for r in (1, 3):
+        y = slot_xy(r, 0)[1]
+        area(img, 5, y - 2, 170, y + 19, "6ad04a", 0.07)
+    cslot(img, 0, 0, "glow", "5ad8f0")
+    cslot(img, 0, 4, "big", a)
+    cslot(img, 0, 8)
+    for r, c, col in HOME_BUTTONS:
+        cslot(img, r, c, "big", col)
+    cslot(img, 4, 0)
+    cslot(img, 4, 2, "gold", "e8e0d0")
+    cslot(img, 4, 4, "gold", "c08aff")
+    cslot(img, 4, 6, "gold", "5ad8f0")
+    player_inv(img, rows)
+    return "home", img, rows
+
+
+def tradewin():
+    """The player trade window (6 rows): your head (0,0), set / clear your money (0,1) (0,2), status (0,4),
+    their money (0,6), their head (0,8); your items rows 1-4 cols 0-3, theirs cols 5-8; between them
+    ready (1,4), their state (2,4), the lock timer (3,4); cancel (5,0)."""
+    rows = 6
+    img, a = plain_page("tradewin", rows, 61, "TRADE")
+    d = ImageDraw.Draw(img)
+    mine, theirs = "5ad8e8", "f0a03a"
+    area(img, 5, slot_xy(1, 0)[1] - 2, 5 + 4 * 18 + 3, slot_xy(4, 0)[1] + 19, mine, 0.10)
+    area(img, 7 + 5 * 18 - 3, slot_xy(1, 0)[1] - 2, 170, slot_xy(4, 0)[1] + 19, theirs, 0.10)
+    cslot(img, 0, 0, "big", mine)
+    cslot(img, 0, 1, "normal", None, mine)
+    cslot(img, 0, 2, "normal", None, mine)
+    cslot(img, 0, 4, "glow", a)
+    cslot(img, 0, 6, "normal", None, theirs)
+    cslot(img, 0, 8, "big", theirs)
+    for r in range(1, 5):
+        for c in range(4):
+            cslot(img, r, c, tint=mine)
+        for c in range(5, 9):
+            cslot(img, r, c, tint=theirs)
+    cslot(img, 1, 4, "big", "6ad04a")
+    cslot(img, 2, 4, "big", theirs)
+    cslot(img, 3, 4, "normal", "f2c23a")
+    # a little arrow pair between the two sides
+    x, y = slot_xy(4, 4)
+    arrow(img, x + 2, y + 5, a, 14)
+    cslot(img, 5, 0)
+    player_inv(img, rows)
+    return "tradewin", img, rows
+
+
 def generate(g):
     global G
     G = g
     out = []
     for fn in (shop, drugs, trade, cartel, top, awards, cook, roll, dry, mix_page, recipe, list_menu, gear, worker,
-               guide, admin):
+               guide, admin, home, tradewin):
         name, img, rows = fn()
         G.save_png(img, f"gui/{name}")
         LAYOUTS[name] = (img.width, img.height, rows)

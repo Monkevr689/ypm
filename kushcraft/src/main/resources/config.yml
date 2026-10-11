@@ -1,5 +1,5 @@
 # =====================================================================
-#  KushCraft 9.0 - the drug economy for an anarchy server.
+#  KushCraft 9.1 - the drug economy for an anarchy server.
 #  Players type /menu for how the server works, /kush for the shop,
 #  their lab and workers, /rankup to climb the ladder.
 #
@@ -9,6 +9,7 @@
 #    RANKS      the rank ladder (costs, time-gates, worker slots)
 #    WORKERS    hiring, wages, work while nobody is around
 #    PVP        death cost, worker raids (off until you review them)
+#    TRADING    /trade between players, the Bazaar (player listings)
 #    MENUS      first join, /menu (texts are in menus.yml)
 #    RESET      season resets
 #    GROWING    plants, wild plants, the Drug Lab, effects
@@ -17,7 +18,7 @@
 #    TRADE      the shelves of vanilla items (long list, at the end)
 #  Change anything, then /kush reload (no restart needed).
 # =====================================================================
-config-version: 13
+config-version: 14
 
 # =====================================================================
 #  STORAGE - everything players own is in plugins/KushCraft/kushcraft.db
@@ -39,7 +40,7 @@ storage:
 #  that shows in the log). Money only comes from selling drugs.
 # =====================================================================
 economy:
-  starting-balance: 250
+  starting-balance: 100
   symbol: '$'
   currency-singular: dollar
   currency-plural: dollars
@@ -49,11 +50,11 @@ market:
   anywhere: true
   # Every item sold lowers that product's price by this much (0.01 = 1%),
   # even inside one big sale, so dumping 200 of one thing pays less...
-  demand-drop: 0.006
+  demand-drop: 0.01
   # ...down to this fraction of the normal price...
-  min-price: 0.4
+  min-price: 0.3
   # ...and it recovers this much per minute. Sell a mix of products!
-  recovery-per-minute: 0.025
+  recovery-per-minute: 0.015
   # A random "hot" product sells for extra for a while.
   hot-item-bonus: 1.5
   hot-item-minutes: 60
@@ -64,8 +65,9 @@ market:
 
 # =====================================================================
 #  SHOP  (/kush > Shop or a Dealer Stand)
-#  9.0: everything you BUY costs about 5x what it did in 8.0. What the
-#  dealer pays for product (sell) is the same, so the grind is longer.
+#  9.1: everything you BUY costs about 10x what it did in 8.0, and the
+#  dealer pays sell-multiplier of the sell prices below (85%), so the
+#  grind is long. Change any of it here and /kush reload.
 #  Cannabis seeds: every strain in strains.yml at its own price times
 #  seed-price-multiplier. Mythic seeds cost mythic-seed-multiplier times
 #  more on top (mythic-seeds: false = not sold, only bred or found wild).
@@ -74,29 +76,31 @@ market:
 #          quality (1-5 stars), potency and rarity.
 # =====================================================================
 shop:
-  seed-price-multiplier: 6.25
+  seed-price-multiplier: 12.5
   mythic-seeds: true
-  mythic-seed-multiplier: 3.0
+  mythic-seed-multiplier: 4.0
+  # The dealer pays this much of every sell price below (0.85 = 85%).
+  sell-multiplier: 0.85
   # Worker contracts (farmhand, dryer, cook, runner) are listed here too:
   # they show on the hiring board. Your rank decides how many you can place.
   buy:
-    - {item: mushroom_spores, amount: 1, price: 150}
-    - {item: coca_seeds, amount: 1, price: 250}
-    - {item: poppy_seeds, amount: 1, price: 275}
-    - {item: peyote_seeds, amount: 1, price: 250}
-    - {item: rolling_papers, amount: 8, price: 40}
-    - {item: blunt_wrap, amount: 4, price: 60}
-    - {item: fertilizer, amount: 4, price: 80}
-    - {item: lab_solvent, amount: 8, price: 90}
-    - {item: bong, amount: 1, price: 450}
-    - {item: planter_box, amount: 2, price: 250}
-    - {item: grow_lamp, amount: 1, price: 1000}
-    - {item: dealer, amount: 1, price: 1500}
-    - {item: lab_station, amount: 1, price: 3250}
-    - {item: farmhand, amount: 1, price: 60000}
-    - {item: dryer, amount: 1, price: 45000}
-    - {item: cook, amount: 1, price: 75000}
-    - {item: runner, amount: 1, price: 55000}
+    - {item: mushroom_spores, amount: 1, price: 300}
+    - {item: coca_seeds, amount: 1, price: 500}
+    - {item: poppy_seeds, amount: 1, price: 550}
+    - {item: peyote_seeds, amount: 1, price: 500}
+    - {item: rolling_papers, amount: 8, price: 80}
+    - {item: blunt_wrap, amount: 4, price: 120}
+    - {item: fertilizer, amount: 4, price: 160}
+    - {item: lab_solvent, amount: 8, price: 180}
+    - {item: bong, amount: 1, price: 900}
+    - {item: planter_box, amount: 2, price: 500}
+    - {item: grow_lamp, amount: 1, price: 2000}
+    - {item: dealer, amount: 1, price: 3000}
+    - {item: lab_station, amount: 1, price: 6500}
+    - {item: farmhand, amount: 1, price: 120000}
+    - {item: dryer, amount: 1, price: 90000}
+    - {item: cook, amount: 1, price: 150000}
+    - {item: runner, amount: 1, price: 110000}
   sell:
     # weed
     bud_fresh: 5
@@ -134,6 +138,15 @@ shop:
     xanny_bars: 28
     moonshine: 35
     laughing_gas: 22
+    # 9.1 street drugs
+    spice: 60
+    bath_salts: 75
+    poppers: 30
+    absinthe: 55
+    datura_tea: 95
+    kratom_tea: 22
+    study_pills: 48
+    poppy_tea: 62
     # drug plants (seeds don't sell: money only comes from drugs)
     coca_leaves: 7
     poppy_pod: 7
@@ -161,17 +174,17 @@ shop:
 ranks:
   ladder:
     - {name: Fresh Meat,  color: gray,         cost: 0,        playtime-hours: 0,   wait-hours: 0,   workers: 1}
-    - {name: Lookout,     color: white,        cost: 3000,     playtime-hours: 2,   wait-hours: 0,   workers: 1}
-    - {name: Corner Boy,  color: green,        cost: 12500,    playtime-hours: 5,   wait-hours: 12,  workers: 2}
-    - {name: Pusher,      color: dark_green,   cost: 35000,    playtime-hours: 10,  wait-hours: 24,  workers: 2}
-    - {name: Trapper,     color: aqua,         cost: 85000,    playtime-hours: 18,  wait-hours: 48,  workers: 3}
-    - {name: Chemist,     color: dark_aqua,    cost: 200000,   playtime-hours: 30,  wait-hours: 72,  workers: 3}
-    - {name: Distributor, color: blue,         cost: 425000,   playtime-hours: 45,  wait-hours: 96,  workers: 4}
-    - {name: Smuggler,    color: light_purple, cost: 850000,   playtime-hours: 65,  wait-hours: 120, workers: 4}
-    - {name: Lieutenant,  color: dark_purple,  cost: 1600000,  playtime-hours: 90,  wait-hours: 144, workers: 5}
-    - {name: Underboss,   color: gold,         cost: 3000000,  playtime-hours: 120, wait-hours: 168, workers: 6}
-    - {name: Don,         color: red,          cost: 5500000,  playtime-hours: 160, wait-hours: 240, workers: 7}
-    - {name: Drug Lord,   color: dark_red,     cost: 10000000, playtime-hours: 220, wait-hours: 336, workers: 8}
+    - {name: Lookout,     color: white,        cost: 5000,     playtime-hours: 3,   wait-hours: 0,   workers: 1}
+    - {name: Corner Boy,  color: green,        cost: 25000,    playtime-hours: 8,   wait-hours: 12,  workers: 2}
+    - {name: Pusher,      color: dark_green,   cost: 75000,    playtime-hours: 16,  wait-hours: 24,  workers: 2}
+    - {name: Trapper,     color: aqua,         cost: 180000,   playtime-hours: 28,  wait-hours: 48,  workers: 3}
+    - {name: Chemist,     color: dark_aqua,    cost: 425000,   playtime-hours: 45,  wait-hours: 72,  workers: 3}
+    - {name: Distributor, color: blue,         cost: 900000,   playtime-hours: 70,  wait-hours: 96,  workers: 4}
+    - {name: Smuggler,    color: light_purple, cost: 1800000,  playtime-hours: 100, wait-hours: 120, workers: 4}
+    - {name: Lieutenant,  color: dark_purple,  cost: 3500000,  playtime-hours: 140, wait-hours: 144, workers: 5}
+    - {name: Underboss,   color: gold,         cost: 6500000,  playtime-hours: 190, wait-hours: 168, workers: 6}
+    - {name: Don,         color: red,          cost: 12000000, playtime-hours: 250, wait-hours: 240, workers: 7}
+    - {name: Drug Lord,   color: dark_red,     cost: 22000000, playtime-hours: 330, wait-hours: 336, workers: 8}
   # Never two rank-ups closer together than this, whatever the rank says.
   min-gap-minutes: 30
   # Playtime only counts while the player did something in the last N minutes.
@@ -217,19 +230,19 @@ workers:
   radius: [8, 12, 16]
   rest-seconds: [4, 2, 1]
   # Price to train a worker to level 2 and 3.
-  upgrade-costs: [50000, 125000]
+  upgrade-costs: [100000, 250000]
   # Wage for every job (one harvest, one planting, one trip to the racks,
   # one batch cooked or rolled), paid from the owner's wallet. No money =
   # no work.
   farmhand:
-    wage: 10
+    wage: 20
   dryer:
-    wage: 8
-  cook:
     wage: 16
+  cook:
+    wage: 32
   runner:
-    # No wage: the Runner keeps this much of every sale (0.15 = 15%).
-    cut: 0.15
+    # No wage: the Runner keeps this much of every sale (0.20 = 20%).
+    cut: 0.20
   # While nobody is near them (their chunk unloaded, e.g. you're offline)
   # workers keep working at a slower pace: when someone comes back, the time
   # they were alone is caught up (harvest, dry, cook, sell) step by step.
@@ -265,17 +278,49 @@ pvp:
     alert-owner: true
 
 # =====================================================================
+#  TRADING - players trading with each other. Everything is logged
+#  (/kush log) and a few things are sinks, so trading can't print money.
+#  /trade <player>: both put items and money on the table and press
+#    Ready. Changing anything locks Ready for lock-seconds. Closing the
+#    window, leaving or dying cancels it and everyone gets their things back.
+#  /bazaar: list a stack for a price; anyone online or not can buy it.
+#    The items are kept safe until sold, taken back or expired.
+# =====================================================================
+trade:
+  enabled: true
+  # How much of the MONEY in a trade is destroyed (0.02 = 2%). Items are free.
+  money-fee: 0.02
+  # A request to trade runs out after this long.
+  request-seconds: 60
+  # After either side changes anything, Ready is locked for this long.
+  lock-seconds: 3
+  # A trade nobody touches for this long is cancelled.
+  timeout-seconds: 180
+
+bazaar:
+  enabled: true
+  # Share of every sale that is destroyed (the seller gets the rest).
+  sale-tax: 0.08
+  # How many listings a player can have at once: base + per-rank x their rank number.
+  base-listings: 2
+  listings-per-rank: 1
+  # Unsold listings run out after this many days (the seller can take the items back).
+  listing-days: 3
+  min-price: 1
+  max-price: 1000000000
+
+# =====================================================================
 #  MENUS - the welcome / help menu (/menu) opens on a player's first join
 #  each season. Its words, icons, rules and links are in menus.yml.
 # =====================================================================
 menu:
   # Shift + F (sneak + swap hands) opens the /kush menu from anywhere.
   shift-f: true
-  # /kush also gives the KushCraft Menu book if the player doesn't have one.
+  # /kush also gives the KushCraft Handbook if the player doesn't have one.
   give-book-on-command: true
 
 new-players:
-  # Give the KushCraft Menu book on the first join of each season.
+  # Everyone gets the KushCraft Handbook when they join (and again each season).
   give-guide: true
   # Given once a season, together with the menu book.
   starter-kit:
@@ -300,12 +345,12 @@ growth:
   # How often plants are updated (seconds).
   tick-seconds: 10
   # Real-time minutes for a cannabis plant to fully mature in average conditions.
-  cannabis-minutes: 20
+  cannabis-minutes: 35
   # Real-time minutes for a magic mushroom cluster to mature.
-  mushroom-minutes: 12
-  coca-minutes: 16
-  poppy-minutes: 14
-  peyote-minutes: 18
+  mushroom-minutes: 20
+  coca-minutes: 28
+  poppy-minutes: 24
+  peyote-minutes: 30
   # Cannabis needs at least this light level (sun or torches), unless a Grow Lamp is close.
   min-light: 9
   # Grow Lamps boost and light every plant within this many blocks.
@@ -321,28 +366,28 @@ growth:
 wild:
   # Chance to find wild seeds when breaking grass / ferns / dead bushes.
   # The strain you find depends on the biome!
-  grass-seed-chance: 0.04
+  grass-seed-chance: 0.025
   # Chance to find mushroom spores when breaking small mushrooms.
-  mushroom-spore-chance: 0.12
+  mushroom-spore-chance: 0.07
   # Chance for coca seeds from grass in jungles and savannas.
-  coca-seed-chance: 0.03
+  coca-seed-chance: 0.018
   # Chance for poppy seeds when breaking a red poppy flower.
-  poppy-seed-chance: 0.15
+  poppy-seed-chance: 0.09
   # Chance for peyote seeds from dead bushes in deserts and badlands.
-  peyote-seed-chance: 0.08
+  peyote-seed-chance: 0.05
   # Chance to find ergot (the fungus LSD is made from) when breaking ripe wheat.
   # It can also be cooked from wheat at a Drug Lab.
-  ergot-chance: 0.06
+  ergot-chance: 0.04
   # Wild plants grow by themselves out in the world, 20-56 blocks from
   # players: cannabis strains by biome, coca in jungles and savannas, poppies
   # on plains, peyote in deserts, magic mushrooms in dark forests and swamps.
   # Anyone can pick them (buds and seeds!). Never near someone's farm.
   plants: true
   # One spot near every player is tried this often (seconds).
-  plant-seconds: 45
+  plant-seconds: 75
   # Most wild plants on the whole server, and around one player.
-  max-plants: 80
-  max-near-player: 6
+  max-plants: 50
+  max-near-player: 4
   # Unpicked wild plants wither after this many hours.
   plant-hours: 6
 
@@ -362,14 +407,14 @@ animals:
 
 drying:
   # Seconds fresh buds need on a drying rack (every Drug Lab has 5 racks).
-  seconds: 30
+  seconds: 45
 
 lab:
   # Multiplier for all Drug Lab cooking times (0.5 = twice as fast).
-  time-multiplier: 1.0
+  time-multiplier: 1.5
   # Price of each Drug Lab upgrade (level 2, 3, 4, 5). Every level cooks
   # 15% faster and adds 8% chance of a bonus item.
-  upgrade-costs: [12500, 40000, 100000, 250000]
+  upgrade-costs: [25000, 80000, 200000, 500000]
 
 strain-maker:
   # Money every mix costs (Drug Lab > Mix; the result is random: keep it or try again).
@@ -399,7 +444,7 @@ effects:
 cartel:
   enabled: true
   # Price to start a cartel.
-  create-cost: 12500
+  create-cost: 25000
   max-name-length: 16
   # Every member sale adds this much on top into the cartel bank (0.05 = 5%).
   bank-cut: 0.05
@@ -416,10 +461,10 @@ cartel:
   # also work if you want them: faster plants / Drug Labs for members.)
   levels:
     - {name: Crew, cost: 0, members: 4, sell-bonus: 0}
-    - {name: Gang, cost: 50000, members: 6, sell-bonus: 0.04}
-    - {name: Syndicate, cost: 200000, members: 8, sell-bonus: 0.08}
-    - {name: Cartel, cost: 600000, members: 12, sell-bonus: 0.12}
-    - {name: Empire, cost: 1750000, members: 16, sell-bonus: 0.16}
+    - {name: Gang, cost: 100000, members: 6, sell-bonus: 0.04}
+    - {name: Syndicate, cost: 400000, members: 8, sell-bonus: 0.08}
+    - {name: Cartel, cost: 1200000, members: 12, sell-bonus: 0.12}
+    - {name: Empire, cost: 3500000, members: 16, sell-bonus: 0.16}
 
 # =====================================================================
 #  DEALER TITLES - the players who sold the most product this season get
@@ -565,7 +610,7 @@ resource-pack:
 #  Spend the money from your product on vanilla items. Trade only SELLS:
 #  you can't sell anything back here - money only comes from drugs. No
 #  netherite, totems, golden apples, ender pearls or End items.
-#  9.0: price-multiplier 5.0 (everything 5x the 8.0 price).
+#  9.1: price-multiplier 10.0 (everything 10x the 8.0 price).
 #  Up to 18 shelves (row 1 and row 5 of the page) of up to 27 items each.
 #  An item may be on more than one shelf. price = what a player pays for ONE
 #  item (before price-multiplier), amount = how many one click buys
@@ -574,7 +619,7 @@ resource-pack:
 exchange:
   enabled: true
   # All prices below are multiplied by this.
-  price-multiplier: 5.0
+  price-multiplier: 10.0
   # Price change per "amount" bought, 0.01 = 1%...
   price-step: 0.01
   # ...up to this much of the normal price...

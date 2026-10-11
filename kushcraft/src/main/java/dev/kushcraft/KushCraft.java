@@ -100,6 +100,8 @@ public final class KushCraft extends JavaPlugin {
     private Onboarding onboarding;
     private MenuTexts menuTexts;
     private RateLimit rates;
+    private dev.kushcraft.trade.Trades trades;
+    private dev.kushcraft.trade.Bazaar bazaar;
     private SeasonReset reset;
     private WorkerRaids raids;
     private ResourcePackManager pack;
@@ -180,6 +182,9 @@ public final class KushCraft extends JavaPlugin {
         playtime = new Playtime(this);
         onboarding = new Onboarding(this);
         reset = new SeasonReset(this);
+        trades = new dev.kushcraft.trade.Trades(this);
+        bazaar = new dev.kushcraft.trade.Bazaar(this, db);
+        bazaar.load();
         raids = new WorkerRaids(this);
         vault = new VaultBridge(this);
         pack = new ResourcePackManager(this, getFile());
@@ -194,6 +199,7 @@ public final class KushCraft extends JavaPlugin {
         persistence.register(awards);
         persistence.register(market);
         persistence.register(exchange);
+        persistence.register(bazaar);
         finishLegacyImport();
 
         Recipes.register(this);
@@ -214,11 +220,12 @@ public final class KushCraft extends JavaPlugin {
         pm.registerEvents(animals, this);
         pm.registerEvents(playtime, this);
         pm.registerEvents(raids, this);
+        pm.registerEvents(trades, this);
 
         KushCommand kc = new KushCommand(this);
         command("kush", kc);
         ServerCommands sc = new ServerCommands(this);
-        for (String c : List.of("menu", "rankup", "balance", "pay", "baltop")) {
+        for (String c : List.of("menu", "rankup", "balance", "pay", "baltop", "trade", "bazaar")) {
             command(c, sc);
         }
 
@@ -237,6 +244,11 @@ public final class KushCraft extends JavaPlugin {
         animals.start();
         playtime.start();
         MenuListener.start(this);
+        // trades: requests that ran out, idle windows; the Bazaar: listings that ran out
+        Bukkit.getScheduler().runTaskTimer(this, () -> {
+            trades.tick();
+            bazaar.tick();
+        }, 20L, 20L);
         // once a minute: "the server is running" (downtime isn't growing time), the log's daily clean-up
         Bukkit.getScheduler().runTaskTimer(this, this::heartbeat, 20L, 1200L);
         // Vault and EssentialsX have enabled by the first tick
@@ -275,6 +287,9 @@ public final class KushCraft extends JavaPlugin {
     @Override
     public void onDisable() {
         MenuListener.closeAll();
+        if (trades != null) {
+            trades.shutdown();
+        }
         if (effects != null) {
             effects.shutdown();
         }
@@ -339,6 +354,7 @@ public final class KushCraft extends JavaPlugin {
             market.load();
             exchange.load();
         }
+        bazaar.load();
         titles.refresh();
         for (org.bukkit.World w : Bukkit.getWorlds()) {
             for (org.bukkit.Chunk c : w.getLoadedChunks()) {
@@ -520,6 +536,14 @@ public final class KushCraft extends JavaPlugin {
 
     public MenuTexts menuTexts() {
         return menuTexts;
+    }
+
+    public dev.kushcraft.trade.Trades trades() {
+        return trades;
+    }
+
+    public dev.kushcraft.trade.Bazaar bazaar() {
+        return bazaar;
     }
 
     public RateLimit rates() {

@@ -36,6 +36,11 @@ public enum Tx {
     ADMIN("admin change", false),
     VAULT_IN("paid by another plugin", false),
     VAULT_OUT("taken by another plugin", false),
+    PLAYER_TRADE("trade with a player", false),
+    BAZAAR_LIST("Bazaar listing", true),
+    BAZAAR_BUY("Bazaar purchase", false),
+    BAZAAR_SELL("Bazaar sale", false),
+    BAZAAR_BACK("Bazaar listing taken back", false),
     RESET("season reset", false);
 
     private final String label;

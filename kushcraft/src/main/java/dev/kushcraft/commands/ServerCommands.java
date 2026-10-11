@@ -29,7 +29,7 @@ import java.util.Locale;
 public final class ServerCommands implements CommandExecutor, TabCompleter {
 
     private static final List<String> OURS = List.of("menu", "rankup", "balance", "bal", "money", "pay", "baltop",
-            "balancetop");
+            "balancetop", "trade", "bazaar");
 
     private final KushCraft plugin;
 
@@ -65,11 +65,50 @@ public final class ServerCommands implements CommandExecutor, TabCompleter {
                 }
             }
             case "baltop" -> baltop(sender, args);
+            case "trade" -> trade(sender, args);
+            case "bazaar" -> {
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(Text.msg("<gray>The Bazaar is a menu: players type /bazaar."));
+                } else if (!plugin.bazaar().enabled()) {
+                    p.sendMessage(Text.msg("<red>The Bazaar is turned off on this server."));
+                } else {
+                    new dev.kushcraft.menus.BazaarMenu(p).open();
+                }
+            }
             default -> {
                 return false;
             }
         }
         return true;
+    }
+
+    /** /trade [player], /trade accept [player], /trade decline. */
+    private void trade(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player p)) {
+            sender.sendMessage(Text.msg("<gray>Players trade with /trade <player>."));
+            return;
+        }
+        var trades = plugin.trades();
+        String problem;
+        if (args.length == 0) {
+            if (trades.enabled()) {
+                new dev.kushcraft.menus.TradePickMenu(p).open();
+            } else {
+                p.sendMessage(Text.msg("<red>Player trading is turned off on this server."));
+            }
+            return;
+        }
+        switch (args[0].toLowerCase(Locale.ROOT)) {
+            case "accept", "yes" -> problem = trades.accept(p, args.length > 1 ? args[1] : null);
+            case "decline", "no", "deny" -> {
+                trades.decline(p);
+                return;
+            }
+            default -> problem = trades.request(p, Bukkit.getPlayerExact(args[0]));
+        }
+        if (problem != null) {
+            p.sendMessage(Text.msg("<red>" + problem));
+        }
     }
 
     private void balance(CommandSender sender, String[] args) {
@@ -111,7 +150,8 @@ public final class ServerCommands implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<>();
         String n = command.getName().toLowerCase(Locale.ROOT);
-        if (args.length == 1 && (n.equals("pay") || (n.equals("balance") && sender.hasPermission("kushcraft.admin")))) {
+        if (args.length == 1 && (n.equals("pay") || n.equals("trade")
+                || (n.equals("balance") && sender.hasPermission("kushcraft.admin")))) {
             Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
             String last = args[0].toLowerCase(Locale.ROOT);
             out.removeIf(s -> !s.toLowerCase(Locale.ROOT).startsWith(last));
@@ -135,12 +175,12 @@ public final class ServerCommands implements CommandExecutor, TabCompleter {
         }
         boolean essentials = Bukkit.getPluginManager().getPlugin("Essentials") != null;
         if (others.isEmpty()) {
-            plugin.getLogger().info("Commands: /menu, /rankup, /balance, /pay and /baltop are KushCraft's"
+            plugin.getLogger().info("Commands: /menu, /rankup, /balance, /pay, /baltop, /trade and /bazaar are KushCraft's"
                     + (essentials ? " (EssentialsX is installed and doesn't take them)." : "."));
             return;
         }
         plugin.getLogger().warning("Commands owned by another plugin: " + String.join(", ", others)
-                + ". KushCraft owns the money, so its /balance, /pay and /baltop should win."
+                + ". KushCraft owns the money, so its /balance, /pay, /baltop, /trade and /bazaar should win."
                 + (essentials ? " In EssentialsX's config.yml add balance, bal, money, pay, baltop, balancetop and eco"
                 + " to disabled-commands and restart. (Players can always use /kush balance and /kush pay.)" : ""));
     }

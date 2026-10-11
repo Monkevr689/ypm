@@ -44,8 +44,14 @@ jobs:
   server-test:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
+      # the released 9.0.0 jar: the upgrade test starts a real 9.0.0 server first
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: kushcraft/release/KushCraft-9.0.0.jar
+          sparse-checkout-cone-mode: false
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -112,10 +118,21 @@ jobs:
           sleep 2
           echo "kush log" >&3
           sleep 2
+          # admin: delete every worker in the world (a second seeded player has one): asks, then a checked backup, then gone
+          echo "kush selftest seed" >&3
+          for i in $(seq 1 30); do [ "$(grep -cE 'SEED (ready|FAILED)' server.log)" -ge 2 ] && break; sleep 1; done
+          echo "kush deleteworkers confirm" >&3
+          sleep 1
+          echo "kush deleteworkers" >&3
+          sleep 1
+          echo "kush deleteworkers confirm" >&3
+          for i in $(seq 1 30); do grep -q "Deleted [0-9]* workers" server.log && break; sleep 1; done
+          echo "kush db" >&3
+          sleep 2
           echo "stop" >&3
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
-          grep -iE "kushcraft|selftest|backup|season|reset|economy" server.log | grep -v "selftest failure" | tail -80 || true
+          grep -iE "kushcraft|selftest|backup|season|reset|economy|deleted" server.log | grep -v "selftest failure" | tail -80 || true
           fail() { echo "::error::$1"; exit 1; }
           grep -q "Database ready: kushcraft.db" server.log || fail "the database was not created"
           grep -q "SELFTEST PASS" server.log || { grep "selftest failure" server.log; fail "selftest failed"; }
@@ -124,7 +141,7 @@ jobs:
             grep -q "registered as the Vault economy" server.log || fail "KushCraft is not the Vault economy"
             grep -q "SELFTEST vault ok" server.log || fail "the Vault bridge test did not run"
           fi
-          grep -q "Commands: /menu, /rankup, /balance, /pay and /baltop are KushCraft's" server.log \
+          grep -q "Commands: /menu, /rankup, /balance, /pay, /baltop, /trade and /bazaar are KushCraft's" server.log \
             || fail "another plugin owns a KushCraft command"
           grep -q "Backup made and verified: .*manual" server.log || fail "/kush backup failed"
           grep -q "SEED ready" server.log || fail "the test player for the reset was not set up"
@@ -165,7 +182,7 @@ jobs:
               if n != 0: bad.append(f"{n} {t} rows survived the reset")
           if ranks != 0: bad.append("ranks, playtime or sales survived the reset")
           if start > 1: bad.append("balances were not all reset to the starting money")
-          if keeper != (25000, 1, 0, 0): bad.append(f"the test player was not wiped: {keeper}")
+          if keeper != (10000, 1, 0, 0): bad.append(f"the test player was not wiped to the starting money: {keeper}")
           backups = glob.glob("plugins/KushCraft/backups/*before-reset-kushcraft*/kushcraft.db")
           if len(backups) != 2: bad.append(f"{len(backups)} reset backups, not 2")
           for b in backups:
@@ -183,6 +200,25 @@ jobs:
           if bad:
               print("::error::" + "; ".join(bad)); sys.exit(1)
           PY
+          # deleting all workers: a confirm without asking first does nothing, then the backup and the deletion
+          grep -q "This deletes all [0-9]* workers" server.log || fail "/kush deleteworkers did not ask first"
+          grep -q "Deleted 1 workers" server.log || fail "/kush deleteworkers did not delete the worker"
+          grep -q "Backup made and verified: .*before-delete-workers" server.log || fail "no checked backup before deleting workers"
+          python3 - <<'PY2'
+          import glob, sqlite3, sys
+          live = sqlite3.connect("plugins/KushCraft/kushcraft.db")
+          bad = []
+          if live.execute("SELECT COUNT(*) FROM workers").fetchone()[0] != 0: bad.append("workers survived deleteworkers")
+          if live.execute("SELECT COUNT(*) FROM listings").fetchone()[0] != 0: bad.append("test listings were left in the Bazaar")
+          if live.execute("SELECT value FROM meta WHERE key='schema'").fetchone()[0] != "2": bad.append("schema is not 2")
+          admin = live.execute("SELECT COUNT(*) FROM ledger WHERE type='ADMIN' AND detail LIKE '%deleted by an admin%'").fetchone()[0]
+          if admin < 1: bad.append("the deletion is not in the log")
+          for b in glob.glob("plugins/KushCraft/backups/*before-delete-workers*/kushcraft.db"):
+              n = sqlite3.connect(b).execute("SELECT COUNT(*) FROM workers").fetchone()[0]
+              if n != 1: bad.append(f"{b} holds {n} workers, not 1")
+          if bad:
+              print("::error::" + "; ".join(bad)); sys.exit(1)
+          PY2
           if grep -nE "Exception|Error" server.log | grep -iE "kushcraft"; then fail "KushCraft errors in log"; fi
           echo "Fresh install test passed"
 
@@ -207,7 +243,7 @@ jobs:
           if grep -nE "Exception|Error" server5.log | grep -iE "kushcraft"; then fail "KushCraft errors after the restart"; fi
           echo "Restart test passed"
 
-      - name: Upgrade an 8.0 server (YAML data files, version 11 config) to 9.0
+      - name: Upgrade an 8.0 server (YAML data files, version 11 config) to 9.1
         working-directory: server
         run: |
           # a fresh data folder with what KushCraft 8.0 left behind: no database, the old .yml files
@@ -321,19 +357,19 @@ jobs:
           exec 3>&-
           grep -iE "kushcraft|imported|moved|updated config" server2.log | head -40 || true
           fail() { echo "::error::$1"; exit 1; }
-          grep -q "Updated config.yml to version 13" server2.log || fail "config was not upgraded"
+          grep -q "Updated config.yml to version 14" server2.log || fail "config was not upgraded"
           test -f plugins/KushCraft/config-old-v11.yml || fail "the old config was not kept"
-          grep -q "^config-version: 13" plugins/KushCraft/config.yml || fail "config version not 13"
+          grep -q "^config-version: 14" plugins/KushCraft/config.yml || fail "config version not 14"
           grep -q "^  death-cash-lost: 0.3" plugins/KushCraft/config.yml || fail "death cash loss not carried into pvp"
           grep -q "^  give-guide: false" plugins/KushCraft/config.yml || fail "give-guide not carried over"
-          grep -q "^  cannabis-minutes: 25" plugins/KushCraft/config.yml || fail "growth settings not carried over"
+          grep -q "^  cannabis-minutes: 35" plugins/KushCraft/config.yml || fail "9.1 growth times missing (they are not carried over)"
           grep -q "^  url: auto" plugins/KushCraft/config.yml || fail "the old pack link was not switched to auto"
           grep -q "^dealer-titles:" plugins/KushCraft/config.yml || fail "dealer titles not moved"
           grep -q "name: The Plug" plugins/KushCraft/config.yml || fail "the server's own dealer titles were lost"
           grep -q "name: Drug Lord" plugins/KushCraft/config.yml || fail "the rank ladder is missing"
           grep -q "^  auto-buy: false" plugins/KushCraft/config.yml || fail "auto-buy is not off in 9.0"
-          grep -q "price: 60000" plugins/KushCraft/config.yml || fail "9.0 worker prices missing"
-          grep -q "price-multiplier: 5.0" plugins/KushCraft/config.yml || fail "9.0 Trade prices missing"
+          grep -q "price: 120000" plugins/KushCraft/config.yml || fail "9.1 worker prices missing"
+          grep -q "price-multiplier: 10.0" plugins/KushCraft/config.yml || fail "9.1 Trade prices missing"
           if grep -qE "price: 12000|price: 650$" plugins/KushCraft/config.yml; then fail "8.0 prices kept"; fi
           grep -q "Imported 2 balances from balances.yml" server2.log || fail "balances not imported"
           grep -q "Suppliers are gone: refunded 1 of them" server2.log || fail "the Supplier was not refunded"
@@ -393,7 +429,7 @@ jobs:
           timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
           exec 3>&-
           fail() { echo "::error::$1"; exit 1; }
-          grep -q "Updated config.yml to version 13" server4.log || fail "8.1 config was not upgraded"
+          grep -q "Updated config.yml to version 14" server4.log || fail "8.1 config was not upgraded"
           if grep -qE "^access:|income-multiplier" plugins/KushCraft/config.yml; then fail "8.1 add-on settings kept"; fi
           awk '/^new-players:/{f=1;next} /^[a-z]/{f=0} f' plugins/KushCraft/config.yml > kit.txt
           cat kit.txt
@@ -425,6 +461,74 @@ jobs:
           cmp -s pack.zip plugins/KushCraft/KushCraft-pack.zip || { echo "::error::served zip differs"; exit 1; }
           echo "Built-in pack server test passed"
 
+      - name: Upgrade a real 9.0.0 server (config 13, database schema 1) to 9.1
+        working-directory: server
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          # a clean data folder, and the released 9.0.0 jar instead of this build
+          mv plugins/KushCraft plugins/KushCraft-before90 && mkdir -p plugins/KushCraft
+          cp plugins/KushCraft-before90/strains.yml plugins/KushCraft/ || true
+          mkdir -p ../current-jar && mv plugins/KushCraft-9.1.*.jar ../current-jar/ || mv plugins/KushCraft-*.jar ../current-jar/
+          cp ../kushcraft/release/KushCraft-9.0.0.jar plugins/
+          rm -f console && mkfifo console
+          java -Xmx2G -jar paper.jar --nogui < console > server6.log 2>&1 &
+          PID=$!
+          exec 3>console
+          for i in $(seq 1 240); do grep -q "Done (" server6.log && break; sleep 2; done
+          grep -q "Done (" server6.log || { tail -100 server6.log; fail "the 9.0.0 server did not start"; }
+          grep -q "KushCraft v9.0.0" server6.log || fail "the 9.0.0 jar is not what started"
+          echo "kush selftest seed" >&3
+          for i in $(seq 1 30); do grep -qE "SEED (ready|FAILED)" server6.log && break; sleep 1; done
+          echo "stop" >&3
+          timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
+          exec 3>&-
+          grep -q "SEED ready" server6.log || fail "could not seed the 9.0.0 server"
+          grep -q "^config-version: 13" plugins/KushCraft/config.yml || fail "the 9.0.0 server has no version 13 config"
+          # now the same data folder with this build
+          rm plugins/KushCraft-9.0.0.jar
+          cp ../current-jar/KushCraft-*.jar plugins/
+          rm -f console && mkfifo console
+          java -Xmx2G -jar paper.jar --nogui < console > server7.log 2>&1 &
+          PID=$!
+          exec 3>console
+          for i in $(seq 1 240); do grep -q "Done (" server7.log && break; sleep 2; done
+          grep -q "Done (" server7.log || { tail -100 server7.log; fail "the upgraded server did not start"; }
+          echo "kush selftest" >&3
+          for i in $(seq 1 90); do grep -qE "SELFTEST (PASS|FAIL)" server7.log && break; sleep 1; done
+          echo "kush db" >&3
+          sleep 2
+          echo "stop" >&3
+          timeout 120 tail --pid=$PID -f /dev/null || kill $PID || true
+          exec 3>&-
+          grep -iE "kushcraft|selftest" server7.log | head -40 || true
+          grep -q "Updated config.yml to version 14" server7.log || fail "the 9.0.0 config was not upgraded to 14"
+          test -f plugins/KushCraft/config-old-v13.yml || fail "the 9.0.0 config was not kept"
+          grep -q "^config-version: 14" plugins/KushCraft/config.yml || fail "config version not 14"
+          grep -q "price: 120000" plugins/KushCraft/config.yml || fail "9.1 prices missing after the upgrade"
+          grep -q "^bazaar:" plugins/KushCraft/config.yml || fail "the bazaar settings are missing"
+          grep -q "Database ready: kushcraft.db (schema 2)" server7.log || fail "the database was not moved to schema 2"
+          grep -q "KushCraft enabled - season 1, 1 players" server7.log || fail "the 9.0.0 data was not loaded as it was"
+          grep -q "1 workers" server7.log || fail "the 9.0.0 worker is gone"
+          grep -q "SELFTEST PASS" server7.log || { grep "selftest failure" server7.log; fail "selftest failed after the 9.0.0 upgrade"; }
+          grep -q "skipped 'delete all workers'" server7.log || fail "the self test must not delete real workers"
+          python3 - <<'PY'
+          import sqlite3, sys
+          c = sqlite3.connect("plugins/KushCraft/kushcraft.db")
+          K = "00000000-0000-0000-0000-00000000c1c1"
+          row = c.execute("SELECT balance, rank, playtime, sales FROM players WHERE uuid=?", (K,)).fetchone()
+          bad = []
+          if row != (1234500, 3, 7200, 500000): bad.append(f"the 9.0.0 player changed in the upgrade: {row}")
+          if c.execute("SELECT COUNT(*) FROM workers WHERE owner=?", (K,)).fetchone()[0] != 1: bad.append("worker lost")
+          if c.execute("SELECT COUNT(*) FROM plants").fetchone()[0] < 1: bad.append("plant lost")
+          if c.execute("SELECT COUNT(*) FROM cartels WHERE id='ci_keepers'").fetchone()[0] != 1: bad.append("cartel lost")
+          if c.execute("SELECT value FROM meta WHERE key='schema'").fetchone()[0] != "2": bad.append("schema is not 2")
+          c.execute("SELECT COUNT(*) FROM listings").fetchone()
+          if bad:
+              print("::error::" + "; ".join(bad)); sys.exit(1)
+          PY
+          if grep -nE "Exception|Error" server7.log | grep -iE "kushcraft"; then fail "KushCraft errors in the 9.0.0 upgrade run"; fi
+          echo "9.0.0 upgrade test passed"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -435,3 +539,5 @@ jobs:
             server/server3.log
             server/server4.log
             server/server5.log
+            server/server6.log
+            server/server7.log

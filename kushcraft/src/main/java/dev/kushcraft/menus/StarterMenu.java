@@ -72,7 +72,7 @@ public final class StarterMenu extends Menu {
         set(BOOK, Items.icon("grower_guide", "<green>Handbook", "<gray>Everything explained, with pictures."));
         set(TIPS, Items.icon("ui_info", "<white>Tips",
                 "<gray>Open this menu: <white>/kush</white>, <white>Shift+F</white>,",
-                "<gray>or the KushCraft Menu book.",
+                "<gray>or right-click your Handbook.",
                 "<gray>Right-click a plant to see how it grows;",
                 "<gray>sneak + right-click for the details."));
     }

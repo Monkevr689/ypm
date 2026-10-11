@@ -84,7 +84,7 @@ public final class Guide {
         out.add("<dark_green><bold>   KUSHCRAFT</bold>\n<dark_gray>    Handbook\n\n"
                 + "<black>Grow plants, cook in the Drug Lab, roll joints and get rich.\n\n"
                 + "<dark_gray>Open the menu:\n<black>/kush <dark_gray>or <black>Shift+F\n<dark_gray>or right-click the\n"
-                + "<black>KushCraft Menu<dark_gray> book.\n"
+                + "<black>KushCraft Handbook<dark_gray>.\n"
                 + "<click:run_command:/kush><dark_green><u>> Open the menu</u></dark_green></click>");
         StringBuilder toc = new StringBuilder("<dark_green><bold>Contents</bold>\n<dark_gray>click a line\n\n");
         for (Map.Entry<String, Integer> e : start.entrySet()) {

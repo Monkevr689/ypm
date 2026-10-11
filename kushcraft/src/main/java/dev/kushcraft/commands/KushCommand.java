@@ -75,7 +75,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
             case "rankup", "ranks", "rank-up" -> open(sender, dev.kushcraft.menus.RanksMenu::new);
             case "help", "info", "rules" -> open(sender, p -> new dev.kushcraft.menus.InfoMenu(p, "main"));
             case "reset" -> plugin.reset().command(sender, args);
-            case "rank", "playtime", "backup", "backups", "db", "log" -> {
+            case "rank", "playtime", "backup", "backups", "db", "log", "deleteworkers" -> {
                 if (!admin && !(sub.equals("playtime") && args.length == 1)) {
                     noPerm(sender);
                     return true;
@@ -284,18 +284,16 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    /** /kush hands out the KushCraft Menu book once, so the menu is always one click away. */
+    /** /kush hands out the KushCraft Handbook once, so the menu is always one click away. */
     private void giveMenuBook(Player p) {
         if (!plugin.getConfig().getBoolean("menu.give-book-on-command", true)) {
             return;
         }
-        for (ItemStack it : p.getInventory().getContents()) {
-            if (Items.is(it, ItemType.GROWER_GUIDE)) {
-                return;
-            }
+        if (dev.kushcraft.listeners.Onboarding.hasHandbook(p)) {
+            return;
         }
         InventoryUtil.give(p, Items.create(ItemType.GROWER_GUIDE));
-        p.sendMessage(Text.msg("<gray>Here's your <green>KushCraft Menu</green> book - right-click it any time."
+        p.sendMessage(Text.msg("<gray>Here's your <green>KushCraft Handbook</green> - right-click it any time."
                 + " <dark_gray>(or Shift+F)"));
     }
 
@@ -395,6 +393,7 @@ public final class KushCommand implements CommandExecutor, TabCompleter {
                     "start", "pay", "guide", "pack", "balance", "strains", "help", "rankup", "playtime"));
             if (admin) {
                 out.addAll(List.of("admin", "give", "items", "money", "sales", "reload", "rank", "log", "backup", "backups",
+                        "deleteworkers",
                         "db"));
             }
             if (sender.hasPermission("kushcraft.reset")) {

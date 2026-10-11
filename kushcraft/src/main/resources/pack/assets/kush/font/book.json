@@ -344,7 +344,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/roll_joint.png",
+   "file": "kush:book/cook_spice.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -353,7 +353,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/roll_blunt.png",
+   "file": "kush:book/cook_bath_salts.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -362,7 +362,7 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/dry_bud.png",
+   "file": "kush:book/cook_poppers.png",
    "ascent": 7,
    "height": 58,
    "chars": [
@@ -371,11 +371,83 @@
   },
   {
    "type": "bitmap",
-   "file": "kush:book/mix_strain.png",
+   "file": "kush:book/cook_absinthe.png",
    "ascent": 7,
    "height": 58,
    "chars": [
     "\ue129"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_datura_tea.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue12a"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_kratom_tea.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue12b"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_study_pills.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue12c"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/cook_poppy_tea.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue12d"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/roll_joint.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue12e"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/roll_blunt.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue12f"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/dry_bud.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue130"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:book/mix_strain.png",
+   "ascent": 7,
+   "height": 58,
+   "chars": [
+    "\ue131"
    ]
   }
  ]

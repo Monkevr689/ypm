@@ -193,8 +193,9 @@ def check_menus():
     if lab_tabs != gui.LAB_TABS:
         errors.append(f"LabTabMenu tabs {lab_tabs} != gui.LAB_TABS {gui.LAB_TABS}")
     for t in lab_tabs:
-        if rows_of(t.lower()) not in (None, lab_rows):
-            errors.append(f"lab page '{t.lower()}' background is not {lab_rows} rows")
+        want = 6 if t == "COOK" else lab_rows  # the Cook page is taller: four rows of recipes
+        if rows_of(t.lower()) not in (None, want):
+            errors.append(f"lab page '{t.lower()}' background is not {want} rows")
     # other menus: super(player, rows, "name", ...) (rows may be the class's ROWS constant)
     for fn in sorted(os.listdir(gui_dir)):
         src = open(os.path.join(gui_dir, fn), encoding="utf-8").read()
@@ -245,9 +246,12 @@ def check_menus():
         errors.append(f"{steps} starter steps but tools/gui.py guide() draws {gui.GUIDE_STEPS}")
     # slot frames drawn for the right number of things
     cat_src = open(os.path.join(JAVA, "dev", "kushcraft", "catalog", "Catalog.java"), encoding="utf-8").read()
-    counts = [len(re.findall(r"Category\." + c + r"[,)]", cat_src)) for c in ("WEED", "PSYCH", "UPPERS", "DOWNERS", "GEAR")]
-    if counts != gui.DRUG_ROWS:
-        errors.append(f"Catalog rows {counts} != gui.DRUG_ROWS {gui.DRUG_ROWS}")
+    counts = [len(re.findall(r"Category\." + c + r"[,)]", cat_src)) for c in ("WEED", "PSYCH", "UPPERS", "DOWNERS", "STREET")]
+    gear = len(re.findall(r"Category\.GEAR[,)]", cat_src))
+    # the last row holds the street drugs, and gear and supplies on the second page of the Drugs tab
+    expected = counts[:4] + [max(counts[4], gear)]
+    if expected != gui.DRUG_ROWS:
+        errors.append(f"Catalog rows {expected} != gui.DRUG_ROWS {gui.DRUG_ROWS}")
     recipe_src = open(os.path.join(JAVA, "dev", "kushcraft", "lab", "LabRecipe.java"), encoding="utf-8").read()
     enums = re.findall(r"^    ([A-Z_]+)\(ItemType\.", recipe_src, re.M)
     if len(enums) != gui.COOK_RECIPES:

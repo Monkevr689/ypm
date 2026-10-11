@@ -79,7 +79,24 @@ public enum LabRecipe {
     MOONSHINE(ItemType.MOONSHINE, 3, 50,
             Ingredient.of(Material.WHEAT, 4), Ingredient.of(Material.SUGAR, 2), Ingredient.water(1)),
     LAUGHING_GAS(ItemType.LAUGHING_GAS, 4, 30,
-            Ingredient.of(Material.SLIME_BALL, 1), Ingredient.of(Material.IRON_NUGGET, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1));
+            Ingredient.of(Material.SLIME_BALL, 1), Ingredient.of(Material.IRON_NUGGET, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    // 9.1 street drugs
+    SPICE(ItemType.SPICE, 4, 35,
+            Ingredient.of(Material.DRIED_KELP, 4), Ingredient.of(Material.FERN, 2), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    BATH_SALTS(ItemType.BATH_SALTS, 3, 50,
+            Ingredient.of(Material.QUARTZ, 2), Ingredient.of(Material.GLOWSTONE_DUST, 1), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    POPPERS(ItemType.POPPERS, 4, 30,
+            Ingredient.of(Material.SWEET_BERRIES, 2), Ingredient.water(1), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    ABSINTHE(ItemType.ABSINTHE, 3, 55,
+            Ingredient.of(Material.FERN, 3), Ingredient.of(Material.SUGAR, 2), Ingredient.water(1)),
+    DATURA_TEA(ItemType.DATURA_TEA, 2, 45,
+            Ingredient.of(Material.LILY_OF_THE_VALLEY, 3), Ingredient.water(1)),
+    KRATOM_TEA(ItemType.KRATOM_TEA, 3, 30,
+            Ingredient.of(Material.JUNGLE_LEAVES, 6), Ingredient.water(1)),
+    STUDY_PILLS(ItemType.STUDY_PILLS, 6, 40,
+            Ingredient.of(Material.GOLD_NUGGET, 2), Ingredient.of(Material.SUGAR, 1), Ingredient.of(ItemType.LAB_SOLVENT, 1)),
+    POPPY_TEA(ItemType.POPPY_TEA, 2, 35,
+            Ingredient.of(ItemType.POPPY_POD, 2), Ingredient.of(Material.SUGAR, 1), Ingredient.water(1));
 
     private final ItemType output;
     private final int amount;
@@ -242,6 +259,12 @@ public enum LabRecipe {
                 case COCOA_BEANS -> "jungles, or Trade";
                 case SWEET_BERRIES -> "taiga bushes, or Trade";
                 case IRON_NUGGET -> "smelt / craft iron";
+                case DRIED_KELP -> "smelt kelp, or Trade";
+                case FERN -> "break grass and ferns, or Trade";
+                case QUARTZ -> "the Nether, or Trade";
+                case LILY_OF_THE_VALLEY -> "flowers in forests, or Trade";
+                case JUNGLE_LEAVES -> "jungle trees, or Trade";
+                case GOLD_NUGGET -> "gold, or Trade";
                 case GLASS_PANE -> "craft from glass";
                 default -> "farm it, or Trade";
             };

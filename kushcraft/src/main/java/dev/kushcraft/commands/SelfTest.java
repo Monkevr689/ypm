@@ -67,6 +67,7 @@ final class SelfTest {
             recipes();
             exchange();
             money();
+            trading();
             ladder();
             awards();
             menus();
@@ -82,6 +83,8 @@ final class SelfTest {
             nature(w, bx + 18, y, bz);
             guide();
             jobs(w, bx - 4, y, bz);
+            adminTools(w, bx + 22, y, bz + 12);
+            nineOne();
         } catch (Throwable t) {
             fails.add("exception: " + t);
             plugin.getLogger().log(java.util.logging.Level.SEVERE, "selftest crashed", t);
@@ -128,7 +131,7 @@ final class SelfTest {
         check(Items.hits(Items.strainItem(ItemType.VAPE_PEN, s, 3, 1)) == Items.VAPE_HITS, "vape pen puffs");
         check(Dose.strain(s, 5, 60, 10).effects().size() == s.effects().size(), "dose effects");
         check(GuiFont.space(-169).length() == 4, "negative space builder");
-        check(LabRecipe.values().length == 27, "lab recipes");
+        check(LabRecipe.values().length == 35, "lab recipes");
         int seconds = 0;
         for (LabRecipe r : LabRecipe.values()) {
             check(r.ingredients().size() <= 4, "recipe needs 1-4 kinds of things: " + r);
@@ -260,7 +263,7 @@ final class SelfTest {
                 .average().orElse(1e9);
         check(epicAvg > commonAvg, "epic seeds cost more than common ones");
         for (var e : plugin.shop().gear()) {
-            check(e.price() <= 4000, "gear costs at most 4000: " + e.type() + " " + e.price());
+            check(e.price() <= 8000, "gear costs at most 8000: " + e.type() + " " + e.price());
         }
         for (var e : plugin.shop().hires()) {
             check(e.price() >= 45000, "9.0: workers are very expensive: " + e.type() + " " + e.price());
@@ -391,7 +394,7 @@ final class SelfTest {
                 Strain s = plugin.strains().all().iterator().next();
                 long now = System.currentTimeMillis();
                 check(Machine.RACKS == 5 && m.racksInUse() == 0, "5 empty drying racks");
-                check(plugin.machines().dryingSeconds() <= 30, "buds dry in 30s");
+                check(plugin.machines().dryingSeconds() <= 60, "buds dry within a minute");
                 for (int r = 0; r < Machine.RACKS; r++) {
                     m.rack(r, new Machine.Rack(s.id(), 3, 10 + r, now - 1000, r < 2 ? now - 1 : now + 30_000));
                 }
@@ -1175,7 +1178,10 @@ final class SelfTest {
         for (String g : List.of("gear", "worker", "guide", "admin")) {
             check(GuiFont.GUIS.contains(g), "background for " + g);
         }
-        check(LabRecipe.values().length <= 27, "cook page fits 3 rows");
+        check(LabRecipe.values().length <= 36, "cook page fits 4 rows");
+        for (String g : List.of("home", "tradewin")) {
+            check(GuiFont.GUIS.contains(g), "background for " + g);
+        }
         check(dev.kushcraft.menus.TabMenu.Tab.values().length == 5, "5 main panels");
     }
 
@@ -1308,6 +1314,157 @@ final class SelfTest {
                 }
             }
         });
+    }
+
+    private String dbString(String sql) {
+        return plugin.db().call(c -> {
+            try (var s = c.createStatement(); var rs = s.executeQuery(sql)) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        });
+    }
+
+    /** 9.1 admin panel: deleting every worker (only when the server has no workers of real players). */
+    private void adminTools(World w, int x, int y, int z) {
+        var ws = plugin.workers();
+        UUID owner = UUID.randomUUID();
+        fake.add(owner);
+        var wk = ws.hireAt(new Location(w, x + 0.5, y + 1, z + 0.5), dev.kushcraft.workers.WorkerType.FARMHAND, owner, 1);
+        wk.satchel().addItem(Items.create(ItemType.FERTILIZER, 4));
+        check(ws.of(owner).size() == 1, "a worker to delete");
+        boolean onlyOurs = ws.all().stream().allMatch(o -> fake.contains(o.owner()));
+        if (onlyOurs) {
+            int n = ws.deleteAll("selftest");
+            check(n >= 1 && ws.all().isEmpty() && ws.of(owner).isEmpty(), "delete all workers removes every worker (" + n + ")");
+            check(plugin.persistence().flushNow() && "0".equals(dbString("SELECT COUNT(*) FROM workers")),
+                    "the deleted workers are gone from the database");
+            check(dbString("SELECT COUNT(*) FROM ledger WHERE player=? AND type='ADMIN' AND detail LIKE '%worker%deleted%'",
+                    owner.toString()) != null && !"0".equals(dbString(
+                    "SELECT COUNT(*) FROM ledger WHERE player=? AND type='ADMIN' AND detail LIKE '%worker%deleted%'", owner.toString())),
+                    "the deletion is in the owner's log");
+        } else {
+            ws.dismiss(wk, null);
+            plugin.getLogger().info("SELFTEST: skipped 'delete all workers' because real players' workers are on this server");
+        }
+        // the reset menu and the handbook flag exist and don't collide
+        check((dev.kushcraft.storage.PlayerRecord.ONBOARDED | dev.kushcraft.storage.PlayerRecord.GOT_KIT
+                | dev.kushcraft.storage.PlayerRecord.AUTO_BUY_OFF | dev.kushcraft.storage.PlayerRecord.HANDBOOK) == 15,
+                "player flags don't overlap");
+    }
+
+    /** 9.1: the harder economy, the new drugs, the handbook. */
+    private void nineOne() {
+        var cfg = plugin.getConfig();
+        check(cfg.getInt("config-version") == 14, "config is version 14");
+        check(cfg.getDouble("shop.seed-price-multiplier") >= 12 && cfg.getDouble("exchange.price-multiplier") >= 10
+                && cfg.getInt("growth.cannabis-minutes") >= 30 && cfg.getDouble("lab.time-multiplier") >= 1.5
+                && cfg.getDouble("shop.sell-multiplier") < 1, "9.1 is expensive, slow and pays less");
+        check(Math.abs(plugin.shop().basePrice(ItemType.COCAINE) - cfg.getDouble("shop.sell.cocaine")
+                * cfg.getDouble("shop.sell-multiplier")) < 1e-9, "the dealer pays sell-multiplier of the sell price");
+        check(plugin.ranks().top() == 12 && plugin.ranks().get(12).cost() >= 20_000_000, "the ladder is steep");
+        // the street drugs
+        var street = dev.kushcraft.catalog.Catalog.entries(dev.kushcraft.catalog.Catalog.Category.STREET);
+        check(street.size() == 8, "8 street drugs, got " + street.size());
+        for (var e : street) {
+            ItemType t = e.type();
+            check(t.isDrug() && LabRecipe.making(t) != null && plugin.shop().basePrice(t) > 0
+                    && dev.kushcraft.catalog.Catalog.dose(t) != null && dev.kushcraft.catalog.Catalog.dose(t).effects().size() >= 3,
+                    "street drug is complete: " + t);
+            check(!RecipeBook.making(t).isEmpty(), "street drug has a recipe picture: " + t);
+        }
+        check(dev.kushcraft.catalog.Catalog.psychedelic(ItemType.DATURA_TEA)
+                && !dev.kushcraft.catalog.Catalog.psychedelic(ItemType.KRATOM_TEA), "moonflower tea can trip badly, kratom tea can't");
+        check(ItemType.GROWER_GUIDE.display().equals("KushCraft Handbook"), "everyone's first item is the Handbook");
+        check(!dev.kushcraft.catalog.Catalog.entries(dev.kushcraft.catalog.Catalog.Category.GEAR).isEmpty(),
+                "gear still has its page");
+    }
+
+    /** 9.1: player trades (the money side) and the Bazaar. */
+    private void trading() {
+        var eco = plugin.economy();
+        // typed prices
+        check(dev.kushcraft.trade.Bazaar.parsePrice("1500") == 150_000 && dev.kushcraft.trade.Bazaar.parsePrice("$1,500") == 150_000
+                && dev.kushcraft.trade.Bazaar.parsePrice("1.5k") == 150_000 && dev.kushcraft.trade.Bazaar.parsePrice("2m") == 200_000_000
+                && dev.kushcraft.trade.Bazaar.parsePrice("0.25") == 25, "prices can be typed as 1500, $1,500, 1.5k or 2m");
+        for (String bad : new String[]{"abc", "-5", "0", "NaN", "1e309", "", "k"}) {
+            check(dev.kushcraft.trade.Bazaar.parsePrice(bad) == -1, "not a price: '" + bad + "'");
+        }
+        // a player trade: money moves both ways in one step, a fee is destroyed
+        UUID ia = UUID.randomUUID(), ib = UUID.randomUUID();
+        fake.add(ia);
+        fake.add(ib);
+        eco.set(Bukkit.getOfflinePlayer(ia), 1000, "selftest");
+        eco.set(Bukkit.getOfflinePlayer(ib), 500, "selftest");
+        long total = eco.account(ia).balance() + eco.account(ib).balance();
+        check(eco.exchange(ia, 30_000, ib, 10_000, 0.02, dev.kushcraft.economy.Tx.PLAYER_TRADE, "a", "b"),
+                "a trade goes through");
+        check(eco.account(ia).balance() == 79_800 && eco.account(ib).balance() == 69_400,
+                "trade money: 300 for 100 with a 2% fee each way (" + eco.account(ia).balance() + ", " + eco.account(ib).balance() + ")");
+        check(total - (eco.account(ia).balance() + eco.account(ib).balance()) == 800, "exactly the fee is destroyed");
+        long before = eco.account(ia).balance();
+        check(!eco.exchange(ia, 10_000_000, ib, 0, 0.02, dev.kushcraft.economy.Tx.PLAYER_TRADE, "a", "b")
+                        && !eco.exchange(ia, 100, ia, 100, 0.02, dev.kushcraft.economy.Tx.PLAYER_TRADE, "a", "b")
+                        && !eco.exchange(ia, -5, ib, 0, 0.02, dev.kushcraft.economy.Tx.PLAYER_TRADE, "a", "b")
+                        && eco.account(ia).balance() == before,
+                "a trade nobody can afford, with yourself or with a negative amount changes nothing");
+        // the Bazaar
+        var bz = plugin.bazaar();
+        UUID seller = UUID.randomUUID(), buyer = UUID.randomUUID();
+        fake.add(seller);
+        fake.add(buyer);
+        eco.set(Bukkit.getOfflinePlayer(seller), 0, "selftest");
+        eco.set(Bukkit.getOfflinePlayer(buyer), 1000, "selftest");
+        int base = bz.count();
+        ItemStack coke = Items.create(ItemType.COCAINE, 5);
+        check(!bz.list(seller, "Sam", 1, coke, 0).ok() && !bz.list(seller, "Sam", 1, coke, Long.MAX_VALUE).ok()
+                && !bz.list(seller, "Sam", 1, new ItemStack(Material.AIR), 5000).ok(), "bad prices and empty stacks aren't listed");
+        var l1 = bz.list(seller, "Sam", 1, coke, 50_000);
+        var l2 = bz.list(seller, "Sam", 1, new ItemStack(Material.DIAMOND, 3), 20_000);
+        var l3 = bz.list(seller, "Sam", 1, new ItemStack(Material.IRON_INGOT, 9), 10_000);
+        check(l1.ok() && l2.ok() && l3.ok(), "three listings at rank 1");
+        check(!bz.list(seller, "Sam", 1, new ItemStack(Material.GOLD_INGOT, 1), 10_000).ok(),
+                "rank 1 has 3 listings, the fourth is refused");
+        check(bz.count() == base + 3 && bz.activeCount(seller) == 3 && bz.of(seller).size() == 3, "the listings are counted");
+        // saved and read back with the custom item intact
+        check(plugin.persistence().flushNow(), "the listings are written");
+        check(String.valueOf(base + 3).equals(dbString("SELECT COUNT(*) FROM listings")), "the listings are in the database");
+        bz.load();
+        var back = bz.get(l1.value().id());
+        check(back != null && dev.kushcraft.items.Items.type(back.item()) == ItemType.COCAINE && back.item().getAmount() == 5
+                && back.price() == 50_000 && back.seller().equals(seller), "a listing survives the database with its item");
+        // buying: refusals change nothing, a sale moves money and the listing once
+        long sellerBefore = eco.account(seller).balance();
+        check(!bz.buy(seller, "Sam", l1.value().id(), it -> true).ok(), "you can't buy your own listing");
+        check(!bz.buy(buyer, "Bo", l1.value().id(), it -> false).ok() && eco.account(buyer).balance() == 100_000
+                && bz.get(l1.value().id()) != null, "no room = no sale, nothing moves");
+        eco.set(Bukkit.getOfflinePlayer(buyer), 100, "selftest");
+        check(!bz.buy(buyer, "Bo", l1.value().id(), it -> true).ok() && eco.account(buyer).balance() == 10_000
+                && bz.get(l1.value().id()) != null, "can't pay = no sale, nothing moves");
+        eco.set(Bukkit.getOfflinePlayer(buyer), 1000, "selftest");
+        var sale = bz.buy(buyer, "Bo", l1.value().id(), it -> true);
+        check(sale.ok() && dev.kushcraft.items.Items.type(sale.value().item()) == ItemType.COCAINE, "the sale goes through");
+        check(eco.account(buyer).balance() == 50_000 && eco.account(seller).balance() == sellerBefore + 46_000,
+                "the buyer pays 500, the seller gets 460 (8% tax is destroyed): " + eco.account(seller).balance());
+        check(bz.get(l1.value().id()) == null && !bz.buy(buyer, "Bo", l1.value().id(), it -> true).ok(),
+                "a listing can only be sold once");
+        // taking back and running out
+        check(!bz.takeBack(buyer, l2.value().id(), it -> true).ok(), "only the seller takes a listing back");
+        check(!bz.takeBack(seller, l2.value().id(), it -> false).ok() && bz.get(l2.value().id()) != null,
+                "no room = it stays listed");
+        var got = bz.takeBack(seller, l2.value().id(), it -> true);
+        check(got.ok() && got.value().getType() == Material.DIAMOND && got.value().getAmount() == 3 && bz.get(l2.value().id()) == null,
+                "the seller takes their listing back");
+        bz.expire(System.currentTimeMillis() + 30L * 86_400_000L);
+        check(bz.active().stream().noneMatch(l -> l.id() == l3.value().id()) && bz.of(seller).stream().anyMatch(
+                        l -> l.id() == l3.value().id() && !l.active()), "a listing that ran out waits for its seller");
+        check(!bz.buy(buyer, "Bo", l3.value().id(), it -> true).ok(), "an expired listing can't be bought");
+        check(bz.takeBack(seller, l3.value().id(), it -> true).ok(), "an expired listing can be taken back");
+        check(plugin.persistence().flushNow() && String.valueOf(base).equals(dbString("SELECT COUNT(*) FROM listings")),
+                "sold and taken-back listings are gone from the database");
+        var log = dbString("SELECT COUNT(*) FROM ledger WHERE player=? AND type IN ('BAZAAR_LIST','BAZAAR_SELL','BAZAAR_BACK')",
+                seller.toString());
+        check(log != null && Integer.parseInt(log) >= 6, "listings, the sale and the take-backs are in the log (" + log + ")");
+        check(bz.maxListings(1) == 3 && bz.maxListings(12) == 14, "listing slots grow with rank");
     }
 
     private void money() {

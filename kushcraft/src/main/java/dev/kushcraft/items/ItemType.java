@@ -107,6 +107,23 @@ public enum ItemType {
             "<gray>Right-click to drink."),
     LAUGHING_GAS("Laughing Gas", "laughing_gas", false, false,
             "<gray>Right-click to huff the balloon."),
+    // --- 9.1 street drugs -------------------------------------------------
+    SPICE("Spice", "spice", false, false,
+            "<gray>Right-click to smoke."),
+    BATH_SALTS("Bath Salts", "bath_salts", false, false,
+            "<gray>Right-click to use."),
+    POPPERS("Poppers", "poppers", false, false,
+            "<gray>Right-click to sniff."),
+    ABSINTHE("Absinthe", "absinthe", false, false,
+            "<gray>Right-click to drink."),
+    DATURA_TEA("Moonflower Tea", "datura_tea", false, false,
+            "<gray>Right-click to drink. Not for the weak."),
+    KRATOM_TEA("Kratom Tea", "kratom_tea", false, false,
+            "<gray>Right-click to drink."),
+    STUDY_PILLS("Study Pills", "study_pills", false, false,
+            "<gray>Right-click to take one."),
+    POPPY_TEA("Poppy Tea", "poppy_tea", false, false,
+            "<gray>Right-click to drink."),
     // --- supplies -------------------------------------------------------
     ROLLING_PAPERS("Rolling Papers", "rolling_papers", false, false,
             "<gray>For rolling joints."),
@@ -120,8 +137,8 @@ public enum ItemType {
             "<dark_gray>Not needed any more."),
     FERTILIZER("Fertilizer", "fertilizer", false, false,
             "<gray>Right-click a plant: faster, better."),
-    GROWER_GUIDE("KushCraft Menu", "grower_guide", false, false,
-            "<gray>Right-click to open the menu."),
+    GROWER_GUIDE("KushCraft Handbook", "grower_guide", false, false,
+            "<gray>Right-click: the menu.", "<gray>Sneak + right-click: read the handbook."),
     // --- workers (right-click the ground to hire them there) -------------
     FARMHAND("Farmhand", "worker_farmhand", false, false,
             "<gray>Harvests and replants your plants.", "<gray>Right-click the ground to hire them there."),
@@ -238,7 +255,8 @@ public enum ItemType {
         return switch (this) {
             case JOINT, BLUNT, SPACE_BROWNIE, GUMMIES, WAX, VAPE_PEN, MAGIC_MUSHROOM, SHROOM_TEA, LUCID_TAB, BLUE_CRYSTAL,
                  PIXIE_DUST, COCAINE, HEROIN, CRACK, OPIUM, LEAN, ECSTASY, KETAMINE, DMT, PEYOTE_BUTTON, MESCALINE,
-                 ANGEL_DUST, SHROOM_CHOCOLATE, AYAHUASCA, SPEED, OXY, XANNY_BARS, MOONSHINE, LAUGHING_GAS -> true;
+                 ANGEL_DUST, SHROOM_CHOCOLATE, AYAHUASCA, SPEED, OXY, XANNY_BARS, MOONSHINE, LAUGHING_GAS, SPICE, BATH_SALTS,
+                 POPPERS, ABSINTHE, DATURA_TEA, KRATOM_TEA, STUDY_PILLS, POPPY_TEA -> true;
             default -> false;
         };
     }

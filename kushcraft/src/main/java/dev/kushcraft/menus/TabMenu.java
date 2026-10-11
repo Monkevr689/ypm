@@ -76,9 +76,9 @@ public abstract class TabMenu extends Menu {
         return false;
     }
 
-    /** /kush, Shift+F and the menu book: opens the tab you used last. */
+    /** /kush, Shift+F and the Handbook: the simple home menu. */
     public static void openMain(Player p) {
-        LAST.getOrDefault(p.getUniqueId(), Tab.SHOP).open(p);
+        HomeMenu.open(p);
     }
 
     @Override
@@ -90,8 +90,8 @@ public abstract class TabMenu extends Menu {
         }
         dev.kushcraft.cartels.Cartel cartel = plugin.cartels().enabled() ? plugin.cartels().of(player) : null;
         set(WALLET, Items.icon("ui_wallet", "<gold>" + money(plugin.economy().balance(player)),
-                cartel == null ? java.util.List.of(plugin.titles().label(player))
-                        : java.util.List.of(plugin.titles().label(player), cartel.colored())));
+                cartel == null ? java.util.List.of(plugin.titles().label(player), "<dark_gray>Click: home menu")
+                        : java.util.List.of(plugin.titles().label(player), cartel.colored(), "<dark_gray>Click: home menu")));
         set(GUIDE, StarterMenu.button(player));
         if (player.hasPermission("kushcraft.admin")) {
             set(ADMIN, Items.icon("ui_admin", "<red>Admin panel", "<dark_gray>Only admins see this button."));
@@ -114,6 +114,11 @@ public abstract class TabMenu extends Menu {
         }
         if (slot == GUIDE) {
             openChild(new StarterMenu(player));
+            return;
+        }
+        if (slot == WALLET) {
+            clickSound();
+            HomeMenu.open(player);
             return;
         }
         if (slot == ADMIN && player.hasPermission("kushcraft.admin")) {

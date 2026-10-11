@@ -1,0 +1,8 @@
+{
+ "parent": "minecraft:item/generated",
+ "textures": {
+  "layer0": "kush:item/datura_tea",
+  "layer1": "kush:item/datura_tea_tint",
+  "layer2": "kush:item/datura_tea_overlay"
+ }
+}

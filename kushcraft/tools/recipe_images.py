@@ -72,6 +72,14 @@ COOK = [
     ("XANNY_BARS", "xanny_bars", 6, 40, [("white_dye", 2), ("sugar", 1), ("kush:lab_solvent", 1)]),
     ("MOONSHINE", "moonshine", 3, 50, [("wheat", 4), ("sugar", 2), ("potion", 1)]),
     ("LAUGHING_GAS", "laughing_gas", 4, 30, [("slime_ball", 1), ("iron_nugget", 2), ("kush:lab_solvent", 1)]),
+    ("SPICE", "spice", 4, 35, [("dried_kelp", 4), ("fern", 2), ("kush:lab_solvent", 1)]),
+    ("BATH_SALTS", "bath_salts", 3, 50, [("quartz", 2), ("glowstone_dust", 1), ("kush:lab_solvent", 1)]),
+    ("POPPERS", "poppers", 4, 30, [("sweet_berries", 2), ("potion", 1), ("kush:lab_solvent", 1)]),
+    ("ABSINTHE", "absinthe", 3, 55, [("fern", 3), ("sugar", 2), ("potion", 1)]),
+    ("DATURA_TEA", "datura_tea", 2, 45, [("lily_of_the_valley", 3), ("potion", 1)]),
+    ("KRATOM_TEA", "kratom_tea", 3, 30, [("jungle_leaves", 6), ("potion", 1)]),
+    ("STUDY_PILLS", "study_pills", 6, 40, [("gold_nugget", 2), ("sugar", 1), ("kush:lab_solvent", 1)]),
+    ("POPPY_TEA", "poppy_tea", 2, 35, [("kush:poppy_pod", 2), ("sugar", 1), ("potion", 1)]),
 ]
 
 # other Drug Lab tabs: (id, station text, result, amount, [(ingredient, count)])
@@ -85,7 +93,7 @@ OTHER = [
 NAMES = {
     "lab_station": "Drug Lab", "grow_lamp": "Grow Lamp", "planter_box": "Planter", "dealer": "Dealer Stand",
     "bong": "Bong", "rolling_papers": "Rolling Papers", "blunt_wrap": "Blunt Wrap", "fertilizer": "Fertilizer",
-    "lab_solvent": "Lab Solvent", "catalyst": "Catalyst", "grower_guide": "KushCraft Menu", "hash": "Hash",
+    "lab_solvent": "Lab Solvent", "catalyst": "Catalyst", "grower_guide": "KushCraft Handbook", "hash": "Hash",
     "moon_rock": "Moon Rock", "space_brownie": "Space Brownie", "shroom_tea": "Shroom Tea", "lucid_tab": "LSD",
     "blue_crystal": "Meth", "cocaine": "Cocaine", "heroin": "Heroin", "pixie_dust": "Pixie Dust",
     "joint": "Joint", "blunt": "Blunt", "bud_dried": "Dried Bud", "seed_pack": "Your own strain",
@@ -95,7 +103,9 @@ NAMES = {
     "ergot_extract": "Ergot Extract", "coca_paste": "Coca Paste", "morphine": "Morphine Base",
     "cough_syrup": "Cough Syrup", "shroom_chocolate": "Shroom Chocolate", "ayahuasca": "Ayahuasca",
     "speed": "Speed", "oxy": "Oxy Pills", "xanny_bars": "Xanny Bars", "moonshine": "Moonshine",
-    "laughing_gas": "Laughing Gas",
+    "laughing_gas": "Laughing Gas", "spice": "Spice", "bath_salts": "Bath Salts", "poppers": "Poppers",
+    "absinthe": "Absinthe", "datura_tea": "Moonflower Tea", "kratom_tea": "Kratom Tea",
+    "study_pills": "Study Pills", "poppy_tea": "Poppy Tea",
 }
 
 MACHINES = {"lab_station": "block/lab_station", "grow_lamp": "block/grow_lamp",

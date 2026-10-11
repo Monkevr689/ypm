@@ -25,19 +25,25 @@ import java.util.Map;
  * belong to your server (resource pack link, world, effects, which systems
  * are on) carried over. Prices are NOT carried over: they're the 9.0 ones.
  *
+ * 9.1 (config-version 14) makes everything harder again: buy prices about
+ * doubled, a tougher market, slower plants and Drug Labs, rarer wild seeds,
+ * a steeper ladder. The same rule applies: the old file is kept, the fresh one
+ * has the 9.1 numbers, and your own switches (pack link, which systems are on,
+ * dealer titles, starter kit...) are carried over - but not growth times, wild
+ * chances, drying and lab speed, which are part of the difficulty.
+ *
  * Later versions only add what's missing and keep everything you set.
  */
 final class ConfigMigration {
 
-    static final int VERSION = 13;
+    static final int VERSION = 14;
 
     /** Settings carried over into the fresh 9.0 config (everything under these paths). */
     private static final List<String> KEEP = List.of(
-            "resource-pack", "effects", "animals", "wild", "harvest", "drying", "menu.shift-f",
-            "menu.give-book-on-command", "growth.tick-seconds", "growth.cannabis-minutes", "growth.mushroom-minutes",
-            "growth.coca-minutes", "growth.poppy-minutes", "growth.peyote-minutes", "growth.min-light",
-            "growth.lamp-radius", "growth.respect-protection", "lab.time-multiplier", "strain-maker.max-per-player",
-            "strain-maker.seeds-given", "cartel.enabled", "cartel.max-name-length", "workers.enabled",
+            "resource-pack", "effects", "animals", "wild.plants", "harvest", "menu.shift-f",
+            "menu.give-book-on-command", "growth.tick-seconds", "growth.min-light",
+            "growth.lamp-radius", "growth.respect-protection", "strain-maker.max-per-player",
+            "strain-maker.seeds-given", "cartel.enabled", "cartel.max-name-length", "workers.enabled", "trade.enabled", "bazaar.enabled",
             "workers.chain-radius", "workers.radius", "workers.rest-seconds", "exchange.enabled", "market.anywhere",
             "jobs.enabled", "awards.advancements", "economy.symbol", "dealer-titles.titles", "dealer-titles.everyone",
             "ranks.tab-list", "new-players.starter-kit", "new-players.give-guide", "pvp.death-cash-lost");
@@ -102,8 +108,9 @@ final class ConfigMigration {
             plugin.getLogger().severe("Could not save config.yml: " + e.getMessage());
         }
         plugin.getConfig().setDefaults(def);
-        plugin.getLogger().info("Updated config.yml to version " + VERSION + " (9.0: grouped by system, about 5x prices,"
-                + " the rank ladder, worker auto-buy off). Kept your " + carried.size() + " server settings ("
+        plugin.getLogger().info("Updated config.yml to version " + VERSION + " (9.1: about 10x the 8.0 prices, a tougher"
+                + " market, slower plants and labs, the rank ladder, worker auto-buy off). Kept your " + carried.size()
+                + " server settings ("
                 + String.join(", ", carried) + "); the old file is " + kept.getName() + ".");
     }
 

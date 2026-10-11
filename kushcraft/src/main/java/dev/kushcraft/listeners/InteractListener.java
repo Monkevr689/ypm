@@ -205,7 +205,11 @@ public final class InteractListener implements Listener {
     private boolean use(Player p, ItemStack item, ItemType type) {
         switch (type) {
             case GROWER_GUIDE -> {
-                dev.kushcraft.menus.TabMenu.openMain(p);
+                if (p.isSneaking()) {
+                    p.openBook(dev.kushcraft.guide.Guide.book(p));
+                } else {
+                    dev.kushcraft.menus.HomeMenu.open(p);
+                }
                 return true;
             }
             case JOINT, BLUNT, VAPE_PEN -> {
@@ -401,11 +405,20 @@ public final class InteractListener implements Listener {
                     food = 3;
                     p.sendActionBar(Text.mm("<gray>Tasty. <dark_gray>Doesn't feel like anything... yet."));
                 }
-                case SHROOM_TEA, LEAN, AYAHUASCA, MOONSHINE -> {
+                case SHROOM_TEA, LEAN, AYAHUASCA, MOONSHINE, ABSINTHE, DATURA_TEA, KRATOM_TEA, POPPY_TEA -> {
                     sound = "minecraft:entity.generic.drink";
                     food = 2;
                 }
-                case LUCID_TAB, MESCALINE, ECSTASY, OXY, XANNY_BARS -> sound = "minecraft:block.amethyst_block.chime";
+                case LUCID_TAB, MESCALINE, ECSTASY, OXY, XANNY_BARS, STUDY_PILLS, BATH_SALTS ->
+                        sound = "minecraft:block.amethyst_block.chime";
+                case SPICE -> {
+                    sound = "minecraft:block.fire.extinguish";
+                    smokeFx(p, 1.1);
+                }
+                case POPPERS -> {
+                    sound = "minecraft:entity.sniffer.sniffing";
+                    p.sendActionBar(Text.mm("<yellow>Whoa... <gray>head rush!"));
+                }
                 case SPEED -> {
                     sound = "minecraft:entity.sniffer.sniffing";
                     dust = new Particle.DustOptions(org.bukkit.Color.fromRGB(0xF4B8D0), 1f);

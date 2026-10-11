@@ -81,7 +81,7 @@
    "type": "bitmap",
    "file": "kush:gui/cook.png",
    "ascent": 13,
-   "height": 204,
+   "height": 222,
    "chars": [
     "\ue006"
    ]
@@ -165,6 +165,24 @@
    "height": 222,
    "chars": [
     "\ue00f"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/home.png",
+   "ascent": 13,
+   "height": 204,
+   "chars": [
+    "\ue010"
+   ]
+  },
+  {
+   "type": "bitmap",
+   "file": "kush:gui/tradewin.png",
+   "ascent": 13,
+   "height": 222,
+   "chars": [
+    "\ue011"
    ]
   }
  ]

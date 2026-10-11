@@ -48,7 +48,12 @@ public abstract class LabTabMenu extends Menu {
     protected final Tab tab;
 
     protected LabTabMenu(Player player, Machine machine, Tab tab) {
-        super(player, ROWS, tab.name().toLowerCase(Locale.ROOT), "Drug Lab · " + tab.display(), false);
+        this(player, machine, tab, ROWS);
+    }
+
+    /** The Cook page is taller (6 rows): four rows of recipes. */
+    protected LabTabMenu(Player player, Machine machine, Tab tab, int rows) {
+        super(player, rows, tab.name().toLowerCase(Locale.ROOT), "Drug Lab · " + tab.display(), false);
         this.machine = machine;
         this.tab = tab;
     }

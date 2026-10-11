@@ -29,6 +29,12 @@ commands:
     description: The richest players
     usage: /baltop [page]
     aliases: [balancetop]
+  trade:
+    description: Trade items and money with another player (both must agree)
+    usage: /trade <player>
+  bazaar:
+    description: The Bazaar - buy from other players or list your goods
+    usage: /bazaar
 permissions:
   kushcraft.use:
     description: Use KushCraft items, machines and menus

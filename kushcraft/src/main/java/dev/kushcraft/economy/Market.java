@@ -37,6 +37,8 @@ public final class Market implements dev.kushcraft.storage.Persistence.Source {
             ItemType.COCAINE, ItemType.CRACK, ItemType.BLUE_CRYSTAL, ItemType.SPEED, ItemType.ECSTASY,
             ItemType.PIXIE_DUST, ItemType.ANGEL_DUST, ItemType.OPIUM, ItemType.HEROIN, ItemType.OXY, ItemType.LEAN,
             ItemType.XANNY_BARS, ItemType.KETAMINE, ItemType.MOONSHINE, ItemType.LAUGHING_GAS,
+            ItemType.SPICE, ItemType.BATH_SALTS, ItemType.POPPERS, ItemType.ABSINTHE, ItemType.DATURA_TEA,
+            ItemType.KRATOM_TEA, ItemType.STUDY_PILLS, ItemType.POPPY_TEA,
             ItemType.COCA_LEAVES, ItemType.POPPY_POD);
 
     private final KushCraft plugin;

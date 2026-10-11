@@ -27,16 +27,16 @@ import java.util.List;
 public final class LabMenu extends LabTabMenu {
 
     static final int FIRST = 9;
-    static final int SLOTS = 27;
-    static final int[] PROGRESS = {at(4, 0), at(4, 1), at(4, 2), at(4, 3), at(4, 4), at(4, 5), at(4, 6)};
-    static final int OUTPUT = at(4, 8);
+    static final int SLOTS = 36;
+    static final int[] PROGRESS = {at(5, 0), at(5, 1), at(5, 2), at(5, 3), at(5, 4), at(5, 5), at(5, 6)};
+    static final int OUTPUT = at(5, 8);
     static final int MAX_BATCHES = Cooking.MAX_BATCHES;
 
     private String pickStrain;
     private int pickQuality;
 
     public LabMenu(Player player, Machine machine) {
-        super(player, machine, Tab.COOK);
+        super(player, machine, Tab.COOK, 6);
     }
 
     @Override

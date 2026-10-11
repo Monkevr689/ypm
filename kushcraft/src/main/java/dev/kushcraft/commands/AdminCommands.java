@@ -51,6 +51,7 @@ final class AdminCommands {
                 }
             }
             case "db" -> db(plugin, s);
+            case "deleteworkers" -> deleteWorkers(plugin, s, args);
             default -> {
             }
         }
@@ -163,6 +164,31 @@ final class AdminCommands {
         } catch (IllegalArgumentException e) {
             return id;
         }
+    }
+
+    private static final Map<String, Long> DELETE_ASKED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** /kush deleteworkers, then /kush deleteworkers confirm within a minute: backup, then every worker is gone. */
+    private static void deleteWorkers(KushCraft plugin, CommandSender s, String[] args) {
+        int n = plugin.workers().all().size();
+        long now = System.currentTimeMillis();
+        boolean confirm = args.length > 1 && args[1].equalsIgnoreCase("confirm");
+        Long asked = DELETE_ASKED.get(s.getName());
+        if (!confirm || asked == null || now - asked > 60_000L) {
+            DELETE_ASKED.put(s.getName(), now);
+            s.sendMessage(Text.msg("<red>This deletes all " + n + " workers in the world and their satchels, for every"
+                    + " player. A backup is made first. <white>/kush deleteworkers confirm</white> <red>within a minute to go ahead."));
+            return;
+        }
+        DELETE_ASKED.remove(s.getName());
+        Backups.Backup b = plugin.backups().make("before-delete-workers", s.getName());
+        if (!b.verified()) {
+            s.sendMessage(Text.msg("<red>The backup failed, so no worker was deleted: " + b.problem()));
+            return;
+        }
+        int done = plugin.workers().deleteAll(s.getName());
+        plugin.getLogger().info(s.getName() + " deleted all workers (" + done + "). Backup: backups/" + b.dir().getName());
+        s.sendMessage(Text.msg("<green>Deleted " + done + " workers. <gray>Backup: backups/" + b.dir().getName()));
     }
 
     /** /kush db */

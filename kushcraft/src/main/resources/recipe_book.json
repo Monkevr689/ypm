@@ -58,7 +58,7 @@
   {
    "id": "craft_grower_guide",
    "char": "",
-   "title": "KushCraft Menu",
+   "title": "KushCraft Handbook",
    "sig": "craft:kush:grower_guidex1:book,wheat_seeds"
   },
   {
@@ -230,23 +230,71 @@
    "sig": "cook:kush:laughing_gasx4:30s:slime_ball*1,iron_nugget*2,kush:lab_solvent*1"
   },
   {
-   "id": "roll_joint",
+   "id": "cook_spice",
    "char": "",
+   "title": "Spice",
+   "sig": "cook:kush:spicex4:35s:dried_kelp*4,fern*2,kush:lab_solvent*1"
+  },
+  {
+   "id": "cook_bath_salts",
+   "char": "",
+   "title": "Bath Salts",
+   "sig": "cook:kush:bath_saltsx3:50s:quartz*2,glowstone_dust*1,kush:lab_solvent*1"
+  },
+  {
+   "id": "cook_poppers",
+   "char": "",
+   "title": "Poppers",
+   "sig": "cook:kush:poppersx4:30s:sweet_berries*2,potion*1,kush:lab_solvent*1"
+  },
+  {
+   "id": "cook_absinthe",
+   "char": "",
+   "title": "Absinthe",
+   "sig": "cook:kush:absinthex3:55s:fern*3,sugar*2,potion*1"
+  },
+  {
+   "id": "cook_datura_tea",
+   "char": "",
+   "title": "Moonflower Tea",
+   "sig": "cook:kush:datura_teax2:45s:lily_of_the_valley*3,potion*1"
+  },
+  {
+   "id": "cook_kratom_tea",
+   "char": "",
+   "title": "Kratom Tea",
+   "sig": "cook:kush:kratom_teax3:30s:jungle_leaves*6,potion*1"
+  },
+  {
+   "id": "cook_study_pills",
+   "char": "",
+   "title": "Study Pills",
+   "sig": "cook:kush:study_pillsx6:40s:gold_nugget*2,sugar*1,kush:lab_solvent*1"
+  },
+  {
+   "id": "cook_poppy_tea",
+   "char": "",
+   "title": "Poppy Tea",
+   "sig": "cook:kush:poppy_teax2:35s:kush:poppy_pod*2,sugar*1,potion*1"
+  },
+  {
+   "id": "roll_joint",
+   "char": "",
    "title": "Joint"
   },
   {
    "id": "roll_blunt",
-   "char": "",
+   "char": "",
    "title": "Blunt"
   },
   {
    "id": "dry_bud",
-   "char": "",
+   "char": "",
    "title": "Dried Bud"
   },
   {
    "id": "mix_strain",
-   "char": "",
+   "char": "",
    "title": "Your own strain"
   }
  ]

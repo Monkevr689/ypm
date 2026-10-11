@@ -879,6 +879,188 @@ def laughing_gas():
 
 
 # ---------------------------------------------------------------------------
+# 9.1 street drugs
+# ---------------------------------------------------------------------------
+@item("spice")
+def spice():
+    """A purple foil packet with a gold star and dried herb crumbs spilling out."""
+    s = Sprite(seed=160)
+    pack = poly([(6, 5), (24, 5), (23, 26), (7, 26)])
+    s.shade(pack, ramp("7a3ac8", 5, spread=0.42), dither=0.3)
+    for x in range(6, 25, 2):
+        s.put(x, 6, c("d0b0f8"))
+        s.put(x + 1, 6, c("5a2a98"))
+        s.put(x if x < 23 else 22, 25, c("4a2288"))
+    s.fill(ellipse(15, 15, 5.5, 5.5), c("2e1650"))
+    star(s, 14, 12, c("f4d848"))
+    s.put(15, 11, c("f4d848"), 2)
+    s.line(8, 8, 8, 22, alpha(c("ffffff"), 160), 2)
+    crumbs = ellipse(23, 28, 6, 2.6) | ellipse(18, 29, 3, 1.6)
+    cr = ramp("7a8a3a", 4, spread=0.4)
+    s.shade(crumbs, cr, dither=0.7, rim=False)
+    s.speckle(crumbs, [c("b8a050"), c("4a5a22")], 0.3)
+    s.outline(0.42)
+    return s
+
+
+@item("bath_salts")
+def bath_salts():
+    """A little glass jar of pink crystals with a cork lid."""
+    s = Sprite(seed=161)
+    jar = rounded(8, 9, 24, 28, 3)
+    s.fill(jar, c("d8e8f0", 110))
+    crystals = rounded(9, 14, 23, 27, 2)
+    cr = ramp("f08ac8", 5, spread=0.4)
+    s.shade(crystals, cr, dither=0.5)
+    s.speckle(crystals, [c("fff0f8"), cr[1]], 0.25)
+    s.speckle(crystals, [alpha(c("ffffff"), 240)], 0.1, layer=2)
+    for (x, y) in ((12, 13), (16, 12), (19, 13), (14, 11), (18, 11)):
+        s.put(x, y, cr[3])
+    s.shade(rounded(9, 4, 23, 9, 1), ramp("b88850", 4, spread=0.35), rim=False)
+    for x in range(10, 23, 3):
+        s.put(x, 6, c("8a6030"))
+    s.fill(rect(11, 18, 21, 23), c("f4ecd4"))
+    for x in range(12, 20, 2):
+        s.put(x, 20, c("6a4a6a"))
+        s.put(x, 22, c("6a4a6a"))
+    glass_shine(s, 10, 10, 10, 26)
+    s.outline(0.42)
+    return s
+
+
+@item("poppers")
+def poppers():
+    """A small brown glass bottle with a black cap, a yellow label and a wisp of vapour."""
+    s = Sprite(seed=162)
+    bottle = rounded(9, 12, 22, 29, 3) | rounded(12, 8, 19, 13, 1)
+    s.shade(bottle, [alpha(x, 235) for x in ramp("8a4a1a", 5, spread=0.38)], dither=0.3)
+    s.shade(rounded(11, 4, 20, 9, 1), ramp("2a2a30", 4, spread=0.4), rim=False)
+    for x in range(12, 20, 2):
+        s.put(x, 5, c("55555e"))
+    s.fill(rect(10, 17, 21, 25), c("f4d84a"))
+    s.fill(rect(10, 17, 21, 18), c("e8a81a"))
+    for x in range(12, 20, 2):
+        s.put(x, 21, c("5a3a10"))
+    s.put(15, 23, c("d8442a"))
+    s.put(16, 23, c("d8442a"))
+    glass_shine(s, 11, 14, 11, 27)
+    for (x, y) in ((24, 6), (25, 4), (24, 2), (26, 2), (27, 6)):
+        s.put(x, y, alpha(c("e8f0f8"), 190), 2)
+    s.outline(0.42)
+    return s
+
+
+@item("absinthe")
+def absinthe():
+    """A tall emerald bottle with a cream label and a sugar cube on a spoon."""
+    s = Sprite(seed=163)
+    body = rounded(8, 14, 20, 30, 3) | rounded(12, 3, 17, 15, 2)
+    s.shade(body, [alpha(x, 235) for x in ramp("2aa84a", 5, spread=0.4)], dither=0.3)
+    s.shade(rounded(11, 1, 18, 5, 1), ramp("d8b840", 4, spread=0.3), rim=False)
+    s.fill(rect(9, 19, 19, 26), c("f0e8c8"))
+    s.fill(rect(9, 19, 19, 20), c("c8b070"))
+    s.fill(ellipse(14, 23, 2.4, 2.4), c("2a8a3a"))
+    s.put(14, 22, c("e8f8d0"))
+    glass_shine(s, 10, 15, 10, 28)
+    s.line(21, 24, 29, 18, c("b8bcc4"))
+    s.line(21, 25, 29, 19, c("8a8e98"))
+    s.fill(rect(25, 14, 29, 17), c("fafaf0"))
+    s.put(26, 15, c("d8d8cc"))
+    s.outline(0.42)
+    return s
+
+
+@item("datura_tea")
+def datura_tea():
+    """A white porcelain cup of pale violet tea with a moonflower floating beside it."""
+    s = Sprite(seed=164)
+    cup = ellipse(14, 20, 10, 8)
+    s.shade(cup, ramp("f4f0ec", 5, spread=0.3), dither=0.3)
+    s.fill(rect(4, 12, 24, 17), c("f4f0ec"))
+    s.fill(ellipse(14, 14, 10, 3.2), c("e0d8e8"))
+    s.shade(ellipse(14, 14, 8.6, 2.4), ramp("a888d8", 4, spread=0.3), rim=False)
+    s.fill(rounded(22, 15, 28, 22, 3), c("e8e0dc"))
+    s.fill(rounded(24, 17, 26, 20, 1), c("2a2a30", 0))
+    s.line(24, 17, 24, 20, c("2a2a30"))
+    s.line(25, 21, 25, 21, c("2a2a30"))
+    # the flower: a white trumpet with a lilac throat
+    s.line(15, 12, 15, 8, c("4a8a3a"))
+    petals = poly([(15, 9), (7, 4), (10, 1), (17, 1), (21, 5)])
+    s.shade(petals, ramp("f8f8ff", 4, spread=0.25), dither=0.3)
+    s.fill(ellipse(14, 4, 3, 2), c("b898e8"))
+    s.put(14, 4, c("6a4aa8"))
+    s.line(8, 5, 12, 3, alpha(c("ffffff"), 200), 2)
+    s.outline(0.42)
+    return s
+
+
+@item("kratom_tea")
+def kratom_tea():
+    """A clay mug of dark green tea with a fresh leaf on the rim."""
+    s = Sprite(seed=165)
+    mug = rounded(6, 11, 22, 28, 3)
+    s.shade(mug, ramp("b8643a", 5, spread=0.34), dither=0.35)
+    s.speckle(mug, [c("8a4424"), c("d0845a")], 0.1)
+    handle = thick_line(22, 15, 27, 18, 2.2) | thick_line(27, 18, 22, 24, 2.2)
+    s.fill(handle, c("8a4a2a"))
+    s.fill(ellipse(14, 12, 8, 2.4), c("8a4a2a"))
+    s.shade(ellipse(14, 12, 6.8, 1.7), ramp("3a7a2a", 4, spread=0.3), rim=False)
+    s.line(9, 17, 19, 17, c("e0c898"))
+    for (x0, y0) in ((9, 21), (14, 23)):
+        s.put(x0, y0, c("e0c898"))
+    sugar_leaf(s, 11, 9, 55, 9, col="4aa83a", width=3.2)
+    sugar_leaf(s, 11, 9, 125, 7, col="3a8a2a", width=2.6)
+    # steam
+    for (x, y) in ((17, 7), (18, 5), (17, 3), (19, 2)):
+        s.put(x, y, alpha(c("e8f0f8"), 170), 2)
+    s.outline(0.42)
+    return s
+
+
+@item("study_pills")
+def study_pills():
+    """A foil blister strip with four yellow pills, one already popped."""
+    s = Sprite(seed=166)
+    strip = rounded(3, 8, 29, 26, 2)
+    s.shade(strip, ramp("c8ccd4", 5, spread=0.3), dither=0.3)
+    for i, x in enumerate((8, 14, 20, 26)):
+        s.fill(ellipse(x - 1, 17, 3.2, 5), c("8a90a0"))
+        if i != 2:
+            s.shade(ellipse(x - 1, 17, 2.6, 4.4), [alpha(v, 150) for v in ramp("f8e8a8", 4, spread=0.2)], rim=False)
+            tablet(s, x - 1, 16, 1.8, 2.8, "f4d020")
+        else:
+            s.fill(ellipse(x - 1, 17, 2.4, 4), c("4a4e5a"))
+    for x in range(4, 29, 3):
+        s.put(x, 9, c("f4f6fa"))
+    s.line(5, 10, 5, 24, alpha(c("ffffff"), 190), 2)
+    s.put(26, 27, c("f4d020"), 2)
+    s.outline(0.42)
+    return s
+
+
+@item("poppy_tea")
+def poppy_tea():
+    """A glass of red-brown tea with a poppy pod and a petal on the rim."""
+    s = Sprite(seed=167)
+    glass = poly([(7, 8), (23, 8), (21, 28), (9, 28)])
+    s.fill(glass, c("d8e8f0", 110))
+    tea = poly([(8, 13), (22, 13), (20, 27), (10, 27)])
+    s.shade(tea, [alpha(v, 215) for v in ramp("b0502a", 5, spread=0.36)], dither=0.3)
+    s.line(9, 13, 21, 13, c("e8a888"))
+    glass_shine(s, 10, 9, 11, 26)
+    pod = ellipse(24, 8, 4.4, 4.8)
+    s.shade(pod, ramp("8aa84a", 5, spread=0.38), dither=0.3)
+    s.fill(rect(21, 4, 27, 5), c("5a6a2a"))
+    for x in (22, 24, 26):
+        s.put(x, 4, c("c8d880"))
+    s.fill(poly([(24, 13), (28, 11), (28, 16)]), c("e8283a"))
+    s.put(27, 13, c("a01020"))
+    s.line(22, 12, 21, 18, c("5a7a2a"))
+    s.outline(0.42)
+    return s
+
+
+# ---------------------------------------------------------------------------
 # in-between steps (cooked at the Drug Lab on the way to a drug)
 # ---------------------------------------------------------------------------
 @item("kief")

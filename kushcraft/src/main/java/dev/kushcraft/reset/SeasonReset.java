@@ -128,12 +128,12 @@ public final class SeasonReset {
     }
 
     /** Step 1: backup, check, show it, hand out a code. */
-    public void prepare(CommandSender sender, Scope scope) {
+    public boolean prepare(CommandSender sender, Scope scope) {
         sender.sendMessage(Text.msg("<gray>Saving everything and making a backup..."));
         Backups.Backup b = plugin.backups().make("before-reset-" + scope.id(), sender.getName());
         if (!b.verified()) {
             sender.sendMessage(Text.msg("<red>The backup failed, so nothing will be reset: " + b.problem()));
-            return;
+            return false;
         }
         showBackup(sender, b);
         String code = code();
@@ -144,6 +144,7 @@ public final class SeasonReset {
                 + (scope != Scope.ECONOMY ? ", plants: " + plugin.plants().all().size() + ", Drug Labs and blocks: "
                 + plugin.machines().all().size() + ", cartels: " + plugin.cartels().all().size() : "")));
         sender.sendMessage(Text.mm(" <red>To go ahead type <white>/kush reset confirm " + code + "</white> within 5 minutes."));
+        return true;
     }
 
     private static void showBackup(CommandSender to, Backups.Backup b) {
@@ -168,7 +169,7 @@ public final class SeasonReset {
     }
 
     /** Step 2. */
-    private void confirm(CommandSender sender, String code) {
+    public void confirm(CommandSender sender, String code) {
         Pending p = pending;
         if (p == null || System.currentTimeMillis() > p.expires()) {
             pending = null;
@@ -227,11 +228,16 @@ public final class SeasonReset {
                             s.executeUpdate("UPDATE players SET sales=0");
                         }
                     }
+                    if (scope == Scope.EVERYTHING) {
+                        try (Statement s = t.createStatement()) {
+                            s.executeUpdate("DELETE FROM listings");
+                        }
+                    }
                     try (PreparedStatement ps = t.prepareStatement("UPDATE players SET balance=?, rank=1, ranked_at=?, "
                             + "playtime=0, flags=flags & ?")) {
                         ps.setLong(1, start);
                         ps.setLong(2, now);
-                        ps.setInt(3, ~(PlayerRecord.ONBOARDED | PlayerRecord.GOT_KIT));
+                        ps.setInt(3, ~(PlayerRecord.ONBOARDED | PlayerRecord.GOT_KIT | PlayerRecord.HANDBOOK));
                         ps.executeUpdate();
                     }
                     if (!labBlocks.isEmpty()) {

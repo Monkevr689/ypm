@@ -203,6 +203,53 @@ public final class Economy {
         return true;
     }
 
+    /**
+     * A player trade: a gives {@code aGives} cents to b and b gives {@code bGives} to a, both or neither.
+     * {@code feeRate} of each amount is destroyed (a money sink). Each side gets one log line with the detail.
+     * False (nothing changed) when either side can't cover what they give. Server thread only.
+     */
+    public boolean exchange(UUID a, long aGives, UUID b, long bGives, double feeRate, Tx type, String detailA, String detailB) {
+        check();
+        if (aGives < 0 || bGives < 0 || a.equals(b)) {
+            return false;
+        }
+        PlayerRecord ra = account(a);
+        PlayerRecord rb = account(b);
+        if (ra.balance() < aGives || rb.balance() < bGives) {
+            return false;
+        }
+        long feeA = Math.round(aGives * Math.max(0, Math.min(1, feeRate)));
+        long feeB = Math.round(bGives * Math.max(0, Math.min(1, feeRate)));
+        long gainA = (bGives - feeB) - aGives;
+        long gainB = (aGives - feeA) - bGives;
+        ra.balance(ra.balance() + gainA);
+        rb.balance(rb.balance() + gainB);
+        ledger.log(a, type, gainA, ra.balance(), b.toString(), detailA);
+        ledger.log(b, type, gainB, rb.balance(), a.toString(), detailB);
+        return true;
+    }
+
+    /**
+     * A Bazaar sale: the buyer pays {@code price}, the seller gets it minus {@code tax} (the tax is destroyed).
+     * False (nothing changed) when the buyer can't pay. Server thread only.
+     */
+    public boolean sale(UUID buyer, UUID seller, long price, long tax, String buyDetail, String sellDetail) {
+        check();
+        if (price <= 0 || tax < 0 || tax > price || buyer.equals(seller)) {
+            return false;
+        }
+        PlayerRecord rb = account(buyer);
+        if (rb.balance() < price) {
+            return false;
+        }
+        PlayerRecord rs = account(seller);
+        rb.balance(rb.balance() - price);
+        rs.balance(rs.balance() + price - tax);
+        ledger.log(buyer, Tx.BAZAAR_BUY, -price, rb.balance(), seller.toString(), buyDetail);
+        ledger.log(seller, Tx.BAZAAR_SELL, price - tax, rs.balance(), buyer.toString(), sellDetail);
+        return true;
+    }
+
     /** Admin: set a balance (logged with who did it). */
     public void set(OfflinePlayer p, double amount, String by) {
         check();
